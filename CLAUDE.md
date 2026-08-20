@@ -27,23 +27,49 @@ O domínio é em português e permanece em português no banco, nos tipos e nos 
 função. Não traduza. Código técnico de scaffolding (hooks, utils, helpers genéricos) pode
 usar inglês.
 
-| Termo                | Significado                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| **Caso**             | Um atendimento completo a uma família, do contrato à entrega dos links                   |
-| **Etapa**            | Unidade de trabalho dentro de um caso (entrada, nascimento, banho, fechamento, edições)  |
-| **Pacote**           | Produto vendido. Define **quais etapas existem** naquele caso                            |
-| **Maternidade**      | Hospital onde o caso acontece                                                            |
-| **Handoff**          | Passagem de uma etapa de uma pessoa para outra, tipicamente na troca de turno            |
-| **Situação clínica** | Estado da mãe/bebê: aguardando, internada, indução, trabalho de parto, nasceu, UTI, alta |
-| **Entregável**       | Link final para a família: Google Photos, WeTransfer, cadeado, reels, álbum              |
-| **Fila de edição**   | Etapas de edição pendentes, distribuídas pela coordenação                                |
-| **Padrão de tempo**  | Tempo de referência esperado para concluir um tipo de etapa                              |
-| **CEL CLICK**        | Celulares corporativos usados para capturar vídeo — 6 aparelhos, compartilhados          |
-| **Estação**          | PC de edição. 4 de foto, 2 de vídeo                                                      |
+| Termo                      | Significado                                                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Caso**                   | Um atendimento completo a uma família, do contrato à entrega dos links                                                                              |
+| **Etapa**                  | Unidade de trabalho dentro de um caso (entrada, nascimento, banho, fechamento, edições)                                                             |
+| **Pacote**                 | Produto vendido. Define **quais etapas existem** naquele caso                                                                                       |
+| **Maternidade**            | Hospital onde o caso acontece                                                                                                                       |
+| **Handoff**                | Passagem de uma etapa de uma pessoa para outra, tipicamente na troca de turno                                                                       |
+| **Situação clínica**       | Estado da mãe/bebê: aguardando, internada, indução, trabalho de parto, nasceu, UTI, alta                                                            |
+| **Entregável**             | Link final para a família: Google Photos, WeTransfer, cadeado, reels, álbum                                                                         |
+| **Fila de edição**         | Etapas de edição pendentes, distribuídas pela coordenação                                                                                           |
+| **SLA / prazo de entrega** | Prazo que a empresa promete ao cliente (48h na maioria, maior no MASTER); conta a partir do nascimento concluído                                    |
+| **CEL CLICK**              | Celulares corporativos usados para capturar vídeo — 6 aparelhos, compartilhados                                                                     |
+| **Estação**                | PC de edição. 4 de foto, 2 de vídeo                                                                                                                 |
+| **Sync**                   | Edge Function que lê a agenda do Google Calendar e cria/atualiza/cancela casos automaticamente                                                      |
+| **Rascunho pendente**      | Caso criado pelo sync quando o parser não consegue mapear pacote ou maternidade com certeza — fica fora do fluxo operacional até confirmação manual |
+| **Card cinza**             | Convenção do cliente no Calendar para sinalizar cancelamento — o sync detecta e cancela o caso automaticamente                                      |
 
 **Pessoas reais do cliente que aparecem no domínio:** Sarah distribui a fila de edição.
 Morgana (atendimento) confirma a entrega dos links e encerra o caso. Não hardcode esses
 nomes — são papéis atribuídos a registros em `pessoas`.
+
+### Pacotes × etapas — referência canônica
+
+O pacote define quais etapas o caso tem. Estrutura cumulativa, confirmada com o cliente
+(vira dado em `pacote_etapas`, no seed — não é schema):
+
+| Pacote                   | Entrada | Nascimento | Banho | Fechamento | Vídeo                   |
+| ------------------------ | ------- | ---------- | ----- | ---------- | ----------------------- |
+| BASIC                    | ✓       | ✓          |       |            |                         |
+| BASIC + REELS            | ✓       | ✓          |       |            | ✓ (venda)               |
+| BASIC REELS              | ✓       | ✓          |       |            | ✓ (contrato)            |
+| STANDARD                 | ✓       | ✓          | ✓     | ✓          |                         |
+| BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓                       |
+| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal 12-15min |
+| BIRTH                    |         | ✓          |       |            | ✓ (venda)               |
+
+- **Entrada existe em todos menos BIRTH.**
+- **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a
+  venda. Por isso sua edição tem urgência — ver SLA na seção 9.
+- "Vídeo de venda" vs "vídeo de contrato" é a mesma etapa no fluxo de trabalho; a diferença
+  está no pacote, não vira campo separado.
+- **SLA:** entrega em 48h para todos os pacotes exceto MASTER (maior). O relógio começa
+  quando a etapa de nascimento é concluída. Ver seção 9.
 
 ---
 
@@ -84,11 +110,26 @@ uma data de **ocorrência**.
 Razão: a medição de produtividade só tem valor se o carimbo não puder ser manipulado do
 aparelho.
 
-### 3.5 Os dois encerramentos são independentes
+### 3.5 Só existem dois caminhos terminais: encerrado e cancelado
 
-Um caso pode estar entregue à família e pendente no financeiro, ou o inverso. `status_entrega`
-e `status_financeiro` são campos separados, com transições separadas. **Nunca** unifique em um
-único status. `status_operacional = encerrado` depende apenas de `status_entrega = confirmado`.
+`status_operacional = encerrado` exige `status_entrega = confirmado` — a Morgana disponibilizou
+e confirmou todos os links. Não existe encerramento por prazo, por omissão ou por decisão
+unilateral de outro papel.
+
+`status_operacional = cancelado` exige `motivo_cancelamento` preenchido e não vazio — seja
+porque o sync detectou o card cinza no Calendar (preenche um texto padrão automaticamente),
+seja porque um humano cancelou manualmente (motivo digitado). Um caso cancelado nunca precisa
+ter passado por entrega.
+
+Constraint de banco (`casos_status_terminal_valido`) já aplica essa regra — não a duplique
+como validação de aplicação que pode divergir da constraint.
+
+**Regra de visibilidade do Quadro:** um dia só sai da tela quando **todos** os casos daquele
+dia estão em `encerrado` OU `cancelado`. Nunca por passagem de data. Um caso atrasado mantém
+o bloco do dia visível, mesmo que trave semanas.
+
+O módulo financeiro (`despesas`, `status_financeiro`) foi removido do escopo. Não recrie essas
+tabelas/colunas sem instrução explícita.
 
 ---
 
@@ -107,19 +148,25 @@ transição chama uma função Postgres (`SECURITY DEFINER`) que, numa única tr
 Funções RPC previstas:
 
 ```
-iniciar_etapa(p_caso_etapa_id, p_estacao_id)
+iniciar_etapa(p_caso_etapa_id)
 concluir_etapa(p_caso_etapa_id, p_observacao)
 atribuir_etapa(p_caso_etapa_id, p_responsavel_id)
 transferir_etapa(p_caso_etapa_id, p_para_pessoa_id, p_motivo)   -- handoff
 atualizar_situacao_clinica(p_caso_id, p_situacao)
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 confirmar_entrega(p_caso_id)
-lancar_despesa(p_caso_id, p_tipo, p_valor, p_comprovante_path)
-conferir_despesas(p_caso_id)
+cancelar_caso(p_caso_id, p_motivo)                              -- cancelamento manual
 ```
 
 RLS deve **negar** UPDATE direto do cliente nas colunas que essas funções controlam. Se a
 policy permite o update direto, a invariante não existe.
+
+**A única exceção de privilégio elevado é o sync do Google Calendar** (seção 12), que roda
+como Edge Function com `service_role` para criar/atualizar casos a partir de eventos, e para
+o cancelamento automático via card cinza (`sync_cancelar_caso`, equivalente a `cancelar_caso`
+mas chamado pelo próprio sync, não por um usuário logado). Fora dessas duas ações de origem,
+todo o resto do ciclo de vida do caso passa pelas RPCs normais, sujeitas à RLS de quem está
+logado — o sync nunca edita uma etapa, nunca faz handoff, nunca confirma entrega.
 
 ---
 
@@ -156,7 +203,6 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
     /casos
     /fila-edicao
     /entregaveis
-    /despesas
     /painel
   /components/ui       componentes base compartilhados
   /lib                 supabase client, query client, helpers
@@ -209,21 +255,72 @@ pé, com uma mão só, em um aparelho compartilhado.
 
 ---
 
-## 7. Autenticação
+## 7. Sync do Google Calendar — intake principal (decisão revisada)
 
-**Fase 0:** email + senha padrão do Supabase Auth, uma conta por pessoa.
+O intake original (formulário manual do comercial) virou **fallback**. A origem principal
+de um caso agora é um evento na agenda única e centralizada do Google Calendar.
 
-**Fase 1:** login por PIN em dispositivo registrado. Implementação: uma Edge Function recebe
-`(device_token, pessoa_id, pin)`, valida contra `equipamentos.device_token` e `pessoas.pin_hash`,
-e emite sessão via Admin API. O `service_role` key vive **apenas** dentro da Edge Function,
-nunca no frontend.
+### Convenção observada nos dados reais do cliente
 
-O `device_token` do aparelho também auto-preenche `caso_etapas.equipamento_captura_id` —
-um campo a menos na tela e um dado a mais confiável.
+```
+MÃE/BEBÊ [-] PACOTE [MATERNIDADE]
+ex.: THAYANE/ALICE BIRTH+REELS GNDI
+     KEVELYN/JOAQUIM - BABY REELS
+     *JENNIE/MARIA LUIZA - BASIC - HSC
+```
+
+- Mãe e bebê sempre no início, separados por `/`. Alta confiança de parsing.
+- Pacote em vocabulário finito, mapeável contra `pacotes`.
+- Maternidade por sigla ao fim, ou embutida no nome do pacote.
+- Eventos **sem `/`** no título (folgas, aniversários, sorteios, reuniões internas) não são
+  casos — o parser descarta.
+- Significado do `*` que antecede alguns nomes: **ainda não confirmado com o cliente**. Não
+  trate esse sinal até confirmação.
+
+### Regra de segurança do parser
+
+**Nunca assuma pacote ou maternidade quando o parsing for ambíguo.** Um caso com pacote
+errado gera checklist de etapas errado — e isso só aparece na maternidade, tarde demais. Se
+o parser não conseguir mapear com certeza, crie o caso como **rascunho pendente**, visível
+mas fora do fluxo operacional, até confirmação manual.
+
+### Cancelamento via card cinza
+
+O cliente sinaliza cancelamento colorindo o evento de cinza no Calendar. O sync detecta essa
+cor e chama `sync_cancelar_caso`, preenchendo `motivo_cancelamento` com um texto padrão (ex.:
+`"Cancelado via Google Calendar (card cinza)"`). Elimina o retrabalho de cancelar duas vezes.
+
+### Cor herdada, não interpretada
+
+`casos.cor_calendar` guarda a cor do evento como veio, sem tentar decodificar o que significa
+(é organização interna do cliente — provavelmente por maternidade ou responsável). O Quadro
+só herda e exibe.
+
+### Implementação
+
+Edge Function em cron (polling a cada poucos minutos), não webhook — webhook exigiria domínio
+verificado e endpoint público, complexidade desnecessária no MVP. Roda com `service_role`
+apenas para criar/atualizar/cancelar via sync; todo o resto do ciclo de vida continua nas
+RPCs normais sob RLS (ver seção 4).
 
 ---
 
-## 8. Medição de produtividade
+## 8. Autenticação
+
+**Fase 0:** email + senha padrão do Supabase Auth, uma conta por pessoa.
+
+**Fase 1:** login por PIN por pessoa, para troca rápida no aparelho compartilhado. Como o
+cadastro de equipamentos foi removido do escopo, **não há vínculo aparelho↔sessão** — o PIN
+valida só contra `pessoas.pin_hash`, sem `device_token`. Implementação: uma Edge Function
+recebe `(pessoa_id, pin)`, valida contra `pessoas.pin_hash`, e emite sessão via Admin API.
+O `service_role` key vive **apenas** dentro da Edge Function, nunca no frontend.
+
+A sessão deve expirar sozinha (fim de turno), já que os 6 aparelhos trocam de mão — mas isso
+é política de expiração de sessão, não registro de dispositivo.
+
+---
+
+## 9. Medição de produtividade
 
 O cliente quer evidência objetiva para cobrar tempo de edição de vídeo. O acordo definido é
 **registro aberto pelas próprias operadoras, com padrões de tempo conhecidos por todas**.
@@ -233,15 +330,22 @@ Implicações para a implementação:
 
 - O tempo de ciclo sai de `concluido_em − iniciado_em`, ambos carimbados pelo servidor
   (invariante 3.4).
-- `padroes_tempo` guarda o tempo esperado por tipo de etapa e pacote. É a régua que torna a
-  cobrança possível — sem ela, a conversa termina em "esse vídeo era mais difícil".
-- Os números do padrão **não são chutados no código**. Vêm do cliente e são calibrados com
-  30–60 dias de dados reais. Deixe a tabela versionada por `vigente_desde`.
+- **SLA de entrega é a régua principal.** Cada pacote tem `prazo_entrega` (intervalo). O
+  vencimento de um caso é derivado: `concluido_em` da etapa de nascimento + `prazo_entrega`.
+  Métrica de cobrança: quantas entregas estouraram o prazo (48h na maioria dos pacotes).
+  Isso é mais concreto e defensável que "fulana demorou" — é o SLA que a própria empresa
+  vende ao cliente.
+- A fila de edição ordena por **urgência de prazo** (quanto falta pro vencimento), não por
+  ordem de chegada. BIRTH sobe naturalmente por ter a janela mais curta; um caso parado há
+  40h de um pacote de 48h sobe na frente de um recém-chegado. É o SLA virando ordenação
+  automática — sem hardcode de "BIRTH primeiro".
 - A fila de edição é visível para **toda a equipe**, não só para a gestão. O cliente observou
   que a produtividade subiu com a simples presença dos sócios — visibilidade compartilhada
   reproduz esse efeito sem clima de fiscalização.
-- Ocupação de estação é indicador de painel: prova que a máquina estava disponível quando a
-  peça ficou parada.
+
+**Ocupação de estação foi removida como métrica.** Dependia do cadastro de equipamentos
+(fora do escopo) e o cliente já confirmou que não falta máquina — o gargalo é tempo de
+trabalho, não fila por hardware. O tempo de ciclo e o cumprimento de SLA cobrem a cobrança.
 
 **O sistema não calcula jornada, hora extra nem espelho de ponto.** A empresa já tem controle
 de ponto digital e ele continua sendo a fonte de verdade. Atividade fora da janela de escala
@@ -249,7 +353,7 @@ gera alerta operacional (um parto estourou o turno), nunca apontamento disciplin
 
 ---
 
-## 9. Privacidade e LGPD
+## 10. Privacidade e LGPD
 
 Este sistema armazena **dado pessoal sensível de saúde e de menor de idade**: nome de mãe e
 recém-nascido, hospital, situação clínica (UTI, indução, cesárea de emergência) e imagens de
@@ -258,8 +362,12 @@ parto.
 Regras não negociáveis:
 
 - RLS em toda tabela, sempre. Operador só enxerga casos dos quais participa ou que estão
-  ativos no seu turno. Despesa é visível apenas para quem lançou, coordenação e financeiro.
+  ativos no seu turno.
 - Acesso a dados de caso gera linha em `eventos`.
+- `eventos` tem FKs `on delete restrict` — um caso com eventos não pode ser deletado, só
+  cancelado. Exclusão por pedido de titular (LGPD) é operação administrativa deliberada de
+  anonimização, não um `delete` direto. Esse fluxo **ainda não existe** — é dívida registrada,
+  não implementação pendente de tarefa imediata.
 - Buckets do Storage são **privados**. Comprovantes e mídias só via signed URL de curta duração.
 - Links de entrega (`entregaveis.url`) são credenciais de acesso à galeria da família —
   trate como segredo, não exponha em log nem em resposta de listagem pública.
@@ -269,7 +377,7 @@ Regras não negociáveis:
 
 ---
 
-## 10. Fluxo de trabalho
+## 11. Fluxo de trabalho
 
 ### Git
 
@@ -277,11 +385,18 @@ Regras não negociáveis:
 - Commits em português, imperativo: `adiciona RPC de conclusão de etapa`.
 - Um PR por tarefa do roadmap. PR sem migration correspondente quando toca schema é erro.
 
+### Sem Docker local — trabalhando direto contra o remoto
+
+Este projeto **não usa `supabase db reset`**. Toda migration nasce com
+`supabase migration new <nome>` e é aplicada com `supabase db push` contra o projeto
+`clickbaby-prod`. Como não há ambiente local descartável, **sempre mostre o SQL/diff da
+migration antes de aplicar** — a aprovação é manual, turno a turno, não automática.
+
 ### Definição de pronto
 
 Uma tarefa só está pronta quando:
 
-1. Migration aplica limpo em banco novo (`supabase db reset` funciona do zero).
+1. Migration revisada e aplicada com `supabase db push` sem erro.
 2. Tipos regenerados e commitados.
 3. RLS testada com pelo menos dois papéis diferentes — inclusive o caso negativo.
 4. Nenhuma transição de estado feita por `.update()` direto.
@@ -299,13 +414,13 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
 
 ---
 
-## 11. Comportamento esperado do agente
+## 12. Comportamento esperado do agente
 
 **Faça:**
 
 - Leia `docs/plano.md` antes de tarefas de modelagem ou de tela.
 - Pergunte quando uma tarefa colidir com uma invariante da seção 3.
-- Proponha a migration antes de escrever o código que a consome.
+- Proponha a migration/diff antes de aplicar com `db push` — sempre mostre antes de agir.
 - Mantenha PRs pequenos e revisáveis.
 
 **Não faça:**
@@ -316,24 +431,32 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
 - Não use `localStorage` para dado de domínio — só preferência de UI.
 - Não instale biblioteca nova sem justificar. A stack da seção 5 é deliberada.
 - Não altere schema pelo painel web do Supabase.
-- Não simplifique os dois status de encerramento em um só.
-- Não hardcode números de padrão de tempo.
+- Não recrie `despesas`, `tipo_despesa` ou `status_financeiro` sem instrução explícita —
+  módulo financeiro está fora do escopo do MVP.
+- Não hardcode os valores de `prazo_entrega` (SLA) nem a regra "BIRTH primeiro" — a
+  ordenação da fila é por urgência de prazo derivada do pacote, o valor vem do seed.
 - Não crie tela de registro de ponto ou cálculo de jornada — está explicitamente fora de escopo.
+- Não deixe o sync do Calendar assumir pacote/maternidade ambíguos — vira rascunho pendente.
+- Não use `supabase db reset` — não há Docker local neste projeto (seção 11).
 
 ---
 
-## 12. Estado atual
+## 13. Estado atual
 
-**Fase 0 — fundação.** Nada implementado ainda.
+**Fase 0 — schema em andamento.** Migration inicial aplicada via `db push`: 12 tabelas,
+11 enums, RLS habilitado **sem policies ainda** (nega tudo por padrão). Despesas e
+financeiro já removidos do schema. Cancelamento com `motivo_cancelamento` e a constraint
+`casos_status_terminal_valido` já aplicados.
 
-Ordem de execução:
+Ordem de execução a partir daqui:
 
-1. Schema completo como migrations, com enums e constraints
-2. Trigger de geração automática de `caso_etapas` a partir de `pacote_etapas`
-3. Políticas RLS por papel
-4. Funções RPC de transição (seção 4)
-5. Seed de cadastros com dados reais do cliente
-6. Script de importação da planilha histórica
-7. Frontend — Quadro primeiro
+1. Trigger de geração automática de `caso_etapas` a partir de `pacote_etapas`
+2. Políticas RLS por papel
+3. Funções RPC de transição, incluindo `cancelar_caso` (seção 4)
+4. Seed de cadastros com dados reais do cliente — **bloqueado até o cliente entregar a
+   lista de pacotes com escopo de etapas** (ver `docs/plano.md`, seção 11)
+5. Sync do Google Calendar (seção 7) — intake principal
+6. Frontend — Quadro primeiro, em blocos por data (ver `docs/plano.md`, seção 7)
+7. Script de importação da planilha histórica (pós-MVP)
 
 O Quadro é a tela da demo. É a única que precisa ser excelente na fase 1.
