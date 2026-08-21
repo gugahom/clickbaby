@@ -25,3 +25,7 @@ dist-ssr
 
 .env
 .env.local
+
+# Estado local do Supabase CLI (Docker) — nunca commitar
+supabase/.branches
+supabase/.temp

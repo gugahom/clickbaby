@@ -53,23 +53,28 @@ nomes — são papéis atribuídos a registros em `pessoas`.
 O pacote define quais etapas o caso tem. Estrutura cumulativa, confirmada com o cliente
 (vira dado em `pacote_etapas`, no seed — não é schema):
 
-| Pacote                   | Entrada | Nascimento | Banho | Fechamento | Vídeo                   |
-| ------------------------ | ------- | ---------- | ----- | ---------- | ----------------------- |
-| BASIC                    | ✓       | ✓          |       |            |                         |
-| BASIC + REELS            | ✓       | ✓          |       |            | ✓ (venda)               |
-| BASIC REELS              | ✓       | ✓          |       |            | ✓ (contrato)            |
-| STANDARD                 | ✓       | ✓          | ✓     | ✓          |                         |
-| BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓                       |
-| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal 12-15min |
-| BIRTH                    |         | ✓          |       |            | ✓ (venda)               |
+| Pacote                   | Entrada | Nascimento | Banho | Fechamento | Vídeo          | Álbum | SLA    |
+| ------------------------ | ------- | ---------- | ----- | ---------- | -------------- | ----- | ------ |
+| BASIC                    | ✓       | ✓          |       |            |                |       | 48h    |
+| BASIC + REELS            | ✓       | ✓          |       |            | ✓ (venda)      |       | 48h    |
+| BASIC REELS              | ✓       | ✓          |       |            | ✓ (contrato)   |       | 48h    |
+| STANDARD                 | ✓       | ✓          | ✓     | ✓          |                |       | 48h    |
+| BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓              |       | 48h    |
+| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal |       | 7 dias |
+| MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal | ✓     | 7 dias |
+| BIRTH                    |         | ✓          |       |            | ✓ (venda)      |       | 24h    |
 
 - **Entrada existe em todos menos BIRTH.**
 - **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a
-  venda. Por isso sua edição tem urgência — ver SLA na seção 9.
+  venda. SLA de 24h (janela curta) faz sua edição subir na fila — ver seção 9.
 - "Vídeo de venda" vs "vídeo de contrato" é a mesma etapa no fluxo de trabalho; a diferença
   está no pacote, não vira campo separado.
-- **SLA:** entrega em 48h para todos os pacotes exceto MASTER (maior). O relógio começa
-  quando a etapa de nascimento é concluída. Ver seção 9.
+- **EVENTO, NEWBORN e combinações ("OUTROS")** ainda não estão no seed. Estratégia definida:
+  quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
+  **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
+  sem mudança de modelo. Não há composição de múltiplos pacotes num caso.
+- **SLA:** 48h na maioria; MASTER e MASTER + ÁLBUM em 7 dias (provisório, ajustável); BIRTH
+  em 24h. O relógio começa quando a etapa de nascimento é concluída. Ver seção 9.
 
 ---
 
@@ -385,23 +390,34 @@ Regras não negociáveis:
 - Commits em português, imperativo: `adiciona RPC de conclusão de etapa`.
 - Um PR por tarefa do roadmap. PR sem migration correspondente quando toca schema é erro.
 
-### Sem Docker local — trabalhando direto contra o remoto
+### Ambiente local com Docker — valide antes de tocar o remoto
 
-Este projeto **não usa `supabase db reset`**. Toda migration nasce com
-`supabase migration new <nome>` e é aplicada com `supabase db push` contra o projeto
-`clickbaby-prod`. Como não há ambiente local descartável, **sempre mostre o SQL/diff da
-migration antes de aplicar** — a aprovação é manual, turno a turno, não automática.
+Este projeto tem Supabase local via Docker. O fluxo de toda migration é:
+
+1. `supabase migration new <nome>` e escreve o SQL
+2. `supabase db reset` — recria o banco local do zero e aplica todas as migrations em
+   ordem (é o teste de que o schema reconstrói limpo)
+3. `supabase test db` — roda os testes pgTAP contra o local
+4. **só depois de tudo verde localmente**, `supabase db push` aplica no remoto (projeto
+   `clickbaby`)
+
+O remoto recebe apenas o que já passou no local. Mesmo assim, mostre o SQL/diff antes do
+`db push` — a aprovação continua manual, turno a turno.
+
+As chaves do Supabase local são fixas e públicas (iguais em qualquer máquina) — nunca vão
+para `.env`, git ou qualquer lugar. O `.env` aponta para o remoto.
 
 ### Definição de pronto
 
 Uma tarefa só está pronta quando:
 
-1. Migration revisada e aplicada com `supabase db push` sem erro.
-2. Tipos regenerados e commitados.
-3. RLS testada com pelo menos dois papéis diferentes — inclusive o caso negativo.
-4. Nenhuma transição de estado feita por `.update()` direto.
-5. `tsc --noEmit` e lint passam.
-6. Testado no viewport mobile, não só no desktop.
+1. `supabase db reset` aplica todas as migrations sem erro no local.
+2. `supabase test db` passa (testes pgTAP).
+3. Tipos regenerados e commitados.
+4. RLS testada com pelo menos dois papéis diferentes — inclusive o caso negativo.
+5. Nenhuma transição de estado feita por `.update()` direto.
+6. `tsc --noEmit` e lint passam.
+7. Testado no viewport mobile, não só no desktop.
 
 ### Testes
 
@@ -437,7 +453,6 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
   ordenação da fila é por urgência de prazo derivada do pacote, o valor vem do seed.
 - Não crie tela de registro de ponto ou cálculo de jornada — está explicitamente fora de escopo.
 - Não deixe o sync do Calendar assumir pacote/maternidade ambíguos — vira rascunho pendente.
-- Não use `supabase db reset` — não há Docker local neste projeto (seção 11).
 
 ---
 
@@ -460,3 +475,11 @@ Ordem de execução a partir daqui:
 7. Script de importação da planilha histórica (pós-MVP)
 
 O Quadro é a tela da demo. É a única que precisa ser excelente na fase 1.
+
+**Dívida explícita — RLS de `casos` (item 2 acima):** as policies `casos_update_adm` e
+`casos_update_atendimento_confirma_entrega` liberam UPDATE de **linha inteira** para adm e
+atendimento, como medida interina enquanto as RPCs de transição (item 3) não existem. Quando
+`confirmar_entrega` e `cancelar_caso` forem implementadas, o UPDATE direto de `casos` deve ser
+**revogado, não afrouxado** — a escrita passa a ser exclusivamente via RPC, restrita por
+coluna. Não é para essas policies evoluírem para algo mais granular; é para deixarem de
+existir.
