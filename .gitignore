@@ -29,3 +29,4 @@ dist-ssr
 # Estado local do Supabase CLI (Docker) — nunca commitar
 supabase/.branches
 supabase/.temp
+.env.functions
