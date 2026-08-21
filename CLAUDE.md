@@ -335,6 +335,14 @@ Implicações para a implementação:
 
 - O tempo de ciclo sai de `concluido_em − iniciado_em`, ambos carimbados pelo servidor
   (invariante 3.4).
+- **Pendência de design — fila de edição:** `concluir_etapa` (RPC genérica, item 3 da
+  seção 13) permite concluir uma etapa que nunca foi iniciada — carimba `iniciado_em` no
+  mesmo instante de `concluido_em`, ciclo zero. Isso é correto para o caso geral (campo
+  admite registro retroativo). Mas **na fila de edição especificamente**, "iniciar" antes de
+  "concluir" precisa ser obrigatório — sem essa trava, o tempo de ciclo de edição vem
+  sempre zero e a métrica de produtividade da seção 9 fura por completo. Ainda não
+  implementado; entra quando a fila de edição for construída (é validação de tela/fluxo,
+  não da RPC genérica de conclusão).
 - **SLA de entrega é a régua principal.** Cada pacote tem `prazo_entrega` (intervalo). O
   vencimento de um caso é derivado: `concluido_em` da etapa de nascimento + `prazo_entrega`.
   Métrica de cobrança: quantas entregas estouraram o prazo (48h na maioria dos pacotes).
