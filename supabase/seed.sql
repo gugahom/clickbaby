@@ -1,8 +1,8 @@
--- Dados de cadastro para dev — pacotes e pacote_etapas, entregues pelo
--- cliente (destrava parcialmente o item 4 da seção 13 do CLAUDE.md: só
--- pacotes/pacote_etapas por enquanto, pessoas e maternidades continuam
--- pendentes). Roda depois de todas as migrations (supabase/config.toml,
--- [db.seed]) — nunca via migration, porque isto é dado, não schema.
+-- Dados de cadastro para dev — pacotes, pacote_etapas e maternidades,
+-- entregues pelo cliente (destrava o item 4 da seção 13 do CLAUDE.md
+-- quase inteiro; só pessoas segue pendente). Roda depois de todas as
+-- migrations (supabase/config.toml, [db.seed]) — nunca via migration,
+-- porque isto é dado, não schema.
 --
 -- "Vídeo de venda" (BASIC + REELS) vs "vídeo de contrato" (BASIC REELS) é a
 -- mesma etapa de trabalho (edicao_video) em pacotes diferentes — seção 2 do
@@ -86,3 +86,26 @@ insert into public.pacote_etapas (pacote_id, etapa_tipo, ordem, obrigatoria)
 select p.id, e.etapa_tipo, e.ordem, true
 from etapas e
 join public.pacotes p on p.slug = e.slug;
+
+
+-- =============================================================================
+-- Maternidades — lista final confirmada com o cliente. Mesmo padrão
+-- idempotente do BIRTH + REELS acima: também inserida pela migration
+-- 20260821113040 (fonte de verdade pro remoto), ON CONFLICT DO NOTHING
+-- dos dois lados pra um `db reset` do zero não duplicar nem quebrar.
+--
+-- A sigla precisa casar EXATAMENTE com o que parseEventoCalendar extrai
+-- do título do evento do Calendar (maiúscula, sem espaço) — são as mesmas
+-- 5 siglas já cadastradas no parser (SIGLAS_MATERNIDADE em
+-- supabase/functions/_shared/parse-evento.ts). Ponta do parser e ponta do
+-- seed precisam concordar; é isso que
+-- supabase/tests/database/seed_maternidades.test.sql prova.
+-- =============================================================================
+
+insert into public.maternidades (nome, sigla) values
+  ('Brígida', 'GNDI'),
+  ('Santa Cruz', 'HSC'),
+  ('Nossa Senhora das Graças', 'HNSG'),
+  ('Curitiba', 'CWB'),
+  ('Fátima', 'HNSF')
+on conflict (sigla) do nothing;

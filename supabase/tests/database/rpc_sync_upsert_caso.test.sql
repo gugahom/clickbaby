@@ -4,7 +4,7 @@
 -- (H1) prova que essa fronteira está fechada.
 
 begin;
-select plan(17);
+select plan(24);
 
 create function pg_temp.levanta_erro(p_sql text) returns boolean
 language plpgsql
@@ -39,15 +39,19 @@ values ('Maternidade Sync Test', 'SYNCTEST');
 
 set local role service_role;
 
-select public.sync_upsert_caso(
-  'evt-completo-001',
-  'Mãe Sync Completo',
-  'Bebê Completo',
-  (select id from public.pacotes where slug = 'basic'),
-  (select id from public.maternidades where sigla = 'SYNCTEST'),
-  now(),
-  '5',
-  false
+select is(
+  public.sync_upsert_caso(
+    'evt-completo-001',
+    'Mãe Sync Completo',
+    'Bebê Completo',
+    (select id from public.pacotes where slug = 'basic'),
+    (select id from public.maternidades where sigla = 'SYNCTEST'),
+    now(),
+    '5',
+    false
+  ),
+  'caso_criado',
+  'A0: retorna caso_criado'
 );
 
 reset role;
@@ -89,15 +93,19 @@ select is(
 
 set local role service_role;
 
-select public.sync_upsert_caso(
-  'evt-rascunho-002',
-  'Mãe Sync Rascunho',
-  'Bebê Rascunho',
-  null,
-  (select id from public.maternidades where sigla = 'SYNCTEST'),
-  now(),
-  '7',
-  false
+select is(
+  public.sync_upsert_caso(
+    'evt-rascunho-002',
+    'Mãe Sync Rascunho',
+    'Bebê Rascunho',
+    null,
+    (select id from public.maternidades where sigla = 'SYNCTEST'),
+    now(),
+    '7',
+    false
+  ),
+  'rascunho_criado',
+  'B0: retorna rascunho_criado'
 );
 
 reset role;
@@ -138,15 +146,19 @@ set local role service_role;
 -- previsao_em não precisa ser idêntico ao da primeira chamada aqui (só
 -- importa em D, a idempotência) -- now() serve; service_role não tem (e
 -- não deveria ter) SELECT em casos, só a função via SECURITY DEFINER.
-select public.sync_upsert_caso(
-  'evt-rascunho-002',
-  'Mãe Sync Rascunho',
-  'Bebê Rascunho',
-  (select id from public.pacotes where slug = 'basic'),
-  (select id from public.maternidades where sigla = 'SYNCTEST'),
-  now(),
-  '7',
-  false
+select is(
+  public.sync_upsert_caso(
+    'evt-rascunho-002',
+    'Mãe Sync Rascunho',
+    'Bebê Rascunho',
+    (select id from public.pacotes where slug = 'basic'),
+    (select id from public.maternidades where sigla = 'SYNCTEST'),
+    now(),
+    '7',
+    false
+  ),
+  'caso_atualizado',
+  'C0: rascunho resolvido retorna caso_atualizado'
 );
 
 reset role;
@@ -198,15 +210,19 @@ select set_config('sync_test.previsao_completo', (
 
 set local role service_role;
 
-select public.sync_upsert_caso(
-  'evt-completo-001',
-  'Mãe Sync Completo',
-  'Bebê Completo',
-  (select id from public.pacotes where slug = 'basic'),
-  (select id from public.maternidades where sigla = 'SYNCTEST'),
-  current_setting('sync_test.previsao_completo')::timestamptz,
-  '5',
-  false
+select is(
+  public.sync_upsert_caso(
+    'evt-completo-001',
+    'Mãe Sync Completo',
+    'Bebê Completo',
+    (select id from public.pacotes where slug = 'basic'),
+    (select id from public.maternidades where sigla = 'SYNCTEST'),
+    current_setting('sync_test.previsao_completo')::timestamptz,
+    '5',
+    false
+  ),
+  'sem_efeito',
+  'D0: reprocessar sem mudança retorna sem_efeito'
 );
 
 reset role;
@@ -228,8 +244,10 @@ select is(
 
 set local role service_role;
 
-select public.sync_upsert_caso(
-  'evt-completo-001', null, null, null, null, null, null, true
+select is(
+  public.sync_upsert_caso('evt-completo-001', null, null, null, null, null, null, true),
+  'caso_cancelado',
+  'E0: cancelamento efetivo retorna caso_cancelado'
 );
 
 reset role;
@@ -263,8 +281,10 @@ select is(
 
 set local role service_role;
 
-select public.sync_upsert_caso(
-  'evt-nunca-existiu-999', null, null, null, null, null, null, true
+select is(
+  public.sync_upsert_caso('evt-nunca-existiu-999', null, null, null, null, null, null, true),
+  'sem_efeito',
+  'F0: cancelar evento inexistente retorna sem_efeito'
 );
 
 reset role;
@@ -296,15 +316,19 @@ set local role service_role;
 
 -- Re-sync manda um dado de calendário atualizado (mae_nome corrigido), mas
 -- não sabe nem deveria saber que o caso já avançou operacionalmente.
-select public.sync_upsert_caso(
-  'evt-em-andamento-003',
-  'Mãe Sync Em Andamento (nome corrigido)',
-  null,
-  (select id from public.pacotes where slug = 'basic'),
-  (select id from public.maternidades where sigla = 'SYNCTEST'),
-  now(),
-  '3',
-  false
+select is(
+  public.sync_upsert_caso(
+    'evt-em-andamento-003',
+    'Mãe Sync Em Andamento (nome corrigido)',
+    null,
+    (select id from public.pacotes where slug = 'basic'),
+    (select id from public.maternidades where sigla = 'SYNCTEST'),
+    now(),
+    '3',
+    false
+  ),
+  'caso_atualizado',
+  'G0: atualização de dado retorna caso_atualizado'
 );
 
 reset role;

@@ -49,7 +49,10 @@ const PACOTES_CANONICOS = [
 // Siglas de maternidade conhecidas (seção 7 do CLAUDE.md).
 const SIGLAS_MATERNIDADE = ["GNDI", "HSC", "HNSG", "HNSF", "CWB"] as const;
 
-function normalizar(texto: string): string {
+// Exportado para o sync (supabase/functions/sync-calendar) reusar na hora
+// de casar pacote_bruto (saída deste parser) contra pacotes.nome no banco
+// — mesma regra de normalização dos dois lados, sem duplicar a lógica.
+export function normalizar(texto: string): string {
   return texto
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acento: ÁLBUM -> ALBUM
