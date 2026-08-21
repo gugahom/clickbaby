@@ -63,18 +63,22 @@ O pacote define quais etapas o caso tem. Estrutura cumulativa, confirmada com o 
 | MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal |       | 7 dias |
 | MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal | ✓     | 7 dias |
 | BIRTH                    |         | ✓          |       |            | ✓ (venda)      |       | 24h    |
+| BIRTH + REELS            |         | ✓          |       |            | ✓ (venda)      |       | 24h    |
 
-- **Entrada existe em todos menos BIRTH.**
+- **Entrada existe em todos menos BIRTH e BIRTH + REELS.**
 - **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a
   venda. SLA de 24h (janela curta) faz sua edição subir na fila — ver seção 9.
+- **BIRTH + REELS** é comercialmente distinto do BIRTH (a tentativa de venda já sai com o
+  reels incluído), mesmo tendo exatamente as mesmas etapas e o mesmo SLA — por isso é um
+  pacote próprio no cadastro, não uma variação do BIRTH.
 - "Vídeo de venda" vs "vídeo de contrato" é a mesma etapa no fluxo de trabalho; a diferença
   está no pacote, não vira campo separado.
 - **EVENTO, NEWBORN e combinações ("OUTROS")** ainda não estão no seed. Estratégia definida:
   quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
   **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
   sem mudança de modelo. Não há composição de múltiplos pacotes num caso.
-- **SLA:** 48h na maioria; MASTER e MASTER + ÁLBUM em 7 dias (provisório, ajustável); BIRTH
-  em 24h. O relógio começa quando a etapa de nascimento é concluída. Ver seção 9.
+- **SLA:** 48h na maioria; MASTER e MASTER + ÁLBUM em 7 dias (provisório, ajustável); BIRTH e
+  BIRTH + REELS em 24h. O relógio começa quando a etapa de nascimento é concluída. Ver seção 9.
 
 ---
 
@@ -484,10 +488,15 @@ Ordem de execução a partir daqui:
 
 O Quadro é a tela da demo. É a única que precisa ser excelente na fase 1.
 
-**Dívida explícita — RLS de `casos` (item 2 acima):** as policies `casos_update_adm` e
-`casos_update_atendimento_confirma_entrega` liberam UPDATE de **linha inteira** para adm e
-atendimento, como medida interina enquanto as RPCs de transição (item 3) não existem. Quando
-`confirmar_entrega` e `cancelar_caso` forem implementadas, o UPDATE direto de `casos` deve ser
-**revogado, não afrouxado** — a escrita passa a ser exclusivamente via RPC, restrita por
-coluna. Não é para essas policies evoluírem para algo mais granular; é para deixarem de
-existir.
+**Dívida fechada — UPDATE direto de `casos`:** a policy `casos_update_atendimento_confirma_entrega`
+foi derrubada (atendimento age só via RPC agora). `casos_update_adm` continua existindo, mas
+`status_operacional`, `status_entrega` e `motivo_cancelamento` perderam o privilégio de
+UPDATE por coluna para `authenticated` — nem adm consegue mudar esses três por UPDATE direto
+mais, só pelas RPCs de transição. Ver migration `20260821065740`.
+
+**Dívida nova, menor — `situacao_clinica` e `termo_status`:** continuam com UPDATE direto
+liberado para adm, não porque sejam "dado" (são estado, no sentido amplo), mas porque ainda
+não têm RPC própria (`atualizar_situacao_clinica` está prevista na seção 4 e não existe;
+`termo_status` nem RPC prevista tem). Quando ganharem RPC, o mesmo tratamento de
+`status_operacional` se aplica: revogar o privilégio de coluna, não só parar de usar o UPDATE
+direto.

@@ -21,6 +21,27 @@ insert into public.pacotes (nome, slug, prazo_entrega) values
   ('MASTER + ÁLBUM', 'master-album',          interval '7 days'),
   ('BIRTH',          'birth',                 interval '24 hours');
 
+-- BIRTH + REELS entra por INSERT idempotente, não na lista acima: também é
+-- inserido pela migration 20260821090808 (necessária porque o remoto já
+-- tinha os 8 pacotes originais quando este 9º foi adicionado). Nesta ordem
+-- (migrations sempre antes do seed), a migration insere primeiro num
+-- `db reset` do zero e este bloco vira no-op — sem isso, duplicaria a
+-- linha e quebraria o reset por causa da unique em pacotes.slug.
+insert into public.pacotes (nome, slug, prazo_entrega)
+values ('BIRTH + REELS', 'birth-reels', interval '24 hours')
+on conflict (slug) do nothing;
+
+insert into public.pacote_etapas (pacote_id, etapa_tipo, ordem, obrigatoria)
+select p.id, e.etapa_tipo, e.ordem, true
+from public.pacotes p
+cross join (
+  values
+    ('nascimento'::public.etapa_tipo, 1),
+    ('edicao_video'::public.etapa_tipo, 2)
+) as e(etapa_tipo, ordem)
+where p.slug = 'birth-reels'
+on conflict (pacote_id, etapa_tipo) do nothing;
+
 with etapas(slug, etapa_tipo, ordem) as (
   values
     ('basic', 'entrada'::public.etapa_tipo, 1),

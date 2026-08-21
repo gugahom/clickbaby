@@ -8,15 +8,15 @@
 -- faz: reset aplica migrations, depois seed, depois os testes).
 
 begin;
-select plan(12);
+select plan(13);
 
 insert into public.maternidades (nome, sigla)
 values ('Maternidade Seed Test', 'SEEDTEST');
 
 select is(
   (select count(*)::int from public.pacotes),
-  8,
-  'seed cria os 8 pacotes'
+  9,
+  'seed cria os 9 pacotes'
 );
 
 select is(
@@ -27,8 +27,8 @@ select is(
 
 select is(
   (select array_agg(slug order by slug) from public.pacotes where prazo_entrega = interval '24 hours'),
-  array['birth'],
-  'BIRTH tem prazo de 24h'
+  array['birth', 'birth-reels'],
+  'BIRTH e BIRTH + REELS têm prazo de 24h'
 );
 
 select is(
@@ -89,6 +89,12 @@ select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth'),
   array['nascimento', 'edicao_video']::public.etapa_tipo[],
   'BIRTH gera 2 etapas sem entrada: nascimento, edicao_video'
+);
+
+select is(
+  (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth-reels'),
+  array['nascimento', 'edicao_video']::public.etapa_tipo[],
+  'BIRTH + REELS gera 2 etapas sem entrada: nascimento, edicao_video (igual BIRTH, pacote comercialmente distinto)'
 );
 
 select * from finish();
