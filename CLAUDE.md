@@ -453,7 +453,6 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
   ordenação da fila é por urgência de prazo derivada do pacote, o valor vem do seed.
 - Não crie tela de registro de ponto ou cálculo de jornada — está explicitamente fora de escopo.
 - Não deixe o sync do Calendar assumir pacote/maternidade ambíguos — vira rascunho pendente.
-- Não use `supabase db reset` — não há Docker local neste projeto (seção 11).
 
 ---
 
@@ -476,3 +475,11 @@ Ordem de execução a partir daqui:
 7. Script de importação da planilha histórica (pós-MVP)
 
 O Quadro é a tela da demo. É a única que precisa ser excelente na fase 1.
+
+**Dívida explícita — RLS de `casos` (item 2 acima):** as policies `casos_update_adm` e
+`casos_update_atendimento_confirma_entrega` liberam UPDATE de **linha inteira** para adm e
+atendimento, como medida interina enquanto as RPCs de transição (item 3) não existem. Quando
+`confirmar_entrega` e `cancelar_caso` forem implementadas, o UPDATE direto de `casos` deve ser
+**revogado, não afrouxado** — a escrita passa a ser exclusivamente via RPC, restrita por
+coluna. Não é para essas policies evoluírem para algo mais granular; é para deixarem de
+existir.
