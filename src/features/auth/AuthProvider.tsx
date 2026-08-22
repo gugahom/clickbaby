@@ -57,7 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       pessoa,
       sair: async () => {
-        await supabase.auth.signOut()
+        const { error } = await supabase.auth.signOut()
+        // Sessão órfã: o JWT ainda é válido (é stateless, dura até expirar),
+        // mas o usuário não existe mais no servidor — acontece sempre que um
+        // `db reset` recria auth.users com ids novos. Nesse caso o /logout
+        // falha e o supabase-js PRESERVA o token local, prendendo a pessoa
+        // exatamente na tela que existe para tirá-la desse estado.
+        // scope 'local' descarta o token sem depender do servidor.
+        if (error) await supabase.auth.signOut({ scope: 'local' })
       },
     }),
     [carregando, session, pessoa],

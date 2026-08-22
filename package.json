@@ -9,9 +9,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:reset": "supabase db reset && node scripts/seed-dev-auth.mjs",
+    "db:reset": "supabase db reset && node scripts/seed-dev-auth.mjs && node scripts/seed-casos.mjs",
     "seed:auth": "node scripts/seed-dev-auth.mjs",
-    "gen:types": "supabase gen types typescript --local > src/types/database.ts"
+    "gen:types": "supabase gen types typescript --local > src/types/database.ts",
+    "seed:casos": "node scripts/seed-casos.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
