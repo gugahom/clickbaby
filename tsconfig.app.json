@@ -16,6 +16,18 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Alias de import — espelhado em vite.config.ts.
+     * Sem baseUrl: deprecado no TS 6; os paths resolvem relativos a este arquivo. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* Estrito, conforme a seção 5 do CLAUDE.md ("TypeScript estrito. Sem any") */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
