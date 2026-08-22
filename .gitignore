@@ -32,3 +32,6 @@ supabase/.temp
 supabase/snippets
 .env.functions
 referencia_v0/
+
+# Worktrees de agente (checkouts completos, com o próprio node_modules/dist)
+.claude/worktrees/
