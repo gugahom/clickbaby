@@ -65,10 +65,29 @@ export function useTransferirEtapa() {
   )
 }
 
+/**
+ * confirmar_entrega recusa um caso sem nenhum entregável registrado (a RPC
+ * exige pelo menos um). Decisão explícita do cliente, por hora: o link real
+ * continua na planilha interna da equipe, fora do sistema — a Morgana não
+ * digita URL nenhuma aqui, só confirma. Por isso o botão de confirmar
+ * encadeia duas RPCs: registra um entregável placeholder e, na sequência,
+ * confirma a entrega. `p_tipo` é arbitrário (nenhum dos 5 valores do enum
+ * descreve "link está em outro lugar"; `google_photos` é só o mais comum).
+ * Quando existir um fluxo de colar o link de verdade, isto sai daqui e vira
+ * um passo explícito na tela (ver TODO em CasoDetalhe/AcoesDoCaso).
+ */
+const ENTREGAVEL_PLACEHOLDER_URL =
+  'Link controlado na planilha interna da equipe (ainda não integrado ao sistema)'
+
 export function useConfirmarEntrega() {
-  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
-    chamar('confirmar_entrega', { p_caso_id: casoId }),
-  )
+  return useAcaoDoQuadro<{ casoId: string }>(async ({ casoId }) => {
+    await chamar('registrar_entregavel', {
+      p_caso_id: casoId,
+      p_tipo: 'google_photos',
+      p_url: ENTREGAVEL_PLACEHOLDER_URL,
+    })
+    await chamar('confirmar_entrega', { p_caso_id: casoId })
+  })
 }
 
 export function useCancelarCaso() {
