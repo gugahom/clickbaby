@@ -6,7 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // supabase/functions é Deno, não navegador: tem o próprio deno.json e é
+  // checado por `deno lint`/`deno test`. Rodar as regras do front ali só
+  // produzia ruído (globals errados, `any` que vem da API do Calendar).
+  globalIgnores(['dist', 'supabase/functions']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
