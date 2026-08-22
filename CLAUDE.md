@@ -235,6 +235,60 @@ Organize por **feature**, não por tipo de arquivo. Nada de pastas globais `comp
 - Toda tabela com RLS habilitado. Sem exceção, nem em tabelas de cadastro.
 - Migrations são imutáveis depois de commitadas. Correção é uma migration nova.
 - **Nunca** altere schema pelo painel web do Supabase. Sempre via migration versionada.
+- **Todo objeto novo precisa de `GRANT` explícito** na migration que o cria — ver
+  a seção de privilégios logo abaixo.
+
+### Privilégios — RLS não basta, o GRANT é a segunda camada
+
+A migration `20260822072158` zerou `anon` no schema `public` e apertou
+`authenticated` para o mínimo que cada tabela precisa. As regras que ficam:
+
+- **`anon` não tem nada.** Só `USAGE` no schema. O app não precisa dele: o login é
+  GoTrue (não passa pelo PostgREST) e nenhuma query roda antes da sessão existir.
+- **`authenticated` recebe só o verbo que a policy pressupõe.** Leitura pura
+  (`caso_etapas`, `handoffs`, `entregaveis`, `eventos`, `quadro_casos`) leva só
+  `SELECT`; cadastros levam os quatro verbos porque a policy `*_escrita_adm` é
+  `FOR ALL`; `casos` leva `SELECT` mais `UPDATE` das 9 colunas de dado.
+- **`TRUNCATE` não vai para ninguém.** É o único verbo de escrita que policy
+  nenhuma filtra — RLS não protege contra ele.
+- **`service_role` é o papel confiável** (Edge Function do sync) e não é tocado.
+
+**Ao criar tabela, view ou RPC nova, conceda explicitamente.** Os default
+privileges foram fechados justamente para o objeto não nascer aberto; o preço é
+que esquecer o `GRANT` faz o app não enxergar o objeto. O erro aparece primeiro
+no local, que é o comportamento desejado.
+
+Três armadilhas, todas já verificadas na prática:
+
+1. **Funções nascem com `EXECUTE` para `PUBLIC`.** Revogar de `anon` e
+   `authenticated` não fecha nada — os dois herdam. O revoke tem que incluir
+   `PUBLIC`.
+2. **As policies chamam `eh_pessoa_ativa()`/`eh_adm()`/`eh_atendimento()` e rodam
+   com o privilégio de quem consulta.** Sem `EXECUTE` nesses três helpers, toda
+   leitura do app morre. Nunca os revogue de `authenticated`.
+3. **Funções de trigger não exigem `EXECUTE`** de quem dispara o trigger.
+   `set_updated_at` e `gerar_caso_etapas` ficam fechadas e os triggers funcionam.
+
+**RPC `SECURITY DEFINER` que não valida o chamador precisa do `EXECUTE` fechado.**
+É o caso de `sync_upsert_caso`, que roda sem usuário logado e por isso não pode
+checar `auth.uid()` — só `service_role`. E atenção: `drop function` + `create
+function` numa migration posterior **reaplica os default privileges** e pode
+reabrir o acesso. Foi exatamente o que aconteceu entre as migrations
+`20260821100857` e `20260821102004`, e ficou explorável em produção.
+
+### Como testar privilégio: as duas direções precisam de guarda diferente
+
+- **"revoguei demais"** → o pgTAP local pega. Se um `SELECT` necessário sumir, o
+  teste e o app quebram na hora.
+- **"o remoto tem mais do que eu pedi"** → o pgTAP local é **cego**. Rode
+  `npm run seguranca`, que faz as duas coisas:
+  - `npm run auditar:privilegios` — diff do dump do remoto contra
+    `supabase/seguranca/privilegios-esperados.txt`. Esse arquivo **é** a política:
+    linha nova num diff de PR significa acesso novo, revise como revisaria código.
+  - `npm run sondar:anon` — caixa-preta com a anon key, confirma que `anon` é
+    negado em toda tabela e toda RPC. Nenhuma sonda escreve.
+
+Rode as duas **depois de todo `db push` que toque schema**.
 
 ### Convenções de frontend
 

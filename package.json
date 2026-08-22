@@ -12,7 +12,10 @@
     "db:reset": "supabase db reset && node scripts/seed-dev-auth.mjs && node scripts/seed-casos.mjs",
     "seed:auth": "node scripts/seed-dev-auth.mjs",
     "gen:types": "supabase gen types typescript --local > src/types/database.ts",
-    "seed:casos": "node scripts/seed-casos.mjs"
+    "seed:casos": "node scripts/seed-casos.mjs",
+    "auditar:privilegios": "node scripts/auditar-privilegios.mjs",
+    "sondar:anon": "node scripts/sondar-anon.mjs",
+    "seguranca": "node scripts/auditar-privilegios.mjs && node scripts/sondar-anon.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
