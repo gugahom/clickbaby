@@ -47,17 +47,24 @@ select 'Mãe Cancelar OK', (select id from public.pacotes where slug = 'basic'),
 insert into public.casos (mae_nome, pacote_id, maternidade_id)
 select 'Mãe Cancelar RoleErro', (select id from public.pacotes where slug = 'basic'), (select id from public.maternidades where sigla = 'TERMTEST');
 
-insert into public.entregaveis (caso_id, tipo, url)
-select id, 'google_photos', 'https://fixture.example/confirma-ok'
-from public.casos where mae_nome = 'Mãe Confirma OK';
-
-
 -- =============================================================================
--- A. confirmar_entrega — caminho positivo (atendimento, caso com link)
+-- A. Encadeamento real: registrar_entregavel (operador) -> confirmar_entrega
+-- (atendimento). Antes disso a fixture inseria o entregável direto por
+-- INSERT, bypassando RLS — agora é a RPC de verdade, provando que as duas
+-- se encaixam (registrar_entregavel existe exatamente pra confirmar_entrega
+-- deixar de ser um botão morto).
 -- =============================================================================
+
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Operador Teste Terminal'), true);
+set local role authenticated;
+
+select public.registrar_entregavel(
+  (select id from public.casos where mae_nome = 'Mãe Confirma OK'),
+  'google_photos',
+  'https://fixture.example/confirma-ok'
+);
 
 select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste Terminal'), true);
-set local role authenticated;
 
 select public.confirmar_entrega((select id from public.casos where mae_nome = 'Mãe Confirma OK'));
 
