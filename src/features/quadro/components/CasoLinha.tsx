@@ -4,6 +4,7 @@ import { Chevron } from '@/components/ui/icones'
 import { formatarHora } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
+import { useRelogioDeMinuto } from '../lib/useRelogio'
 import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
 
@@ -17,7 +18,10 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   const idPainel = useId()
   const idCabecalho = useId()
 
-  const sla = estadoSla(caso)
+  // O relógio faz o rótulo do SLA andar sozinho: sem ele, um caso aberto na
+  // tela mostraria o prazo congelado no instante em que carregou.
+  const agora = useRelogioDeMinuto()
+  const sla = estadoSla(caso, agora)
   const cor = corDoCaso(caso.corCalendar)
   const hora = formatarHora(caso.previsaoEm)
   const etapaAtual = etapas.find((e) => e.status === 'em_andamento')

@@ -6,6 +6,7 @@ type LinhaEtapa = Database['public']['Tables']['caso_etapas']['Row']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
 export type StatusEtapa = Database['public']['Enums']['status_etapa']
 export type StatusOperacional = Database['public']['Enums']['status_operacional']
+export type StatusEntrega = Database['public']['Enums']['status_entrega']
 export type SituacaoClinica = Database['public']['Enums']['situacao_clinica']
 
 /**
@@ -27,6 +28,7 @@ export interface CasoQuadro {
   observacao: string | null
   situacaoClinica: SituacaoClinica
   statusOperacional: StatusOperacional
+  statusEntrega: StatusEntrega
   pacoteNome: string | null
   pacoteSlug: string | null
   prazoEntregaHoras: number | null
@@ -49,6 +51,8 @@ export interface EtapaQuadro {
   status: StatusEtapa
   ordem: number
   observacao: string | null
+  /** Necessário para o handoff: transferir_etapa exige responsável atual. */
+  responsavelId: string | null
   iniciadoEm: string | null
   concluidoEm: string | null
   estacao: string | null
@@ -82,6 +86,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     observacao: linha.observacao,
     situacaoClinica: linha.situacao_clinica ?? 'aguardando',
     statusOperacional: linha.status_operacional ?? 'agendado',
+    statusEntrega: linha.status_entrega ?? 'pendente',
     pacoteNome: linha.pacote_nome,
     pacoteSlug: linha.pacote_slug,
     prazoEntregaHoras: linha.prazo_entrega_horas,
@@ -110,6 +115,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     status: linha.status,
     ordem: linha.ordem,
     observacao: linha.observacao,
+    responsavelId: linha.responsavel_id,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     estacao: linha.estacao,

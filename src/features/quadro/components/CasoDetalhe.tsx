@@ -1,6 +1,6 @@
 import clsx from 'clsx'
-import { Botao } from '@/components/ui/Botao'
 import { formatarDataHora } from '@/lib/formato'
+import { AcoesDoCaso } from './AcoesDoCaso'
 import type { EstadoSla } from '../lib/sla'
 import {
   ROTULO_ETAPA,
@@ -17,14 +17,14 @@ interface PropsCasoDetalhe {
 }
 
 /**
- * Painel que expande no lugar. Estrutura herdada da referência (observações →
- * histórico de etapas → ações), com uma diferença: as AÇÕES desta fatia são
- * somente leitura.
+ * Painel que expande no lugar: observações -> histórico de etapas -> ações,
+ * estrutura herdada da referência da v0.
  *
- * Os botões existem desabilitados de propósito, para o layout já ser julgado
- * com eles. Quando a próxima fatia chegar, cada um chama uma RPC
- * (iniciar_etapa / concluir_etapa / transferir_etapa) — nunca `.update()`
- * direto e nunca mutação de estado local, que é como a v0 os implementava.
+ * O histórico e as ações são listas separadas de propósito. O histórico
+ * responde "o que já aconteceu" (inclui etapa concluída, com responsável e
+ * horário); as ações respondem "o que dá para fazer agora" e escondem o que já
+ * terminou. Juntar as duas faria a linha de uma etapa concluída carregar botões
+ * mortos — caro no mobile, onde o espaço é o recurso escasso.
  */
 export function CasoDetalhe({ caso, etapas, sla }: PropsCasoDetalhe) {
   return (
@@ -91,24 +91,11 @@ export function CasoDetalhe({ caso, etapas, sla }: PropsCasoDetalhe) {
         )}
       </section>
 
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <Botao disabled title="Chega na próxima fatia (RPC iniciar_etapa)">
-          Iniciar etapa
-        </Botao>
-        <Botao disabled title="Chega na próxima fatia (RPC concluir_etapa)">
-          Concluir etapa
-        </Botao>
-        <Botao
-          variante="fantasma"
-          disabled
-          title="Chega na próxima fatia (RPC transferir_etapa)"
-        >
-          Handoff
-        </Botao>
-        <span className="text-xs text-muted-foreground">
-          Somente leitura nesta fatia — as ações passam por RPC.
-        </span>
-      </div>
+      <section>
+        <TituloSecao>Ações</TituloSecao>
+        <AcoesDoCaso caso={caso} etapas={etapas} />
+      </section>
+
     </div>
   )
 }

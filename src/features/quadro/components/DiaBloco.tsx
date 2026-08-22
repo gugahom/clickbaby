@@ -19,12 +19,20 @@ export function DiaBloco({
   abertoInicialmente,
 }: PropsDiaBloco) {
   const [aberto, setAberto] = useState(abertoInicialmente)
+  const [mostrarResolvidos, setMostrarResolvidos] = useState(false)
   const idPainel = useId()
   const idCabecalho = useId()
+  const idResolvidos = useId()
 
   const rotulo = bloco.dia === null ? 'Sem data prevista' : rotularDia(bloco.dia, hoje)
   const atraso = bloco.dia === null ? 0 : diasAtras(bloco.dia, hoje)
   const emAtraso = atraso > 0
+
+  // Caso terminal sai da lista ativa e vai para a gaveta de resolvidos: o dia
+  // segue visível (invariante 3.5 — só sai quando TODOS resolverem), mas o que
+  // ainda precisa de ação fica no topo, sem competir com o que já acabou.
+  const ativos = bloco.casos.filter((c) => !c.ehTerminal)
+  const resolvidos = bloco.casos.filter((c) => c.ehTerminal)
 
   return (
     <section className="border-b border-border last:border-b-0">
@@ -76,14 +84,56 @@ export function DiaBloco({
       </h2>
 
       <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
-        {aberto &&
-          bloco.casos.map((caso) => (
-            <CasoLinha
-              key={caso.id}
-              caso={caso}
-              etapas={etapasPorCaso.get(caso.id) ?? []}
-            />
-          ))}
+        {aberto && (
+          <>
+            {ativos.map((caso) => (
+              <CasoLinha
+                key={caso.id}
+                caso={caso}
+                etapas={etapasPorCaso.get(caso.id) ?? []}
+              />
+            ))}
+
+            {resolvidos.length > 0 && (
+              <div className="border-t border-concluido/25 bg-concluido/8">
+                <button
+                  type="button"
+                  onClick={() => setMostrarResolvidos((v) => !v)}
+                  aria-expanded={mostrarResolvidos}
+                  aria-controls={idResolvidos}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-concluido/12 md:px-4"
+                >
+                  {/*
+                    "Resolvidos", não "concluídos": um caso cancelado cai aqui e
+                    nunca foi concluído. O contador do cabeçalho usa a palavra
+                    "concluídos" por herança da fatia anterior — vale alinhar os
+                    dois num passe futuro.
+                  */}
+                  <span className="text-sm font-medium text-concluido">
+                    Resolvidos neste dia ({resolvidos.length})
+                  </span>
+                  <Chevron
+                    className={clsx(
+                      'size-4 flex-shrink-0 text-concluido transition-transform',
+                      mostrarResolvidos && 'rotate-180',
+                    )}
+                  />
+                </button>
+
+                <div id={idResolvidos} hidden={!mostrarResolvidos}>
+                  {mostrarResolvidos &&
+                    resolvidos.map((caso) => (
+                      <CasoLinha
+                        key={caso.id}
+                        caso={caso}
+                        etapas={etapasPorCaso.get(caso.id) ?? []}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </section>
   )

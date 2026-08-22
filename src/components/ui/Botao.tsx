@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { ButtonHTMLAttributes } from 'react'
 
-type Variante = 'primario' | 'contorno' | 'fantasma'
+type Variante = 'primario' | 'contorno' | 'fantasma' | 'destrutivo'
 
 interface PropsBotao extends ButtonHTMLAttributes<HTMLButtonElement> {
   variante?: Variante
@@ -11,6 +11,8 @@ const VARIANTES: Record<Variante, string> = {
   primario: 'bg-primary text-primary-foreground hover:opacity-90',
   contorno: 'border border-border text-foreground hover:bg-muted',
   fantasma: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  // Só para o que encerra o caso sem desfazer: confirmar entrega e cancelar.
+  destrutivo: 'bg-atrasado text-background hover:opacity-90',
 }
 
 /**
