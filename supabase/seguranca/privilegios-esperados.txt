@@ -1,0 +1,50 @@
+# Política de privilégios do schema public — anon e authenticated.
+#
+# Gerado por `node scripts/auditar-privilegios.mjs --atualizar`, mas NÃO é
+# um artefato descartável: é a política em si. Uma linha nova aqui num diff
+# de PR significa que alguém ganhou acesso — revise como revisaria código.
+#
+# service_role e postgres ficam de fora de propósito (papéis confiáveis).
+# Ver o cabeçalho de scripts/auditar-privilegios.mjs.
+
+GRANT ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) TO authenticated;
+GRANT ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) TO authenticated;
+GRANT ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.eh_adm() TO authenticated;
+GRANT ALL ON FUNCTION public.eh_atendimento() TO authenticated;
+GRANT ALL ON FUNCTION public.eh_pessoa_ativa() TO authenticated;
+GRANT ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) TO authenticated;
+GRANT SELECT ON TABLE public.caso_etapas TO authenticated;
+GRANT SELECT ON TABLE public.casos TO authenticated;
+GRANT SELECT ON TABLE public.entregaveis TO authenticated;
+GRANT SELECT ON TABLE public.eventos TO authenticated;
+GRANT SELECT ON TABLE public.handoffs TO authenticated;
+GRANT SELECT ON TABLE public.quadro_casos TO authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.escalas TO authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.maternidades TO authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.pacote_etapas TO authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.pacotes TO authenticated;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.pessoas TO authenticated;
+GRANT UPDATE(bebe_nome) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(cor_calendar) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(mae_nome) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(maternidade_id) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(observacao) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(pacote_id) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(previsao_em) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(situacao_clinica) ON TABLE public.casos TO authenticated;
+GRANT UPDATE(termo_status) ON TABLE public.casos TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+REVOKE ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.eh_adm() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.eh_atendimento() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.eh_pessoa_ativa() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.gerar_caso_etapas() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_upsert_caso(p_google_event_id text, p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_cor_calendar text, p_cancelado boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) FROM PUBLIC;
