@@ -100,7 +100,11 @@ function alvoLocal() {
 }
 
 function alvoRemoto() {
-  const env = readFileSync(join(raiz, '..', '..', '..', '.env'), 'utf8')
+  // `.env` fica na raiz do repositório, ao lado de package.json. O caminho
+  // subia três níveis porque este script nasceu dentro de um git worktree
+  // (.claude/worktrees/<nome>/scripts); fora dele, aquilo apontava para o
+  // diretório do usuário.
+  const env = readFileSync(join(raiz, '.env'), 'utf8')
   const pega = (chave) =>
     env.match(new RegExp(`^${chave}=(.*)$`, 'm'))?.[1]?.trim().replace(/\r$/, '')
   return { url: pega('VITE_SUPABASE_URL'), key: pega('VITE_SUPABASE_ANON_KEY') }
