@@ -1,16 +1,30 @@
 @import 'tailwindcss';
 
 /* =============================================================================
- * Tokens de tema.
+ * Tokens de tema — CLARO por padrão.
  *
- * A estrutura (variáveis semânticas em oklch + @theme inline mapeando para
- * classes utilitárias) vem da referência da v0. Os valores e a polaridade NÃO:
- * ali o default era claro e o escuro uma variação; aqui o escuro é o default,
- * porque metade da operação é noturna (seção 5 do CLAUDE.md) e a tela é usada
- * num corredor de maternidade às 3h.
+ * A tela substitui um quadro branco de vidro. O tema claro não é o escuro
+ * invertido: ele volta ao material original. Superfície de papel, tinta escura,
+ * e as cores do Calendar como traço de marcador.
  *
- * A "cara da Clickbaby" (cores e tipografia da marca) entra depois — estes são
- * neutros deliberados, para o layout ser julgado antes da identidade.
+ * A profundidade INVERTE em relação ao escuro. Lá, o card sobe afastando-se do
+ * fundo (fundo 0.17 -> card 0.21). Aqui não dá para subir acima do branco, então
+ * quem se afasta é o FUNDO: a página é um branco levemente quente e as linhas
+ * são branco puro. Sem isso, uma lista densa vira uma folha lisa e as linhas
+ * somem umas nas outras.
+ *
+ * Duas consequências que exigiram valores próprios, não conversão:
+ *   1. `--border` no escuro é branco a 12% — translúcido funciona porque a
+ *      luminância separa. No branco, translúcido desaparece: aqui a borda é
+ *      opaca e carrega a grade da lista sozinha.
+ *   2. As cores de estado no escuro vivem em L 0.68-0.83 (claras sobre fundo
+ *      escuro). No claro elas precisam do papel inverso, L 0.45-0.55, senão
+ *      verde e âmbar ficam ilegíveis sobre branco.
+ *
+ * O escuro segue definido em [data-tema="escuro"], desligado. A seção 5 do
+ * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é noturna";
+ * o cliente pediu branco. O bloco fica pronto para o dia em que o turno da
+ * noite pedir de volta.
  * ============================================================================= */
 
 @theme inline {
@@ -38,11 +52,40 @@
 }
 
 :root {
+  color-scheme: light;
+
+  /* O papel: branco quente na página, branco puro nas linhas. */
+  --background: oklch(0.985 0.004 85);
+  --card: oklch(1 0 0);
+
+  /* Tinta, não preto puro: #000 sobre branco vibra sob luz de hospital. */
+  --foreground: oklch(0.25 0.012 265);
+  --card-foreground: oklch(0.25 0.012 265);
+
+  --muted: oklch(0.955 0.005 85);
+  --muted-foreground: oklch(0.47 0.012 265);
+  --border: oklch(0.865 0.006 265);
+  --ring: oklch(0.52 0.15 250);
+  --primary: oklch(0.52 0.15 250);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --concluido: oklch(0.5 0.13 152);
+  --andamento: oklch(0.5 0.14 250);
+  --atrasado: oklch(0.52 0.19 25);
+  --atencao: oklch(0.52 0.11 70);
+
+  --rascunho: oklch(0.45 0.09 75);
+  --rascunho-fundo: oklch(0.965 0.03 85);
+  --rascunho-borda: oklch(0.88 0.055 85);
+}
+
+/* Tema escuro — preservado, desligado. Ver a nota no topo. */
+:root[data-tema='escuro'] {
   color-scheme: dark;
 
   --background: oklch(0.17 0.008 260);
-  --foreground: oklch(0.97 0.003 260);
   --card: oklch(0.21 0.009 260);
+  --foreground: oklch(0.97 0.003 260);
   --card-foreground: oklch(0.97 0.003 260);
   --muted: oklch(0.27 0.01 260);
   --muted-foreground: oklch(0.72 0.012 260);
@@ -82,9 +125,10 @@
   }
 
   /* Foco sempre visível: a linha do caso é um header clicável de verdade,
-   * navegável por teclado. */
+   * navegável por teclado. No claro o anel precisa de offset positivo — sem o
+   * contraste de luminância do escuro, um anel embutido some na borda. */
   :focus-visible {
     outline: 2px solid var(--ring);
-    outline-offset: -2px;
+    outline-offset: 1px;
   }
 }
