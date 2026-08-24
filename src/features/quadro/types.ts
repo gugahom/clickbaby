@@ -40,8 +40,15 @@ export interface CasoQuadro {
   faltaMaternidade: boolean
   ehRascunho: boolean
   ehTerminal: boolean
+  /** Preenchido = está na UTI agora. Sai do bloco do dia e o SLA congela. */
+  utiDesde: string | null
+  naUti: boolean
+  slaPausado: boolean
+  utiHorasTotal: number
   etapasTotal: number
   etapasConcluidas: number
+  /** Serve para ordenar a aba Concluídos pelo que foi resolvido por último. */
+  updatedAt: string | null
 }
 
 export interface EtapaQuadro {
@@ -55,6 +62,8 @@ export interface EtapaQuadro {
   responsavelId: string | null
   iniciadoEm: string | null
   concluidoEm: string | null
+  /** Janela de pausa aberta. O tempo aqui não conta como trabalho. */
+  pausadoEm: string | null
   estacao: string | null
   responsavelNome: string | null
 }
@@ -98,8 +107,13 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     faltaMaternidade: linha.falta_maternidade ?? false,
     ehRascunho: linha.eh_rascunho ?? false,
     ehTerminal: linha.eh_terminal ?? false,
+    utiDesde: linha.uti_desde,
+    naUti: linha.na_uti ?? false,
+    slaPausado: linha.sla_pausado ?? false,
+    utiHorasTotal: linha.uti_horas_total ?? 0,
     etapasTotal: linha.etapas_total ?? 0,
     etapasConcluidas: linha.etapas_concluidas ?? 0,
+    updatedAt: linha.updated_at,
   }
 }
 
@@ -118,6 +132,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     responsavelId: linha.responsavel_id,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
+    pausadoEm: linha.pausado_em,
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
   }
@@ -140,6 +155,7 @@ export const ROTULO_STATUS_ETAPA: Record<StatusEtapa, string> = {
   em_andamento: 'Em andamento',
   concluida: 'Concluída',
   dispensada: 'Dispensada',
+  pausada: 'Pausada',
 }
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {

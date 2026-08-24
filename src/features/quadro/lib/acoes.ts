@@ -70,6 +70,53 @@ export function podeTransferir(etapa: EtapaQuadro): Disponibilidade {
   return OK
 }
 
+export function podePausar(etapa: EtapaQuadro): Disponibilidade {
+  // pausar_etapa só aceita em_andamento: pausar pendente não significa nada, e
+  // pausar concluída seria reabrir trabalho terminado por porta lateral.
+  if (etapa.status !== 'em_andamento') {
+    return { habilitada: false, motivo: 'Só pausa etapa em andamento.' }
+  }
+  return OK
+}
+
+export function podeMoverParaUti(caso: CasoQuadro): Disponibilidade {
+  if (caso.ehTerminal) {
+    return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  if (caso.naUti) {
+    return { habilitada: false, motivo: 'Já está na UTI.' }
+  }
+  return OK
+}
+
+export function podeRetornarDaUti(caso: CasoQuadro): Disponibilidade {
+  if (!caso.naUti) {
+    return { habilitada: false, motivo: 'O caso não está na UTI.' }
+  }
+  return OK
+}
+
+/**
+ * A etapa de vídeo pode não existir: só os pacotes com reels a trazem. Quando
+ * falta, o botão vira "Adicionar reels" (adicionar_reels); quando existe, vira
+ * "Editar reels", que é iniciar_etapa naquela etapa.
+ */
+export function podeAdicionarReels(
+  caso: CasoQuadro,
+  etapas: EtapaQuadro[],
+): Disponibilidade {
+  if (caso.ehTerminal) {
+    return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  if (caso.faltaPacote) {
+    return { habilitada: false, motivo: 'Rascunho sem pacote definido.' }
+  }
+  if (etapas.some((e) => e.tipo === 'edicao_video')) {
+    return { habilitada: false, motivo: 'Este caso já tem etapa de vídeo.' }
+  }
+  return OK
+}
+
 export function podeConfirmarEntrega(
   caso: CasoQuadro,
   papelSistema: string,

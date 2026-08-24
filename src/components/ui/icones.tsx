@@ -132,3 +132,19 @@ export function IconeHandoff({ className }: PropsIcone) {
     </svg>
   )
 }
+
+export function IconePause({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Preenchido como o play, e no mesmo lugar do grupo: os dois são a mesma
+          alavanca em estados opostos, não duas ações diferentes. */}
+      <rect x="7" y="5" width="3.5" height="14" rx="1" />
+      <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+    </svg>
+  )
+}

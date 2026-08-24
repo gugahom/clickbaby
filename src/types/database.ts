@@ -47,6 +47,8 @@ export type Database = {
           iniciado_em: string | null
           observacao: string | null
           ordem: number
+          pausa_acumulada: string
+          pausado_em: string | null
           responsavel_id: string | null
           status: Database["public"]["Enums"]["status_etapa"]
           subiu_por: string | null
@@ -65,6 +67,8 @@ export type Database = {
           iniciado_em?: string | null
           observacao?: string | null
           ordem?: number
+          pausa_acumulada?: string
+          pausado_em?: string | null
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
@@ -83,6 +87,8 @@ export type Database = {
           iniciado_em?: string | null
           observacao?: string | null
           ordem?: number
+          pausa_acumulada?: string
+          pausado_em?: string | null
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
@@ -153,6 +159,8 @@ export type Database = {
           status_operacional: Database["public"]["Enums"]["status_operacional"]
           termo_status: Database["public"]["Enums"]["termo_status"]
           updated_at: string
+          uti_acumulada: string
+          uti_desde: string | null
         }
         Insert: {
           bebe_nome?: string | null
@@ -172,6 +180,8 @@ export type Database = {
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
           termo_status?: Database["public"]["Enums"]["termo_status"]
           updated_at?: string
+          uti_acumulada?: string
+          uti_desde?: string | null
         }
         Update: {
           bebe_nome?: string | null
@@ -191,6 +201,8 @@ export type Database = {
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
           termo_status?: Database["public"]["Enums"]["termo_status"]
           updated_at?: string
+          uti_acumulada?: string
+          uti_desde?: string | null
         }
         Relationships: [
           {
@@ -636,6 +648,7 @@ export type Database = {
           maternidade_id: string | null
           maternidade_nome: string | null
           maternidade_sigla: string | null
+          na_uti: boolean | null
           nascimento_concluido_em: string | null
           observacao: string | null
           pacote_id: string | null
@@ -646,12 +659,15 @@ export type Database = {
           situacao_clinica:
             | Database["public"]["Enums"]["situacao_clinica"]
             | null
+          sla_pausado: boolean | null
           status_entrega: Database["public"]["Enums"]["status_entrega"] | null
           status_operacional:
             | Database["public"]["Enums"]["status_operacional"]
             | null
           termo_status: Database["public"]["Enums"]["termo_status"] | null
           updated_at: string | null
+          uti_desde: string | null
+          uti_horas_total: number | null
           vence_em: string | null
         }
         Relationships: [
@@ -673,6 +689,7 @@ export type Database = {
       }
     }
     Functions: {
+      adicionar_reels: { Args: { p_caso_id: string }; Returns: boolean }
       cancelar_caso: {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined
@@ -686,6 +703,17 @@ export type Database = {
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
+      pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      registrar_entregavel: {
+        Args: {
+          p_caso_id: string
+          p_tipo: Database["public"]["Enums"]["tipo_entregavel"]
+          p_url: string
+        }
+        Returns: undefined
+      }
+      retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }
       sync_upsert_caso: {
         Args: {
           p_bebe_nome: string
@@ -740,6 +768,7 @@ export type Database = {
         | "em_andamento"
         | "concluida"
         | "dispensada"
+        | "pausada"
       status_operacional:
         | "agendado"
         | "em_atendimento"
@@ -919,6 +948,7 @@ export const Constants = {
         "em_andamento",
         "concluida",
         "dispensada",
+        "pausada",
       ],
       status_operacional: [
         "agendado",
