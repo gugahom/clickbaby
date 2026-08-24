@@ -1,0 +1,22 @@
+-- =============================================================================
+-- status_etapa ganha 'pausada'.
+--
+-- POR QUE ESTA MIGRATION SÓ TEM UMA LINHA
+-- O Postgres não deixa um valor de enum ser USADO na mesma transação em que é
+-- adicionado, e o CLI aplica cada arquivo de migration numa transação própria.
+-- Então o `add value` fica sozinho aqui e quem usa 'pausada' (pausar_etapa e a
+-- retomada em iniciar_etapa) vem na migration seguinte.
+--
+-- Mesmo padrão da 20260821030717, que adicionou 'album' a etapa_tipo.
+--
+-- SEMÂNTICA
+-- 'pausada' é trabalho INTERROMPIDO, não trabalho terminado: a etapa já foi
+-- iniciada, parou, e vai voltar. O caso de uso é troca de turno — quem sai
+-- pausa, quem entra retoma. Difere de 'dispensada', que é trabalho que não vai
+-- acontecer, e de 'atribuida', que é trabalho que ainda não começou.
+--
+-- O tempo parado NÃO conta como tempo de trabalho: a migration seguinte
+-- adiciona o acumulador que o desconta do tempo de ciclo.
+-- =============================================================================
+
+alter type public.status_etapa add value 'pausada';
