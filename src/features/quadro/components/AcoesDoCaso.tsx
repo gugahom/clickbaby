@@ -1,7 +1,16 @@
 import { useState } from 'react'
+import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
+import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
 import { Dialogo } from '@/components/ui/Dialogo'
+import {
+  IconeCaneta,
+  IconeCheck,
+  IconeHandoff,
+  IconePlay,
+} from '@/components/ui/icones'
+import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
   useCancelarCaso,
@@ -20,7 +29,12 @@ import {
   podeEncerrarCaso,
 } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
-import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
+import {
+  ROTULO_ETAPA,
+  ROTULO_STATUS_ETAPA,
+  type CasoQuadro,
+  type EtapaQuadro,
+} from '../types'
 
 interface PropsAcoes {
   caso: CasoQuadro
@@ -30,19 +44,19 @@ interface PropsAcoes {
 type Confirmacao = { tipo: 'entrega' } | { tipo: 'cancelamento' } | null
 
 /**
- * Ações de escrita do Quadro. Todas chamam RPC; nenhuma toca estado local de
- * etapa (a fonte da verdade é o banco depois da chamada — as mutations
- * invalidam a query do Quadro e a tela redesenha).
+ * Etapas do caso: estado e ação na MESMA linha.
  *
- * Divisão de atrito, deliberada:
- *   - iniciar e concluir vão DIRETO. São o gesto frequente, feito de pé, com
- *     uma mão. Confirmação aqui empurraria a equipe de volta ao quadro branco.
- *   - confirmar entrega e cancelar pedem CONFIRMAÇÃO. Encerram o caso e as RPCs
- *     não têm desfazer.
+ * Antes eram duas listas — "Histórico de etapas" em cima, "Ações" embaixo, com
+ * os mesmos nomes repetidos e três botões de texto por etapa. A pessoa lia o
+ * nome numa lista e procurava o mesmo nome na outra para agir. Agora cada etapa
+ * é uma linha: o que aconteceu à esquerda, o que dá para fazer à direita.
  *
- * O gating por papel é de conveniência, não de segurança: as RPCs barram no
- * backend (confirmar_entrega e cancelar_caso exigem eh_atendimento() ou
- * eh_adm()). A tela só evita oferecer o que já se sabe que será negado.
+ * Isso corta metade da altura do card expandido — no mobile, a diferença entre
+ * ver duas etapas e ver o caso inteiro.
+ *
+ * O que NÃO mudou: escrita só por RPC, invalidação da query depois, zero estado
+ * local de etapa. O gating por papel também segue igual — as RPCs barram no
+ * backend, a tela só evita oferecer o que será negado.
  */
 export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const { pessoa } = useAuth()
@@ -52,6 +66,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
+  const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
   const concluir = useConcluirEtapa()
@@ -80,70 +95,115 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
   // painel de trás, e um alerta ali ficaria escondido atrás do backdrop.
-  const temDialogo = confirmacao !== null || handoffDe !== null
+  const temDialogo =
+    confirmacao !== null || handoffDe !== null || observacaoDe !== null
 
   return (
     <div className="space-y-3">
       {erro && !temDialogo && <Alerta onFechar={() => setErro(null)}>{erro}</Alerta>}
 
-      {/* Uma linha de ações por etapa: é a etapa que se inicia, conclui e
-          transfere, não o caso. */}
-      {etapas.length > 0 && (
-        <ul className="space-y-2">
+      {etapas.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {caso.faltaPacote
+            ? 'Sem pacote definido — as etapas são geradas quando o pacote for confirmado.'
+            : 'Nenhuma etapa gerada.'}
+        </p>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {etapas.map((etapa) => {
             const inicio = podeIniciar(etapa)
             const conclusao = podeConcluir(etapa)
             const handoff = podeTransferir(etapa)
-            const encerrada = etapa.status === 'concluida' || etapa.status === 'dispensada'
+            const encerrada =
+              etapa.status === 'concluida' || etapa.status === 'dispensada'
 
             return (
-              <li
-                key={etapa.id}
-                className="flex flex-wrap items-center gap-2 rounded bg-background/60 px-2 py-2"
-              >
+              <li key={etapa.id} className="flex items-center gap-3 py-1 pl-3 pr-1">
                 <span
-                  className={`flex-1 text-sm font-medium ${encerrada ? 'text-muted-foreground line-through' : ''}`}
-                >
-                  {ROTULO_ETAPA[etapa.tipo]}
-                </span>
+                  className={clsx('size-2 flex-shrink-0 rounded-full', pontoEtapa(etapa))}
+                  aria-hidden="true"
+                />
 
-                {/* Etapa terminada não mostra botão nenhum — some, não fica
-                    desabilitado ocupando espaço no mobile. */}
+                <div className="min-w-0 flex-1 py-1">
+                  <div
+                    className={clsx(
+                      'text-sm font-medium',
+                      encerrada && 'text-muted-foreground',
+                    )}
+                  >
+                    {ROTULO_ETAPA[etapa.tipo]}
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
+                    {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
+                    {etapa.estacao && (
+                      <span className="rounded bg-muted px-1 py-0.5 font-mono">
+                        {etapa.estacao}
+                      </span>
+                    )}
+                    {etapa.concluidoEm && (
+                      <span>· {formatarDataHora(etapa.concluidoEm)}</span>
+                    )}
+                  </div>
+                  {etapa.observacao && (
+                    <p className="mt-1 text-xs whitespace-pre-line text-foreground/80">
+                      {etapa.observacao}
+                    </p>
+                  )}
+                </div>
+
+                {/* Grupo de ações na própria linha. Etapa terminada perde os
+                    botões inteiros — no mobile, ícone morto é espaço perdido. */}
                 {!encerrada && (
-                  <>
-                    <Botao
+                  <div className="flex flex-shrink-0 items-center">
+                    <BotaoIcone
+                      rotulo="Iniciar etapa"
+                      tom="acao"
+                      disabled={ocupado || !inicio.habilitada}
+                      motivo={inicio.motivo}
                       onClick={() =>
                         executar(iniciar.mutateAsync({ casoEtapaId: etapa.id }))
                       }
-                      disabled={ocupado || !inicio.habilitada}
-                      title={inicio.motivo}
                     >
-                      Iniciar
-                    </Botao>
+                      <IconePlay className="size-4" />
+                    </BotaoIcone>
 
-                    <Botao
-                      variante="primario"
+                    <BotaoIcone
+                      rotulo="Concluir etapa"
+                      tom="positivo"
+                      disabled={ocupado || !conclusao.habilitada}
+                      motivo={conclusao.motivo}
                       onClick={() =>
                         executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
                       }
-                      disabled={ocupado || !conclusao.habilitada}
-                      title={conclusao.motivo}
                     >
-                      Concluir
-                    </Botao>
+                      <IconeCheck className="size-[18px]" />
+                    </BotaoIcone>
 
-                    <Botao
-                      variante="fantasma"
+                    <BotaoIcone
+                      rotulo="Concluir com observação"
+                      disabled={ocupado || !conclusao.habilitada}
+                      motivo={conclusao.motivo}
+                      onClick={() => {
+                        setErro(null)
+                        setObservacaoDe(etapa)
+                      }}
+                    >
+                      <IconeCaneta className="size-[18px]" />
+                    </BotaoIcone>
+
+                    <BotaoIcone
+                      rotulo="Passar para outra pessoa"
+                      disabled={ocupado || !handoff.habilitada}
+                      motivo={handoff.motivo}
                       onClick={() => {
                         setErro(null)
                         setHandoffDe(etapa)
                       }}
-                      disabled={ocupado || !handoff.habilitada}
-                      title={handoff.motivo}
                     >
-                      Handoff
-                    </Botao>
-                  </>
+                      <IconeHandoff className="size-[18px]" />
+                    </BotaoIcone>
+                  </div>
                 )}
               </li>
             )
@@ -152,9 +212,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       )}
 
       {/* Ações que encerram o caso. Não aparecem para operador — as RPCs
-          negariam, e oferecer o que será negado é pior que não oferecer. */}
+          negariam, e oferecer o que será negado é pior que não oferecer.
+          O espaço que sobrou aqui fica vazio de propósito: UTI e Editar Reels
+          entram quando as regras chegarem. */}
       {mostraAcoesDeCaso && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           <Botao
             variante="destrutivo"
             onClick={() => {
@@ -184,6 +246,21 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             Encerram o caso — sem desfazer.
           </span>
         </div>
+      )}
+
+      {observacaoDe && (
+        <DialogoObservacao
+          etapa={observacaoDe}
+          ocupado={concluir.isPending}
+          erro={erro}
+          onCancelar={() => setObservacaoDe(null)}
+          onConfirmar={(observacao) =>
+            executar(
+              concluir.mutateAsync({ casoEtapaId: observacaoDe.id, observacao }),
+              () => setObservacaoDe(null),
+            )
+          }
+        />
       )}
 
       {handoffDe && (
@@ -271,6 +348,60 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   )
 }
 
+interface PropsObservacao {
+  etapa: EtapaQuadro
+  ocupado: boolean
+  erro: string | null
+  onCancelar: () => void
+  onConfirmar: (observacao: string) => void
+}
+
+/**
+ * A observação é gravada por concluir_etapa(id, observacao) — é o único caminho
+ * de escrita que existe: `authenticated` não tem UPDATE em caso_etapas, e não
+ * há RPC para anotar sem concluir.
+ *
+ * Por isso o botão diz "Concluir com observação", não "Anotar". Um rótulo que
+ * prometesse só anotar estaria mentindo sobre o que o clique faz.
+ */
+function DialogoObservacao({
+  etapa,
+  ocupado,
+  erro,
+  onCancelar,
+  onConfirmar,
+}: PropsObservacao) {
+  const [texto, setTexto] = useState('')
+
+  return (
+    <Dialogo
+      titulo={`Concluir ${ROTULO_ETAPA[etapa.tipo]} com observação`}
+      rotuloConfirmar="Concluir etapa"
+      confirmarDesabilitado={texto.trim() === ''}
+      ocupado={ocupado}
+      erro={erro}
+      onCancelar={onCancelar}
+      onConfirmar={() => onConfirmar(texto.trim())}
+    >
+      <p className="text-sm text-muted-foreground">
+        A etapa é concluída junto com a anotação — não existe anotar sem
+        concluir.
+      </p>
+      <label className="block">
+        <span className="text-sm font-medium">Observação</span>
+        <textarea
+          autoFocus
+          rows={3}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="ex.: mãe pediu fotos com a avó"
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base"
+        />
+      </label>
+    </Dialogo>
+  )
+}
+
 interface PropsHandoff {
   etapa: EtapaQuadro
   ocupado: boolean
@@ -279,7 +410,13 @@ interface PropsHandoff {
   onConfirmar: (paraPessoaId: string, motivo: string) => void
 }
 
-function DialogoHandoff({ etapa, ocupado, erro, onCancelar, onConfirmar }: PropsHandoff) {
+function DialogoHandoff({
+  etapa,
+  ocupado,
+  erro,
+  onCancelar,
+  onConfirmar,
+}: PropsHandoff) {
   const { data: pessoas, isPending } = usePessoasAtivas()
   const [paraPessoaId, setParaPessoaId] = useState('')
   const [motivo, setMotivo] = useState('')
@@ -335,4 +472,17 @@ function DialogoHandoff({ etapa, ocupado, erro, onCancelar, onConfirmar }: Props
       </label>
     </Dialogo>
   )
+}
+
+function pontoEtapa(etapa: EtapaQuadro): string {
+  switch (etapa.status) {
+    case 'concluida':
+      return 'bg-concluido'
+    case 'em_andamento':
+      return 'bg-andamento'
+    case 'atribuida':
+      return 'bg-muted-foreground'
+    default:
+      return 'bg-muted-foreground/30'
+  }
 }
