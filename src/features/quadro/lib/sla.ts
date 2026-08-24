@@ -9,7 +9,13 @@ import type { CasoQuadro } from '../types'
  * Nada de prazo hardcoded: o número vem do seed, via `prazo_entrega_horas`.
  */
 
-export type Urgencia = 'atrasado' | 'urgente' | 'atencao' | 'tranquilo' | 'sem_prazo'
+export type Urgencia =
+  | 'atrasado'
+  | 'urgente'
+  | 'atencao'
+  | 'tranquilo'
+  | 'sem_prazo'
+  | 'pausado'
 
 export interface EstadoSla {
   urgencia: Urgencia
@@ -20,6 +26,18 @@ export interface EstadoSla {
 }
 
 export function estadoSla(caso: CasoQuadro, agora: Date = new Date()): EstadoSla {
+  // Na UTI, vence_em anda junto com o relógio (a view soma o intervalo em
+  // curso). Uma contagem regressiva ficaria parada na tela e pareceria bug —
+  // então aqui ela dá lugar ao tempo de UTI, que é o que muda.
+  if (caso.slaPausado) {
+    return {
+      urgencia: 'pausado',
+      rotulo: `SLA pausado · UTI há ${formatarDuracao(caso.utiHorasTotal)}`,
+      detalhe:
+        'O prazo de entrega não corre enquanto o caso está na UTI — ele é esticado pelo tempo parado.',
+    }
+  }
+
   if (!caso.venceEm) {
     const prazo = caso.prazoEntregaHoras
     return {
@@ -56,7 +74,10 @@ export function estadoSla(caso: CasoQuadro, agora: Date = new Date()): EstadoSla
   return {
     urgencia,
     rotulo: `Vence em ${formatarDuracao(restanteHoras)}`,
-    detalhe: `SLA de ${formatarPrazo(prazoTotal)}, contado da conclusão do nascimento.`,
+    detalhe:
+      caso.utiHorasTotal > 0
+        ? `SLA de ${formatarPrazo(prazoTotal)}, esticado em ${formatarDuracao(caso.utiHorasTotal)} de UTI.`
+        : `SLA de ${formatarPrazo(prazoTotal)}, contado da conclusão do nascimento.`,
   }
 }
 
@@ -66,6 +87,7 @@ export const CLASSE_URGENCIA: Record<Urgencia, string> = {
   atencao: 'text-atencao',
   tranquilo: 'text-muted-foreground',
   sem_prazo: 'text-muted-foreground',
+  pausado: 'text-andamento',
 }
 
 function formatarDuracao(horas: number): string {

@@ -90,6 +90,30 @@ export function useConfirmarEntrega() {
   })
 }
 
+export function usePausarEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('pausar_etapa', { p_caso_etapa_id: casoEtapaId }),
+  )
+}
+
+export function useMoverParaUti() {
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('mover_para_uti', { p_caso_id: casoId }),
+  )
+}
+
+export function useRetornarDaUti() {
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('retornar_da_uti', { p_caso_id: casoId }),
+  )
+}
+
+export function useAdicionarReels() {
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('adicionar_reels', { p_caso_id: casoId }),
+  )
+}
+
 export function useCancelarCaso() {
   return useAcaoDoQuadro<{ casoId: string; motivo: string }>(({ casoId, motivo }) =>
     chamar('cancelar_caso', { p_caso_id: casoId, p_motivo: motivo }),

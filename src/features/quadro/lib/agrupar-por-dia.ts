@@ -16,6 +16,10 @@ import type { BlocoDia, CasoQuadro } from '../types'
  *
  * Dias sem previsão (`dia === null`) caem num bloco próprio no fim: existem no
  * banco (previsao_em é nullable) e sumir com eles esconderia trabalho.
+ *
+ * Casos terminais e casos na UTI continuam vindo dentro de `casos` (a aba
+ * Concluídos e a seção UTI leem daqui e precisam saber de que dia eram), mas
+ * ficam fora das contagens do bloco — ver montarBloco.
  */
 export function agruparPorDia(casos: CasoQuadro[]): BlocoDia[] {
   const porDia = new Map<string, CasoQuadro[]>()
@@ -42,13 +46,21 @@ export function agruparPorDia(casos: CasoQuadro[]): BlocoDia[] {
 
 function montarBloco(dia: string | null, casos: CasoQuadro[]): BlocoDia {
   const ordenados = [...casos].sort(ordenarDentroDoDia)
-  const resolvidos = ordenados.filter((c) => c.ehTerminal).length
+
+  // Casos na UTI saem da conta do dia inteira, numerador e denominador: eles
+  // não estão nem pendentes nem resolvidos AQUI — mudaram de seção. Contá-los
+  // faria o "X de Y" nunca fechar.
+  const doDia = ordenados.filter((c) => !c.naUti)
+  const resolvidos = doDia.filter((c) => c.ehTerminal).length
+
   return {
     dia,
     casos: ordenados,
-    total: ordenados.length,
+    total: doDia.length,
     resolvidos,
-    fechado: ordenados.length > 0 && resolvidos === ordenados.length,
+    // Fechado quando não sobrou nada aberto: ou tudo terminal, ou o que
+    // restava foi para a UTI. Em ambos os casos não há trabalho do dia na tela.
+    fechado: doDia.length === 0 || resolvidos === doDia.length,
   }
 }
 

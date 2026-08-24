@@ -8,23 +8,32 @@ import {
   IconeCaneta,
   IconeCheck,
   IconeHandoff,
+  IconePause,
   IconePlay,
 } from '@/components/ui/icones'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
+  useAdicionarReels,
   useCancelarCaso,
   useConcluirEtapa,
   useConfirmarEntrega,
   useIniciarEtapa,
+  useMoverParaUti,
+  usePausarEtapa,
+  useRetornarDaUti,
   useTransferirEtapa,
   usePessoasAtivas,
 } from '../api/useAcoes'
 import {
+  podeAdicionarReels,
   podeCancelar,
   podeConcluir,
   podeConfirmarEntrega,
   podeIniciar,
+  podeMoverParaUti,
+  podePausar,
+  podeRetornarDaUti,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -69,13 +78,21 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
+  const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
+  const moverParaUti = useMoverParaUti()
+  const retornarDaUti = useRetornarDaUti()
+  const adicionarReels = useAdicionarReels()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
 
   const ocupado =
     iniciar.isPending ||
+    pausar.isPending ||
+    moverParaUti.isPending ||
+    retornarDaUti.isPending ||
+    adicionarReels.isPending ||
     concluir.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
@@ -91,6 +108,17 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
 
   const entrega = podeConfirmarEntrega(caso, papel)
   const cancelamento = podeCancelar(caso, papel)
+  const vaiParaUti = podeMoverParaUti(caso)
+  const voltaDaUti = podeRetornarDaUti(caso)
+  const novoReels = podeAdicionarReels(caso, etapas)
+
+  // "Editar reels" é iniciar_etapa na etapa de vídeo — não existe estado
+  // "em reels" separado: o caso segue na lista da esquerda e TAMBÉM aparece na
+  // seção REELS enquanto a edição está em andamento.
+  const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
+  const edicaoDeVideo = etapaVideo
+    ? podeIniciar(etapaVideo)
+    : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
@@ -112,6 +140,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {etapas.map((etapa) => {
             const inicio = podeIniciar(etapa)
+            const pausa = podePausar(etapa)
             const conclusao = podeConcluir(etapa)
             const handoff = podeTransferir(etapa)
             const encerrada =
@@ -156,17 +185,34 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     botões inteiros — no mobile, ícone morto é espaço perdido. */}
                 {!encerrada && (
                   <div className="flex flex-shrink-0 items-center">
-                    <BotaoIcone
-                      rotulo="Iniciar etapa"
-                      tom="acao"
-                      disabled={ocupado || !inicio.habilitada}
-                      motivo={inicio.motivo}
-                      onClick={() =>
-                        executar(iniciar.mutateAsync({ casoEtapaId: etapa.id }))
-                      }
-                    >
-                      <IconePlay className="size-4" />
-                    </BotaoIcone>
+                    {/* Play e pause são a MESMA alavanca em estados opostos, e
+                        por isso ocupam a mesma posição: em andamento mostra
+                        pause, o resto mostra play (que também retoma). */}
+                    {etapa.status === 'em_andamento' ? (
+                      <BotaoIcone
+                        rotulo="Pausar etapa"
+                        tom="acao"
+                        disabled={ocupado || !pausa.habilitada}
+                        motivo={pausa.motivo}
+                        onClick={() =>
+                          executar(pausar.mutateAsync({ casoEtapaId: etapa.id }))
+                        }
+                      >
+                        <IconePause className="size-4" />
+                      </BotaoIcone>
+                    ) : (
+                      <BotaoIcone
+                        rotulo={etapa.status === 'pausada' ? 'Retomar etapa' : 'Iniciar etapa'}
+                        tom="acao"
+                        disabled={ocupado || !inicio.habilitada}
+                        motivo={inicio.motivo}
+                        onClick={() =>
+                          executar(iniciar.mutateAsync({ casoEtapaId: etapa.id }))
+                        }
+                      >
+                        <IconePlay className="size-4" />
+                      </BotaoIcone>
+                    )}
 
                     <BotaoIcone
                       rotulo="Concluir etapa"
@@ -211,10 +257,55 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         </ul>
       )}
 
+      {/* Ações que MOVEM o caso entre as seções da tela. Ficam separadas das
+          que encerram: estas são reversíveis e do dia a dia, aquelas não têm
+          desfazer. */}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        {caso.naUti ? (
+          <Botao
+            onClick={() => executar(retornarDaUti.mutateAsync({ casoId: caso.id }))}
+            disabled={ocupado || !voltaDaUti.habilitada}
+            title={voltaDaUti.motivo}
+          >
+            Voltar da UTI
+          </Botao>
+        ) : (
+          <Botao
+            onClick={() => executar(moverParaUti.mutateAsync({ casoId: caso.id }))}
+            disabled={ocupado || !vaiParaUti.habilitada}
+            title={vaiParaUti.motivo}
+          >
+            UTI
+          </Botao>
+        )}
+
+        {/* Um botão só, dois significados, conforme o caso já tem vídeo ou não.
+            Sem etapa de vídeo: cria (adicionar_reels). Com etapa: começa a
+            editar (iniciar_etapa), que é o que faz o caso aparecer na seção
+            REELS. */}
+        {etapaVideo ? (
+          <Botao
+            onClick={() =>
+              executar(iniciar.mutateAsync({ casoEtapaId: etapaVideo.id }))
+            }
+            disabled={ocupado || !edicaoDeVideo.habilitada}
+            title={edicaoDeVideo.motivo}
+          >
+            Editar reels
+          </Botao>
+        ) : (
+          <Botao
+            onClick={() => executar(adicionarReels.mutateAsync({ casoId: caso.id }))}
+            disabled={ocupado || !novoReels.habilitada}
+            title={novoReels.motivo}
+          >
+            Adicionar reels
+          </Botao>
+        )}
+      </div>
+
       {/* Ações que encerram o caso. Não aparecem para operador — as RPCs
-          negariam, e oferecer o que será negado é pior que não oferecer.
-          O espaço que sobrou aqui fica vazio de propósito: UTI e Editar Reels
-          entram quando as regras chegarem. */}
+          negariam, e oferecer o que será negado é pior que não oferecer. */}
       {mostraAcoesDeCaso && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <Botao
