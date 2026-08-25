@@ -117,7 +117,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   // seção REELS enquanto a edição está em andamento.
   const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
   const edicaoDeVideo = etapaVideo
-    ? podeIniciar(etapaVideo)
+    ? podeIniciar(etapaVideo, etapas)
     : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
@@ -139,9 +139,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {etapas.map((etapa) => {
-            const inicio = podeIniciar(etapa)
+            const inicio = podeIniciar(etapa, etapas)
             const pausa = podePausar(etapa)
-            const conclusao = podeConcluir(etapa)
+            const conclusao = podeConcluir(etapa, etapas)
             const handoff = podeTransferir(etapa)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'

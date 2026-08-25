@@ -25,6 +25,36 @@
  * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é noturna";
  * o cliente pediu branco. O bloco fica pronto para o dia em que o turno da
  * noite pedir de volta.
+ *
+ * ONDE A COR MORA (revisão: a tela estava lida como planilha)
+ * O papel continua quieto. A cor entra em três lugares, e só neles:
+ *
+ *   1. A FAIXA DA MARCA no topo, no azul da íris do logo. É o que separa "app"
+ *      de "planilha aberta no navegador".
+ *
+ *      As duas cores vêm do logo: o azul e o rosa da lente. A divisão de
+ *      trabalho entre elas é deliberada — AZUL carrega a estrutura (faixa,
+ *      ações primárias, aba ativa) e ROSA carrega o acento (contadores,
+ *      títulos de seção, marcadores). Uma tela dominada pelo rosa é lida como
+ *      "fofa" em segundos, e às 3h num corredor de maternidade a leitura certa
+ *      é densidade, não doçura. O rosa aparece pouco e por isso é visto.
+ *
+ *      Os dois foram escurecidos em relação ao logo. O azul e o rosa de uma
+ *      marca são feitos para fundo escuro e tamanho grande; como texto sobre
+ *      branco, os valores originais não passariam de 3:1.
+ *
+ *   2. A ESPINHA do caso, que carrega a cor do Calendar. Ela já era a
+ *      identidade visual que a equipe usa na agenda — só estava fina demais
+ *      para valer alguma coisa. Engordou.
+ *
+ *   3. O estado PRONTO PARA ENTREGA. Um caso com todas as etapas feitas e ainda
+ *      aberto é o único que está esperando por uma pessoa específica. Ganha peso
+ *      próprio, porque é a informação mais acionável do Quadro.
+ *
+ * Fora daí, tudo segue neutro. Se cada linha gritasse, nenhuma seria vista.
+ *
+ * As cores de estado ganharam croma (0.13 -> 0.16 na média) sem perder o
+ * contraste — todas seguem acima de 4.5:1 sobre o branco.
  * ============================================================================= */
 
 @theme inline {
@@ -48,7 +78,22 @@
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
 
+  --color-marca: var(--marca);
+  --color-marca-forte: var(--marca-forte);
+  --color-marca-suave: var(--marca-suave);
+  --color-acento: var(--acento);
+  --color-acento-forte: var(--acento-forte);
+  --color-acento-suave: var(--acento-suave);
+  --color-pronto: var(--pronto);
+  --color-pronto-fundo: var(--pronto-fundo);
+  --color-pronto-borda: var(--pronto-borda);
+
   --radius-md: 0.5rem;
+
+  /* Elevação. No claro a sombra é o que separa a linha do papel — no escuro
+     essa função era da luminância. */
+  --shadow-cartao: 0 1px 2px oklch(0.25 0.02 265 / 6%), 0 1px 3px oklch(0.25 0.02 265 / 4%);
+  --shadow-painel: 0 1px 3px oklch(0.25 0.02 265 / 7%), 0 4px 12px oklch(0.25 0.02 265 / 5%);
 }
 
 :root {
@@ -69,14 +114,31 @@
   --primary: oklch(0.52 0.15 250);
   --primary-foreground: oklch(0.99 0 0);
 
-  --concluido: oklch(0.5 0.13 152);
-  --andamento: oklch(0.5 0.14 250);
-  --atrasado: oklch(0.52 0.19 25);
-  --atencao: oklch(0.52 0.11 70);
+  --concluido: oklch(0.52 0.16 152);
+  --andamento: oklch(0.52 0.17 248);
+  --atrasado: oklch(0.53 0.21 25);
+  --atencao: oklch(0.55 0.14 68);
 
-  --rascunho: oklch(0.45 0.09 75);
-  --rascunho-fundo: oklch(0.965 0.03 85);
-  --rascunho-borda: oklch(0.88 0.055 85);
+  --rascunho: oklch(0.47 0.11 75);
+  --rascunho-fundo: oklch(0.965 0.038 85);
+  --rascunho-borda: oklch(0.87 0.07 85);
+
+  /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
+     branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
+  --marca: oklch(0.48 0.14 252);
+  --marca-forte: oklch(0.37 0.12 254);
+  --marca-suave: oklch(0.965 0.022 252);
+
+  /* Rosa da marca. Acento: contadores, títulos de seção, marcadores. Usado
+     pouco de propósito — ver a nota no topo. */
+  --acento: oklch(0.56 0.2 357);
+  --acento-forte: oklch(0.46 0.18 357);
+  --acento-suave: oklch(0.965 0.028 357);
+
+  /* Pronto para entrega: todas as etapas feitas, caso ainda aberto. */
+  --pronto: oklch(0.48 0.15 155);
+  --pronto-fundo: oklch(0.965 0.035 155);
+  --pronto-borda: oklch(0.84 0.09 155);
 }
 
 /* Tema escuro — preservado, desligado. Ver a nota no topo. */
@@ -101,6 +163,18 @@
   --rascunho: oklch(0.83 0.13 85);
   --rascunho-fundo: oklch(0.28 0.05 85 / 35%);
   --rascunho-borda: oklch(0.5 0.09 85 / 45%);
+
+  --marca: oklch(0.6 0.15 252);
+  --marca-forte: oklch(0.5 0.14 254);
+  --marca-suave: oklch(0.26 0.04 252);
+
+  --acento: oklch(0.7 0.19 357);
+  --acento-forte: oklch(0.6 0.18 357);
+  --acento-suave: oklch(0.27 0.05 357);
+
+  --pronto: oklch(0.74 0.16 155);
+  --pronto-fundo: oklch(0.28 0.05 155 / 40%);
+  --pronto-borda: oklch(0.5 0.1 155 / 45%);
 }
 
 @layer base {

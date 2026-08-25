@@ -44,7 +44,11 @@ export function DiaBloco({
           aria-controls={idPainel}
           className={clsx(
             'flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition-colors md:px-4 md:py-4',
-            emAtraso ? 'bg-atrasado/12 hover:bg-atrasado/18' : 'bg-muted/40 hover:bg-muted/60',
+            // O dia atrasado é o alarme do Quadro: fundo próprio e borda
+            // esquerda grossa, para ser achado rolando a lista sem ler.
+            emAtraso
+              ? 'border-l-4 border-l-atrasado bg-atrasado/10 hover:bg-atrasado/15'
+              : 'border-l-4 border-l-transparent bg-marca-suave hover:bg-marca-suave/70',
           )}
         >
           <div className="min-w-0 flex-1">
@@ -52,11 +56,11 @@ export function DiaBloco({
               {/* first-letter, não `capitalize`: o Intl devolve
                   "terça-feira, 18 de agosto" e `capitalize` viraria
                   "Terça-Feira, 18 De Agosto". */}
-              <span className="text-base font-semibold first-letter:uppercase md:text-lg">
+              <span className="text-base font-bold tracking-tight first-letter:uppercase md:text-lg">
                 {rotulo}
               </span>
               {emAtraso && (
-                <span className="rounded bg-atrasado/20 px-1.5 py-0.5 text-xs font-medium text-atrasado">
+                <span className="rounded-full bg-atrasado px-2 py-0.5 text-[11px] font-semibold text-white">
                   {atraso === 1 ? 'há 1 dia' : `há ${atraso} dias`}
                 </span>
               )}

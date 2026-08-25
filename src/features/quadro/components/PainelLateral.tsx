@@ -39,11 +39,15 @@ export function PainelLateral({
   children,
 }: PropsPainelLateral) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card">
-      <header className="flex-shrink-0 border-b border-border px-3 py-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card shadow-painel">
+      {/* O rosa da marca vive aqui: são os dois pontos da tela que se leem de
+          longe, na TV da sala de edição. Usado pouco, é visto. */}
+      <header className="flex-shrink-0 border-b border-border bg-acento-suave px-3 py-2.5">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">{titulo}</h2>
-          <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+          <h2 className="text-sm font-bold tracking-[0.12em] text-acento-forte uppercase">
+            {titulo}
+          </h2>
+          <span className="text-lg font-bold tabular-nums text-acento-forte">
             {quantidade}
           </span>
         </div>

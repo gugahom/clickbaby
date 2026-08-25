@@ -29,12 +29,21 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
+  // Todas as etapas feitas e o caso ainda aberto: é o único estado em que o
+  // caso está esperando por uma PESSOA, não por trabalho. Por isso ganha peso
+  // próprio — é a informação mais acionável do Quadro.
+  const prontoParaEntrega =
+    !caso.ehTerminal &&
+    caso.etapasTotal > 0 &&
+    caso.etapasConcluidas === caso.etapasTotal
+
   return (
     <div
       className={clsx(
-        'border-b border-border last:border-b-0',
-        caso.ehRascunho && 'bg-rascunho-fundo/30',
-        caso.ehTerminal && 'opacity-60',
+        'border-b border-border transition-colors last:border-b-0',
+        caso.ehRascunho && 'bg-rascunho-fundo/40',
+        prontoParaEntrega && 'bg-pronto-fundo',
+        caso.ehTerminal && 'opacity-55',
       )}
     >
       {/*
@@ -49,14 +58,19 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="w-full px-3 py-3 text-left transition-colors hover:bg-muted/40 md:px-4"
+        className="w-full px-3 py-3 text-left transition-colors hover:bg-marca-suave md:px-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
-          {/* Barra de cor herdada do Calendar. items-stretch faz ela acompanhar
-              a altura da linha sozinha. */}
+          {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
+              equipe usa essa cor para agrupar na agenda, então ela tem que
+              valer alguma coisa aqui. items-stretch faz acompanhar a altura da
+              linha sozinha.
+
+              Pronto para entrega ROUBA a espinha: naquele estado, "quem é este
+              caso na agenda" importa menos que "este aqui está te esperando". */}
           <div
-            className="w-1 flex-shrink-0 rounded-sm"
-            style={{ backgroundColor: cor }}
+            className="w-1.5 flex-shrink-0 rounded-full"
+            style={{ backgroundColor: prontoParaEntrega ? 'var(--pronto)' : cor }}
             aria-hidden="true"
           />
 
@@ -84,6 +98,11 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                     </span>
                   ) : (
                     <span className="text-rascunho">sem maternidade</span>
+                  )}
+                  {prontoParaEntrega && (
+                    <span className="rounded-full bg-pronto px-2 py-0.5 text-[11px] font-semibold text-white">
+                      Pronto para entrega
+                    </span>
                   )}
                   {caso.ehRascunho && <BadgeRascunho />}
                   {caso.ehTerminal && (

@@ -15,7 +15,7 @@
 -- acumulado seria sempre zero e o teste não provaria nada.
 
 begin;
-select plan(17);
+select plan(20);
 
 
 -- =============================================================================
@@ -238,6 +238,50 @@ select is(
      ) t),
   'etapa_iniciada=1 etapa_pausada=2 etapa_retomada=2 etapa_transferida=1',
   'o log distingue iniciada (1x) de retomada (2x) e registra a transferência da troca de turno'
+);
+
+
+-- =============================================================================
+-- 7. Concluir DIRETO de uma pausa (migration 20260824232449)
+--
+-- Era um bug: a guarda de concluir_etapa foi escrita antes de 'pausada' existir
+-- e não a listava, então play -> pause -> concluir falhava. Não há razão para
+-- recusar — se a operadora decide que acabou, concluir dali é legítimo.
+-- =============================================================================
+
+select pg_temp.vira('entra.pausa@clickbaby.test');
+set local role authenticated;
+
+select public.pausar_etapa(pg_temp.etapa('nascimento'));
+
+reset role;
+
+-- Recua a pausa em 1h para provar que ela é descontada na conclusão.
+update public.caso_etapas
+   set pausado_em = now() - interval '1 hour'
+ where id = pg_temp.etapa('nascimento');
+
+select pg_temp.vira('entra.pausa@clickbaby.test');
+set local role authenticated;
+
+select lives_ok(
+  format('select public.concluir_etapa(%L)', pg_temp.etapa('nascimento')),
+  'concluir uma etapa PAUSADA funciona — era o bug do play/pause/concluir'
+);
+
+reset role;
+
+select is(
+  (select status from public.caso_etapas where id = pg_temp.etapa('nascimento')),
+  'concluida'::public.status_etapa,
+  'a etapa ficou concluída'
+);
+
+-- Sem isto, a última pausa ficaria aberta e o intervalo parado viraria trabalho.
+select ok(
+  (select pausado_em is null and pausa_acumulada >= interval '2 hours 59 minutes'
+     from public.caso_etapas where id = pg_temp.etapa('nascimento')),
+  'concluir da pausa FECHA a janela e soma a última hora — o tempo parado não vira trabalho'
 );
 
 
