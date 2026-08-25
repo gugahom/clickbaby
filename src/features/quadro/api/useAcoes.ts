@@ -1,6 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 import { chavesQuadro } from './useQuadro'
+
+export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
+
+export interface EntregavelResumo {
+  id: string
+  tipo: TipoEntregavel
+  url: string
+  criado_em: string
+  confirmado_em: string | null
+}
 
 /**
  * Toda transição de estado passa por RPC — nunca `.update()` direto
@@ -19,7 +30,10 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: executar,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: chavesQuadro.todos }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
+      void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
+    },
   })
 }
 
@@ -66,27 +80,54 @@ export function useTransferirEtapa() {
 }
 
 /**
- * confirmar_entrega recusa um caso sem nenhum entregável registrado (a RPC
- * exige pelo menos um). Decisão explícita do cliente, por hora: o link real
- * continua na planilha interna da equipe, fora do sistema — a Morgana não
- * digita URL nenhuma aqui, só confirma. Por isso o botão de confirmar
- * encadeia duas RPCs: registra um entregável placeholder e, na sequência,
- * confirma a entrega. `p_tipo` é arbitrário (nenhum dos 5 valores do enum
- * descreve "link está em outro lugar"; `google_photos` é só o mais comum).
- * Quando existir um fluxo de colar o link de verdade, isto sai daqui e vira
- * um passo explícito na tela (ver TODO em CasoDetalhe/AcoesDoCaso).
+ * Confirmar entrega encerra o caso.
+ *
+ * Até a migration 20260825014102 esta função registrava um entregável de
+ * MENTIRA antes de confirmar — a RPC exige ao menos um link e não havia tela
+ * para colar o de verdade. Isso gravava uma url falsa numa tabela cujo conteúdo
+ * o CLAUDE.md trata como credencial. O placeholder morreu junto com o
+ * DialogoEntregaveis, que cola o link real.
+ *
+ * Qualquer pessoa ativa confirma: quem gera os links são as fotógrafas.
  */
-const ENTREGAVEL_PLACEHOLDER_URL =
-  'Link controlado na planilha interna da equipe (ainda não integrado ao sistema)'
-
 export function useConfirmarEntrega() {
-  return useAcaoDoQuadro<{ casoId: string }>(async ({ casoId }) => {
-    await chamar('registrar_entregavel', {
-      p_caso_id: casoId,
-      p_tipo: 'google_photos',
-      p_url: ENTREGAVEL_PLACEHOLDER_URL,
-    })
-    await chamar('confirmar_entrega', { p_caso_id: casoId })
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('confirmar_entrega', { p_caso_id: casoId }),
+  )
+}
+
+export function useRegistrarEntregavel() {
+  return useAcaoDoQuadro<{ casoId: string; tipo: TipoEntregavel; url: string }>(
+    ({ casoId, tipo, url }) =>
+      chamar('registrar_entregavel', {
+        p_caso_id: casoId,
+        p_tipo: tipo,
+        p_url: url.trim(),
+      }),
+  )
+}
+
+/**
+ * Links de UM caso, buscados só quando o card está aberto.
+ *
+ * Deliberadamente fora da carga principal do Quadro: `entregaveis.url` é
+ * credencial de acesso à galeria da família (seção 10 do CLAUDE.md). Trazer a
+ * url de 80 casos para desenhar zero delas seria manter no cliente o que a tela
+ * nem mostra. Um card aberto por vez, uma query.
+ */
+export function useEntregaveis(casoId: string, habilitado: boolean) {
+  return useQuery({
+    queryKey: ['entregaveis', casoId],
+    enabled: habilitado,
+    queryFn: async (): Promise<EntregavelResumo[]> => {
+      const { data, error } = await supabase
+        .from('entregaveis')
+        .select('id, tipo, url, criado_em, confirmado_em')
+        .eq('caso_id', casoId)
+        .order('criado_em')
+      if (error) throw error
+      return data ?? []
+    },
   })
 }
 
