@@ -31,8 +31,12 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
   return useMutation({
     mutationFn: executar,
     onSuccess: () => {
+      // As três coisas que uma ação muda: o Quadro, os links do caso e o
+      // histórico. Esquecer o histórico o deixava congelado por 30s (o
+      // staleTime global) — a pessoa agia e o log não mostrava a própria ação.
       void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
       void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
+      void queryClient.invalidateQueries({ queryKey: ['historico'] })
     },
   })
 }

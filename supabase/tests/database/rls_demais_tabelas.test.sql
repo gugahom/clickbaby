@@ -389,20 +389,27 @@ select ok(
   'I2: adm não consegue inserir eventos diretamente — append-only só via trigger/RPC'
 );
 
+-- I3 e I4 afirmavam o contrário até a migration 20260825020122, que abriu a
+-- LEITURA de eventos para qualquer pessoa ativa. O histórico de quem fez o quê
+-- é o produto (invariante 3.2) e a visibilidade compartilhada é valor declarado
+-- da seção 9 — um log que a gestão lê sobre a equipe e a equipe não é
+-- exatamente o clima que aquela seção evita.
+--
+-- A ESCRITA continua negada para todos, inclusive adm: ver I1 e I2 acima.
 select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome ilike 'Operador Teste RLS%'), true);
 
 select is(
   (select count(*)::int from public.eventos e join public.casos c on c.id = e.caso_id where c.mae_nome = 'Mãe RLS Suite' and e.tipo = 'etapas_geradas'),
-  0,
-  'I3: operador não consegue ler eventos'
+  1,
+  'I3: operador LÊ eventos (leitura compartilhada desde 20260825020122)'
 );
 
 select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste RLS'), true);
 
 select is(
   (select count(*)::int from public.eventos e join public.casos c on c.id = e.caso_id where c.mae_nome = 'Mãe RLS Suite' and e.tipo = 'etapas_geradas'),
-  0,
-  'I4: atendimento não consegue ler eventos'
+  1,
+  'I4: atendimento também LÊ eventos'
 );
 
 select * from finish();
