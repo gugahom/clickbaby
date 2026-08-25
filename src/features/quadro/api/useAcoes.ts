@@ -69,6 +69,21 @@ export function useConcluirEtapa() {
   )
 }
 
+/**
+ * Designa responsável a uma etapa que ainda não começou. Distinta de
+ * transferir: ali houve passagem de trabalho e vira linha em `handoffs`; aqui
+ * nada foi passado porque nada começou.
+ */
+export function useAtribuirEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; paraPessoaId: string }>(
+    ({ casoEtapaId, paraPessoaId }) =>
+      chamar('atribuir_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_para_pessoa_id: paraPessoaId,
+      }),
+  )
+}
+
 export function useTransferirEtapa() {
   return useAcaoDoQuadro<{
     casoEtapaId: string

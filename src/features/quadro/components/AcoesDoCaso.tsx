@@ -7,6 +7,7 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import {
   IconeCaneta,
   IconeCheck,
+  IconeAtribuir,
   IconeHandoff,
   IconePause,
   IconePlay,
@@ -15,6 +16,7 @@ import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
   useAdicionarReels,
+  useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
   useConfirmarEntrega,
@@ -26,6 +28,7 @@ import {
   usePessoasAtivas,
 } from '../api/useAcoes'
 import {
+  podeAtribuir,
   podeAdicionarReels,
   podeCancelar,
   podeConcluir,
@@ -77,9 +80,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
+  const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
+  const atribuir = useAtribuirEtapa()
   const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
   const moverParaUti = useMoverParaUti()
@@ -91,6 +96,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
 
   const ocupado =
     iniciar.isPending ||
+    atribuir.isPending ||
     pausar.isPending ||
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
@@ -131,7 +137,10 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
   // painel de trás, e um alerta ali ficaria escondido atrás do backdrop.
   const temDialogo =
-    confirmacao !== null || handoffDe !== null || observacaoDe !== null
+    confirmacao !== null ||
+    handoffDe !== null ||
+    observacaoDe !== null ||
+    atribuirDe !== null
 
   return (
     <div className="space-y-3">
@@ -150,6 +159,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const pausa = podePausar(etapa)
             const conclusao = podeConcluir(etapa, etapas)
             const handoff = podeTransferir(etapa)
+            const designacao = podeAtribuir(etapa)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
@@ -245,17 +255,34 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       <IconeCaneta className="size-[18px]" />
                     </BotaoIcone>
 
-                    <BotaoIcone
-                      rotulo="Passar para outra pessoa"
-                      disabled={ocupado || !handoff.habilitada}
-                      motivo={handoff.motivo}
-                      onClick={() => {
-                        setErro(null)
-                        setHandoffDe(etapa)
-                      }}
-                    >
-                      <IconeHandoff className="size-[18px]" />
-                    </BotaoIcone>
+                    {/* Mesmo slot, dois verbos. Antes de começar é ATRIBUIR
+                        (designar quem vai fazer); depois é HANDOFF (passar
+                        trabalho em curso, que vira linha em handoffs). A linha
+                        não é o status, é se alguém já trabalhou. */}
+                    {designacao.habilitada ? (
+                      <BotaoIcone
+                        rotulo="Atribuir responsável"
+                        disabled={ocupado}
+                        onClick={() => {
+                          setErro(null)
+                          setAtribuirDe(etapa)
+                        }}
+                      >
+                        <IconeAtribuir className="size-[18px]" />
+                      </BotaoIcone>
+                    ) : (
+                      <BotaoIcone
+                        rotulo="Passar para outra pessoa"
+                        disabled={ocupado || !handoff.habilitada}
+                        motivo={handoff.motivo}
+                        onClick={() => {
+                          setErro(null)
+                          setHandoffDe(etapa)
+                        }}
+                      >
+                        <IconeHandoff className="size-[18px]" />
+                      </BotaoIcone>
+                    )}
                   </div>
                 )}
               </li>
@@ -372,9 +399,35 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         />
       )}
 
+      {atribuirDe && (
+        <DialogoPessoa
+          titulo={`Atribuir ${ROTULO_ETAPA[atribuirDe.tipo]}`}
+          contexto={
+            atribuirDe.responsavelNome
+              ? `Responsável agora: ${atribuirDe.responsavelNome}. O trabalho ainda não começou, então isto é redistribuição, não handoff.`
+              : 'Ninguém designado ainda. Pode atribuir a si mesma para assumir.'
+          }
+          rotuloConfirmar="Atribuir"
+          excluirPessoaId={atribuirDe.responsavelId}
+          ocupado={atribuir.isPending}
+          erro={erro}
+          onCancelar={() => setAtribuirDe(null)}
+          onConfirmar={(paraPessoaId) =>
+            executar(
+              atribuir.mutateAsync({ casoEtapaId: atribuirDe.id, paraPessoaId }),
+              () => setAtribuirDe(null),
+            )
+          }
+        />
+      )}
+
       {handoffDe && (
-        <DialogoHandoff
-          etapa={handoffDe}
+        <DialogoPessoa
+          titulo={`Passar ${ROTULO_ETAPA[handoffDe.tipo]} para outra pessoa`}
+          contexto={`Responsável agora: ${handoffDe.responsavelNome ?? '—'}. A passagem fica registrada no histórico.`}
+          rotuloConfirmar="Transferir"
+          excluirPessoaId={handoffDe.responsavelId}
+          comMotivo
           ocupado={transferir.isPending}
           erro={erro}
           onCancelar={() => setHandoffDe(null)}
@@ -511,46 +564,58 @@ function DialogoObservacao({
   )
 }
 
-interface PropsHandoff {
-  etapa: EtapaQuadro
+interface PropsDialogoPessoa {
+  titulo: string
+  contexto: string
+  rotuloConfirmar: string
+  /** Some da lista: a RPC recusa designar para quem já é responsável. */
+  excluirPessoaId: string | null
+  /** Só o handoff pede motivo — atribuir é planejamento, não precisa justificar. */
+  comMotivo?: boolean
   ocupado: boolean
   erro: string | null
   onCancelar: () => void
   onConfirmar: (paraPessoaId: string, motivo: string) => void
 }
 
-function DialogoHandoff({
-  etapa,
+/**
+ * Escolha de pessoa, usada por atribuir e por handoff.
+ *
+ * As duas ações fazem a mesma pergunta — "quem fica com isto?" — e mudam no que
+ * significam: atribuir designa trabalho que não começou, handoff registra
+ * trabalho que mudou de mão. Uma tela só, dois textos.
+ */
+function DialogoPessoa({
+  titulo,
+  contexto,
+  rotuloConfirmar,
+  excluirPessoaId,
+  comMotivo = false,
   ocupado,
   erro,
   onCancelar,
   onConfirmar,
-}: PropsHandoff) {
+}: PropsDialogoPessoa) {
   const { data: pessoas, isPending } = usePessoasAtivas()
   const [paraPessoaId, setParaPessoaId] = useState('')
   const [motivo, setMotivo] = useState('')
 
-  // A RPC recusa transferir para o responsável atual; tirar da lista evita o
-  // erro em vez de explicá-lo depois.
-  const opcoes = (pessoas ?? []).filter((p) => p.id !== etapa.responsavelId)
+  const opcoes = (pessoas ?? []).filter((p) => p.id !== excluirPessoaId)
 
   return (
     <Dialogo
-      titulo={`Passar ${ROTULO_ETAPA[etapa.tipo]} para outra pessoa`}
-      rotuloConfirmar="Transferir"
+      titulo={titulo}
+      rotuloConfirmar={rotuloConfirmar}
       confirmarDesabilitado={paraPessoaId === ''}
       ocupado={ocupado}
       erro={erro}
       onCancelar={onCancelar}
       onConfirmar={() => onConfirmar(paraPessoaId, motivo)}
     >
-      <p className="text-sm text-muted-foreground">
-        Responsável agora: {etapa.responsavelNome ?? '—'}. A passagem fica registrada
-        no histórico.
-      </p>
+      <p className="text-sm text-muted-foreground">{contexto}</p>
 
       <label className="block">
-        <span className="text-sm font-medium">Passar para</span>
+        <span className="text-sm font-medium">Pessoa</span>
         <select
           value={paraPessoaId}
           onChange={(e) => setParaPessoaId(e.target.value)}
@@ -567,18 +632,20 @@ function DialogoHandoff({
         </select>
       </label>
 
-      <label className="block">
-        <span className="text-sm font-medium">
-          Motivo <span className="font-normal text-muted-foreground">(opcional)</span>
-        </span>
-        <input
-          type="text"
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          placeholder="ex.: troca de turno"
-          className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-        />
-      </label>
+      {comMotivo && (
+        <label className="block">
+          <span className="text-sm font-medium">
+            Motivo <span className="font-normal text-muted-foreground">(opcional)</span>
+          </span>
+          <input
+            type="text"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="ex.: troca de turno"
+            className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+          />
+        </label>
+      )}
     </Dialogo>
   )
 }

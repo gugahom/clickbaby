@@ -148,3 +148,25 @@ export function IconePause({ className }: PropsIcone) {
     </svg>
   )
 }
+
+export function IconeAtribuir({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Pessoa + sinal de mais: designar alguém. Ocupa o mesmo lugar do
+          handoff no grupo, porque as duas respondem "quem é o responsável" —
+          mudam só o momento e o que aconteceu de fato. */}
+      <path d="M15 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="8.5" cy="7" r="3.5" />
+      <path d="M19 8v6M22 11h-6" />
+    </svg>
+  )
+}
