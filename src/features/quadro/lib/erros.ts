@@ -36,10 +36,14 @@ const TRADUCOES: Traducao[] = [
     mensagem: 'Esta etapa já foi iniciada ou já está concluída.',
   },
 
-  // concluir_etapa
+  // concluir_etapa. A mensagem NÃO pode afirmar "já está concluída": a RPC
+  // levanta o mesmo erro para qualquer estado de origem inválido, e dizer a
+  // causa errada manda a pessoa procurar problema onde não tem. Concluir de uma
+  // pausa passou a ser permitido na migration 20260824232449 — se este erro
+  // aparecer agora, a etapa está mesmo terminada.
   {
     padrao: /só pode ser concluída a partir de/i,
-    mensagem: 'Esta etapa já está concluída.',
+    mensagem: 'Esta etapa já foi concluída ou dispensada.',
   },
 
   // transferir_etapa

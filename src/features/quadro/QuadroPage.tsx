@@ -182,10 +182,10 @@ export function QuadroPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-card px-3 py-3 md:px-4">
+      <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border bg-card px-3 py-3 shadow-cartao md:px-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold md:text-2xl">Quadro</h1>
+            <h1 className="text-lg font-bold tracking-tight md:text-2xl">Quadro</h1>
             <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
               {isPending
                 ? 'Carregando…'
@@ -241,8 +241,8 @@ export function QuadroPage() {
             {/* Desktop: lista larga à esquerda; à direita, UTI e Reels dividem
                 a altura em duas linhas IGUAIS (grid-rows-2). Cada uma rola por
                 dentro, então nenhuma empurra a outra por mais casos que tenha. */}
-            <div className="hidden min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-4 lg:p-4">
-              <div className="min-h-0 overflow-y-auto rounded-md border border-border bg-card">
+            <div className="hidden min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-4 lg:p-4">
+              <div className="min-h-0 overflow-y-auto rounded-md border border-border bg-card shadow-painel">
                 {listaPorDia}
               </div>
               <div className="grid min-h-0 grid-rows-2 gap-4">
@@ -279,10 +279,10 @@ function BotaoAba({
       onClick={onClick}
       aria-pressed={ativa}
       className={clsx(
-        'min-h-11 flex-shrink-0 rounded-md px-3 text-sm font-medium transition-colors',
+        'min-h-11 flex-shrink-0 rounded-md px-3.5 text-sm font-semibold transition-colors',
         ativa
-          ? 'bg-primary text-primary-foreground'
-          : 'border border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+          ? 'bg-marca text-white shadow-cartao'
+          : 'border border-border text-muted-foreground hover:bg-marca-suave hover:text-marca',
       )}
     >
       {children}
