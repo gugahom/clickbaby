@@ -96,16 +96,29 @@ export function podeConcluir(
   return OK
 }
 
+/**
+ * Atribuir vale ANTES do trabalho começar; transferir, depois. A linha não é o
+ * status, é se alguém já trabalhou — e é ela que decide se existe uma passagem
+ * de trabalho a registrar em `handoffs`.
+ */
+export function podeAtribuir(etapa: EtapaQuadro): Disponibilidade {
+  if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
+    return { habilitada: false, motivo: 'Trabalho terminado.' }
+  }
+  if (etapa.status !== 'pendente' && etapa.status !== 'atribuida') {
+    return { habilitada: false, motivo: 'Já começou — use o handoff.' }
+  }
+  return OK
+}
+
 export function podeTransferir(etapa: EtapaQuadro): Disponibilidade {
   if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Trabalho terminado não se transfere.' }
   }
-  // transferir_etapa exige responsável atual: ela é handoff entre DUAS
-  // pessoas, não a primeira atribuição. A RPC atribuir_etapa (prevista na
-  // seção 4 do CLAUDE.md) ainda não existe, então na prática o responsável
-  // aparece quando alguém inicia ou conclui a etapa.
+  // transferir_etapa exige responsável atual: é handoff entre DUAS pessoas, não
+  // a primeira designação — para isso existe atribuir_etapa.
   if (!etapa.responsavelId) {
-    return { habilitada: false, motivo: 'Inicie a etapa antes de transferir.' }
+    return { habilitada: false, motivo: 'Atribua um responsável antes.' }
   }
   return OK
 }
