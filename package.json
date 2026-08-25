@@ -15,7 +15,8 @@
     "seed:casos": "node scripts/seed-casos.mjs",
     "auditar:privilegios": "node scripts/auditar-privilegios.mjs",
     "sondar:anon": "node scripts/sondar-anon.mjs",
-    "seguranca": "node scripts/auditar-privilegios.mjs && node scripts/sondar-anon.mjs"
+    "seguranca": "node scripts/auditar-privilegios.mjs && node scripts/sondar-anon.mjs && node scripts/auditar-storage.mjs",
+    "auditar:storage": "node scripts/auditar-storage.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

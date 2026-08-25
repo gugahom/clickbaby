@@ -299,6 +299,8 @@ reabrir o acesso. Foi exatamente o que aconteceu entre as migrations
     linha nova num diff de PR significa acesso novo, revise como revisaria código.
   - `npm run sondar:anon` — caixa-preta com a anon key, confirma que `anon` é
     negado em toda tabela e toda RPC. Nenhuma sonda escreve.
+  - `npm run auditar:storage` — nenhum bucket público no remoto, e a rota de URL
+    pública não serve conteúdo sem assinatura.
 
 Rode as duas **depois de todo `db push` que toque schema**.
 
@@ -452,6 +454,13 @@ Regras não negociáveis:
   anonimização, não um `delete` direto. Esse fluxo **ainda não existe** — é dívida registrada,
   não implementação pendente de tarefa imediata.
 - Buckets do Storage são **privados**. Comprovantes e mídias só via signed URL de curta duração.
+  Os buckets são **versionados** na migration `20260825062852` — criar bucket pelo painel web
+  deixa o local sem ele e transforma "privado" numa configuração que um clique inverte sem
+  rastro. `npm run auditar:storage` confere o remoto; o pgTAP falha se algum virar público.
+  **Ainda não existe policy em `storage.objects`**: com RLS ligada isso nega tudo, que é o
+  estado certo enquanto nada sobe arquivo. A primeira policy de upload vai fazer
+  `buckets_privados.test.sql` falhar de propósito — é o gatilho para alguém ler a regra antes
+  de ela entrar.
 - Links de entrega (`entregaveis.url`) são credenciais de acesso à galeria da família —
   trate como segredo, não exponha em log nem em resposta de listagem pública.
 - Nunca logue nome de paciente, situação clínica ou URL de entregável em console, Sentry ou
