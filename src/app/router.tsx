@@ -3,11 +3,12 @@ import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
+import { FilaPage } from '@/features/fila-edicao/FilaPage'
 
 /**
- * Rotas do MVP. Só /quadro e /login existem nesta fatia; as demais telas do
- * plano (caso, fila de edição, entrega, painel — seção 7 de docs/plano.md)
- * entram como irmãs de /quadro dentro de RotaProtegida.
+ * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
+ * de /quadro dentro de RotaProtegida: A (Quadro) e C (Fila de edição) existem;
+ * faltam B (detalhe do caso), D (novo caso manual) e F (painel).
  */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <Navigate to="/quadro" replace /> },
           { path: '/quadro', element: <QuadroPage /> },
+          { path: '/fila', element: <FilaPage /> },
         ],
       },
     ],

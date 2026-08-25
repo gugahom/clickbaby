@@ -121,6 +121,13 @@ export type Database = {
             foreignKeyName: "caso_etapas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "quadro_casos"
             referencedColumns: ["id"]
           },
@@ -277,6 +284,13 @@ export type Database = {
             foreignKeyName: "entregaveis_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "entregaveis_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "quadro_casos"
             referencedColumns: ["id"]
           },
@@ -383,11 +397,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "eventos_caso_etapa_id_fkey"
+            columns: ["caso_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_etapa_id"]
+          },
+          {
             foreignKeyName: "eventos_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
             referencedRelation: "casos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
           },
           {
             foreignKeyName: "eventos_caso_id_fkey"
@@ -443,6 +471,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "caso_etapas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handoffs_caso_etapa_id_fkey"
+            columns: ["caso_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_etapa_id"]
           },
           {
             foreignKeyName: "handoffs_de_pessoa_id_fkey"
@@ -631,6 +666,41 @@ export type Database = {
       }
     }
     Views: {
+      fila_edicao: {
+        Row: {
+          atribuido_em: string | null
+          atribuido_por_nome: string | null
+          bebe_nome: string | null
+          caso_etapa_id: string | null
+          caso_id: string | null
+          cor_calendar: string | null
+          dia: string | null
+          estacao: string | null
+          etapa_status: Database["public"]["Enums"]["status_etapa"] | null
+          etapa_tipo: Database["public"]["Enums"]["etapa_tipo"] | null
+          iniciado_em: string | null
+          mae_nome: string | null
+          maternidade_sigla: string | null
+          na_uti: boolean | null
+          pacote_nome: string | null
+          pausa_acumulada: string | null
+          pausado_em: string | null
+          prazo_entrega_horas: number | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          sla_pausado: boolean | null
+          vence_em: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caso_etapas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quadro_casos: {
         Row: {
           bebe_nome: string | null
@@ -690,6 +760,10 @@ export type Database = {
     }
     Functions: {
       adicionar_reels: { Args: { p_caso_id: string }; Returns: boolean }
+      atribuir_etapa: {
+        Args: { p_caso_etapa_id: string; p_para_pessoa_id: string }
+        Returns: undefined
+      }
       cancelar_caso: {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined

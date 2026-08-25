@@ -25,6 +25,7 @@ GRANT SELECT ON TABLE public.caso_etapas TO authenticated;
 GRANT SELECT ON TABLE public.casos TO authenticated;
 GRANT SELECT ON TABLE public.entregaveis TO authenticated;
 GRANT SELECT ON TABLE public.eventos TO authenticated;
+GRANT SELECT ON TABLE public.fila_edicao TO authenticated;
 GRANT SELECT ON TABLE public.handoffs TO authenticated;
 GRANT SELECT ON TABLE public.quadro_casos TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.escalas TO authenticated;
