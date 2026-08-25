@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router'
+import { NavLink, Outlet } from 'react-router'
+import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
@@ -50,6 +51,13 @@ export function AppShell() {
           </span>
         </div>
 
+        {/* Navegação. Antes não existia: o Quadro era a única tela e chegar na
+            fila exigiria digitar a URL. */}
+        <nav className="flex flex-1 items-center gap-1" aria-label="Telas">
+          <Aba para="/quadro">Quadro</Aba>
+          <Aba para="/fila">Fila de edição</Aba>
+        </nav>
+
         <div className="flex min-w-0 items-center gap-2.5">
           {pessoa && (
             <>
@@ -78,5 +86,21 @@ export function AppShell() {
         <Outlet />
       </main>
     </div>
+  )
+}
+
+function Aba({ para, children }: { para: string; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={para}
+      className={({ isActive }) =>
+        clsx(
+          'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+          isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white',
+        )
+      }
+    >
+      {children}
+    </NavLink>
   )
 }
