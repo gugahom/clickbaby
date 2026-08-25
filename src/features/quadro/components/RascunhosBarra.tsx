@@ -37,7 +37,7 @@ export function RascunhosBarra({ rascunhos, hoje }: PropsRascunhosBarra) {
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-rascunho">Rascunhos pendentes</span>
-          <span className="rounded-full bg-rascunho/20 px-2 py-0.5 text-xs font-bold text-rascunho">
+          <span className="rounded-full bg-rascunho px-2 py-0.5 text-xs font-bold text-white">
             {rascunhos.length}
           </span>
           <span className="hidden text-xs text-muted-foreground sm:inline">

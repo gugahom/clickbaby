@@ -1,4 +1,4 @@
-import type { CasoQuadro, EtapaQuadro } from '../types'
+import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
 
 /**
  * Quais ações fazem sentido AGORA, para esta etapa e para este papel.
@@ -30,7 +30,36 @@ export interface Disponibilidade {
 
 const OK: Disponibilidade = { habilitada: true }
 
-export function podeIniciar(etapa: EtapaQuadro): Disponibilidade {
+/**
+ * A etapa anterior (por `ordem`) precisa estar resolvida antes desta abrir.
+ *
+ * É trava de TELA, não de banco: `concluir_etapa` continua aceitando qualquer
+ * ordem de propósito, porque campo admite registro retroativo (seção 9 do
+ * CLAUDE.md) — alguém pode ter fotografado o banho e só registrar depois. O que
+ * a trava evita é o caminho fácil de sair aprovando tudo de cima para baixo sem
+ * o trabalho ter acontecido.
+ *
+ * Dispensada conta como resolvida: é uma etapa que não vai acontecer, e ela não
+ * pode segurar a fila atrás de si.
+ */
+function anteriorPendente(
+  etapa: EtapaQuadro,
+  etapas: EtapaQuadro[],
+): EtapaQuadro | null {
+  const anteriores = etapas
+    .filter((e) => e.ordem < etapa.ordem)
+    .sort((a, b) => b.ordem - a.ordem)
+
+  const bloqueia = anteriores.find(
+    (e) => e.status !== 'concluida' && e.status !== 'dispensada',
+  )
+  return bloqueia ?? null
+}
+
+export function podeIniciar(
+  etapa: EtapaQuadro,
+  etapas: EtapaQuadro[] = [],
+): Disponibilidade {
   if (etapa.status === 'em_andamento') {
     return { habilitada: false, motivo: 'Já está em andamento.' }
   }
@@ -40,10 +69,17 @@ export function podeIniciar(etapa: EtapaQuadro): Disponibilidade {
   if (etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Etapa dispensada.' }
   }
+  const trava = anteriorPendente(etapa, etapas)
+  if (trava) {
+    return { habilitada: false, motivo: `Conclua ${ROTULO_ETAPA[trava.tipo]} antes.` }
+  }
   return OK
 }
 
-export function podeConcluir(etapa: EtapaQuadro): Disponibilidade {
+export function podeConcluir(
+  etapa: EtapaQuadro,
+  etapas: EtapaQuadro[] = [],
+): Disponibilidade {
   // concluir_etapa aceita pendente, atribuida E em_andamento: o registro
   // retroativo é deliberado (seção 9 do CLAUDE.md) — em campo nem sempre dá
   // para tocar o aparelho na hora exata.
@@ -52,6 +88,10 @@ export function podeConcluir(etapa: EtapaQuadro): Disponibilidade {
   }
   if (etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Etapa dispensada.' }
+  }
+  const trava = anteriorPendente(etapa, etapas)
+  if (trava) {
+    return { habilitada: false, motivo: `Conclua ${ROTULO_ETAPA[trava.tipo]} antes.` }
   }
   return OK
 }
@@ -117,18 +157,26 @@ export function podeAdicionarReels(
   return OK
 }
 
+/**
+ * Sem checagem de papel desde a migration 20260825014102: quem gera os links são
+ * as fotógrafas, e prender o encerramento ao atendimento fazia da Morgana
+ * gargalo de um passo que ela não executa.
+ *
+ * A trava que sobrou é outra e continua valendo — sem link registrado ninguém
+ * encerra. Ela mora na RPC; aqui só evita oferecer o que vai ser negado.
+ */
 export function podeConfirmarEntrega(
   caso: CasoQuadro,
-  papelSistema: string,
+  temEntregavel: boolean,
 ): Disponibilidade {
-  if (!podeEncerrarCaso(papelSistema)) {
-    return { habilitada: false, motivo: 'Só atendimento ou gestão.' }
-  }
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
   }
   if (caso.statusEntrega === 'confirmado') {
     return { habilitada: false, motivo: 'Entrega já confirmada.' }
+  }
+  if (!temEntregavel) {
+    return { habilitada: false, motivo: 'Registre ao menos um link antes.' }
   }
   return OK
 }

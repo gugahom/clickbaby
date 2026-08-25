@@ -38,6 +38,8 @@ import {
   podeEncerrarCaso,
 } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
+import { Entregaveis } from './Entregaveis'
+import { useEntregaveis } from '../api/useAcoes'
 import {
   ROTULO_ETAPA,
   ROTULO_STATUS_ETAPA,
@@ -106,7 +108,12 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     )
   }
 
-  const entrega = podeConfirmarEntrega(caso, papel)
+  // O card só renderiza AcoesDoCaso quando está aberto, então buscar aqui já é
+  // "só com o card aberto" — ver useEntregaveis.
+  const { data: entregaveis } = useEntregaveis(caso.id, true)
+  const temEntregavel = (entregaveis ?? []).length > 0
+
+  const entrega = podeConfirmarEntrega(caso, temEntregavel)
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
@@ -117,7 +124,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   // seção REELS enquanto a edição está em andamento.
   const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
   const edicaoDeVideo = etapaVideo
-    ? podeIniciar(etapaVideo)
+    ? podeIniciar(etapaVideo, etapas)
     : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
@@ -139,9 +146,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {etapas.map((etapa) => {
-            const inicio = podeIniciar(etapa)
+            const inicio = podeIniciar(etapa, etapas)
             const pausa = podePausar(etapa)
-            const conclusao = podeConcluir(etapa)
+            const conclusao = podeConcluir(etapa, etapas)
             const handoff = podeTransferir(etapa)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
@@ -304,22 +311,33 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         )}
       </div>
 
-      {/* Ações que encerram o caso. Não aparecem para operador — as RPCs
-          negariam, e oferecer o que será negado é pior que não oferecer. */}
-      {mostraAcoesDeCaso && (
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Botao
-            variante="destrutivo"
-            onClick={() => {
-              setErro(null)
-              setConfirmacao({ tipo: 'entrega' })
-            }}
-            disabled={ocupado || !entrega.habilitada}
-            title={entrega.motivo}
-          >
-            Confirmar entrega
-          </Botao>
+      {/* Links de entrega. A fotógrafa gera fora do sistema e cola aqui; sem ao
+          menos um, confirmar entrega é recusado pela RPC. */}
+      <div className="border-t border-border pt-3">
+        <h5 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Links de entrega
+        </h5>
+        <Entregaveis caso={caso} aberto />
+      </div>
 
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        {/* Confirmar entrega não olha mais papel (migration 20260825014102):
+            quem gera os links são as fotógrafas. Cancelar continua restrito —
+            cancelar é decisão comercial sobre o contrato, não o fim natural do
+            trabalho. */}
+        <Botao
+          variante="destrutivo"
+          onClick={() => {
+            setErro(null)
+            setConfirmacao({ tipo: 'entrega' })
+          }}
+          disabled={ocupado || !entrega.habilitada}
+          title={entrega.motivo}
+        >
+          Confirmar entrega
+        </Botao>
+
+        {mostraAcoesDeCaso && (
           <Botao
             variante="fantasma"
             onClick={() => {
@@ -332,12 +350,12 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           >
             Cancelar caso
           </Botao>
+        )}
 
-          <span className="text-xs text-muted-foreground">
-            Encerram o caso — sem desfazer.
-          </span>
-        </div>
-      )}
+        <span className="text-xs text-muted-foreground">
+          Encerram o caso — sem desfazer.
+        </span>
+      </div>
 
       {observacaoDe && (
         <DialogoObservacao

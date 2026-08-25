@@ -45,8 +45,14 @@ usar inglês.
 | **Card cinza**             | Convenção do cliente no Calendar para sinalizar cancelamento — o sync detecta e cancela o caso automaticamente                                      |
 
 **Pessoas reais do cliente que aparecem no domínio:** Sarah distribui a fila de edição.
-Morgana (atendimento) confirma a entrega dos links e encerra o caso. Não hardcode esses
-nomes — são papéis atribuídos a registros em `pessoas`.
+Não hardcode esses nomes — são papéis atribuídos a registros em `pessoas`.
+
+**Entrega — revisado com o gestor.** Quem gera os links de entrega são as próprias
+fotógrafas, fora do sistema (Google Photos, WeTransfer). Elas colam o link no caso e
+confirmam a entrega, o que encerra o caso. A Morgana **não** é mais a única que confirma:
+prender o encerramento ao atendimento fazia dela gargalo de um passo que ela não executa.
+O sistema guarda e exibe o link; **não gera nem confere** se ele existe de verdade —
+uma integração de verificação fica para depois, se fizer sentido.
 
 ### Pacotes × etapas — referência canônica
 
@@ -121,9 +127,15 @@ aparelho.
 
 ### 3.5 Só existem dois caminhos terminais: encerrado e cancelado
 
-`status_operacional = encerrado` exige `status_entrega = confirmado` — a Morgana disponibilizou
-e confirmou todos os links. Não existe encerramento por prazo, por omissão ou por decisão
-unilateral de outro papel.
+`status_operacional = encerrado` exige `status_entrega = confirmado` **e ao menos um
+entregável registrado**. Não existe encerramento por prazo nem por omissão: alguém tem que
+fazer o gesto, e o gesto fica gravado em `eventos` e em `entregaveis.confirmado_por`.
+
+**Qualquer pessoa ativa confirma a entrega** (migration `20260825014102`). A restrição a
+atendimento/adm caiu quando se descobriu que quem gera os links são as fotógrafas — o
+portão continua existindo, mudou quem tem a chave. `cancelar_caso` **continua** restrita a
+atendimento/adm: cancelar é decisão comercial sobre o contrato, não o fim natural de um
+trabalho.
 
 `status_operacional = cancelado` exige `motivo_cancelamento` preenchido e não vazio — seja
 porque o sync detectou o card cinza no Calendar (preenche um texto padrão automaticamente),

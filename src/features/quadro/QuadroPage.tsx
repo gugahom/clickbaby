@@ -4,6 +4,7 @@ import { Botao } from '@/components/ui/Botao'
 import { hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
 import { useRetornarDaUti } from './api/useAcoes'
+import { useRealtimeQuadro } from './api/useRealtimeQuadro'
 import { mensagemDeErro } from './lib/erros'
 import {
   DIAS_INICIAIS,
@@ -39,6 +40,8 @@ export function QuadroPage() {
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
+  // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
+  const { conectado } = useRealtimeQuadro()
 
   const { blocos, rascunhos, naUti, emReels, concluidos, totalAbertos } = useMemo(() => {
     const casos = data?.casos ?? []
@@ -182,14 +185,25 @@ export function QuadroPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-card px-3 py-3 md:px-4">
+      <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border bg-card px-3 py-3 shadow-cartao md:px-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold md:text-2xl">Quadro</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
+            <h1 className="text-lg font-bold tracking-tight md:text-2xl">Quadro</h1>
+            <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
               {isPending
                 ? 'Carregando…'
                 : `${totalAbertos} ${totalAbertos === 1 ? 'caso' : 'casos'} em ${blocos.length} ${blocos.length === 1 ? 'dia' : 'dias'}`}
+              {/* Só aparece quando NÃO está conectado. Um selo verde permanente
+                  vira ruído que ninguém lê; o que a pessoa precisa saber é o
+                  contrário — que a tela pode estar velha. */}
+              {!conectado && !isPending && (
+                <span
+                  className="rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-medium text-atencao"
+                  title="Sem conexão ao vivo. A tela pode não refletir o que outra pessoa acabou de fazer."
+                >
+                  fora do ao vivo
+                </span>
+              )}
             </p>
           </div>
 
@@ -241,8 +255,8 @@ export function QuadroPage() {
             {/* Desktop: lista larga à esquerda; à direita, UTI e Reels dividem
                 a altura em duas linhas IGUAIS (grid-rows-2). Cada uma rola por
                 dentro, então nenhuma empurra a outra por mais casos que tenha. */}
-            <div className="hidden min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-4 lg:p-4">
-              <div className="min-h-0 overflow-y-auto rounded-md border border-border bg-card">
+            <div className="hidden min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-4 lg:p-4">
+              <div className="min-h-0 overflow-y-auto rounded-md border border-border bg-card shadow-painel">
                 {listaPorDia}
               </div>
               <div className="grid min-h-0 grid-rows-2 gap-4">
@@ -279,10 +293,10 @@ function BotaoAba({
       onClick={onClick}
       aria-pressed={ativa}
       className={clsx(
-        'min-h-11 flex-shrink-0 rounded-md px-3 text-sm font-medium transition-colors',
+        'min-h-11 flex-shrink-0 rounded-md px-3.5 text-sm font-semibold transition-colors',
         ativa
-          ? 'bg-primary text-primary-foreground'
-          : 'border border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+          ? 'bg-marca text-white shadow-cartao'
+          : 'border border-border text-muted-foreground hover:bg-marca-suave hover:text-marca',
       )}
     >
       {children}
