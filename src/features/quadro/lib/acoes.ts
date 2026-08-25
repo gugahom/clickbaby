@@ -157,18 +157,26 @@ export function podeAdicionarReels(
   return OK
 }
 
+/**
+ * Sem checagem de papel desde a migration 20260825014102: quem gera os links são
+ * as fotógrafas, e prender o encerramento ao atendimento fazia da Morgana
+ * gargalo de um passo que ela não executa.
+ *
+ * A trava que sobrou é outra e continua valendo — sem link registrado ninguém
+ * encerra. Ela mora na RPC; aqui só evita oferecer o que vai ser negado.
+ */
 export function podeConfirmarEntrega(
   caso: CasoQuadro,
-  papelSistema: string,
+  temEntregavel: boolean,
 ): Disponibilidade {
-  if (!podeEncerrarCaso(papelSistema)) {
-    return { habilitada: false, motivo: 'Só atendimento ou gestão.' }
-  }
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
   }
   if (caso.statusEntrega === 'confirmado') {
     return { habilitada: false, motivo: 'Entrega já confirmada.' }
+  }
+  if (!temEntregavel) {
+    return { habilitada: false, motivo: 'Registre ao menos um link antes.' }
   }
   return OK
 }

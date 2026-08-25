@@ -4,7 +4,7 @@
 -- ambas.
 
 begin;
-select plan(14);
+select plan(15);
 
 create function pg_temp.levanta_erro(p_sql text) returns boolean
 language plpgsql
@@ -100,28 +100,59 @@ select is(
 -- B. confirmar_entrega — negativos
 -- =============================================================================
 
--- B1: operador não pode confirmar (caso sem link, mas o erro de papel vem
--- primeiro — a checagem de papel precede a de entregável).
+-- B1: operador AGORA CONSEGUE confirmar (migration 20260825014102).
+-- O teste era o inverso: afirmava que o operador era barrado por papel. Quem
+-- gera os links são as fotógrafas, então prender o encerramento ao atendimento
+-- fazia da Morgana gargalo de um passo que ela não executa.
+--
+-- A trava que ficou é outra: sem entregável não se encerra. Por isso este caso
+-- ganha um link antes — o que o teste prova é que o operador passa pela porta
+-- que antes era só do atendimento.
 select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Operador Teste Terminal'), true);
+set local role authenticated;
+
+select public.registrar_entregavel(
+  (select id from public.casos where mae_nome = 'Mãe Confirma SemLink'),
+  'google_photos',
+  'https://exemplo.invalido/operador-confirma'
+);
+
+select lives_ok(
+  format(
+    $$ select public.confirmar_entrega('%s'::uuid) $$,
+    (select id from public.casos where mae_nome = 'Mãe Confirma SemLink')
+  ),
+  'CE5: operador CONFIRMA entrega — a restrição de papel caiu (20260825014102)'
+);
+
+select is(
+  (select status_operacional from public.casos where mae_nome = 'Mãe Confirma SemLink'),
+  'encerrado'::public.status_operacional,
+  'CE5b: e o caso encerrou pelo gesto do operador'
+);
+
+-- B2: a trava que SOBROU — sem entregável nenhum, ninguém encerra.
+--
+-- A fixture sai do papel authenticated para ser criada: `authenticated` não tem
+-- (nem deve ter) INSERT em casos — o intake é do sync, via service_role.
+reset role;
+
+insert into public.casos (mae_nome, pacote_id, maternidade_id, previsao_em)
+values (
+  'Mãe Sem Link Nenhum',
+  (select id from public.pacotes where slug = 'basic'),
+  (select id from public.maternidades where sigla = 'HSC'),
+  '2026-09-30 10:00:00+00'
+);
+
 set local role authenticated;
 
 select ok(
   pg_temp.levanta_erro(format(
     $$ select public.confirmar_entrega('%s'::uuid) $$,
-    (select id from public.casos where mae_nome = 'Mãe Confirma SemLink')
+    (select id from public.casos where mae_nome = 'Mãe Sem Link Nenhum')
   )),
-  'CE5: operador não consegue confirmar entrega (restrição de papel)'
-);
-
--- B2: atendimento não pode confirmar um caso sem nenhum entregável.
-select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste Terminal'), true);
-
-select ok(
-  pg_temp.levanta_erro(format(
-    $$ select public.confirmar_entrega('%s'::uuid) $$,
-    (select id from public.casos where mae_nome = 'Mãe Confirma SemLink')
-  )),
-  'CE6: confirmar entrega de um caso sem entregável levanta erro'
+  'CE6: confirmar entrega de um caso sem entregável levanta erro — a trava que importa continua'
 );
 
 -- B3: confirmar de novo um caso já confirmado/encerrado.
