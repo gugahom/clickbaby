@@ -1,4 +1,5 @@
 import { AcoesDoCaso } from './AcoesDoCaso'
+import { HistoricoDoCaso } from './HistoricoDoCaso'
 import type { EstadoSla } from '../lib/sla'
 import { ROTULO_SITUACAO, type CasoQuadro, type EtapaQuadro } from '../types'
 
@@ -41,6 +42,14 @@ export function CasoDetalhe({ caso, etapas, sla }: PropsCasoDetalhe) {
       <section>
         <TituloSecao>Etapas</TituloSecao>
         <AcoesDoCaso caso={caso} etapas={etapas} />
+      </section>
+
+      {/* Por último de propósito: as etapas respondem "o que fazer agora", que é
+          a pergunta de quem abre o card no corredor. O histórico responde "o
+          que já aconteceu", que se consulta, não se opera. */}
+      <section>
+        <TituloSecao>Histórico</TituloSecao>
+        <HistoricoDoCaso casoId={caso.id} />
       </section>
     </div>
   )

@@ -48,6 +48,9 @@ export function useRealtimeQuadro(): EstadoRealtime {
       if (timer.current) clearTimeout(timer.current)
       timer.current = setTimeout(() => {
         void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
+        // O histórico também: uma ação de outra pessoa é fato novo no log, e é
+        // justamente o que o card aberto deveria mostrar aparecendo.
+        void queryClient.invalidateQueries({ queryKey: ['historico'] })
       }, ESPERA_MS)
     }
 
