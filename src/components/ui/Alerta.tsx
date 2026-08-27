@@ -1,3 +1,5 @@
+import { BotaoIcone } from './BotaoIcone'
+
 interface PropsAlerta {
   children: React.ReactNode
   onFechar?: () => void
@@ -19,14 +21,13 @@ export function Alerta({ children, onFechar }: PropsAlerta) {
     >
       <span className="flex-1">{children}</span>
       {onFechar && (
-        <button
-          type="button"
+        <BotaoIcone
+          rotulo="Fechar aviso"
           onClick={onFechar}
-          aria-label="Fechar aviso"
-          className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+          className="-my-2 size-9 text-current/70"
         >
           ✕
-        </button>
+        </BotaoIcone>
       )}
     </div>
   )

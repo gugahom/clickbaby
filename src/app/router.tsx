@@ -3,17 +3,22 @@ import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
-import { FilaPage } from '@/features/fila-edicao/FilaPage'
 
 /**
  * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
- * do Quadro dentro de RotaProtegida: A (Quadro) e C (Fila de edição) existem;
- * faltam B (detalhe do caso), D (novo caso manual) e F (painel).
+ * do Quadro dentro de RotaProtegida. Hoje só o Quadro existe; faltam B
+ * (detalhe do caso), D (novo caso manual) e F (painel).
+ *
+ * A Fila de edição (tela C) foi REMOVIDA a pedido do gestor — ele não a pediu
+ * e ela não tinha uso na operação atual. A trava da seção 9 do CLAUDE.md
+ * (iniciar antes de concluir, sem a qual o tempo de ciclo dá zero) NÃO some
+ * junto: ela vive na migration 20260825051226, no banco. A view `fila_edicao`
+ * e os testes pgTAP também continuam. O que saiu foi só a tela.
  *
  * BASENAME
  * O app é publicado sob /quadro/, com a raiz reservada para uma landing. O
  * basename absorve esse prefixo, então os caminhos aqui são relativos a ele:
- * '/' é o Quadro em /quadro, '/fila' é a Fila em /quadro/fila.
+ * '/' é o Quadro, servido em /quadro.
  *
  * Por isso NÃO existe mais uma rota '/quadro' aqui — ela viraria
  * /quadro/quadro. Os três lados desta decisão (base do Vite, outDir e este
@@ -29,7 +34,6 @@ export const router = createBrowserRouter(
           element: <AppShell />,
           children: [
             { index: true, element: <QuadroPage /> },
-            { path: '/fila', element: <FilaPage /> },
           ],
         },
       ],

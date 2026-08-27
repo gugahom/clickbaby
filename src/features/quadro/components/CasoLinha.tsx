@@ -7,6 +7,9 @@ import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
 import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
+import { EditarCasoDialogo } from './EditarCasoDialogo'
+import { IconeCaneta } from '@/components/ui/icones'
+import { BotaoIcone } from '@/components/ui/BotaoIcone'
 
 interface PropsCasoLinha {
   caso: CasoQuadro
@@ -15,6 +18,7 @@ interface PropsCasoLinha {
 
 export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   const [aberto, setAberto] = useState(false)
+  const [editando, setEditando] = useState(false)
   const idPainel = useId()
   const idCabecalho = useId()
 
@@ -40,10 +44,14 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   return (
     <div
       className={clsx(
-        'border-b border-border transition-colors last:border-b-0',
-        caso.ehRascunho && 'bg-rascunho-fundo/40',
-        prontoParaEntrega && 'bg-pronto-fundo',
-        caso.ehTerminal && 'opacity-55',
+        // Cartão, não linha de grade. O que separa um caso do seguinte agora é
+        // o chão pastel aparecendo no vão, não um filete de 1px — era essa a
+        // queixa de "tudo colado". A sombra sobe no hover para dar o retorno
+        // de que a coisa inteira é clicável.
+        'group relative overflow-hidden rounded-cartao border border-border bg-card shadow-cartao transition-shadow hover:shadow-cartao-alto',
+        caso.ehRascunho && 'border-rascunho-borda bg-rascunho-fundo/50',
+        prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
+        caso.ehTerminal && 'opacity-60 shadow-none',
       )}
     >
       {/*
@@ -52,13 +60,20 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         renderizava outros <button> lá dentro (HTML inválido) — quebraria
         assim que as ações da próxima fatia chegassem.
       */}
+      {/*
+        <button> cru, e não o Botao: isto é um controle de sanfona que ocupa a
+        linha inteira, não uma ação. A mola de escala do Botao encolheria o
+        cartão/cabeçalho todo a cada toque, o que numa lista rolando lê como
+        falha de renderização, não como resposta. A confirmação aqui já vem do
+        chevron girando e do painel abrindo.
+      */}
       <button
         type="button"
         id={idCabecalho}
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="w-full px-3 py-3 text-left transition-colors hover:bg-marca-suave md:px-4"
+        className="relative w-full py-3 pr-14 pl-3 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -155,18 +170,47 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
             )}
           </div>
 
-          <div className="flex flex-shrink-0 items-center">
-            {/* Chevron aponta para BAIXO quando fechado (abre para baixo) e para
-                CIMA quando aberto. A referência tinha isto invertido. */}
-            <Chevron
-              className={clsx(
-                'size-5 text-muted-foreground transition-transform',
-                aberto && 'rotate-180',
-              )}
-            />
-          </div>
         </div>
+
+        {/* Chevron aponta para BAIXO quando fechado (abre para baixo) e para
+            CIMA quando aberto. A referência tinha isto invertido.
+
+            Saiu do fluxo e foi para a calha reservada à direita (o `pr-14` do
+            cabeçalho) para dividir esse espaço com o botão de editar sem
+            disputar lugar com o rótulo de SLA, que vive no alto à direita. */}
+        <Chevron
+          className={clsx(
+            'absolute top-3.5 right-3 size-5 text-muted-foreground transition-transform',
+            aberto && 'rotate-180',
+          )}
+        />
       </button>
+
+      {/*
+        FORA do <button>. Um <button> dentro de outro é HTML inválido e o
+        clique interno borbulharia abrindo o detalhe junto — foi o defeito da
+        referência da v0, e não vale repetir por economia de markup.
+
+        SEMPRE VISÍVEL, nunca só no hover. A primeira versão revelava no hover
+        no desktop; em celular, que é o aparelho real da operação (seção 6),
+        hover não existe — o botão ficaria invisível e clicável ao mesmo tempo,
+        que é o pior dos dois mundos. Fica quieto pelo contraste, não pela
+        opacidade.
+
+        No rascunho ele é o gesto principal do cartão: é o que tira o caso do
+        limbo. Por isso ganha borda e a cor da pendência; nos demais é
+        conveniência e fica em cinza.
+      */}
+      <BotaoIcone
+        rotulo={`${caso.ehRascunho ? 'Completar' : 'Editar'} cadastro de ${titulo}`}
+        tom={caso.ehRascunho ? 'pendencia' : 'neutro'}
+        onClick={() => setEditando(true)}
+        className="absolute right-1.5 bottom-1.5"
+      >
+        <IconeCaneta className="size-4" />
+      </BotaoIcone>
+
+      {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
 
       <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
         {aberto && <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />}

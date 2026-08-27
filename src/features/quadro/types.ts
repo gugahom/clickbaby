@@ -29,9 +29,13 @@ export interface CasoQuadro {
   situacaoClinica: SituacaoClinica
   statusOperacional: StatusOperacional
   statusEntrega: StatusEntrega
+  /** Os ids existiam na view e não eram lidos. O editor de cadastro precisa
+      deles para pré-selecionar o valor atual nos seletores. */
+  pacoteId: string | null
   pacoteNome: string | null
   pacoteSlug: string | null
   prazoEntregaHoras: number | null
+  maternidadeId: string | null
   maternidadeNome: string | null
   maternidadeSigla: string | null
   nascimentoConcluidoEm: string | null
@@ -96,9 +100,11 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     situacaoClinica: linha.situacao_clinica ?? 'aguardando',
     statusOperacional: linha.status_operacional ?? 'agendado',
     statusEntrega: linha.status_entrega ?? 'pendente',
+    pacoteId: linha.pacote_id,
     pacoteNome: linha.pacote_nome,
     pacoteSlug: linha.pacote_slug,
     prazoEntregaHoras: linha.prazo_entrega_horas,
+    maternidadeId: linha.maternidade_id,
     maternidadeNome: linha.maternidade_nome,
     maternidadeSigla: linha.maternidade_sigla,
     nascimentoConcluidoEm: linha.nascimento_concluido_em,

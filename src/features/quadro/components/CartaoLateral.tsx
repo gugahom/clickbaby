@@ -40,7 +40,7 @@ export function CartaoLateral({
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
   return (
-    <li className="flex items-stretch gap-2.5 border-b border-border px-3 py-2.5 last:border-b-0">
+    <li className="flex items-stretch gap-2.5 rounded-md border border-border bg-card px-3 py-2.5 shadow-cartao">
       <div
         className="w-1 flex-shrink-0 rounded-sm"
         style={{ backgroundColor: corDoCaso(caso.corCalendar) }}
