@@ -9,6 +9,7 @@ import {
   IconeCheck,
   IconeAtribuir,
   IconeHandoff,
+  IconeRendicao,
   IconePause,
   IconePlay,
 } from '@/components/ui/icones'
@@ -16,6 +17,7 @@ import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
   useAdicionarVideo,
+  usePlanejarRendicao,
   useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
@@ -37,6 +39,7 @@ import {
   podeMoverParaUti,
   podePausar,
   podeRetornarDaUti,
+  podePlanejarRendicao,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -81,6 +84,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
   const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
+  const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
@@ -90,6 +94,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
   const adicionarVideo = useAdicionarVideo()
+  const planejarRendicao = usePlanejarRendicao()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -141,7 +146,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     confirmacao !== null ||
     handoffDe !== null ||
     observacaoDe !== null ||
-    atribuirDe !== null
+    atribuirDe !== null ||
+    rendicaoDe !== null
 
   return (
     <div className="space-y-3">
@@ -161,6 +167,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const conclusao = podeConcluir(etapa, etapas)
             const handoff = podeTransferir(etapa)
             const designacao = podeAtribuir(etapa)
+            const rendicao = podePlanejarRendicao(etapa)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
@@ -183,6 +190,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
                     {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
+                    {etapa.proximoResponsavelNome && (
+                      <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">
+                        rende para {etapa.proximoResponsavelNome}
+                      </span>
+                    )}
                     {etapa.estacao && (
                       <span className="rounded bg-muted px-1 py-0.5 font-mono">
                         {etapa.estacao}
@@ -284,6 +296,28 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         <IconeHandoff className="size-[18px]" />
                       </BotaoIcone>
                     )}
+
+                    {/* Slot PRÓPRIO, não compartilhado com os de cima. Atribuir
+                        e handoff trocam o responsável agora; isto só anuncia
+                        quem assume depois — as duas coisas convivem, e a
+                        fotógrafa que sabe que sai em 15 minutos precisa das
+                        duas na mesma linha. */}
+                    <BotaoIcone
+                      rotulo={
+                        etapa.proximoResponsavelNome
+                          ? `Rendição: ${etapa.proximoResponsavelNome} assume`
+                          : 'Planejar rendição de turno'
+                      }
+                      disabled={ocupado || !rendicao.habilitada}
+                      motivo={rendicao.motivo}
+                      tom={etapa.proximoResponsavelNome ? 'acao' : 'neutro'}
+                      onClick={() => {
+                        setErro(null)
+                        setRendicaoDe(etapa)
+                      }}
+                    >
+                      <IconeRendicao className="size-[18px]" />
+                    </BotaoIcone>
                   </div>
                 )}
               </li>
@@ -417,6 +451,31 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             executar(
               atribuir.mutateAsync({ casoEtapaId: atribuirDe.id, paraPessoaId }),
               () => setAtribuirDe(null),
+            )
+          }
+        />
+      )}
+
+      {rendicaoDe && (
+        <DialogoPessoa
+          titulo={`Quem assume ${ROTULO_ETAPA[rendicaoDe.tipo]}?`}
+          contexto={
+            rendicaoDe.proximoResponsavelNome
+              ? `${rendicaoDe.responsavelNome ?? '—'} está com a etapa e ${rendicaoDe.proximoResponsavelNome} assume. Escolher outra pessoa substitui o combinado.`
+              : `${rendicaoDe.responsavelNome ?? '—'} está com a etapa. Quem for escolhido aqui NÃO assume agora — fica anunciado para a virada de turno.`
+          }
+          rotuloConfirmar="Anunciar"
+          excluirPessoaId={rendicaoDe.responsavelId}
+          ocupado={planejarRendicao.isPending}
+          erro={erro}
+          onCancelar={() => setRendicaoDe(null)}
+          onConfirmar={(proximaPessoaId) =>
+            executar(
+              planejarRendicao.mutateAsync({
+                casoEtapaId: rendicaoDe.id,
+                proximaPessoaId,
+              }),
+              () => setRendicaoDe(null),
             )
           }
         />

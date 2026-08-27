@@ -137,6 +137,25 @@ export function podeAtribuir(etapa: EtapaQuadro): Disponibilidade {
   return OK
 }
 
+/**
+ * Anunciar quem assume na virada de turno.
+ *
+ * Espelha as guardas de `planejar_rendicao` (migration 20260827141600): exige
+ * responsável atual, porque rendição é quem vem DEPOIS de alguém — sem isso o
+ * que se quer é atribuir. Vale em qualquer status não terminal, inclusive
+ * `atribuida`: a fotógrafa que sabe que sai em 15 minutos combina a troca
+ * antes de começar, não depois.
+ */
+export function podePlanejarRendicao(etapa: EtapaQuadro): Disponibilidade {
+  if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
+    return { habilitada: false, motivo: 'Trabalho terminado.' }
+  }
+  if (!etapa.responsavelId) {
+    return { habilitada: false, motivo: 'Atribua um responsável antes.' }
+  }
+  return OK
+}
+
 export function podeTransferir(etapa: EtapaQuadro): Disponibilidade {
   if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Trabalho terminado não se transfere.' }

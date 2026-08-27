@@ -5,8 +5,9 @@ import { formatarHora } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
-import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
+import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
+import { TrilhasDoCaso } from './TrilhasDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { IconeCaneta } from '@/components/ui/icones'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
@@ -28,8 +29,6 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   const sla = estadoSla(caso, agora)
   const cor = corDoCaso(caso.corCalendar)
   const hora = formatarHora(caso.previsaoEm)
-  const etapaAtual = etapas.find((e) => e.status === 'em_andamento')
-  const concluidas = etapas.filter((e) => e.status === 'concluida').length
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
@@ -140,32 +139,15 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
               )}
             </div>
 
-            {/* Trilha de etapas: inline no desktop, resumida no mobile.
-                Rascunho não tem etapas — nada de "0/0". */}
-            {etapas.length > 0 && (
-              <div className="mt-2">
-                <div className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-sm md:flex">
-                  {etapas.map((etapa, i) => (
-                    <span key={etapa.id} className="flex items-center gap-1.5">
-                      <span className={classeEtapa(etapa)}>{ROTULO_ETAPA[etapa.tipo]}</span>
-                      {i < etapas.length - 1 && (
-                        <span className="text-border" aria-hidden="true">
-                          ·
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
+            {/* As duas trilhas. Rascunho não tem etapas — nada de "0/0". */}
+            <TrilhasDoCaso etapas={etapas} />
 
-                <div className="flex items-center justify-between text-sm md:hidden">
-                  <span className="text-muted-foreground">
-                    {etapaAtual ? ROTULO_ETAPA[etapaAtual.tipo] : 'Não iniciado'} ·{' '}
-                    {concluidas}/{etapas.length}
-                  </span>
-                  {sla.rotulo && (
-                    <span className={CLASSE_URGENCIA[sla.urgencia]}>{sla.rotulo}</span>
-                  )}
-                </div>
+            {/* No mobile o SLA não cabe na linha do título; desce para cá. */}
+            {sla.rotulo && (
+              <div className="mt-1.5 md:hidden">
+                <span className={clsx('text-sm', CLASSE_URGENCIA[sla.urgencia])}>
+                  {sla.rotulo}
+                </span>
               </div>
             )}
           </div>
@@ -217,19 +199,6 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
       </div>
     </div>
   )
-}
-
-function classeEtapa(etapa: EtapaQuadro): string {
-  switch (etapa.status) {
-    case 'concluida':
-      return 'text-concluido font-medium'
-    case 'em_andamento':
-      return 'text-andamento font-bold'
-    case 'dispensada':
-      return 'text-muted-foreground line-through'
-    default:
-      return 'text-muted-foreground'
-  }
 }
 
 export function BadgeRascunho() {

@@ -170,3 +170,27 @@ export function IconeAtribuir({ className }: PropsIcone) {
     </svg>
   )
 }
+
+export function IconeRendicao({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Duas pessoas com uma seta entre elas: quem está e quem assume. NÃO é
+          o handoff (que é uma pessoa e uma seta de saída) — aqui as duas
+          coexistem na tela, porque a troca ainda não aconteceu. */}
+      <circle cx="6" cy="7" r="3" />
+      <path d="M1.5 20v-1a4 4 0 0 1 4-4h1" />
+      <circle cx="18" cy="7" r="3" />
+      <path d="M22.5 20v-1a4 4 0 0 0-4-4h-1" />
+      <path d="M10 11.5h4M12.5 10l1.5 1.5-1.5 1.5" />
+    </svg>
+  )
+}

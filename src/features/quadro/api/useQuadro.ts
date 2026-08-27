@@ -50,7 +50,13 @@ async function carregarQuadro(): Promise<DadosQuadro> {
 
   const { data: linhasEtapas, error: erroEtapas } = await supabase
     .from('caso_etapas')
-    .select('*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome)')
+    // Dois embeds pela MESMA tabela `pessoas`, então os dois precisam nomear a
+    // FK — sem isso o PostgREST não sabe por qual coluna juntar. E precisa ser
+    // um literal de uma peça só: concatenar com `+` faz o tipo do select virar
+    // string genérica e a inferência do supabase-js desabar.
+    .select(
+      '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome)',
+    )
     .in('caso_id', ids)
     .order('ordem', { ascending: true })
 

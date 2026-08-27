@@ -168,6 +168,20 @@ export function useRetornarDaUti() {
   )
 }
 
+/**
+ * Anuncia quem assume a etapa na virada de turno, sem trocar o responsável.
+ * `proximaPessoaId: null` cancela o plano.
+ */
+export function usePlanejarRendicao() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; proximaPessoaId: string | null }>(
+    ({ casoEtapaId, proximaPessoaId }) =>
+      chamar('planejar_rendicao', {
+        p_caso_etapa_id: casoEtapaId,
+        p_proxima_pessoa_id: proximaPessoaId,
+      }),
+  )
+}
+
 export function useAdicionarVideo() {
   return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
     chamar('adicionar_video', { p_caso_id: casoId }),

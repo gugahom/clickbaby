@@ -73,12 +73,19 @@ export interface EtapaQuadro {
   observacao: string | null
   /** Necessário para o handoff: transferir_etapa exige responsável atual. */
   responsavelId: string | null
+  /**
+   * Quem já sabe que assume esta etapa na virada de turno. NÃO é um segundo
+   * responsável — só uma pessoa trabalha por vez. Ver a migration
+   * 20260827141600.
+   */
+  proximoResponsavelId: string | null
   iniciadoEm: string | null
   concluidoEm: string | null
   /** Janela de pausa aberta. O tempo aqui não conta como trabalho. */
   pausadoEm: string | null
   estacao: string | null
   responsavelNome: string | null
+  proximoResponsavelNome: string | null
 }
 
 /** Um bloco de dia do Quadro, já com o contador resolvido. */
@@ -134,6 +141,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
 
 type LinhaEtapaComResponsavel = LinhaEtapa & {
   responsavel: { nome: string } | null
+  proximo_responsavel: { nome: string } | null
 }
 
 export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
@@ -146,11 +154,13 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     ordem: linha.ordem,
     observacao: linha.observacao,
     responsavelId: linha.responsavel_id,
+    proximoResponsavelId: linha.proximo_responsavel_id,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     pausadoEm: linha.pausado_em,
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
+    proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,
   }
 }
 
