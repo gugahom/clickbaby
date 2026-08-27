@@ -2,6 +2,7 @@
 // banco. O teste real deste sync é rodar contra o Google de verdade
 // (documentado no PR/CLAUDE.md); isto cobre só a decisão e a resolução.
 import {
+  autorizarChamada,
   contabilizarAcao,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
@@ -230,4 +231,127 @@ Deno.test("ponta a ponta: as 5 siglas do seed real são todas reconhecidas pelo 
     if (resultado.tipo !== "caso") throw new Error("deveria ser tipo caso");
     assertEqual(resultado.maternidade_sigla, sigla, `parser reconhece a sigla do seed: ${sigla}`);
   }
+});
+
+// =============================================================================
+// autorizarChamada — a segunda camada
+//
+// O teste que importa aqui é o NEGATIVO: a anon key é uma credencial
+// legítima do projeto, aceita pelo gateway, e é pública. Se ela passar, a
+// função está aberta para qualquer pessoa que leia o bundle do frontend.
+//
+// O projeto tem credencial nos DOIS formatos do Supabase (JWT legado e
+// sb_secret/sb_publishable), então os dois entram aqui — a primeira
+// invocação em produção falhou justamente por a checagem cobrir só um.
+// =============================================================================
+
+function jwtFalso(role: string): string {
+  const b64 = (o: unknown) =>
+    btoa(JSON.stringify(o)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return [
+    b64({ alg: "HS256", typ: "JWT" }),
+    b64({ iss: "supabase", ref: "projetofalso", role, iat: 1, exp: 2 }),
+    "assinaturairrelevante",
+  ].join(".");
+}
+
+const JWT_SERVICE_ROLE = jwtFalso("service_role");
+const JWT_ANON = jwtFalso("anon");
+// Formato novo: opaco, sem claims. É o que o runtime injeta.
+const SECRET_NOVA = "sb_secret_" + "N".repeat(30);
+const PUBLISHABLE = "sb_publishable_" + "P".repeat(30);
+
+Deno.test("caminho 1: a chave injetada (formato novo) autoriza", () => {
+  assertEqual(
+    autorizarChamada(`Bearer ${SECRET_NOVA}`, SECRET_NOVA).autorizado,
+    true,
+    "é exatamente a chave injetada",
+  );
+});
+
+Deno.test("caminho 2: JWT legado com role service_role autoriza", () => {
+  // Este é o caso que quebrou em produção: a chave injetada está no formato
+  // novo, então a igualdade falha e só a claim salva.
+  assertEqual(
+    autorizarChamada(`Bearer ${JWT_SERVICE_ROLE}`, SECRET_NOVA).autorizado,
+    true,
+    "service_role legada continua valendo",
+  );
+});
+
+Deno.test("ANON KEY é RECUSADA nos dois formatos — o ponto desta camada", () => {
+  assertEqual(
+    autorizarChamada(`Bearer ${JWT_ANON}`, SECRET_NOVA).autorizado,
+    false,
+    "anon legada (JWT com role anon)",
+  );
+  assertEqual(
+    autorizarChamada(`Bearer ${PUBLISHABLE}`, SECRET_NOVA).autorizado,
+    false,
+    "publishable nova (opaca, não é a secret)",
+  );
+});
+
+Deno.test("credencial opaca que não é a chave injetada é recusada", () => {
+  assertEqual(
+    autorizarChamada(`Bearer sb_secret_${"X".repeat(30)}`, SECRET_NOVA).autorizado,
+    false,
+    "parece uma secret, mas não é a nossa",
+  );
+});
+
+Deno.test("Bearer aceita variação de caixa e espaço", () => {
+  assertEqual(
+    autorizarChamada(`bearer   ${SECRET_NOVA}`, SECRET_NOVA).autorizado,
+    true,
+    "minúsculo e espaço extra ainda é um Bearer válido",
+  );
+});
+
+Deno.test("sem Authorization, sem Bearer, ou vazio: recusado", () => {
+  for (const cabecalho of [null, undefined, "", "   ", SECRET_NOVA, `Basic ${SECRET_NOVA}`]) {
+    assertEqual(
+      autorizarChamada(cabecalho, SECRET_NOVA).autorizado,
+      false,
+      `cabeçalho ${JSON.stringify(cabecalho)} não autoriza`,
+    );
+  }
+});
+
+Deno.test("sem a chave injetada, o caminho 1 não vira coringa", () => {
+  // Se serviceRoleKey vier vazia, a igualdade não pode "casar" com um token
+  // vazio nem liberar geral — só o caminho 2 (claim verificada) decide.
+  assertEqual(
+    autorizarChamada(`Bearer ${PUBLISHABLE}`, "").autorizado,
+    false,
+    "opaca sem chave para comparar: nega",
+  );
+  assertEqual(
+    autorizarChamada(`Bearer ${JWT_ANON}`, "").autorizado,
+    false,
+    "anon sem chave para comparar: nega",
+  );
+});
+
+Deno.test("o motivo da recusa não devolve o token nem a chave", () => {
+  for (const token of [JWT_ANON, PUBLISHABLE]) {
+    const motivo = autorizarChamada(`Bearer ${token}`, SECRET_NOVA).motivo ?? "";
+    assertEqual(motivo.includes(token), false, "não ecoa o token apresentado");
+    assertEqual(motivo.includes(SECRET_NOVA), false, "não vaza a chave do servidor");
+  }
+});
+
+// =============================================================================
+// ResumoSync não carrega nome de paciente
+// =============================================================================
+
+Deno.test("o resumo de erros não tem campo de título", () => {
+  const resumo = novoResumoVazio();
+  resumo.erros.push({ evento_id: "abc123", erro: "sync_upsert_caso falhou" });
+  const chaves = Object.keys(resumo.erros[0]).sort();
+  assertEqual(
+    chaves,
+    ["erro", "evento_id"],
+    "só id e mensagem — título traz nome de mãe/bebê (seção 10)",
+  );
 });

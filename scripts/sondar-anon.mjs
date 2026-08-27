@@ -22,9 +22,11 @@
  *     de INSERT são cobertos pelo snapshot do auditar-privilegios.mjs.
  *
  * LIMITAÇÃO CONHECIDA
- * Só cobre `anon`. Sondar `authenticated` exigiria uma sessão real no alvo, e
- * o remoto ainda não tem contas (o seed de pessoas está bloqueado). Esse lado
- * fica com o snapshot até existir uma conta de teste dedicada.
+ * Só cobre `anon`. Sondar `authenticated` exigiria uma sessão real no alvo.
+ * O remoto já tem contas desde 26/08/2026 (Jeferson, Sarah, André), mas são
+ * de gente de verdade: logar como elas para sondar deixaria eventos de acesso
+ * no nome de alguém que não fez nada. Falta uma conta de teste dedicada e
+ * inativa; até lá, esse lado fica com o snapshot do auditar-privilegios.mjs.
  *
  * USO
  *   node scripts/sondar-anon.mjs           # alvo do .env (remoto)

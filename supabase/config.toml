@@ -385,6 +385,31 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# =============================================================================
+# Edge Functions
+#
+# Versionado aqui, e não deixado no padrão do painel, porque autenticação de
+# função é exatamente o tipo de configuração que alguém inverte com um clique
+# sem deixar rastro em diff nenhum — a mesma classe de problema que a auditoria
+# de privilégios e a de buckets encontraram.
+# =============================================================================
+
+[functions.sync-calendar]
+enabled = true
+# NAO MEXA SEM LER: esta linha e' pre-requisito de seguranca, nao so config.
+#
+# Primeira camada: o gateway exige uma credencial valida do projeto. NAO
+# basta sozinha -- a anon key e' valida e e' publica (vai no bundle do
+# frontend), entao sozinha esta linha significa "qualquer pessoa que abra o
+# DevTools do site dispara o sync".
+#
+# A segunda camada esta em sync-calendar/logica.ts (autorizarChamada), e um
+# dos seus dois caminhos de aceite DEPENDE desta linha: ele confia na claim
+# `role` de um JWT legado sem verificar a assinatura, porque o gateway ja
+# verificou. Com verify_jwt = false, esse caminho passa a aceitar JWT
+# forjado e a funcao fica aberta.
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
