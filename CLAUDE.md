@@ -205,7 +205,7 @@ logado — o sync nunca edita uma etapa, nunca faz handoff, nunca confirma entre
 | PWA                            | `vite-plugin-pwa`                                                     |
 | Fila offline                   | IndexedDB via `idb` — fila simples de mutações, não sync bidirecional |
 | Lógica privilegiada            | Supabase Edge Functions (Deno)                                        |
-| Deploy                         | Vercel                                                                |
+| Deploy                         | Cloudflare Pages — app em `/quadro`, raiz livre para a landing        |
 
 **Não crie um backend Node/Express neste projeto.** Supabase cobre tudo que o MVP precisa. Se
 uma tarefa parecer exigir servidor próprio, pare e pergunte.

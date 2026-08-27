@@ -1,0 +1,16 @@
+# Cloudflare Pages.
+#
+# Versionado, e nao deixado so no painel, pela mesma razao dos buckets do
+# Storage e dos privilegios do Postgres: configuracao que so existe num painel
+# web nao aparece em diff nenhum e ninguem revisa quando muda.
+#
+# `pages_build_output_dir` e a RAIZ do que vai publicado -- dist/, nao
+# dist/quadro/. Os dois precisam ser assim:
+#   dist/quadro/...  o app, servido em /quadro (base do Vite + basename do
+#                    React Router; ver vite.config.ts)
+#   dist/_redirects  a regra de SPA, que so vale se estiver na raiz do
+#                    diretorio publicado
+#   dist/            de resto vazia, reservada para a landing
+name = "clickbaby"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-26"
