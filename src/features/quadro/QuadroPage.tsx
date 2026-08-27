@@ -14,10 +14,9 @@ import {
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
-  etapaDeReelsDaSecao,
+  reelsAbertosDaSecao,
   casosConcluidos,
   casosNaUti,
-  situacaoDoVideo,
 } from './lib/secoes'
 import { useRelogioDeMinuto } from './lib/useRelogio'
 import { DiaBloco } from './components/DiaBloco'
@@ -25,7 +24,7 @@ import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
 import { RascunhosPainel } from './components/RascunhosPainel'
-import { AcoesDaEtapa } from './components/AcoesDaEtapa'
+import { CartaoReels } from './components/CartaoReels'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -155,46 +154,16 @@ export function QuadroPage() {
       vazio="Nenhum vídeo aberto."
       erro={erroReels}
     >
-      {emReels.map((caso) => {
-        const etapas = etapasPorCaso.get(caso.id) ?? []
-        // A MESMA função que decide se o caso entra na seção decide qual das
-        // duas rodadas de reels o cartão representa — senão o detalhe e a
-        // ação poderiam apontar para etapas diferentes.
-        const video = etapaDeReelsDaSecao(etapas)
-        const situacao = situacaoDoVideo(etapas)
-        // Quem está com a etapa importa mais que o estado quando já tem dono:
-        // a pergunta na sala de edição é "quem está com esse?".
-        const detalhe =
-          situacao === 'editando'
-            ? video?.responsavelNome
-              ? `Editando: ${video.responsavelNome}`
-              : 'Edição em andamento'
-            : situacao === 'pausada'
-              ? video?.responsavelNome
-                ? `Pausada — ${video.responsavelNome}`
-                : 'Pausada'
-              : video?.responsavelNome
-                ? `Aguardando — ${video.responsavelNome}`
-                : 'Aguardando edição'
-
-        return (
-          <CartaoLateral
-            key={caso.id}
-            caso={caso}
-            hoje={hoje}
-            destaque="reels"
-            detalhe={detalhe}
-            acao={
-              // Play/pause/concluir no próprio cartão: sem isto a seção só
-              // informava, e agir exigia achar o mesmo caso na lista da
-              // esquerda, abrir e descer até a etapa.
-              video ? (
-                <AcoesDaEtapa etapa={video} etapas={etapas} onErro={setErroReels} />
-              ) : null
-            }
-          />
-        )
-      })}
+      {emReels.map((caso) => (
+        <CartaoReels
+          key={caso.id}
+          caso={caso}
+          hoje={hoje}
+          etapas={etapasPorCaso.get(caso.id) ?? []}
+          reels={reelsAbertosDaSecao(etapasPorCaso.get(caso.id) ?? [])}
+          onErro={setErroReels}
+        />
+      ))}
     </PainelLateral>
   )
 

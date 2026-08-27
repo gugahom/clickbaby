@@ -134,7 +134,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const { data: entregaveis } = useEntregaveis(caso.id, true)
   const temEntregavel = (entregaveis ?? []).length > 0
 
-  const entrega = podeConfirmarEntrega(caso, temEntregavel)
+  const entrega = podeConfirmarEntrega(caso, temEntregavel, etapas)
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)

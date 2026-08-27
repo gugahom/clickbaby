@@ -22,6 +22,7 @@ GRANT ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) TO authenticated
 GRANT ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_pessoa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) TO authenticated;
+GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.retornar_da_uti(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.somar_dias_uteis(p_inicio timestamp with time zone, p_dias integer) TO authenticated;
 GRANT ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) TO authenticated;
@@ -67,6 +68,7 @@ REVOKE ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_pessoa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.retornar_da_uti(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.somar_dias_uteis(p_inicio timestamp with time zone, p_dias integer) FROM PUBLIC;

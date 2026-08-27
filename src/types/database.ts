@@ -845,6 +845,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_estacao: {
+        Args: { p_caso_etapa_id: string; p_estacao: string }
+        Returns: undefined
+      }
       retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }
       somar_dias_uteis: {
         Args: { p_dias: number; p_inicio: string }

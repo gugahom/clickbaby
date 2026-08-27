@@ -263,6 +263,7 @@ export function podeAdicionarVideo(
 export function podeConfirmarEntrega(
   caso: CasoQuadro,
   temEntregavel: boolean,
+  etapas: EtapaQuadro[] = [],
 ): Disponibilidade {
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
@@ -270,6 +271,22 @@ export function podeConfirmarEntrega(
   if (caso.statusEntrega === 'confirmado') {
     return { habilitada: false, motivo: 'Entrega já confirmada.' }
   }
+
+  // Espelha a trava que entrou em 20260827181322. Sem ela aqui, o botão
+  // apareceria habilitado e a pessoa levaria o erro cru da RPC — e o caso
+  // ficaria ainda mais confuso agora que os reels saíram da fita de edição do
+  // card: quem olha o Quadro não os vê ali.
+  const abertas = etapas.filter(
+    (e) => e.status !== 'concluida' && e.status !== 'dispensada',
+  )
+  if (abertas.length > 0) {
+    const nomes = abertas.map((e) => ROTULO_ETAPA[e.tipo]).join(', ')
+    return {
+      habilitada: false,
+      motivo: `Falta concluir ou dispensar: ${nomes}.`,
+    }
+  }
+
   if (!temEntregavel) {
     return { habilitada: false, motivo: 'Registre ao menos um link antes.' }
   }

@@ -185,7 +185,17 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
  */
 export const ROTULO_RODADA: Record<number, string> = {
   1: 'Parto',
-  2: 'Banho',
+  // "B+F" e não "Banho": é como a equipe chama o bloco banho + fechamento no
+  // dia a dia, e vocabulário do domínio não se traduz no caminho até a tela
+  // (seção 2 do CLAUDE.md). Quando o fechamento se descolar do banho, o aviso
+  // da etapa cobre a exceção — não é caso de mudar o rótulo.
+  2: 'B+F',
+}
+
+/** O numeral que o gestor pediu no card: Ⅰ, Ⅱ. */
+export const NUMERAL_RODADA: Record<number, string> = {
+  1: 'I',
+  2: 'II',
 }
 
 export const ROTULO_ETAPA: Record<EtapaTipo, string> = {

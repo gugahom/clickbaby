@@ -169,6 +169,20 @@ export function useRetornarDaUti() {
 }
 
 /**
+ * Marca em qual PC a etapa está sendo editada. Texto livre ("pc-1"); em branco
+ * limpa. Ver registrar_estacao na migration 20260827181322.
+ */
+export function useRegistrarEstacao() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; estacao: string }>(
+    ({ casoEtapaId, estacao }) =>
+      chamar('registrar_estacao', {
+        p_caso_etapa_id: casoEtapaId,
+        p_estacao: estacao,
+      }),
+  )
+}
+
+/**
  * Desfaz a conclusão de uma etapa: volta para em_andamento e limpa
  * concluido_em, preservando iniciado_em. Ver reabrir_etapa na migration
  * 20260827172830.

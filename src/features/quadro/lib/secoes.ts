@@ -120,23 +120,31 @@ export function casosComVideoAberto(
     })
 }
 
-/** Como a edição está, em uma palavra — o que a seção REELS mostra por caso. */
-export type SituacaoDoVideo = 'aguardando' | 'editando' | 'pausada'
-
-/** A etapa de reels que a seção mostra, para a tela ligar as ações nela. */
-export function etapaDeReelsDaSecao(etapas: EtapaQuadro[]): EtapaQuadro | null {
-  return reelsAberto(etapas)
-}
-
-export function situacaoDoVideo(etapas: EtapaQuadro[]): SituacaoDoVideo | null {
-  const video = reelsAberto(etapas)
-  if (!video) return null
-  if (video.status === 'em_andamento') return 'editando'
-  if (video.status === 'pausada') return 'pausada'
-  return 'aguardando'
-}
-
 /** Casos encerrados ou cancelados, do mais recente para o mais antigo. */
+/**
+ * TODAS as rodadas de reels ainda abertas de um caso, em ordem de rodada.
+ *
+ * A seção passou a listar uma linha por rodada — "Ⅰ Parto", "Ⅱ B+F" — porque
+ * elas são trabalhos distintos e podem estar com pessoas diferentes, em PCs
+ * diferentes. Devolver só uma esconderia metade do que há para fazer.
+ *
+ * `reelsAberto` (singular) continua existindo para a pergunta de ENTRADA na
+ * seção: basta uma rodada aberta para o caso aparecer. As duas usam o mesmo
+ * filtro, então não há como o caso entrar e a lista vir vazia.
+ */
+export function reelsAbertosDaSecao(etapas: EtapaQuadro[]): EtapaQuadro[] {
+  return etapas
+    .filter((e) => e.tipo === 'reels')
+    .filter((e) => e.status !== 'concluida' && e.status !== 'dispensada')
+    .filter(
+      (e) =>
+        e.status === 'em_andamento' ||
+        e.status === 'pausada' ||
+        podeIniciar(e, etapas).habilitada,
+    )
+    .sort((a, b) => a.rodada - b.rodada)
+}
+
 export function casosConcluidos(casos: CasoQuadro[]): CasoQuadro[] {
   return casos
     .filter((c) => c.ehTerminal)

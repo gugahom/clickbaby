@@ -1,19 +1,43 @@
 import clsx from 'clsx'
 import {
+  NUMERAL_RODADA,
   ROTULO_ETAPA,
   ROTULO_RODADA,
   type EtapaQuadro,
   type StatusEtapa,
-  type TrilhaEtapa,
 } from '../types'
 
 interface PropsTrilhasDoCaso {
   etapas: EtapaQuadro[]
 }
 
-const ROTULO_TRILHA: Record<TrilhaEtapa, string> = {
+/**
+ * Três faixas, não duas.
+ *
+ * A trilha no banco tem dois valores (acompanhamento e edição), e o REELS sai
+ * de dentro da edição. É uma separação de TELA, e é deliberada: o gestor pediu
+ * que a edição de reels aconteça na seção própria — a estação de edição é outro
+ * lugar físico, com outra pessoa. Misturar reels e fotos na mesma fita
+ * escondia isso.
+ *
+ * O que NÃO se pode perder ao separar: os reels continuam bloqueando o
+ * encerramento do caso (migration 20260827181322). Se sumissem do card, quem
+ * olhasse o Quadro veria tudo verde, clicaria em confirmar e levaria uma
+ * recusa sem explicação na tela. Por isso a faixa REELS existe aqui —
+ * mostrando estado, SEM botões. Agir é na seção.
+ */
+type Faixa = 'acompanhamento' | 'edicao' | 'reels'
+
+const ROTULO_FAIXA: Record<Faixa, string> = {
   acompanhamento: 'Acompanhamento',
   edicao: 'Edição',
+  reels: 'Reels',
+}
+
+const COR_FAIXA: Record<Faixa, string> = {
+  acompanhamento: 'text-marca',
+  edicao: 'text-acento',
+  reels: 'text-rascunho',
 }
 
 /**
@@ -45,17 +69,30 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
   if (etapas.length === 0) return null
 
   const acompanhamento = etapas.filter((e) => e.trilha === 'acompanhamento')
-  const edicao = etapas.filter((e) => e.trilha === 'edicao')
+  const reels = etapas.filter((e) => e.tipo === 'reels')
+  const edicao = etapas.filter((e) => e.trilha === 'edicao' && e.tipo !== 'reels')
 
   return (
     <div className="mt-3 space-y-2.5">
-      <Trilha trilha="acompanhamento" etapas={acompanhamento} />
-      <Trilha trilha="edicao" etapas={edicao} />
+      <Trilha faixa="acompanhamento" etapas={acompanhamento} />
+      <Trilha faixa="edicao" etapas={edicao} />
+      {/* `soMarcador`: a faixa de reels informa, não convida. As duas outras
+          nomeiam a etapa porque é ali que se age; aqui a ação está na seção,
+          e repetir os nomes gastaria a linha sem oferecer nada. */}
+      <Trilha faixa="reels" etapas={reels} soMarcador />
     </div>
   )
 }
 
-function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[] }) {
+function Trilha({
+  faixa,
+  etapas,
+  soMarcador = false,
+}: {
+  faixa: Faixa
+  etapas: EtapaQuadro[]
+  soMarcador?: boolean
+}) {
   if (etapas.length === 0) return null
 
   const feitas = etapas.filter((e) => e.status === 'concluida').length
@@ -85,10 +122,10 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
         <span
           className={clsx(
             'text-[10px] font-bold tracking-[0.08em] uppercase',
-            trilha === 'acompanhamento' ? 'text-marca' : 'text-acento',
+            COR_FAIXA[faixa],
           )}
         >
-          {ROTULO_TRILHA[trilha]}
+          {ROTULO_FAIXA[faixa]}
         </span>
         {/* No celular o contador acompanha o rótulo; no desktop vai para o fim
             da fita. Dois nós, um visível por vez — mais simples que mover o
@@ -101,10 +138,11 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
           <Etapa
             key={etapa.id}
             etapa={etapa}
+            soMarcador={soMarcador}
             // O sufixo de rodada só aparece quando há MAIS DE UMA rodada
             // daquela etapa no caso. Num BASIC, que nunca terá a segunda,
-            // "Edição Fotos · Parto" seria uma distinção sem contraparte —
-            // ruído que ocupa a linha e não separa nada.
+            // "Fotos Ⅰ Parto" seria uma distinção sem contraparte — ruído que
+            // ocupa a linha e não separa nada.
             comRodada={etapas.some(
               (o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada,
             )}
@@ -118,18 +156,36 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
   )
 }
 
-function Etapa({ etapa, comRodada }: { etapa: EtapaQuadro; comRodada: boolean }) {
+function Etapa({
+  etapa,
+  comRodada,
+  soMarcador,
+}: {
+  etapa: EtapaQuadro
+  comRodada: boolean
+  soMarcador: boolean
+}) {
   const pessoas = nomesDaEtapa(etapa)
-  const rodada = comRodada ? ROTULO_RODADA[etapa.rodada] : null
+  const numeral = comRodada ? NUMERAL_RODADA[etapa.rodada] : null
+  const bloco = comRodada ? ROTULO_RODADA[etapa.rodada] : null
 
   return (
     <span className="inline-flex items-center gap-1">
       <Marcador status={etapa.status} />
       <span className={CLASSE_STATUS[etapa.status]}>
-        {ROTULO_ETAPA[etapa.tipo]}
-        {rodada && (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            {rodada}
+        {/* O numeral vem PRIMEIRO, e sozinho já ordena as rodadas de longe.
+            O nome do bloco vem depois, para quem chega perto e precisa saber
+            de que material se trata. */}
+        {numeral && <span className="mr-1 font-bold tabular-nums">{numeral}</span>}
+        {!soMarcador && ROTULO_ETAPA[etapa.tipo]}
+        {bloco && (
+          <span
+            className={clsx(
+              'text-xs font-normal text-muted-foreground',
+              !soMarcador && 'ml-1',
+            )}
+          >
+            {bloco}
           </span>
         )}
       </span>
