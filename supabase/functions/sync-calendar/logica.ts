@@ -98,7 +98,12 @@ export interface ResumoSync {
   rascunhos: number;
   ignorados: number;
   sem_efeito: number;
-  erros: Array<{ evento_id: string; titulo?: string; erro: string }>;
+  // SEM o título do evento, deliberadamente. O título do Calendar é
+  // "MÃE/BEBÊ - PACOTE [MATERNIDADE]" — nome de mãe e de recém-nascido, que
+  // a seção 10 do CLAUDE.md trata como dado sensível de saúde e de menor.
+  // O evento_id resolve o debug sem isso: é um id opaco do Google, e quem
+  // precisa investigar abre o evento por ele no próprio Calendar.
+  erros: Array<{ evento_id: string; erro: string }>;
 }
 
 export function novoResumoVazio(): ResumoSync {
@@ -141,4 +146,105 @@ export function contabilizarAcao(resumo: ResumoSync, acao: string): void {
         erro: `sync_upsert_caso retornou uma ação não reconhecida: "${acao}"`,
       });
   }
+}
+
+// -----------------------------------------------------------------------
+// Autorização: só service_role chama o sync
+// -----------------------------------------------------------------------
+//
+// POR QUE ISTO EXISTE
+// `verify_jwt = true` (o padrão da plataforma, agora versionado em
+// config.toml) exige uma credencial válida do projeto. Isso soa como
+// proteção e não é: a ANON KEY é uma credencial válida, e ela é pública
+// por definição — vai no bundle do frontend. Sem a checagem abaixo,
+// qualquer pessoa que abrisse o DevTools do site disparava o sync e
+// recebia de volta o resumo do lote.
+//
+// DOIS FORMATOS DE CREDENCIAL, DESCOBERTO NA PRÁTICA
+// O projeto tem chaves nos dois formatos que o Supabase suporta hoje:
+//   - legado: um JWT com claim `role` ("service_role" ou "anon");
+//   - novo:   `sb_secret_...` / `sb_publishable_...`, que NÃO são JWT e
+//             não carregam claim nenhuma.
+// O runtime da Edge Function injeta SUPABASE_SERVICE_ROLE_KEY no formato
+// NOVO. Uma checagem que só comparasse com ela recusaria a service_role
+// key legada — que é credencial legítima do mesmo projeto. Foi exatamente
+// o que aconteceu na primeira tentativa de invocar em produção.
+//
+// Por isso há dois caminhos de aceite, e eles têm garantias DIFERENTES:
+//
+//   1. Igualdade com a chave injetada. Não depende de mais nada: quem não
+//      tem a chave não passa. Cobre o formato novo.
+//
+//   2. JWT com claim role = "service_role". Cobre o formato legado, e
+//      DEPENDE de `verify_jwt = true` ter validado a assinatura antes —
+//      esta função não verifica assinatura, só lê a claim. Se alguém
+//      puser verify_jwt = false, este caminho passa a aceitar JWT forjado.
+//      É por isso que a linha está versionada em config.toml com este
+//      aviso ao lado, e não deixada no padrão do painel.
+//
+// Nada além desses dois passa: anon nos dois formatos cai fora (o JWT anon
+// tem role "anon"; a publishable não é JWT e não é igual à secret).
+
+/** Compara sem vazar em quanto tempo as strings divergem. */
+function comparaConstante(a: string, b: string): boolean {
+  // O comprimento da chave não é segredo (os dois formatos são públicos),
+  // só o conteúdo — por isso sair cedo aqui não entrega nada.
+  if (a.length !== b.length) return false;
+  let diferenca = 0;
+  for (let i = 0; i < a.length; i++) {
+    diferenca |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diferenca === 0;
+}
+
+/**
+ * Lê as claims de um JWT. NÃO verifica assinatura — quem verifica é o
+ * gateway, com verify_jwt = true. Ver o caminho 2 acima.
+ */
+export function lerClaims(token: string): Record<string, unknown> | null {
+  const partes = token.split(".");
+  if (partes.length !== 3) return null;
+  try {
+    const base64 = partes[1].replace(/-/g, "+").replace(/_/g, "/");
+    const completo = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const claims = JSON.parse(atob(completo));
+    return typeof claims === "object" && claims !== null ? claims : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface ResultadoAutorizacao {
+  autorizado: boolean;
+  /** Motivo da recusa, para o log do servidor. Nunca ecoa token nem chave. */
+  motivo?: string;
+}
+
+export function autorizarChamada(
+  cabecalhoAuthorization: string | null | undefined,
+  serviceRoleKey: string,
+): ResultadoAutorizacao {
+  const cabecalho = (cabecalhoAuthorization ?? "").trim();
+  const casa = cabecalho.match(/^Bearer\s+(.+)$/i);
+  if (!casa) return { autorizado: false, motivo: "sem Authorization: Bearer" };
+
+  const token = casa[1].trim();
+
+  // Caminho 1 — a chave injetada, em qualquer formato.
+  if (serviceRoleKey && comparaConstante(token, serviceRoleKey)) {
+    return { autorizado: true };
+  }
+
+  // Caminho 2 — JWT legado cuja assinatura o gateway já validou.
+  const claims = lerClaims(token);
+  if (claims === null) {
+    return { autorizado: false, motivo: "credencial não é a service_role key nem um JWT" };
+  }
+
+  const papel = typeof claims.role === "string" ? claims.role : null;
+  if (papel !== "service_role") {
+    return { autorizado: false, motivo: `papel "${papel ?? "ausente"}" não pode disparar o sync` };
+  }
+
+  return { autorizado: true };
 }

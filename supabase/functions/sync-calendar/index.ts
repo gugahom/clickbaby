@@ -13,6 +13,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseEventoCalendar } from "../_shared/parse-evento.ts";
 import {
+  autorizarChamada,
   contabilizarAcao,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
@@ -211,14 +212,32 @@ async function processarEvento(
 // Handler HTTP
 // -----------------------------------------------------------------------
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   const resumo = novoResumoVazio();
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Segunda camada, ANTES de qualquer trabalho. O gateway com
+  // verify_jwt = true já barrou quem não tem JWT válido; aqui barra quem
+  // tem o JWT ERRADO — e a anon key, que é pública, é o JWT errado.
+  // Ver o comentário longo em logica.ts sobre por que as duas camadas não
+  // se sobrepõem.
+  const autorizacao = autorizarChamada(
+    req.headers.get("Authorization"),
+    supabaseServiceRoleKey ?? "",
+  );
+  if (!autorizacao.autorizado) {
+    console.warn(`sync-calendar: chamada recusada (${autorizacao.motivo})`);
+    return new Response(
+      JSON.stringify({ erro: "nao autorizado" }, null, 2),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   try {
     const contaServicoJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
     const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!contaServicoJson) throw new Error("Secret GOOGLE_SERVICE_ACCOUNT_JSON não configurado.");
     if (!calendarId) throw new Error("Secret GOOGLE_CALENDAR_ID não configurado.");
@@ -262,9 +281,14 @@ Deno.serve(async (_req) => {
         }
       } catch (erroEvento) {
         // Um evento problemático não pode travar o lote inteiro.
+        //
+        // O título NÃO entra aqui nem no console: ele carrega nome de mãe e
+        // de bebê, e a seção 10 do CLAUDE.md proíbe isso tanto em resposta
+        // quanto em log — o log da Edge Function é retido e visível no
+        // painel, ou seja, é telemetria como qualquer outra. O evento_id é
+        // suficiente para achar o evento no Calendar.
         resumo.erros.push({
           evento_id: evento.id,
-          titulo: evento.summary,
           erro: erroEvento instanceof Error ? erroEvento.message : String(erroEvento),
         });
       }
@@ -301,15 +325,26 @@ Deno.serve(async (_req) => {
 //    Sem isso, toda chamada à API retorna 404/403 mesmo com a
 //    autenticação certa.
 //
-// 3. Testar localmente:
+// 3. QUEM PODE CHAMAR: so service_role. A anon key NAO serve, de proposito --
+//    ela e publica (vai no bundle do frontend), e ate esta trava existir
+//    qualquer pessoa que lesse o bundle disparava o sync e recebia de volta
+//    nome de mae e bebe no corpo da resposta. Ver autorizarChamada em
+//    logica.ts e [functions.sync-calendar] em config.toml.
+//
+// 4. Testar localmente:
 //      supabase functions serve sync-calendar --env-file supabase/.env.local
 //      curl -i --request POST http://127.0.0.1:54321/functions/v1/sync-calendar \
-//        --header "Authorization: Bearer <ANON_KEY_LOCAL>"
+//        --header "Authorization: Bearer $SERVICE_ROLE_KEY_LOCAL"
 //
-// 4. Testar no remoto:
+// 5. Testar no remoto:
 //      supabase functions deploy sync-calendar
 //      curl -i --request POST https://<project-ref>.supabase.co/functions/v1/sync-calendar \
-//        --header "Authorization: Bearer <ANON_KEY_OU_SERVICE_ROLE_KEY>"
+//        --header "Authorization: Bearer $SERVICE_ROLE_KEY"
 //
-// 5. Sem cron configurado ainda (próxima fatia) -- só invocação manual.
+//    A chave vem de variavel de ambiente na hora de chamar, nunca colada
+//    num arquivo do repo.
+//
+// 6. Sem cron configurado ainda (proxima fatia) -- so invocacao manual. Quando
+//    entrar, o disparo vem de pg_cron + pg_net de dentro do banco, com a chave
+//    no Vault: nenhum cliente precisa dela.
 // =============================================================================
