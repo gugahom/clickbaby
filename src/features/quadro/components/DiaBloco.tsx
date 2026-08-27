@@ -4,6 +4,7 @@ import { Chevron } from '@/components/ui/icones'
 import { diasAtras, rotularDia } from '@/lib/formato'
 import type { BlocoDia, EtapaQuadro } from '../types'
 import { CasoLinha } from './CasoLinha'
+import { Diafragma } from './Diafragma'
 
 interface PropsDiaBloco {
   bloco: BlocoDia
@@ -12,6 +13,19 @@ interface PropsDiaBloco {
   abertoInicialmente: boolean
 }
 
+/**
+ * Um dia do Quadro: cabeçalho de seção sobre o chão pastel, e os casos como
+ * cartões brancos empilhados com respiro entre eles.
+ *
+ * A mudança em relação à versão anterior é de material, não de arranjo. Antes
+ * tudo vivia dentro de um único painel branco e o que separava um caso do
+ * seguinte era uma linha de 1px — o resultado se lia como planilha, e era
+ * exatamente a queixa. Agora o chão aparece entre os cartões, e é ele que
+ * separa. A borda ficou só para fechar a forma.
+ *
+ * O cabeçalho do dia NÃO é cartão de propósito: se fosse, competiria com os
+ * casos. Ele fica direto no chão, como rótulo de prateleira.
+ */
 export function DiaBloco({
   bloco,
   hoje,
@@ -34,8 +48,15 @@ export function DiaBloco({
   const ativos = bloco.casos.filter((c) => !c.ehTerminal && !c.naUti)
 
   return (
-    <section className="border-b border-border last:border-b-0">
+    <section>
       <h2>
+        {/*
+          <button> cru, e não o Botao: isto é um controle de sanfona que ocupa a
+          linha inteira, não uma ação. A mola de escala do Botao encolheria o
+          cartão/cabeçalho todo a cada toque, o que numa lista rolando lê como
+          falha de renderização, não como resposta. A confirmação aqui já vem do
+          chevron girando e do painel abrindo.
+        */}
         <button
           type="button"
           id={idCabecalho}
@@ -43,14 +64,20 @@ export function DiaBloco({
           aria-expanded={aberto}
           aria-controls={idPainel}
           className={clsx(
-            'flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition-colors md:px-4 md:py-4',
-            // O dia atrasado é o alarme do Quadro: fundo próprio e borda
-            // esquerda grossa, para ser achado rolando a lista sem ler.
-            emAtraso
-              ? 'border-l-4 border-l-atrasado bg-atrasado/10 hover:bg-atrasado/15'
-              : 'border-l-4 border-l-transparent bg-marca-suave hover:bg-marca-suave/70',
+            'flex w-full items-center gap-3 rounded-cartao px-3 py-2.5 text-left transition-colors md:gap-4 md:px-4',
+            emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'hover:bg-card/70',
           )}
         >
+          {/* O diafragma: uma pá por caso, acesa quando o caso se resolve. É a
+              mesma informação do "0 de 5" ao lado, visível sem ler — inclusive
+              da TV da sala de edição. */}
+          <Diafragma
+            total={bloco.total}
+            feitos={bloco.resolvidos}
+            emAtraso={emAtraso}
+            className="size-9 md:size-10"
+          />
+
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               {/* first-letter, não `capitalize`: o Intl devolve
@@ -88,7 +115,7 @@ export function DiaBloco({
 
       <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
         {aberto && (
-          <>
+          <div className="mt-1.5 space-y-2">
             {ativos.map((caso) => (
               <CasoLinha
                 key={caso.id}
@@ -96,7 +123,7 @@ export function DiaBloco({
                 etapas={etapasPorCaso.get(caso.id) ?? []}
               />
             ))}
-          </>
+          </div>
         )}
       </div>
     </section>

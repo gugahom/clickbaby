@@ -1,60 +1,62 @@
 @import 'tailwindcss';
 
 /* =============================================================================
- * Tokens de tema — CLARO por padrão.
+ * Tokens de tema — CLARO, agora sobre CHÃO PASTEL.
  *
  * A tela substitui um quadro branco de vidro. O tema claro não é o escuro
- * invertido: ele volta ao material original. Superfície de papel, tinta escura,
- * e as cores do Calendar como traço de marcador.
+ * invertido: ele volta ao material original.
  *
- * A profundidade INVERTE em relação ao escuro. Lá, o card sobe afastando-se do
- * fundo (fundo 0.17 -> card 0.21). Aqui não dá para subir acima do branco, então
- * quem se afasta é o FUNDO: a página é um branco levemente quente e as linhas
- * são branco puro. Sem isso, uma lista densa vira uma folha lisa e as linhas
- * somem umas nas outras.
+ * A REGRA QUE ORGANIZA TUDO
+ * As cores do logo foram medidas do arquivo (public/logo-clickbaby.png):
  *
- * Duas consequências que exigiram valores próprios, não conversão:
- *   1. `--border` no escuro é branco a 12% — translúcido funciona porque a
- *      luminância separa. No branco, translúcido desaparece: aqui a borda é
- *      opaca e carrega a grade da lista sozinha.
- *   2. As cores de estado no escuro vivem em L 0.68-0.83 (claras sobre fundo
- *      escuro). No claro elas precisam do papel inverso, L 0.45-0.55, senão
- *      verde e âmbar ficam ilegíveis sobre branco.
+ *   cinza      #606060   oklch(0.489 0     90)    6.29:1 sobre branco
+ *   rosa       #F890C8   oklch(0.779 0.141 347)   2.14:1 sobre branco
+ *   azul-bebê  #A0B0D0   oklch(0.756 0.049 264)   2.18:1 sobre branco
+ *   manteiga   #F0D868   oklch(0.880 0.134 97)    1.6:1  sobre branco
+ *
+ * Os três pastéis REPROVAM como texto. O cinza passa. Isso não é limitação, é
+ * a instrução de uso que o próprio logo dá: ali o lettering é cinza e os
+ * pastéis são a lente. Então, aqui: PASTEL É SUPERFÍCIE, NUNCA TEXTO.
+ *
+ * Daí a inversão em relação à versão anterior. Antes a página era branca e a
+ * profundidade vinha de afastar o fundo (branco quente atrás, branco puro nas
+ * linhas) — funcionava, mas rendia uma folha lisa que se lia como planilha. Os
+ * pastéis não tinham onde morar sem virar texto ilegível.
+ *
+ * Agora o CHÃO é pastel e os cartões são brancos. Duas coisas de uma vez: a
+ * cor da marca finalmente ocupa área de verdade, e cada caso passa a flutuar
+ * sobre ela em vez de ser uma linha numa grade. O texto nunca toca o pastel —
+ * vive sempre no branco do cartão, com o mesmo contraste de antes.
+ *
+ * O gradiente do chão vai do azul-bebê ao rosa, muito diluído. Não é
+ * decoração solta: é o mesmo par que se alterna nas pás do diafragma do logo.
+ * Fixo, não rola com a página — precisa ler como luz na sala, não como
+ * elemento.
+ *
+ * O que a faixa índigo do topo fazia — separar "app" de "documento aberto no
+ * navegador" — passa a ser feito pelo par chão-tingido + cartão-branco. Por
+ * isso o cabeçalho pôde virar branco, que é onde o logo de verdade cabe: ele
+ * é cinza e pastel sobre transparente, e sobre índigo ficaria ilegível.
+ *
+ * ONDE A COR AINDA É TINTA (e aí vem escurecida)
+ * Rosa e azul continuam existindo como texto em `--acento` e `--marca`, mas
+ * nos valores ESCURECIDOS — L 0.48-0.56 em vez de 0.76-0.78. Um rosa de marca
+ * é feito para tamanho grande sobre fundo escuro; como rótulo de 12px sobre
+ * branco, o valor original não passa de 3:1. A divisão de trabalho segue:
+ * AZUL carrega estrutura (ações primárias, aba ativa), ROSA carrega acento
+ * (contadores, títulos de seção). Uma tela dominada pelo rosa é lida como
+ * "fofa" em segundos, e às 3h num corredor de maternidade a leitura certa é
+ * densidade, não doçura.
+ *
+ * A MANTEIGA finalmente trabalha. Era a única cor do logo sem função na tela.
+ * O estado de rascunho já usava um âmbar escurecido — que é a mesma matiz
+ * (97 vs 75). Aproximei os dois: rascunho agora É a manteiga da marca, e a
+ * seção de rascunhos herda isso.
  *
  * O escuro segue definido em [data-tema="escuro"], desligado. A seção 5 do
- * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é noturna";
- * o cliente pediu branco. O bloco fica pronto para o dia em que o turno da
+ * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é
+ * noturna"; o cliente pediu claro. O bloco fica pronto para quando o turno da
  * noite pedir de volta.
- *
- * ONDE A COR MORA (revisão: a tela estava lida como planilha)
- * O papel continua quieto. A cor entra em três lugares, e só neles:
- *
- *   1. A FAIXA DA MARCA no topo, no azul da íris do logo. É o que separa "app"
- *      de "planilha aberta no navegador".
- *
- *      As duas cores vêm do logo: o azul e o rosa da lente. A divisão de
- *      trabalho entre elas é deliberada — AZUL carrega a estrutura (faixa,
- *      ações primárias, aba ativa) e ROSA carrega o acento (contadores,
- *      títulos de seção, marcadores). Uma tela dominada pelo rosa é lida como
- *      "fofa" em segundos, e às 3h num corredor de maternidade a leitura certa
- *      é densidade, não doçura. O rosa aparece pouco e por isso é visto.
- *
- *      Os dois foram escurecidos em relação ao logo. O azul e o rosa de uma
- *      marca são feitos para fundo escuro e tamanho grande; como texto sobre
- *      branco, os valores originais não passariam de 3:1.
- *
- *   2. A ESPINHA do caso, que carrega a cor do Calendar. Ela já era a
- *      identidade visual que a equipe usa na agenda — só estava fina demais
- *      para valer alguma coisa. Engordou.
- *
- *   3. O estado PRONTO PARA ENTREGA. Um caso com todas as etapas feitas e ainda
- *      aberto é o único que está esperando por uma pessoa específica. Ganha peso
- *      próprio, porque é a informação mais acionável do Quadro.
- *
- * Fora daí, tudo segue neutro. Se cada linha gritasse, nenhuma seria vista.
- *
- * As cores de estado ganharam croma (0.13 -> 0.16 na média) sem perder o
- * contraste — todas seguem acima de 4.5:1 sobre o branco.
  * ============================================================================= */
 
 @theme inline {
@@ -84,32 +86,47 @@
   --color-acento: var(--acento);
   --color-acento-forte: var(--acento-forte);
   --color-acento-suave: var(--acento-suave);
+  /* Cores CRUAS do logo. Superfície apenas — ver a nota de contraste no topo. */
+  --color-logo-rosa: var(--logo-rosa);
+  --color-logo-azul: var(--logo-azul);
+  --color-logo-manteiga: var(--logo-manteiga);
+  --color-logo-cinza: var(--logo-cinza);
+
   --color-pronto: var(--pronto);
   --color-pronto-fundo: var(--pronto-fundo);
   --color-pronto-borda: var(--pronto-borda);
 
   --radius-md: 0.5rem;
+  --radius-cartao: 0.75rem;
 
   /* Elevação. No claro a sombra é o que separa a linha do papel — no escuro
      essa função era da luminância. */
-  --shadow-cartao: 0 1px 2px oklch(0.25 0.02 265 / 6%), 0 1px 3px oklch(0.25 0.02 265 / 4%);
-  --shadow-painel: 0 1px 3px oklch(0.25 0.02 265 / 7%), 0 4px 12px oklch(0.25 0.02 265 / 5%);
+  --shadow-cartao: 0 1px 2px oklch(0.45 0.03 265 / 5%), 0 2px 6px oklch(0.45 0.03 265 / 6%);
+  --shadow-cartao-alto:
+    0 1px 2px oklch(0.45 0.03 265 / 6%), 0 6px 16px oklch(0.45 0.03 265 / 10%);
+  --shadow-painel: 0 1px 3px oklch(0.45 0.03 265 / 6%), 0 8px 24px oklch(0.45 0.03 265 / 7%);
 }
 
 :root {
   color-scheme: light;
 
-  /* O papel: branco quente na página, branco puro nas linhas. */
-  --background: oklch(0.985 0.004 85);
+  /* O chão pastel e o cartão branco. A ordem inverteu: antes a página era o
+     branco mais quente e a linha o branco puro; agora a página é tingida e o
+     cartão flutua nela. */
+  --background: oklch(0.967 0.017 264);
+  --background-fim: oklch(0.974 0.014 350);
   --card: oklch(1 0 0);
 
   /* Tinta, não preto puro: #000 sobre branco vibra sob luz de hospital. */
   --foreground: oklch(0.25 0.012 265);
   --card-foreground: oklch(0.25 0.012 265);
 
-  --muted: oklch(0.955 0.005 85);
+  --muted: oklch(0.962 0.008 264);
   --muted-foreground: oklch(0.47 0.012 265);
-  --border: oklch(0.865 0.006 265);
+  /* Mais clara que antes: com os cartões separados por espaço e sombra, a
+     borda não precisa mais carregar a grade sozinha. Ela agora só fecha a
+     forma do cartão. */
+  --border: oklch(0.905 0.008 264);
   --ring: oklch(0.52 0.15 250);
   --primary: oklch(0.52 0.15 250);
   --primary-foreground: oklch(0.99 0 0);
@@ -119,9 +136,11 @@
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
 
-  --rascunho: oklch(0.47 0.11 75);
-  --rascunho-fundo: oklch(0.965 0.038 85);
-  --rascunho-borda: oklch(0.87 0.07 85);
+  /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
+     do logo (97), sem perder o 4.5:1 que o texto precisa. */
+  --rascunho: oklch(0.47 0.105 92);
+  --rascunho-fundo: oklch(0.972 0.04 95);
+  --rascunho-borda: oklch(0.88 0.075 95);
 
   /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
      branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
@@ -139,6 +158,13 @@
   --pronto: oklch(0.48 0.15 155);
   --pronto-fundo: oklch(0.965 0.035 155);
   --pronto-borda: oklch(0.84 0.09 155);
+
+  /* As cores do logo como vieram do arquivo. Existem para pintar superfície:
+     as pás do diafragma, o chão, um traço. Nunca texto — ver o topo. */
+  --logo-rosa: oklch(0.779 0.141 347);
+  --logo-azul: oklch(0.756 0.049 264);
+  --logo-manteiga: oklch(0.88 0.134 97);
+  --logo-cinza: oklch(0.489 0 90);
 }
 
 /* Tema escuro — preservado, desligado. Ver a nota no topo. */
@@ -175,6 +201,15 @@
   --pronto: oklch(0.74 0.16 155);
   --pronto-fundo: oklch(0.28 0.05 155 / 40%);
   --pronto-borda: oklch(0.5 0.1 155 / 45%);
+
+  /* No escuro o chão não é pastel: pastel sobre escuro perde a função de
+     superfície e vira mancha. O gradiente termina onde começa. */
+  --background-fim: oklch(0.17 0.008 260);
+
+  --logo-rosa: oklch(0.779 0.141 347);
+  --logo-azul: oklch(0.756 0.049 264);
+  --logo-manteiga: oklch(0.88 0.134 97);
+  --logo-cinza: oklch(0.7 0 90);
 }
 
 @layer base {
@@ -189,7 +224,16 @@
   }
 
   body {
+    /* `fixed` é o ponto: sem isso o gradiente rola junto com a lista e vira
+       elemento. Preso, ele lê como luz na sala. */
     background-color: var(--background);
+    background-image: linear-gradient(
+      160deg,
+      var(--background) 0%,
+      var(--background) 45%,
+      var(--background-fim) 100%
+    );
+    background-attachment: fixed;
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     /* Alvos de toque de 44px e fonte generosa: a tela é usada de pé, com uma

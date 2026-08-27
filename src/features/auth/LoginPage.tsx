@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { Botao } from '@/components/ui/Botao'
+import { Logo } from '@/components/ui/Logo'
 import { ehAmbienteLocal, supabase } from '@/lib/supabase'
 import { useAuth } from './contexto'
 
@@ -9,6 +10,11 @@ import { useAuth } from './contexto'
  *
  * O login por PIN da fase 1 depende de Edge Function com service_role e não
  * entra nesta fatia.
+ *
+ * A tela inteira é a marca: o chão pastel do body aparece cheio aqui, sem
+ * lista por cima, e o cartão branco com o logo centralizado é a única coisa
+ * na tela. É o único momento do produto em que dá para respirar — o resto é
+ * corredor de maternidade às 3h.
  */
 export function LoginPage() {
   const { session, carregando } = useAuth()
@@ -33,53 +39,76 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center p-4">
       <form
         onSubmit={entrar}
-        className="w-full max-w-sm space-y-4 rounded-md border border-border bg-card p-6"
+        className="w-full max-w-[26rem] rounded-cartao border border-border bg-card p-7 shadow-painel md:p-9"
       >
-        <div>
-          <h1 className="text-xl font-bold">Clickbaby</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Entre para ver o Quadro.
-            {ehAmbienteLocal && (
-              <span className="mt-1 block font-mono text-xs">ambiente: LOCAL</span>
-            )}
-          </p>
+        <div className="flex flex-col items-center text-center">
+          <Logo className="h-14 max-w-[15rem] md:h-16 md:max-w-[17rem]" prioridade />
+          <p className="mt-5 text-sm text-muted-foreground">Entre para ver o Quadro.</p>
+          {ehAmbienteLocal && (
+            <span className="mt-2 rounded bg-muted px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+              ambiente: LOCAL
+            </span>
+          )}
         </div>
 
-        <label className="block">
-          <span className="text-sm font-medium">Email</span>
-          <input
-            type="email"
-            required
+        <div className="mt-7 space-y-4">
+          <Campo
+            rotulo="Email"
+            tipo="email"
             autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+            valor={email}
+            aoMudar={setEmail}
           />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium">Senha</span>
-          <input
-            type="password"
-            required
+          <Campo
+            rotulo="Senha"
+            tipo="password"
             autoComplete="current-password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+            valor={senha}
+            aoMudar={setSenha}
           />
-        </label>
 
-        {erro && <p className="text-sm text-atrasado">{erro}</p>}
+          {erro && (
+            <p
+              role="alert"
+              className="rounded-md border border-atrasado/30 bg-atrasado/8 px-3 py-2 text-sm text-atrasado"
+            >
+              {erro}
+            </p>
+          )}
 
-        <Botao
-          type="submit"
-          variante="primario"
-          disabled={enviando}
-          className="w-full"
-        >
-          {enviando ? 'Entrando…' : 'Entrar'}
-        </Botao>
+          <Botao type="submit" variante="primario" disabled={enviando} className="w-full">
+            {enviando ? 'Entrando…' : 'Entrar'}
+          </Botao>
+        </div>
       </form>
     </div>
+  )
+}
+
+function Campo({
+  rotulo,
+  tipo,
+  autoComplete,
+  valor,
+  aoMudar,
+}: {
+  rotulo: string
+  tipo: 'email' | 'password'
+  autoComplete: string
+  valor: string
+  aoMudar: (v: string) => void
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium">{rotulo}</span>
+      <input
+        type={tipo}
+        required
+        autoComplete={autoComplete}
+        value={valor}
+        onChange={(e) => aoMudar(e.target.value)}
+        className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background/60 px-3 text-base transition-colors focus:border-marca focus:bg-card"
+      />
+    </label>
   )
 }
