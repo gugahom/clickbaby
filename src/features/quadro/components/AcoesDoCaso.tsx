@@ -15,7 +15,7 @@ import {
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
-  useAdicionarReels,
+  useAdicionarVideo,
   useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
@@ -29,7 +29,7 @@ import {
 } from '../api/useAcoes'
 import {
   podeAtribuir,
-  podeAdicionarReels,
+  podeAdicionarVideo,
   podeCancelar,
   podeConcluir,
   podeConfirmarEntrega,
@@ -89,7 +89,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const concluir = useConcluirEtapa()
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
-  const adicionarReels = useAdicionarReels()
+  const adicionarVideo = useAdicionarVideo()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -100,7 +100,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     pausar.isPending ||
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
-    adicionarReels.isPending ||
+    adicionarVideo.isPending ||
     concluir.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
@@ -123,15 +123,16 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
-  const novoReels = podeAdicionarReels(caso, etapas)
+  const novoVideo = podeAdicionarVideo(caso, etapas)
 
-  // "Editar reels" é iniciar_etapa na etapa de vídeo — não existe estado
-  // "em reels" separado: o caso segue na lista da esquerda e TAMBÉM aparece na
-  // seção REELS enquanto a edição está em andamento.
+  // O VÍDEO aqui é o horizontal, que de fábrica só o MASTER tem. O reels virou
+  // etapa própria e está em todo pacote (migration 20260827140400), então ele
+  // aparece na trilha de edição como qualquer outra etapa e não precisa de um
+  // botão de atalho.
   const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
   const edicaoDeVideo = etapaVideo
     ? podeIniciar(etapaVideo, etapas)
-    : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo.' }
+    : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo horizontal.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
@@ -313,10 +314,10 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           </Botao>
         )}
 
-        {/* Um botão só, dois significados, conforme o caso já tem vídeo ou não.
-            Sem etapa de vídeo: cria (adicionar_reels). Com etapa: começa a
-            editar (iniciar_etapa), que é o que faz o caso aparecer na seção
-            REELS. */}
+        {/* Um botão só, dois significados, conforme o caso já tem o horizontal
+            ou não. Sem a etapa: cria (adicionar_video), para quando a venda do
+            horizontal se fecha fora do MASTER. Com a etapa: começa a editar
+            (iniciar_etapa). */}
         {etapaVideo ? (
           <Botao
             onClick={() =>
@@ -325,15 +326,15 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             disabled={ocupado || !edicaoDeVideo.habilitada}
             title={edicaoDeVideo.motivo}
           >
-            Editar reels
+            Editar vídeo
           </Botao>
         ) : (
           <Botao
-            onClick={() => executar(adicionarReels.mutateAsync({ casoId: caso.id }))}
-            disabled={ocupado || !novoReels.habilitada}
-            title={novoReels.motivo}
+            onClick={() => executar(adicionarVideo.mutateAsync({ casoId: caso.id }))}
+            disabled={ocupado || !novoVideo.habilitada}
+            title={novoVideo.motivo}
           >
-            Adicionar reels
+            Adicionar vídeo
           </Botao>
         )}
       </div>

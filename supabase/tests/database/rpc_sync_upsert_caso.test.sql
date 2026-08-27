@@ -71,8 +71,8 @@ select is(
     join public.casos c on c.id = ce.caso_id
     where c.google_calendar_event_id = 'evt-completo-001'
   ),
-  2,
-  'A2: trigger gera as 2 etapas do pacote basic (entrada, nascimento) na hora'
+  4,
+  'A2: trigger gera as 4 etapas do BASIC (entrada, nascimento, edicao_foto, reels) na hora'
 );
 
 select is(
@@ -174,8 +174,8 @@ select is(
     join public.casos c on c.id = ce.caso_id
     where c.google_calendar_event_id = 'evt-rascunho-002'
   ),
-  2,
-  'C2: trigger de UPDATE gera as etapas agora que o rascunho foi resolvido'
+  4,
+  'C2: trigger de UPDATE gera as 4 etapas agora que o rascunho foi resolvido'
 );
 
 select is(

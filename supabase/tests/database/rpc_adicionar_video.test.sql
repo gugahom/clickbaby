@@ -1,13 +1,19 @@
--- pgTAP: adicionar_reels (migration 20260824164426).
+-- pgTAP: adicionar_video (migration 20260827140400).
+--
+-- Substitui rpc_adicionar_reels.test.sql. A função mudou de nome porque mudou
+-- de significado: enquanto reels e vídeo eram a mesma coisa, `adicionar_reels`
+-- criava `edicao_video` e ninguém notava a contradição. Agora `reels` está em
+-- TODO pacote e não precisa ser adicionado; o que se acrescenta à mão é o
+-- VÍDEO HORIZONTAL, que de fábrica só o MASTER tem.
 --
 -- O que precisa ser provado:
---   - acrescenta edicao_video a um pacote que não tem (o caso do BASIC que
---     ganha reels na hora da venda);
+--   - acrescenta edicao_video a um pacote que não tem (o BASIC que fecha a
+--     venda do horizontal na hora);
 --   - é idempotente de verdade: segunda chamada devolve false, não erra, e não
 --     duplica nem gera evento;
 --   - não mexe nas etapas que já existiam nem no pacote do caso;
 --   - recusa caso terminal;
---   - a etapa nasce no fim do checklist.
+--   - a etapa nasce com a ordem PADRÃO do tipo, não no fim da lista.
 
 begin;
 select plan(13);
@@ -18,28 +24,28 @@ select plan(13);
 -- =============================================================================
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
-values (gen_random_uuid(), 'reels.teste@clickbaby.test', 'authenticated', 'authenticated', now(), now());
+values (gen_random_uuid(), 'video.teste@clickbaby.test', 'authenticated', 'authenticated', now(), now());
 
 insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
-select 'Operador Reels', u.id, 'operador', true
-from auth.users u where u.email = 'reels.teste@clickbaby.test';
+select 'Operador Video', u.id, 'operador', true
+from auth.users u where u.email = 'video.teste@clickbaby.test';
 
--- BASIC: entrada + nascimento, SEM vídeo. É o caso de uso do dono.
+-- BASIC: entrada, nascimento, edicao_foto, reels. SEM o horizontal.
 insert into public.casos (id, mae_nome, pacote_id, maternidade_id, previsao_em)
 values (
   'cccccccc-0000-0000-0000-000000000001',
-  'MAE SEM REELS',
+  'MAE SEM VIDEO',
   (select id from public.pacotes where slug = 'basic'),
   (select id from public.maternidades where sigla = 'HSC'),
   '2026-09-14 12:00:00+00'
 );
 
--- BABY REELS: já tem edicao_video. Aqui a RPC tem que ser no-op.
+-- MASTER: já traz edicao_video pelo pacote. Aqui a RPC tem que ser no-op.
 insert into public.casos (id, mae_nome, pacote_id, maternidade_id, previsao_em)
 values (
   'cccccccc-0000-0000-0000-000000000002',
-  'MAE COM REELS',
-  (select id from public.pacotes where slug = 'baby-reels'),
+  'MAE COM VIDEO',
+  (select id from public.pacotes where slug = 'master'),
   (select id from public.maternidades where sigla = 'HSC'),
   '2026-09-14 14:00:00+00'
 );
@@ -66,10 +72,10 @@ $$;
 -- =============================================================================
 
 select is(
-  (select count(*)::int from public.caso_etapas
+  (select array_agg(tipo order by ordem) from public.caso_etapas
     where caso_id = 'cccccccc-0000-0000-0000-000000000001'),
-  2,
-  'BASIC nasce com 2 etapas (entrada, nascimento) e nenhum vídeo'
+  array['entrada', 'nascimento', 'edicao_foto', 'reels']::public.etapa_tipo[],
+  'BASIC nasce com campo (entrada, nascimento) e edição (foto, reels) — e sem o horizontal'
 );
 
 select ok(
@@ -83,13 +89,13 @@ select ok(
 -- 2. Acrescenta
 -- =============================================================================
 
-select pg_temp.vira('reels.teste@clickbaby.test');
+select pg_temp.vira('video.teste@clickbaby.test');
 set local role authenticated;
 
 select is(
-  public.adicionar_reels('cccccccc-0000-0000-0000-000000000001'),
+  public.adicionar_video('cccccccc-0000-0000-0000-000000000001'),
   true,
-  'adicionar_reels devolve true quando cria a etapa'
+  'adicionar_video devolve true quando cria a etapa'
 );
 
 reset role;
@@ -103,8 +109,8 @@ select ok(
 select is(
   (select count(*)::int from public.caso_etapas
     where caso_id = 'cccccccc-0000-0000-0000-000000000001'),
-  3,
-  'o caso passou a ter 3 etapas — as 2 originais seguem lá'
+  5,
+  'o caso passou a ter 5 etapas — as 4 originais seguem lá'
 );
 
 select is(
@@ -114,11 +120,20 @@ select is(
   'a etapa nova nasce pendente, como qualquer outra'
 );
 
+-- Antes era max(ordem)+1, o que dava um número diferente conforme o pacote.
+-- Agora a ordem é propriedade do TIPO: o vídeo é 7 em qualquer caso.
 select is(
   (select ordem from public.caso_etapas
     where caso_id = 'cccccccc-0000-0000-0000-000000000001' and tipo = 'edicao_video'),
-  3,
-  'a etapa entra no FIM do checklist (ordem 3, depois de entrada e nascimento)'
+  public.ordem_padrao_da_etapa('edicao_video'),
+  'a etapa entra com a ordem PADRÃO do tipo, igual em todo caso'
+);
+
+select is(
+  (select trilha from public.caso_etapas
+    where caso_id = 'cccccccc-0000-0000-0000-000000000001' and tipo = 'edicao_video'),
+  'edicao',
+  'e cai na trilha de edição, sem ninguém preencher — a coluna é gerada'
 );
 
 -- O pacote é o que foi vendido: acrescentar etapa não é trocar produto.
@@ -131,9 +146,9 @@ select is(
 
 select is(
   (select count(*)::int from public.eventos
-    where caso_id = 'cccccccc-0000-0000-0000-000000000001' and tipo = 'reels_adicionado'),
+    where caso_id = 'cccccccc-0000-0000-0000-000000000001' and tipo = 'video_adicionado'),
   1,
-  'gravou um evento reels_adicionado'
+  'gravou um evento video_adicionado'
 );
 
 
@@ -141,30 +156,23 @@ select is(
 -- 3. Idempotência — o ponto que faz o botão ser seguro de clicar duas vezes
 -- =============================================================================
 
-select pg_temp.vira('reels.teste@clickbaby.test');
+select pg_temp.vira('video.teste@clickbaby.test');
 set local role authenticated;
 
 select is(
-  public.adicionar_reels('cccccccc-0000-0000-0000-000000000001'),
+  public.adicionar_video('cccccccc-0000-0000-0000-000000000001'),
   false,
   'a segunda chamada devolve false em vez de erro'
 );
 
--- Caso que já vinha com vídeo pelo pacote: mesmo no-op.
+-- MASTER já vem com o horizontal pelo pacote: mesmo no-op.
 select is(
-  public.adicionar_reels('cccccccc-0000-0000-0000-000000000002'),
+  public.adicionar_video('cccccccc-0000-0000-0000-000000000002'),
   false,
   'caso cujo pacote já traz edicao_video também é no-op'
 );
 
 reset role;
-
-select is(
-  (select count(*)::int from public.eventos
-    where caso_id = 'cccccccc-0000-0000-0000-000000000001' and tipo = 'reels_adicionado'),
-  1,
-  'sem mudança real, sem evento novo — segue 1'
-);
 
 
 -- =============================================================================
@@ -176,12 +184,12 @@ update public.casos
        motivo_cancelamento = 'teste'
  where id = 'cccccccc-0000-0000-0000-000000000002';
 
-select pg_temp.vira('reels.teste@clickbaby.test');
+select pg_temp.vira('video.teste@clickbaby.test');
 set local role authenticated;
 
 select ok(
   pg_temp.levanta(
-    'select public.adicionar_reels(''cccccccc-0000-0000-0000-000000000002'')'),
+    'select public.adicionar_video(''cccccccc-0000-0000-0000-000000000002'')'),
   'caso cancelado recusa etapa nova'
 );
 

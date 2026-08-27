@@ -153,7 +153,7 @@ export function QuadroPage() {
     >
       {emReels.map((caso) => {
         const etapas = etapasPorCaso.get(caso.id) ?? []
-        const video = etapas.find((e) => e.tipo === 'edicao_video')
+        const video = etapas.find((e) => e.tipo === 'reels')
         const situacao = situacaoDoVideo(etapas)
         // Quem está com a etapa importa mais que o estado quando já tem dono:
         // a pergunta na sala de edição é "quem está com esse?".

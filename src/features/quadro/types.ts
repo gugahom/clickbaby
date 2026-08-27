@@ -55,10 +55,19 @@ export interface CasoQuadro {
   updatedAt: string | null
 }
 
+/**
+ * CAMPO é o que acontece na maternidade; EDIÇÃO é o que acontece na ilha.
+ * Vem GERADA do banco a partir do tipo (migration 20260827140400) — não é
+ * derivada aqui de propósito: duas definições da mesma divisão acabariam
+ * discordando, e ela decide precedência, não só layout.
+ */
+export type TrilhaEtapa = 'campo' | 'edicao'
+
 export interface EtapaQuadro {
   id: string
   casoId: string
   tipo: EtapaTipo
+  trilha: TrilhaEtapa
   status: StatusEtapa
   ordem: number
   observacao: string | null
@@ -132,6 +141,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     id: linha.id,
     casoId: linha.caso_id,
     tipo: linha.tipo,
+    trilha: (linha.trilha ?? 'campo') as TrilhaEtapa,
     status: linha.status,
     ordem: linha.ordem,
     observacao: linha.observacao,
@@ -149,9 +159,12 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   nascimento: 'Nascimento',
   banho: 'Banho',
   fechamento: 'Fechamento',
-  edicao_foto: 'Edição foto',
-  edicao_video: 'Vídeo',
-  reels: 'Reels',
+  // A trilha de EDIÇÃO é rotulada como edição, a pedido do gestor: na TV da
+  // sala, "Vídeo" solto ao lado de "Banho" não dizia se era captura ou
+  // pós-produção.
+  edicao_foto: 'Edição Fotos',
+  reels: 'Edição Reels',
+  edicao_video: 'Edição Vídeo',
   album: 'Álbum',
 }
 

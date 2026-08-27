@@ -45,7 +45,13 @@ export function casosNaUti(casos: CasoQuadro[]): CasoQuadro[] {
  *
  * Pausada entra por ser exatamente o que precisa de atenção, e `em_andamento`
  * entra porque continua sendo trabalho aberto. Saem só `concluida` e
- * `dispensada` — e os casos sem etapa de vídeo, que são os pacotes sem reels.
+ * `dispensada`.
+ *
+ * A ETAPA É `reels`, NÃO `edicao_video`
+ * Até a migration 20260827140400 eram a mesma coisa e o código lia
+ * `edicao_video`. Não são: `reels` é o vertical, existe em TODO pacote;
+ * `edicao_video` é o horizontal, só no MASTER. Manter o filtro antigo faria
+ * esta seção mostrar 9 casos de 88 e chamar isso de "Reels".
  *
  * ORDEM: POR VENCIMENTO, NÃO POR CHEGADA
  * A seção 9 do CLAUDE.md manda a fila de edição ordenar por urgência de prazo.
@@ -71,7 +77,7 @@ export function casosComVideoAberto(
       if (caso.ehTerminal) return false
 
       const etapas = etapasPorCaso.get(caso.id) ?? []
-      const video = etapas.find((e) => e.tipo === 'edicao_video')
+      const video = etapas.find((e) => e.tipo === 'reels')
       if (!video) return false
 
       if (video.status === 'concluida' || video.status === 'dispensada') return false
@@ -93,7 +99,7 @@ export function casosComVideoAberto(
 export type SituacaoDoVideo = 'aguardando' | 'editando' | 'pausada'
 
 export function situacaoDoVideo(etapas: EtapaQuadro[]): SituacaoDoVideo | null {
-  const video = etapas.find((e) => e.tipo === 'edicao_video')
+  const video = etapas.find((e) => e.tipo === 'reels')
   if (!video) return null
   if (video.status === 'em_andamento') return 'editando'
   if (video.status === 'pausada') return 'pausada'

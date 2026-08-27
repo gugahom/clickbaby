@@ -168,9 +168,9 @@ export function useRetornarDaUti() {
   )
 }
 
-export function useAdicionarReels() {
+export function useAdicionarVideo() {
   return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
-    chamar('adicionar_reels', { p_caso_id: casoId }),
+    chamar('adicionar_video', { p_caso_id: casoId }),
   )
 }
 

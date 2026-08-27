@@ -16,7 +16,7 @@
 -- Tudo numa transação revertida no final.
 
 begin;
-select plan(24);
+select plan(25);
 
 
 -- =============================================================================
@@ -230,10 +230,19 @@ select is(
   'BABY REELS (interval 48 hours) vira 48'
 );
 
+-- O MASTER deixou de ter intervalo: mede-se em dias úteis (20260827135656).
+-- prazo_entrega_horas NULO aqui não é falta de prazo, é prazo de outra
+-- natureza — quem responde por ele são prazo_dias_uteis e prazo_total_horas.
 select is(
   (select prazo_entrega_horas from public.quadro_casos where id = '44444444-4444-4444-4444-444444444444'),
-  168::numeric,
-  'MASTER (interval 7 days) vira 168 — o formato que quebraria um parser de texto'
+  null,
+  'MASTER não tem prazo em horas — o dele é em dias úteis'
+);
+
+select is(
+  (select prazo_dias_uteis from public.quadro_casos where id = '44444444-4444-4444-4444-444444444444'),
+  10,
+  'e a view entrega os 10 dias úteis, para a tela poder rotular'
 );
 
 select is(
@@ -249,8 +258,8 @@ select is(
 
 select is(
   (select etapas_total from public.quadro_casos where id = '11111111-1111-1111-1111-111111111111'),
-  5,
-  'BABY REELS gera 5 etapas e a view conta todas (o left join do nascimento não multiplica linha)'
+  6,
+  'BABY REELS gera 6 etapas e a view conta todas (o left join do nascimento não multiplica linha)'
 );
 
 select is(
