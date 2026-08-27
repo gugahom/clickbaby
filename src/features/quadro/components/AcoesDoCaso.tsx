@@ -4,11 +4,13 @@ import { Botao } from '@/components/ui/Botao'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { AnotarDialogo } from './AnotarDialogo'
 import {
   IconeCaneta,
   IconeCheck,
   IconeAtribuir,
   IconeHandoff,
+  IconeNota,
   IconeRendicao,
   IconePause,
   IconePlay,
@@ -17,6 +19,7 @@ import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
   useAdicionarVideo,
+  useAnotarEtapa,
   usePlanejarRendicao,
   useAtribuirEtapa,
   useCancelarCaso,
@@ -85,6 +88,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
   const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
   const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
+  const [anotarDe, setAnotarDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
@@ -95,6 +99,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const retornarDaUti = useRetornarDaUti()
   const adicionarVideo = useAdicionarVideo()
   const planejarRendicao = usePlanejarRendicao()
+  const anotar = useAnotarEtapa()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -130,14 +135,10 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const voltaDaUti = podeRetornarDaUti(caso)
   const novoVideo = podeAdicionarVideo(caso, etapas)
 
-  // O VÍDEO aqui é o horizontal, que de fábrica só o MASTER tem. O reels virou
-  // etapa própria e está em todo pacote (migration 20260827140400), então ele
-  // aparece na trilha de edição como qualquer outra etapa e não precisa de um
-  // botão de atalho.
+  // O VÍDEO aqui é o horizontal, que de fábrica só o MASTER tem. Serve só para
+  // saber se ainda cabe ACRESCENTÁ-LO — dar play nele é como em qualquer outra
+  // etapa, pela lista acima.
   const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
-  const edicaoDeVideo = etapaVideo
-    ? podeIniciar(etapaVideo, etapas)
-    : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo horizontal.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
@@ -147,7 +148,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     handoffDe !== null ||
     observacaoDe !== null ||
     atribuirDe !== null ||
-    rendicaoDe !== null
+    rendicaoDe !== null ||
+    anotarDe !== null
 
   return (
     <div className="space-y-3">
@@ -318,6 +320,21 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     >
                       <IconeRendicao className="size-[18px]" />
                     </BotaoIcone>
+
+                    {/* Sem trava de status: anotar vale ANTES de a etapa
+                        começar — é o único momento em que o aviso serve. Vale
+                        até em etapa concluída, para corrigir o relato. */}
+                    <BotaoIcone
+                      rotulo={etapa.observacao ? 'Editar aviso' : 'Escrever aviso'}
+                      disabled={ocupado}
+                      tom={etapa.observacao ? 'acao' : 'neutro'}
+                      onClick={() => {
+                        setErro(null)
+                        setAnotarDe(etapa)
+                      }}
+                    >
+                      <IconeNota className="size-[18px]" />
+                    </BotaoIcone>
                   </div>
                 )}
               </li>
@@ -348,21 +365,15 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           </Botao>
         )}
 
-        {/* Um botão só, dois significados, conforme o caso já tem o horizontal
-            ou não. Sem a etapa: cria (adicionar_video), para quando a venda do
-            horizontal se fecha fora do MASTER. Com a etapa: começa a editar
-            (iniciar_etapa). */}
-        {etapaVideo ? (
-          <Botao
-            onClick={() =>
-              executar(iniciar.mutateAsync({ casoEtapaId: etapaVideo.id }))
-            }
-            disabled={ocupado || !edicaoDeVideo.habilitada}
-            title={edicaoDeVideo.motivo}
-          >
-            Editar vídeo
-          </Botao>
-        ) : (
+        {/* Só o ACRESCENTAR, e só quando a etapa não existe.
+            "Editar vídeo" saiu daqui: era um atalho para dar play na etapa de
+            vídeo, e desde que cada etapa da trilha ganhou seu próprio play na
+            lista acima, ele repetia um botão que já está a dois centímetros
+            dali — com a desvantagem de sugerir que o vídeo é especial entre as
+            três edições, o que deixou de ser verdade.
+            Acrescentar continua aqui porque é ação de CASO (muda o escopo do
+            trabalho), não de etapa, e não teria onde morar na lista. */}
+        {!etapaVideo && (
           <Botao
             onClick={() => executar(adicionarVideo.mutateAsync({ casoId: caso.id }))}
             disabled={ocupado || !novoVideo.habilitada}
@@ -451,6 +462,21 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             executar(
               atribuir.mutateAsync({ casoEtapaId: atribuirDe.id, paraPessoaId }),
               () => setAtribuirDe(null),
+            )
+          }
+        />
+      )}
+
+      {anotarDe && (
+        <AnotarDialogo
+          etapa={anotarDe}
+          ocupado={anotar.isPending}
+          erro={erro}
+          onCancelar={() => setAnotarDe(null)}
+          onConfirmar={(observacao) =>
+            executar(
+              anotar.mutateAsync({ casoEtapaId: anotarDe.id, observacao }),
+              () => setAnotarDe(null),
             )
           }
         />

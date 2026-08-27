@@ -49,12 +49,11 @@ function resolvida(e: EtapaQuadro): boolean {
  *
  * A precedência real é por TRILHA:
  *
- *   CAMPO   sequencial entre si. Entrada antes de nascimento, nascimento antes
- *           de banho, banho antes de fechamento.
- *   EDIÇÃO  libera quando o NASCIMENTO conclui, e as etapas dela não se
- *           seguram entre si — foto, reels e vídeo podem estar com três
- *           pessoas diferentes ao mesmo tempo, que é a razão de o gestor ter
- *           pedido a separação.
+ *   ACOMPANHAMENTO  sequencial entre si. Entrada antes de nascimento,
+ *                   nascimento antes de banho, banho antes de fechamento.
+ *   EDIÇÃO          libera quando o NASCIMENTO conclui, e as etapas dela não
+ *                   se seguram entre si — foto, reels e vídeo podem estar com
+ *                   três pessoas diferentes ao mesmo tempo.
  *
  * Continua sendo trava de TELA, não de banco: `concluir_etapa` aceita qualquer
  * ordem de propósito, porque campo admite registro retroativo (seção 9 do
@@ -76,7 +75,7 @@ function anteriorPendente(
   }
 
   const anteriores = etapas
-    .filter((e) => e.trilha === 'campo' && e.ordem < etapa.ordem)
+    .filter((e) => e.trilha === 'acompanhamento' && e.ordem < etapa.ordem)
     .sort((a, b) => b.ordem - a.ordem)
 
   return anteriores.find((e) => !resolvida(e)) ?? null

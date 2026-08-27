@@ -1,4 +1,4 @@
--- pgTAP: trilhas CAMPO e EDIÇÃO (migration 20260827140400).
+-- pgTAP: trilhas ACOMPANHAMENTO e EDIÇÃO (migration 20260827140400).
 --
 -- A trilha existe por dois motivos, e este arquivo protege os dois:
 --
@@ -50,7 +50,7 @@ $$;
 
 select ok(
   pg_temp.levanta(
-    'update public.caso_etapas set trilha = ''campo''
+    'update public.caso_etapas set trilha = ''acompanhamento''
       where caso_id = ''aaaa1111-0000-0000-0000-000000000001'' and tipo = ''reels'''),
   'escrever na trilha à mão é RECUSADO'
 );
@@ -62,9 +62,9 @@ select ok(
 
 select is(
   (select array_agg(tipo::text order by ordem) from public.caso_etapas
-    where caso_id = 'aaaa1111-0000-0000-0000-000000000001' and trilha = 'campo'),
+    where caso_id = 'aaaa1111-0000-0000-0000-000000000001' and trilha = 'acompanhamento'),
   array['entrada', 'nascimento', 'banho', 'fechamento'],
-  'CAMPO é o que acontece na maternidade'
+  'ACOMPANHAMENTO é o que a empresa faz junto da família'
 );
 
 select is(
@@ -77,7 +77,7 @@ select is(
 select is(
   (select count(*)::int from public.caso_etapas
     where caso_id = 'aaaa1111-0000-0000-0000-000000000001'
-      and trilha not in ('campo', 'edicao')),
+      and trilha not in ('acompanhamento', 'edicao')),
   0,
   'não existe terceira trilha — toda etapa cai numa das duas'
 );

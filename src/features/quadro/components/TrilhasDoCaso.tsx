@@ -6,7 +6,7 @@ interface PropsTrilhasDoCaso {
 }
 
 const ROTULO_TRILHA: Record<TrilhaEtapa, string> = {
-  campo: 'Campo',
+  acompanhamento: 'Acompanhamento',
   edicao: 'Edição',
 }
 
@@ -38,12 +38,12 @@ const ROTULO_TRILHA: Record<TrilhaEtapa, string> = {
 export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
   if (etapas.length === 0) return null
 
-  const campo = etapas.filter((e) => e.trilha === 'campo')
+  const acompanhamento = etapas.filter((e) => e.trilha === 'acompanhamento')
   const edicao = etapas.filter((e) => e.trilha === 'edicao')
 
   return (
     <div className="mt-2 space-y-1">
-      <Trilha trilha="campo" etapas={campo} />
+      <Trilha trilha="acompanhamento" etapas={acompanhamento} />
       <Trilha trilha="edicao" etapas={edicao} />
     </div>
   )
@@ -60,8 +60,8 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
           na vertical e acha a trilha certa sem ler. */}
       <span
         className={clsx(
-          'mt-0.5 w-[3.75rem] flex-shrink-0 text-[10px] font-bold tracking-[0.1em] uppercase',
-          trilha === 'campo' ? 'text-marca' : 'text-acento',
+          'mt-0.5 w-[6.5rem] flex-shrink-0 text-[10px] font-bold tracking-[0.08em] uppercase',
+          trilha === 'acompanhamento' ? 'text-marca' : 'text-acento',
         )}
       >
         {ROTULO_TRILHA[trilha]}

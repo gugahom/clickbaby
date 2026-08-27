@@ -799,6 +799,10 @@ export type Database = {
     }
     Functions: {
       adicionar_video: { Args: { p_caso_id: string }; Returns: boolean }
+      anotar_etapa: {
+        Args: { p_caso_etapa_id: string; p_observacao: string }
+        Returns: undefined
+      }
       atribuir_etapa: {
         Args: { p_caso_etapa_id: string; p_para_pessoa_id: string }
         Returns: undefined

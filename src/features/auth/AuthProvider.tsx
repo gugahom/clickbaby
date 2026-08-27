@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { ContextoAuth, type EstadoAuth, type PessoaLogada } from './contexto'
@@ -8,6 +8,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [pessoa, setPessoa] = useState<PessoaLogada | null>(null)
 
+  /**
+   * Qual usuário já está resolvido. Existe para separar "trocou de sessão" de
+   * "renovou o token da mesma sessão" — ver o comentário em onAuthStateChange.
+   */
+  const usuarioResolvido = useRef<string | null>(null)
+
   useEffect(() => {
     let ativo = true
 
@@ -15,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!s) {
         if (ativo) {
           setPessoa(null)
+          usuarioResolvido.current = null
           setCarregando(false)
         }
         return
@@ -30,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPessoa(
         data ? { id: data.id, nome: data.nome, papelSistema: data.papel_sistema } : null,
       )
+      usuarioResolvido.current = s.user.id
       setCarregando(false)
     }
 
@@ -41,7 +49,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, novaSession) => {
       setSession(novaSession)
-      setCarregando(true)
+
+      /*
+       * SÓ volta a "carregando" quando o USUÁRIO muda.
+       *
+       * onAuthStateChange dispara também para TOKEN_REFRESHED, que acontece
+       * sozinho de tempos em tempos com a mesma pessoa logada. A versão
+       * anterior fazia setCarregando(true) em todo evento — e como
+       * RotaProtegida troca o <Outlet /> por "Verificando sessão…" enquanto
+       * carrega, o Quadro inteiro era DESMONTADO e remontado a cada renovação
+       * de token.
+       *
+       * O efeito: aba selecionada voltava para Lista, cards abertos fechavam,
+       * e um diálogo a meio preenchimento sumia — em produção, calado, sem
+       * erro em lugar nenhum. Descoberto porque a aba Reels não "grudava".
+       *
+       * A resolução da pessoa continua acontecendo (o vínculo pode ter mudado
+       * do outro lado); o que não acontece mais é apagar a tela para isso.
+       */
+      const mudouDeUsuario = novaSession?.user.id !== usuarioResolvido.current
+      if (mudouDeUsuario) setCarregando(true)
+
       void resolverPessoa(novaSession)
     })
 

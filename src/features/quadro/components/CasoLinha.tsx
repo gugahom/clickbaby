@@ -8,6 +8,7 @@ import { useRelogioDeMinuto } from '../lib/useRelogio'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
 import { TrilhasDoCaso } from './TrilhasDoCaso'
+import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { IconeCaneta } from '@/components/ui/icones'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
@@ -173,6 +174,9 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         clique interno borbulharia abrindo o detalhe junto — foi o defeito da
         referência da v0, e não vale repetir por economia de markup.
 
+        Ancorado no TOPO, não na base: a faixa de avisos ocupa o rodapé do
+        cartão quando existe, e um botão absoluto ali cairia por cima do texto.
+
         SEMPRE VISÍVEL, nunca só no hover. A primeira versão revelava no hover
         no desktop; em celular, que é o aparelho real da operação (seção 6),
         hover não existe — o botão ficaria invisível e clicável ao mesmo tempo,
@@ -187,12 +191,17 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         rotulo={`${caso.ehRascunho ? 'Completar' : 'Editar'} cadastro de ${titulo}`}
         tom={caso.ehRascunho ? 'pendencia' : 'neutro'}
         onClick={() => setEditando(true)}
-        className="absolute right-1.5 bottom-1.5"
+        className="absolute top-11 right-1.5"
       >
         <IconeCaneta className="size-4" />
       </BotaoIcone>
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
+
+      {/* Fora do <button> do cabeçalho e antes do painel: a faixa é sempre
+          visível, aberto ou fechado. Um aviso que só aparecesse ao expandir o
+          caso não seria visto na TV, que é onde ele precisa ser visto. */}
+      <AvisosDoCaso etapas={etapas} />
 
       <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
         {aberto && <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />}

@@ -56,12 +56,16 @@ export interface CasoQuadro {
 }
 
 /**
- * CAMPO é o que acontece na maternidade; EDIÇÃO é o que acontece na ilha.
- * Vem GERADA do banco a partir do tipo (migration 20260827140400) — não é
- * derivada aqui de propósito: duas definições da mesma divisão acabariam
- * discordando, e ela decide precedência, não só layout.
+ * ACOMPANHAMENTO é o que a empresa faz junto da família; EDIÇÃO é o que
+ * acontece na ilha. Vem GERADA do banco a partir do tipo — não é derivada aqui
+ * de propósito: duas definições da mesma divisão acabariam discordando, e ela
+ * decide precedência, não só layout.
+ *
+ * Era 'campo' até a migration 20260827155728. A palavra é do gestor, e o valor
+ * mudou no banco junto com o rótulo: dois nomes para a mesma coisa é a
+ * divergência de vocabulário que a seção 2 do CLAUDE.md manda evitar.
  */
-export type TrilhaEtapa = 'campo' | 'edicao'
+export type TrilhaEtapa = 'acompanhamento' | 'edicao'
 
 export interface EtapaQuadro {
   id: string
@@ -149,7 +153,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     id: linha.id,
     casoId: linha.caso_id,
     tipo: linha.tipo,
-    trilha: (linha.trilha ?? 'campo') as TrilhaEtapa,
+    trilha: (linha.trilha ?? 'acompanhamento') as TrilhaEtapa,
     status: linha.status,
     ordem: linha.ordem,
     observacao: linha.observacao,
