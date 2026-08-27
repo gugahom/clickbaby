@@ -182,7 +182,18 @@ function Etapa({
   soMarcador: boolean
 }) {
   const pessoas = nomesDaEtapa(etapa)
-  const bloco = comRodada ? ROTULO_RODADA[etapa.rodada] : null
+
+  /*
+   * NA FAIXA REELS o bloco é o ÚNICO nome, então nunca some.
+   *
+   * A regra de esconder o bloco quando há uma rodada só nasceu para a fita de
+   * edição, onde o nome da etapa já identifica o item e "Foto Parto" sem um
+   * "Foto B+F" ao lado seria uma distinção sem contraparte. Aqui é o oposto:
+   * `soMarcador` omite o nome da etapa (seria "Reels" repetido sob um rótulo
+   * que já diz REELS), e sem o bloco sobra um marcador sem palavra nenhuma —
+   * um item que existe, ocupa a linha e não diz o que é.
+   */
+  const bloco = comRodada || soMarcador ? ROTULO_RODADA[etapa.rodada] : null
 
   return (
     <span className="inline-flex items-center gap-1">
@@ -190,16 +201,20 @@ function Etapa({
       <span className={CLASSE_STATUS[etapa.status]}>
         {/* Sem numeral: "Ⅰ"/"Ⅱ" ao lado de "Parto"/"B+F" dizia a mesma coisa
             duas vezes, e o nome do bloco é o que a equipe usa para falar. */}
-        {!soMarcador && ROTULO_ETAPA[etapa.tipo]}
-        {bloco && (
-          <span
-            className={clsx(
-              'text-xs font-normal text-muted-foreground',
-              !soMarcador && 'ml-1',
+        {soMarcador ? (
+          // Sendo o nome do item, herda o peso e a cor do status como
+          // qualquer outro — em cinza minúsculo, um reels concluído não
+          // ficaria verde e a faixa perderia o estado à distância.
+          bloco
+        ) : (
+          <>
+            {ROTULO_ETAPA[etapa.tipo]}
+            {bloco && (
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                {bloco}
+              </span>
             )}
-          >
-            {bloco}
-          </span>
+          </>
         )}
       </span>
       {/*

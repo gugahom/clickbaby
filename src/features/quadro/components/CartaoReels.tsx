@@ -39,7 +39,6 @@ interface PropsCartaoReels {
 export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoReels) {
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
   const cor = corDoCaso(caso.corCalendar)
-  const varias = reels.length > 1
 
   return (
     <li className="flex items-stretch gap-2.5 rounded-md border border-border bg-card px-3 py-2.5 shadow-cartao">
@@ -58,14 +57,7 @@ export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoRe
 
         <ul className="mt-2 space-y-1.5">
           {reels.map((etapa) => (
-            <LinhaDeRodada
-              key={etapa.id}
-              etapa={etapa}
-              etapas={etapas}
-              // Sem outra rodada aberta, o numeral não distingue nada.
-              comNumeral={varias}
-              onErro={onErro}
-            />
+            <LinhaDeRodada key={etapa.id} etapa={etapa} etapas={etapas} onErro={onErro} />
           ))}
         </ul>
       </div>
@@ -76,12 +68,10 @@ export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoRe
 function LinhaDeRodada({
   etapa,
   etapas,
-  comNumeral,
   onErro,
 }: {
   etapa: EtapaQuadro
   etapas: EtapaQuadro[]
-  comNumeral: boolean
   onErro: (mensagem: string | null) => void
 }) {
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
@@ -90,11 +80,17 @@ function LinhaDeRodada({
     <li className="flex items-center gap-2 rounded-md bg-muted/50 py-1 pr-1 pl-2">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm">
-          {/* Sem numeral: o nome do bloco já separa as duas, e é como a
-              equipe fala. */}
-          <span className="font-medium">
-            {comNumeral ? ROTULO_RODADA[etapa.rodada] : 'Reels'}
-          </span>
+          {/*
+            SEMPRE o nome do bloco, mesmo com uma rodada aberta só.
+            
+            Antes o rótulo caía para "Reels" quando sobrava uma — ou seja,
+            concluir o reels do parto REBATIZAVA a linha do B+F, que continuava
+            sendo exatamente o mesmo trabalho. O nome de uma tarefa não pode
+            mudar porque outra terminou.
+            
+            E "Reels" nunca acrescentou nada: a seção inteira é de reels.
+          */}
+          <span className="font-medium">{ROTULO_RODADA[etapa.rodada]}</span>
           {responsavel && (
             <span className="truncate text-xs text-muted-foreground">· {responsavel}</span>
           )}
