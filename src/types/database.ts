@@ -51,6 +51,7 @@ export type Database = {
           pausado_em: string | null
           proximo_responsavel_id: string | null
           responsavel_id: string | null
+          rodada: number
           status: Database["public"]["Enums"]["status_etapa"]
           subiu_por: string | null
           tipo: Database["public"]["Enums"]["etapa_tipo"]
@@ -73,6 +74,7 @@ export type Database = {
           pausado_em?: string | null
           proximo_responsavel_id?: string | null
           responsavel_id?: string | null
+          rodada?: number
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
           tipo: Database["public"]["Enums"]["etapa_tipo"]
@@ -95,6 +97,7 @@ export type Database = {
           pausado_em?: string | null
           proximo_responsavel_id?: string | null
           responsavel_id?: string | null
+          rodada?: number
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
           tipo?: Database["public"]["Enums"]["etapa_tipo"]
@@ -830,6 +833,10 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
         Returns: undefined
       }
+      reabrir_etapa: {
+        Args: { p_caso_etapa_id: string; p_motivo?: string }
+        Returns: undefined
+      }
       registrar_entregavel: {
         Args: {
           p_caso_id: string
@@ -855,6 +862,10 @@ export type Database = {
           p_previsao_em: string
         }
         Returns: string
+      }
+      tipo_tem_segunda_rodada: {
+        Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
+        Returns: boolean
       }
       transferir_etapa: {
         Args: {

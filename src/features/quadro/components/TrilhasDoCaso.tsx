@@ -1,5 +1,11 @@
 import clsx from 'clsx'
-import { ROTULO_ETAPA, type EtapaQuadro, type StatusEtapa, type TrilhaEtapa } from '../types'
+import {
+  ROTULO_ETAPA,
+  ROTULO_RODADA,
+  type EtapaQuadro,
+  type StatusEtapa,
+  type TrilhaEtapa,
+} from '../types'
 
 interface PropsTrilhasDoCaso {
   etapas: EtapaQuadro[]
@@ -92,7 +98,17 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
 
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
         {etapas.map((etapa) => (
-          <Etapa key={etapa.id} etapa={etapa} />
+          <Etapa
+            key={etapa.id}
+            etapa={etapa}
+            // O sufixo de rodada só aparece quando há MAIS DE UMA rodada
+            // daquela etapa no caso. Num BASIC, que nunca terá a segunda,
+            // "Edição Fotos · Parto" seria uma distinção sem contraparte —
+            // ruído que ocupa a linha e não separa nada.
+            comRodada={etapas.some(
+              (o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada,
+            )}
+          />
         ))}
 
         {/* Na TV é o que responde "quanto falta aqui" sem contar item por item. */}
@@ -102,13 +118,21 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
   )
 }
 
-function Etapa({ etapa }: { etapa: EtapaQuadro }) {
+function Etapa({ etapa, comRodada }: { etapa: EtapaQuadro; comRodada: boolean }) {
   const pessoas = nomesDaEtapa(etapa)
+  const rodada = comRodada ? ROTULO_RODADA[etapa.rodada] : null
 
   return (
     <span className="inline-flex items-center gap-1">
       <Marcador status={etapa.status} />
-      <span className={CLASSE_STATUS[etapa.status]}>{ROTULO_ETAPA[etapa.tipo]}</span>
+      <span className={CLASSE_STATUS[etapa.status]}>
+        {ROTULO_ETAPA[etapa.tipo]}
+        {rodada && (
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            {rodada}
+          </span>
+        )}
+      </span>
       {pessoas && (
         <span className="text-xs font-medium text-muted-foreground">· {pessoas}</span>
       )}

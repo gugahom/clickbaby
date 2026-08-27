@@ -169,6 +169,21 @@ export function useRetornarDaUti() {
 }
 
 /**
+ * Desfaz a conclusão de uma etapa: volta para em_andamento e limpa
+ * concluido_em, preservando iniciado_em. Ver reabrir_etapa na migration
+ * 20260827172830.
+ */
+export function useReabrirEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; motivo?: string }>(
+    ({ casoEtapaId, motivo }) =>
+      chamar('reabrir_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_motivo: motivo ?? null,
+      }),
+  )
+}
+
+/**
  * Escreve (ou apaga, com texto vazio) a observação de uma etapa, em qualquer
  * status. Não é transição de estado — ver anotar_etapa na migration
  * 20260827155728.

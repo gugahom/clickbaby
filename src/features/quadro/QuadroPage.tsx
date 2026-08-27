@@ -14,6 +14,7 @@ import {
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
+  etapaDeReelsDaSecao,
   casosConcluidos,
   casosNaUti,
   situacaoDoVideo,
@@ -156,7 +157,10 @@ export function QuadroPage() {
     >
       {emReels.map((caso) => {
         const etapas = etapasPorCaso.get(caso.id) ?? []
-        const video = etapas.find((e) => e.tipo === 'reels')
+        // A MESMA função que decide se o caso entra na seção decide qual das
+        // duas rodadas de reels o cartão representa — senão o detalhe e a
+        // ação poderiam apontar para etapas diferentes.
+        const video = etapaDeReelsDaSecao(etapas)
         const situacao = situacaoDoVideo(etapas)
         // Quem está com a etapa importa mais que o estado quando já tem dono:
         // a pergunta na sala de edição é "quem está com esse?".

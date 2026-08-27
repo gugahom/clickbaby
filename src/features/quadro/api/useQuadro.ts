@@ -58,6 +58,11 @@ async function carregarQuadro(): Promise<DadosQuadro> {
       '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome)',
     )
     .in('caso_id', ids)
+    // rodada ANTES de ordem: agrupa a edição do parto e a do banho em blocos,
+    // que é como o trabalho se organiza. Ordenar só por `ordem` intercalaria
+    // "Foto parto, Foto banho, Reels parto, Reels banho".
+    // A trilha de acompanhamento é toda rodada 1, então não muda de posição.
+    .order('rodada', { ascending: true })
     .order('ordem', { ascending: true })
 
   if (erroEtapas) throw erroEtapas

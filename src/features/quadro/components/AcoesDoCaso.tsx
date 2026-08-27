@@ -8,6 +8,7 @@ import { AnotarDialogo } from './AnotarDialogo'
 import {
   IconeCaneta,
   IconeCheck,
+  IconeDesfazer,
   IconeAtribuir,
   IconeHandoff,
   IconeNota,
@@ -20,6 +21,7 @@ import { useAuth } from '@/features/auth/contexto'
 import {
   useAdicionarVideo,
   useAnotarEtapa,
+  useReabrirEtapa,
   usePlanejarRendicao,
   useAtribuirEtapa,
   useCancelarCaso,
@@ -43,6 +45,7 @@ import {
   podePausar,
   podeRetornarDaUti,
   podePlanejarRendicao,
+  podeReabrir,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -51,6 +54,7 @@ import { Entregaveis } from './Entregaveis'
 import { useEntregaveis } from '../api/useAcoes'
 import {
   ROTULO_ETAPA,
+  ROTULO_RODADA,
   ROTULO_STATUS_ETAPA,
   type CasoQuadro,
   type EtapaQuadro,
@@ -100,6 +104,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const adicionarVideo = useAdicionarVideo()
   const planejarRendicao = usePlanejarRendicao()
   const anotar = useAnotarEtapa()
+  const reabrir = useReabrirEtapa()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -170,6 +175,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const handoff = podeTransferir(etapa)
             const designacao = podeAtribuir(etapa)
             const rendicao = podePlanejarRendicao(etapa)
+            const reabertura = podeReabrir(etapa, caso)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
@@ -188,6 +194,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     )}
                   >
                     {ROTULO_ETAPA[etapa.tipo]}
+                    {/* Sem o sufixo, a lista mostraria "Edição Fotos" duas
+                        vezes e não haveria como saber em qual se está
+                        clicando. */}
+                    {etapas.some((o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada) && (
+                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                        {ROTULO_RODADA[etapa.rodada]}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
@@ -212,6 +226,25 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     </p>
                   )}
                 </div>
+
+                {/* Etapa CONCLUÍDA fica só com o desfazer. Concluir é um gesto
+                    de um toque, feito com uma mão num corredor — e até a
+                    migration 20260827172830 era irreversível. Dispensada não
+                    entra: ali não houve trabalho a devolver. */}
+                {etapa.status === 'concluida' && (
+                  <div className="flex flex-shrink-0 items-center">
+                    <BotaoIcone
+                      rotulo="Reabrir etapa"
+                      motivo={reabertura.motivo}
+                      disabled={ocupado || !reabertura.habilitada}
+                      onClick={() =>
+                        executar(reabrir.mutateAsync({ casoEtapaId: etapa.id }))
+                      }
+                    >
+                      <IconeDesfazer className="size-[18px]" />
+                    </BotaoIcone>
+                  </div>
+                )}
 
                 {/* Grupo de ações na própria linha. Etapa terminada perde os
                     botões inteiros — no mobile, ícone morto é espaço perdido. */}

@@ -74,6 +74,12 @@ export interface EtapaQuadro {
   trilha: TrilhaEtapa
   status: StatusEtapa
   ordem: number
+  /**
+   * Qual passagem de edição esta etapa é. 1 = material do parto; 2 = material
+   * do banho e fechamento, criada pela trigger quando o fechamento conclui.
+   * Só `edicao_foto` e `reels` chegam a ter 2 (migration 20260827172830).
+   */
+  rodada: number
   observacao: string | null
   /** Necessário para o handoff: transferir_etapa exige responsável atual. */
   responsavelId: string | null
@@ -156,6 +162,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     trilha: (linha.trilha ?? 'acompanhamento') as TrilhaEtapa,
     status: linha.status,
     ordem: linha.ordem,
+    rodada: linha.rodada ?? 1,
     observacao: linha.observacao,
     responsavelId: linha.responsavel_id,
     proximoResponsavelId: linha.proximo_responsavel_id,
@@ -166,6 +173,19 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     responsavelNome: linha.responsavel?.nome ?? null,
     proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,
   }
+}
+
+/**
+ * Como cada rodada se chama na tela.
+ *
+ * Nome e não número: "Edição Fotos 2" obriga a saber o que é a 2; "Edição
+ * Fotos · Banho" diz de que material se trata, que é a pergunta real de quem
+ * senta na estação de edição. Os nomes vêm do que gerou o material —
+ * nascimento de um lado, banho e fechamento do outro.
+ */
+export const ROTULO_RODADA: Record<number, string> = {
+  1: 'Parto',
+  2: 'Banho',
 }
 
 export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
