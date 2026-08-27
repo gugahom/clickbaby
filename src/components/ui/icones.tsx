@@ -215,3 +215,23 @@ export function IconeNota({ className }: PropsIcone) {
     </svg>
   )
 }
+
+export function IconeDesfazer({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Seta girando para trás: desfazer. Deliberadamente NÃO é uma lixeira —
+          reabrir não apaga nada, devolve a etapa ao trabalho. */}
+      <path d="M3 8v5h5" />
+      <path d="M3.5 12.5a8.5 8.5 0 1 0 2.4-5.4L3 10" />
+    </svg>
+  )
+}

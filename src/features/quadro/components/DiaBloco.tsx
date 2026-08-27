@@ -63,9 +63,37 @@ export function DiaBloco({
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
           aria-controls={idPainel}
+          /*
+           * FECHADO ganha superfície; ABERTO não.
+           *
+           * Aberto, o cabeçalho é rótulo de prateleira: os cartões logo abaixo
+           * dizem onde o bloco começa e termina, e dar caixa a ele o faria
+           * competir com eles.
+           *
+           * Fechado, os cartões somem e sobra texto solto no chão pastel — sem
+           * nada dizendo que aquilo é clicável. É a queixa: um dia fechado
+           * precisa parecer um objeto que se seleciona, não um título.
+           *
+           * A caixa é discreta de propósito. Ela existe para dar borda ao alvo,
+           * não para chamar atenção: um dia fechado é justamente o que a pessoa
+           * NÃO está olhando agora.
+           */
           className={clsx(
-            'flex w-full items-center gap-3 rounded-cartao px-3 py-2.5 text-left transition-colors md:gap-4 md:px-4',
-            emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'hover:bg-card/70',
+            // A borda existe SEMPRE e só troca de cor. Se ela aparecesse e
+            // sumisse, o 1px de largura entraria e sairia da caixa a cada
+            // abrir/fechar, empurrando o bloco inteiro — e `transition-all`
+            // ainda animaria essa largura, transformando um deslocamento de
+            // layout em algo que se vê acontecer.
+            'flex w-full items-center gap-3 rounded-cartao border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow] md:gap-4 md:px-4',
+            aberto
+              ? clsx(
+                  'border-transparent',
+                  emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'hover:bg-card/70',
+                )
+              : clsx(
+                  'border-border shadow-cartao hover:shadow-cartao-alto',
+                  emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'bg-card/70 hover:bg-card',
+                ),
           )}
         >
           {/* O diafragma: uma pá por caso, acesa quando o caso se resolve. É a

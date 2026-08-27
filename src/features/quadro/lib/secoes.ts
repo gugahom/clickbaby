@@ -68,6 +68,41 @@ export function casosNaUti(casos: CasoQuadro[]): CasoQuadro[] {
  * depois do nascimento, que é o que arma o relógio), mas se acontecer, prazo
  * desconhecido não é o mesmo que prazo urgente.
  */
+/**
+ * O reels que a seção deve mostrar deste caso — ou null se não há nenhum
+ * aberto.
+ *
+ * DUAS RODADAS, UM CARTÃO
+ * Desde a migration 20260827172830 um caso pode ter DOIS reels: o do parto e o
+ * do banho. A versão anterior usava `find`, que devolve sempre o primeiro — e
+ * com a rodada 1 concluída e a 2 aberta a seção diria que não há nada a fazer,
+ * escondendo exatamente o trabalho que sobrou.
+ *
+ * A prioridade responde "o que está acontecendo agora neste caso": o que está
+ * em andamento vence; depois o pausado, que é o que precisa de atenção; por
+ * fim o mais antigo disponível, porque a rodada do parto vem antes da do banho.
+ */
+function reelsAberto(etapas: EtapaQuadro[]): EtapaQuadro | null {
+  const abertos = etapas
+    .filter((e) => e.tipo === 'reels')
+    .filter((e) => e.status !== 'concluida' && e.status !== 'dispensada')
+    .filter(
+      (e) =>
+        e.status === 'em_andamento' ||
+        e.status === 'pausada' ||
+        podeIniciar(e, etapas).habilitada,
+    )
+
+  if (abertos.length === 0) return null
+
+  const peso = (e: EtapaQuadro) =>
+    e.status === 'em_andamento' ? 0 : e.status === 'pausada' ? 1 : 2
+
+  return (
+    [...abertos].sort((a, b) => peso(a) - peso(b) || a.rodada - b.rodada)[0] ?? null
+  )
+}
+
 export function casosComVideoAberto(
   casos: CasoQuadro[],
   etapasPorCaso: Map<string, EtapaQuadro[]>,
@@ -75,17 +110,7 @@ export function casosComVideoAberto(
   return casos
     .filter((caso) => {
       if (caso.ehTerminal) return false
-
-      const etapas = etapasPorCaso.get(caso.id) ?? []
-      const video = etapas.find((e) => e.tipo === 'reels')
-      if (!video) return false
-
-      if (video.status === 'concluida' || video.status === 'dispensada') return false
-      if (video.status === 'em_andamento' || video.status === 'pausada') return true
-
-      // Ainda não começou: entra quando as etapas anteriores tiverem saído da
-      // frente.
-      return podeIniciar(video, etapas).habilitada
+      return reelsAberto(etapasPorCaso.get(caso.id) ?? []) !== null
     })
     .sort((a, b) => {
       if (a.venceEm === b.venceEm) return 0
@@ -95,18 +120,31 @@ export function casosComVideoAberto(
     })
 }
 
-/** Como a edição está, em uma palavra — o que a seção REELS mostra por caso. */
-export type SituacaoDoVideo = 'aguardando' | 'editando' | 'pausada'
-
-export function situacaoDoVideo(etapas: EtapaQuadro[]): SituacaoDoVideo | null {
-  const video = etapas.find((e) => e.tipo === 'reels')
-  if (!video) return null
-  if (video.status === 'em_andamento') return 'editando'
-  if (video.status === 'pausada') return 'pausada'
-  return 'aguardando'
+/** Casos encerrados ou cancelados, do mais recente para o mais antigo. */
+/**
+ * TODAS as rodadas de reels ainda abertas de um caso, em ordem de rodada.
+ *
+ * A seção passou a listar uma linha por rodada — "Ⅰ Parto", "Ⅱ B+F" — porque
+ * elas são trabalhos distintos e podem estar com pessoas diferentes, em PCs
+ * diferentes. Devolver só uma esconderia metade do que há para fazer.
+ *
+ * `reelsAberto` (singular) continua existindo para a pergunta de ENTRADA na
+ * seção: basta uma rodada aberta para o caso aparecer. As duas usam o mesmo
+ * filtro, então não há como o caso entrar e a lista vir vazia.
+ */
+export function reelsAbertosDaSecao(etapas: EtapaQuadro[]): EtapaQuadro[] {
+  return etapas
+    .filter((e) => e.tipo === 'reels')
+    .filter((e) => e.status !== 'concluida' && e.status !== 'dispensada')
+    .filter(
+      (e) =>
+        e.status === 'em_andamento' ||
+        e.status === 'pausada' ||
+        podeIniciar(e, etapas).habilitada,
+    )
+    .sort((a, b) => a.rodada - b.rodada)
 }
 
-/** Casos encerrados ou cancelados, do mais recente para o mais antigo. */
 export function casosConcluidos(casos: CasoQuadro[]): CasoQuadro[] {
   return casos
     .filter((c) => c.ehTerminal)

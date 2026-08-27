@@ -97,13 +97,13 @@ select is(
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth'),
-  array['nascimento', 'edicao_foto', 'reels']::public.etapa_tipo[],
-  'BIRTH: sem entrada (venda no pós-parto), mas com foto e reels'
+  array['nascimento', 'fechamento', 'edicao_foto', 'reels']::public.etapa_tipo[],
+  'BIRTH: sem entrada nem banho (venda no pós-parto), mas COM fechamento, foto e reels'
 );
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth-reels'),
-  array['nascimento', 'edicao_foto', 'reels']::public.etapa_tipo[],
+  array['nascimento', 'fechamento', 'edicao_foto', 'reels']::public.etapa_tipo[],
   'BIRTH + REELS: idênticas ao BIRTH — pacote comercialmente distinto, mesmo trabalho'
 );
 

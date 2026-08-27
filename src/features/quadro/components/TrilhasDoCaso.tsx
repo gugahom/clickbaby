@@ -1,13 +1,42 @@
 import clsx from 'clsx'
-import { ROTULO_ETAPA, type EtapaQuadro, type StatusEtapa, type TrilhaEtapa } from '../types'
+import {
+  ROTULO_ETAPA,
+  ROTULO_RODADA,
+  type EtapaQuadro,
+  type StatusEtapa,
+} from '../types'
 
 interface PropsTrilhasDoCaso {
   etapas: EtapaQuadro[]
 }
 
-const ROTULO_TRILHA: Record<TrilhaEtapa, string> = {
+/**
+ * Três faixas, não duas.
+ *
+ * A trilha no banco tem dois valores (acompanhamento e edição), e o REELS sai
+ * de dentro da edição. É uma separação de TELA, e é deliberada: o gestor pediu
+ * que a edição de reels aconteça na seção própria — a estação de edição é outro
+ * lugar físico, com outra pessoa. Misturar reels e fotos na mesma fita
+ * escondia isso.
+ *
+ * O que NÃO se pode perder ao separar: os reels continuam bloqueando o
+ * encerramento do caso (migration 20260827181322). Se sumissem do card, quem
+ * olhasse o Quadro veria tudo verde, clicaria em confirmar e levaria uma
+ * recusa sem explicação na tela. Por isso a faixa REELS existe aqui —
+ * mostrando estado, SEM botões. Agir é na seção.
+ */
+type Faixa = 'acompanhamento' | 'edicao' | 'reels'
+
+const ROTULO_FAIXA: Record<Faixa, string> = {
   acompanhamento: 'Acompanhamento',
   edicao: 'Edição',
+  reels: 'Reels',
+}
+
+const COR_FAIXA: Record<Faixa, string> = {
+  acompanhamento: 'text-marca',
+  edicao: 'text-acento',
+  reels: 'text-rascunho',
 }
 
 /**
@@ -39,17 +68,46 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
   if (etapas.length === 0) return null
 
   const acompanhamento = etapas.filter((e) => e.trilha === 'acompanhamento')
-  const edicao = etapas.filter((e) => e.trilha === 'edicao')
+  const reels = etapas.filter((e) => e.tipo === 'reels')
+  const edicao = etapas.filter((e) => e.trilha === 'edicao' && e.tipo !== 'reels')
 
+  /*
+   * GRID no desktop, para as três faixas alinharem SOZINHAS.
+   *
+   * Antes a calha do rótulo era `w-[6.5rem]` — número escolhido no olho, e
+   * errado: "ACOMPANHAMENTO" é mais largo que isso e transbordava, encostando
+   * na primeira etapa enquanto as outras duas faixas ficavam com folga. As
+   * três linhas não batiam.
+   *
+   * Com `grid-cols-[max-content_1fr]` a coluna mede exatamente o maior rótulo,
+   * seja ele qual for. Cada Trilha vira `contents` no desktop, então os dois
+   * filhos dela entram direto no grid do pai e alinham por construção — sem
+   * medida mágica para alguém precisar refazer quando um rótulo mudar.
+   *
+   * No celular o grid não vale: ali as faixas empilham, e cada Trilha volta a
+   * ser sua própria caixa.
+   */
   return (
-    <div className="mt-3 space-y-2.5">
-      <Trilha trilha="acompanhamento" etapas={acompanhamento} />
-      <Trilha trilha="edicao" etapas={edicao} />
+    <div className="mt-3 space-y-2.5 sm:grid sm:grid-cols-[max-content_1fr] sm:gap-x-4 sm:gap-y-2.5 sm:space-y-0">
+      <Trilha faixa="acompanhamento" etapas={acompanhamento} />
+      <Trilha faixa="edicao" etapas={edicao} />
+      {/* `soMarcador`: a faixa de reels informa, não convida. As duas outras
+          nomeiam a etapa porque é ali que se age; aqui a ação está na seção,
+          e repetir os nomes gastaria a linha sem oferecer nada. */}
+      <Trilha faixa="reels" etapas={reels} soMarcador />
     </div>
   )
 }
 
-function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[] }) {
+function Trilha({
+  faixa,
+  etapas,
+  soMarcador = false,
+}: {
+  faixa: Faixa
+  etapas: EtapaQuadro[]
+  soMarcador?: boolean
+}) {
   if (etapas.length === 0) return null
 
   const feitas = etapas.filter((e) => e.status === 'concluida').length
@@ -61,28 +119,26 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
   )
 
   /*
-   * EMPILHA NO CELULAR, LADO A LADO NO DESKTOP.
+   * EMPILHA NO CELULAR, GRID NO DESKTOP.
    *
-   * A calha do rótulo tem 6.5rem. Num aparelho de 375px isso é mais de um
-   * quarto da largura só para dizer "ACOMPANHAMENTO", e sobrava tão pouco que
-   * quatro etapas quebravam em três linhas — o card ficava alto e apertado ao
-   * mesmo tempo, que foi a queixa.
+   * Num aparelho de 375px a calha do rótulo comeria mais de um quarto da
+   * largura só para dizer "ACOMPANHAMENTO", e sobraria tão pouco que quatro
+   * etapas quebrariam em três linhas — o card ficaria alto e apertado ao mesmo
+   * tempo. Empilhado, as etapas usam a largura inteira.
    *
-   * Empilhado, as etapas usam a largura inteira e cabem em menos linhas. A
-   * altura total sai igual ou menor, e o respiro aparece. Do `sm` para cima a
-   * calha volta, porque aí ela paga: as duas trilhas alinham na vertical e a
-   * vista acha a certa sem ler.
+   * Do `sm` para cima, `contents` dissolve esta caixa e joga os dois filhos no
+   * grid do pai (ver TrilhasDoCaso), que é o que faz as três faixas alinharem.
    */
   return (
-    <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
-      <div className="flex items-center justify-between gap-2 sm:block sm:w-[6.5rem] sm:flex-shrink-0 sm:pt-0.5">
+    <div className="flex flex-col gap-1 text-sm sm:contents">
+      <div className="flex items-center justify-between gap-2 sm:block sm:pt-0.5">
         <span
           className={clsx(
             'text-[10px] font-bold tracking-[0.08em] uppercase',
-            trilha === 'acompanhamento' ? 'text-marca' : 'text-acento',
+            COR_FAIXA[faixa],
           )}
         >
-          {ROTULO_TRILHA[trilha]}
+          {ROTULO_FAIXA[faixa]}
         </span>
         {/* No celular o contador acompanha o rótulo; no desktop vai para o fim
             da fita. Dois nós, um visível por vez — mais simples que mover o
@@ -90,9 +146,23 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
         <span className="sm:hidden">{contador}</span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+      {/* gap-x generoso: com 12px as etapas se liam como uma palavra só. O
+          marcador de cada uma precisa de ar à esquerda para o olho separar
+          "onde termina uma e começa a outra" sem ler o texto. */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
         {etapas.map((etapa) => (
-          <Etapa key={etapa.id} etapa={etapa} />
+          <Etapa
+            key={etapa.id}
+            etapa={etapa}
+            soMarcador={soMarcador}
+            // O sufixo de rodada só aparece quando há MAIS DE UMA rodada
+            // daquela etapa no caso. Num BASIC, que nunca terá a segunda,
+            // "Fotos Ⅰ Parto" seria uma distinção sem contraparte — ruído que
+            // ocupa a linha e não separa nada.
+            comRodada={etapas.some(
+              (o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada,
+            )}
+          />
         ))}
 
         {/* Na TV é o que responde "quanto falta aqui" sem contar item por item. */}
@@ -102,15 +172,67 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
   )
 }
 
-function Etapa({ etapa }: { etapa: EtapaQuadro }) {
+function Etapa({
+  etapa,
+  comRodada,
+  soMarcador,
+}: {
+  etapa: EtapaQuadro
+  comRodada: boolean
+  soMarcador: boolean
+}) {
   const pessoas = nomesDaEtapa(etapa)
+
+  /*
+   * NA FAIXA REELS o bloco é o ÚNICO nome, então nunca some.
+   *
+   * A regra de esconder o bloco quando há uma rodada só nasceu para a fita de
+   * edição, onde o nome da etapa já identifica o item e "Foto Parto" sem um
+   * "Foto B+F" ao lado seria uma distinção sem contraparte. Aqui é o oposto:
+   * `soMarcador` omite o nome da etapa (seria "Reels" repetido sob um rótulo
+   * que já diz REELS), e sem o bloco sobra um marcador sem palavra nenhuma —
+   * um item que existe, ocupa a linha e não diz o que é.
+   */
+  const bloco = comRodada || soMarcador ? ROTULO_RODADA[etapa.rodada] : null
 
   return (
     <span className="inline-flex items-center gap-1">
       <Marcador status={etapa.status} />
-      <span className={CLASSE_STATUS[etapa.status]}>{ROTULO_ETAPA[etapa.tipo]}</span>
+      <span className={CLASSE_STATUS[etapa.status]}>
+        {/* Sem numeral: "Ⅰ"/"Ⅱ" ao lado de "Parto"/"B+F" dizia a mesma coisa
+            duas vezes, e o nome do bloco é o que a equipe usa para falar. */}
+        {soMarcador ? (
+          // Sendo o nome do item, herda o peso e a cor do status como
+          // qualquer outro — em cinza minúsculo, um reels concluído não
+          // ficaria verde e a faixa perderia o estado à distância.
+          bloco
+        ) : (
+          <>
+            {ROTULO_ETAPA[etapa.tipo]}
+            {bloco && (
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                {bloco}
+              </span>
+            )}
+          </>
+        )}
+      </span>
+      {/*
+        O nome NÃO pode parecer parte do rótulo da rodada.
+        
+        Antes "Parto" e "Gestão" eram os dois `text-xs text-muted-foreground`,
+        e o olho lia "Foto" em destaque seguido de "Parto · Gestão" como um
+        bloco só — a fronteira entre "que material" e "quem está" sumia. São
+        três informações diferentes e precisam de três pesos.
+        
+        Agora o nome ganha a cor de texto normal e um selo discreto: destaca-se
+        do rótulo cinza sem competir com o nome da etapa, que segue sendo o
+        primeiro a ser lido.
+      */}
       {pessoas && (
-        <span className="text-xs font-medium text-muted-foreground">· {pessoas}</span>
+        <span className="rounded bg-muted px-1.5 py-px text-xs font-medium text-foreground/80">
+          {pessoas}
+        </span>
       )}
     </span>
   )

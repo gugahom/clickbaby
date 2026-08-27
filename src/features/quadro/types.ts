@@ -74,6 +74,12 @@ export interface EtapaQuadro {
   trilha: TrilhaEtapa
   status: StatusEtapa
   ordem: number
+  /**
+   * Qual passagem de edição esta etapa é. 1 = material do parto; 2 = material
+   * do banho e fechamento, criada pela trigger quando o fechamento conclui.
+   * Só `edicao_foto` e `reels` chegam a ter 2 (migration 20260827172830).
+   */
+  rodada: number
   observacao: string | null
   /** Necessário para o handoff: transferir_etapa exige responsável atual. */
   responsavelId: string | null
@@ -156,6 +162,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     trilha: (linha.trilha ?? 'acompanhamento') as TrilhaEtapa,
     status: linha.status,
     ordem: linha.ordem,
+    rodada: linha.rodada ?? 1,
     observacao: linha.observacao,
     responsavelId: linha.responsavel_id,
     proximoResponsavelId: linha.proximo_responsavel_id,
@@ -168,17 +175,36 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
   }
 }
 
+/**
+ * Como cada rodada se chama na tela.
+ *
+ * Nome e não número: "Edição Fotos 2" obriga a saber o que é a 2; "Edição
+ * Fotos · Banho" diz de que material se trata, que é a pergunta real de quem
+ * senta na estação de edição. Os nomes vêm do que gerou o material —
+ * nascimento de um lado, banho e fechamento do outro.
+ */
+export const ROTULO_RODADA: Record<number, string> = {
+  1: 'Parto',
+  // "B+F" e não "Banho": é como a equipe chama o bloco banho + fechamento no
+  // dia a dia, e vocabulário do domínio não se traduz no caminho até a tela
+  // (seção 2 do CLAUDE.md). Quando o fechamento se descolar do banho, o aviso
+  // da etapa cobre a exceção — não é caso de mudar o rótulo.
+  2: 'B+F',
+}
+
+
 export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   entrada: 'Entrada',
   nascimento: 'Nascimento',
   banho: 'Banho',
   fechamento: 'Fechamento',
-  // A trilha de EDIÇÃO é rotulada como edição, a pedido do gestor: na TV da
-  // sala, "Vídeo" solto ao lado de "Banho" não dizia se era captura ou
-  // pós-produção.
-  edicao_foto: 'Edição Fotos',
-  reels: 'Edição Reels',
-  edicao_video: 'Edição Vídeo',
+  // SEM o prefixo "Edição": a faixa do card já se chama EDIÇÃO, e repetir a
+  // palavra em cada item gastava metade da linha dizendo o que o rótulo da
+  // esquerda já dizia. O que distingue os itens entre si é o resto — Foto,
+  // Reels, Vídeo — e é isso que fica.
+  edicao_foto: 'Foto',
+  reels: 'Reels',
+  edicao_video: 'Vídeo',
   album: 'Álbum',
 }
 

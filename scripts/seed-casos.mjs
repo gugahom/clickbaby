@@ -48,10 +48,17 @@ function statusLocal() {
 
 const env = statusLocal()
 const url = env.API_URL
-const anonKey = env.ANON_KEY
+// A service_role, não a anon: desde que o sync ganhou `autorizarChamada`, só
+// ela dispara a função. A anon key é pública — se servisse aqui, serviria
+// para qualquer um disparar o sync em produção.
+//
+// A chave vem de `supabase status` em tempo de execução, nunca de arquivo:
+// nada de segredo entra no repositório. E a guarda logo abaixo garante que
+// ela só é usada contra 127.0.0.1.
+const chave = env.SERVICE_ROLE_KEY
 
-if (!url || !anonKey) {
-  console.error('`supabase status` não devolveu API_URL/ANON_KEY.')
+if (!url || !chave) {
+  console.error('`supabase status` não devolveu API_URL/SERVICE_ROLE_KEY.')
   process.exit(1)
 }
 
@@ -70,7 +77,7 @@ try {
   resposta = await fetch(`${url}/functions/v1/sync-calendar`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${anonKey}`,
+      Authorization: `Bearer ${chave}`,
       'Content-Type': 'application/json',
     },
   })

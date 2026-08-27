@@ -4,7 +4,7 @@
 -- ambas.
 
 begin;
-select plan(15);
+select plan(18);
 
 create function pg_temp.levanta_erro(p_sql text) returns boolean
 language plpgsql
@@ -46,6 +46,19 @@ insert into public.casos (mae_nome, pacote_id, maternidade_id)
 select 'Mãe Cancelar OK', (select id from public.pacotes where slug = 'basic'), (select id from public.maternidades where sigla = 'TERMTEST');
 insert into public.casos (mae_nome, pacote_id, maternidade_id)
 select 'Mãe Cancelar RoleErro', (select id from public.pacotes where slug = 'basic'), (select id from public.maternidades where sigla = 'TERMTEST');
+
+-- Desde a migration 20260827181322, encerrar exige TRABALHO FEITO além do
+-- link. As fixtures que vão até o fim precisam ter o checklist resolvido —
+-- e é bom que precisem: a asserção do bloco CE-TRAVA abaixo prova que a
+-- exigência é real, e esta preparação é o que a torna satisfeita de propósito.
+update public.caso_etapas ce
+   set status = 'concluida',
+       iniciado_em = now() - interval '2 hours',
+       concluido_em = now() - interval '1 hour'
+  from public.casos c
+ where c.id = ce.caso_id
+   and c.mae_nome in ('Mãe Confirma OK', 'Mãe Confirma SemLink');
+
 
 -- =============================================================================
 -- A. Encadeamento real: registrar_entregavel (operador) -> confirmar_entrega
@@ -242,6 +255,72 @@ select ok(
   )),
   'CC6: cancelar um caso já cancelado levanta erro'
 );
+
+-- =============================================================================
+-- CE-TRAVA. Etapa em aberto impede o encerramento
+--
+-- O gestor dizia "só pode ser fechado após as edições e link" — a segunda
+-- metade existia, a primeira não. Antes da 20260827181322 dava para encerrar
+-- um caso com os dois reels pendentes, e isso ficou mais fácil de acontecer
+-- quando os reels saíram da fita de edição do card: quem olha o Quadro não os
+-- vê ali.
+-- =============================================================================
+
+-- O bloco anterior deixou `role authenticated` ativo, e authenticated não
+-- insere em casos (migration 20260822072158 — ele só tem SELECT e UPDATE de
+-- colunas de dado). A fixture precisa do papel do dono.
+reset role;
+
+insert into public.casos (mae_nome, pacote_id, maternidade_id)
+select 'Mãe Etapa Aberta',
+       (select id from public.pacotes where slug = 'basic'),
+       (select id from public.maternidades where sigla = 'TERMTEST');
+
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Operador Teste Terminal'), true);
+set local role authenticated;
+
+select public.registrar_entregavel(
+  (select id from public.casos where mae_nome = 'Mãe Etapa Aberta'),
+  'google_photos',
+  'https://fixture.example/etapa-aberta'
+);
+
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste Terminal'), true);
+
+select ok(
+  pg_temp.levanta_erro(format(
+    'select public.confirmar_entrega(%L)',
+    (select id from public.casos where mae_nome = 'Mãe Etapa Aberta'))),
+  'CE-TRAVA1: com link mas etapa em aberto, encerrar é RECUSADO'
+);
+
+reset role;
+
+select is(
+  (select status_operacional::text from public.casos where mae_nome = 'Mãe Etapa Aberta'),
+  'agendado',
+  'CE-TRAVA2: e o caso NÃO mudou de estado — a recusa não deixou nada pela metade'
+);
+
+-- Dispensada conta como resolvida: é uma etapa que não vai acontecer, e exigir
+-- conclusão dela travaria o caso para sempre.
+update public.caso_etapas ce
+   set status = 'dispensada'
+  from public.casos c
+ where c.id = ce.caso_id
+   and c.mae_nome = 'Mãe Etapa Aberta';
+
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste Terminal'), true);
+set local role authenticated;
+
+select lives_ok(format(
+  'select public.confirmar_entrega(%L)',
+  (select id from public.casos where mae_nome = 'Mãe Etapa Aberta')),
+  'CE-TRAVA3: com tudo DISPENSADO, encerra — dispensada é resolvida'
+);
+
+reset role;
+
 
 select * from finish();
 rollback;

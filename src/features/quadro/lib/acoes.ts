@@ -51,9 +51,10 @@ function resolvida(e: EtapaQuadro): boolean {
  *
  *   ACOMPANHAMENTO  sequencial entre si. Entrada antes de nascimento,
  *                   nascimento antes de banho, banho antes de fechamento.
- *   EDIÇÃO          libera quando o NASCIMENTO conclui, e as etapas dela não
- *                   se seguram entre si — foto, reels e vídeo podem estar com
- *                   três pessoas diferentes ao mesmo tempo.
+ *   EDIÇÃO          libera quando conclui a etapa que produziu o material:
+ *                   nascimento para a rodada 1, fechamento para a rodada 2. As
+ *                   etapas de edição não se seguram entre si — foto, reels e
+ *                   vídeo podem estar com três pessoas ao mesmo tempo.
  *
  * Continua sendo trava de TELA, não de banco: `concluir_etapa` aceita qualquer
  * ordem de propósito, porque campo admite registro retroativo (seção 9 do
@@ -66,12 +67,24 @@ function anteriorPendente(
   etapas: EtapaQuadro[],
 ): EtapaQuadro | null {
   if (etapa.trilha === 'edicao') {
-    const nascimento = etapas.find((e) => e.tipo === 'nascimento')
-    // Sem etapa de nascimento não há o que esperar. Não acontece nos pacotes
-    // de hoje (todos têm), mas devolver null é o comportamento seguro: a tela
-    // oferece a ação e o banco decide.
-    if (!nascimento || resolvida(nascimento)) return null
-    return nascimento
+    /*
+     * De que material esta edição trata decide o que ela espera.
+     *
+     *   rodada 1  material do parto     -> espera o NASCIMENTO
+     *   rodada 2  material do banho     -> espera o FECHAMENTO
+     *
+     * A rodada 2 só é criada DEPOIS de o fechamento concluir, então na prática
+     * ela já nasce liberada. A regra existe para o caminho de volta: se alguém
+     * reabrir o fechamento, a edição do banho volta a estar bloqueada — que é o
+     * correto, porque o material que ela edita voltou a ser trabalho em curso.
+     */
+    const gatilho = etapa.rodada >= 2 ? 'fechamento' : 'nascimento'
+    const dependencia = etapas.find((e) => e.tipo === gatilho && e.rodada === 1)
+
+    // Sem a etapa gatilho não há o que esperar. Devolver null é o
+    // comportamento seguro: a tela oferece a ação e o banco decide.
+    if (!dependencia || resolvida(dependencia)) return null
+    return dependencia
   }
 
   const anteriores = etapas
@@ -145,6 +158,26 @@ export function podeAtribuir(etapa: EtapaQuadro): Disponibilidade {
  * `atribuida`: a fotógrafa que sabe que sai em 15 minutos combina a troca
  * antes de começar, não depois.
  */
+/**
+ * Desfazer uma conclusão.
+ *
+ * Espelha as guardas de `reabrir_etapa` (migration 20260827172830). Existe
+ * porque concluir é um gesto de UM toque, feito com uma mão, num corredor — e
+ * até aqui era irreversível.
+ */
+export function podeReabrir(
+  etapa: EtapaQuadro,
+  caso: CasoQuadro,
+): Disponibilidade {
+  if (etapa.status !== 'concluida') {
+    return { habilitada: false, motivo: 'Só se reabre etapa concluída.' }
+  }
+  if (caso.ehTerminal) {
+    return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  return OK
+}
+
 export function podePlanejarRendicao(etapa: EtapaQuadro): Disponibilidade {
   if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Trabalho terminado.' }
@@ -230,6 +263,7 @@ export function podeAdicionarVideo(
 export function podeConfirmarEntrega(
   caso: CasoQuadro,
   temEntregavel: boolean,
+  etapas: EtapaQuadro[] = [],
 ): Disponibilidade {
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
@@ -237,6 +271,22 @@ export function podeConfirmarEntrega(
   if (caso.statusEntrega === 'confirmado') {
     return { habilitada: false, motivo: 'Entrega já confirmada.' }
   }
+
+  // Espelha a trava que entrou em 20260827181322. Sem ela aqui, o botão
+  // apareceria habilitado e a pessoa levaria o erro cru da RPC — e o caso
+  // ficaria ainda mais confuso agora que os reels saíram da fita de edição do
+  // card: quem olha o Quadro não os vê ali.
+  const abertas = etapas.filter(
+    (e) => e.status !== 'concluida' && e.status !== 'dispensada',
+  )
+  if (abertas.length > 0) {
+    const nomes = abertas.map((e) => ROTULO_ETAPA[e.tipo]).join(', ')
+    return {
+      habilitada: false,
+      motivo: `Falta concluir ou dispensar: ${nomes}.`,
+    }
+  }
+
   if (!temEntregavel) {
     return { habilitada: false, motivo: 'Registre ao menos um link antes.' }
   }
