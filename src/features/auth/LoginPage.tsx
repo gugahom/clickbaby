@@ -17,7 +17,7 @@ export function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
-  if (!carregando && session) return <Navigate to="/quadro" replace />
+  if (!carregando && session) return <Navigate to="/" replace />
 
   async function entrar(e: FormEvent) {
     e.preventDefault()

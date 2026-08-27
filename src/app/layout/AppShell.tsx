@@ -54,7 +54,9 @@ export function AppShell() {
         {/* Navegação. Antes não existia: o Quadro era a única tela e chegar na
             fila exigiria digitar a URL. */}
         <nav className="flex flex-1 items-center gap-1" aria-label="Telas">
-          <Aba para="/quadro">Quadro</Aba>
+          <Aba para="/" fim>
+            Quadro
+          </Aba>
           <Aba para="/fila">Fila de edição</Aba>
         </nav>
 
@@ -89,10 +91,22 @@ export function AppShell() {
   )
 }
 
-function Aba({ para, children }: { para: string; children: React.ReactNode }) {
+// `fim` -> a prop `end` do NavLink. O Quadro agora mora em "/", e sem isso ele
+// casaria como ativo em toda rota filha — as duas abas ficariam acesas ao mesmo
+// tempo na Fila.
+function Aba({
+  para,
+  fim = false,
+  children,
+}: {
+  para: string
+  fim?: boolean
+  children: React.ReactNode
+}) {
   return (
     <NavLink
       to={para}
+      end={fim}
       className={({ isActive }) =>
         clsx(
           'rounded px-2.5 py-1 text-xs font-medium transition-colors',

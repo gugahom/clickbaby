@@ -4,11 +4,21 @@
  * A seção 11 do CLAUDE.md diz que as chaves do Supabase local nunca vão para
  * `.env` (que aponta para o remoto) nem para o git. Então elas não são
  * digitadas em lugar nenhum: este script lê do próprio CLI (`supabase status`)
- * e escreve `.env.local`, que já está no .gitignore e tem precedência sobre o
- * `.env` no Vite.
+ * e escreve um arquivo de ambiente que o .gitignore já cobre.
  *
  * Consequência prática: trocar entre local e remoto é trocar de comando
  * (`npm run dev:local` vs `npm run dev`), não editar arquivo.
+ *
+ * POR QUE `.env.development.local` E NÃO `.env.local`
+ * O Vite carrega `.env.local` em TODO modo, build de produção incluído, e ele
+ * vence o `.env`. Com o nome antigo, rodar este script uma vez e depois
+ * `npm run build` gerava um bundle de produção apontando para
+ * http://127.0.0.1:54321 — endereço que não existe no navegador de quem
+ * acessa o site publicado. Sem erro de build, sem aviso: o app subia quebrado.
+ *
+ * O sufixo `.development` prende o arquivo ao modo de desenvolvimento, então o
+ * build de produção volta a enxergar o `.env`. A rede de segurança está em
+ * vite.config.ts, que falha o build se o bundle mencionar endereço local.
  */
 
 import { execFileSync, spawn } from 'node:child_process'
@@ -43,7 +53,7 @@ if (!env.API_URL || !env.ANON_KEY) {
 }
 
 writeFileSync(
-  join(raiz, '.env.local'),
+  join(raiz, '.env.development.local'),
   [
     '# GERADO por scripts/dev-local.mjs a partir de `supabase status`.',
     '# Ignorado pelo git. Não edite à mão, não commite, não copie para .env.',
@@ -53,7 +63,7 @@ writeFileSync(
   ].join('\n'),
 )
 
-console.log(`.env.local apontando para ${env.API_URL}\n`)
+console.log(`.env.development.local apontando para ${env.API_URL}\n`)
 
 spawn('npm', ['run', 'dev'], {
   cwd: raiz,
