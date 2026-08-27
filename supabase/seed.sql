@@ -46,6 +46,7 @@ from public.pacotes p
 cross join (
   values
     ('nascimento'::public.etapa_tipo),
+    ('fechamento'::public.etapa_tipo),
     ('edicao_foto'::public.etapa_tipo),
     ('reels'::public.etapa_tipo)
 ) as e(etapa_tipo)
@@ -65,9 +66,13 @@ on conflict (pacote_id, etapa_tipo) do nothing;
 --      "✓ + horizontal" que a seção 2 do CLAUDE.md descreve. Até aqui, todo
 --      pacote usava `edicao_video` para o que na verdade era o reels.
 --
+-- BIRTH e BIRTH + REELS ganharam FECHAMENTO em 27/08/2026 (migration
+-- 20260827190426): são vendidos no pós-parto, sem entrada, mas o fechamento
+-- acontece e não estava sendo registrado. Banho segue fora dos dois.
+--
 -- `ordem` não é digitada: sai de ordem_padrao_da_etapa(), para o mesmo tipo
 -- ter o mesmo número em todo pacote. Buraco na sequência é esperado — um
--- BIRTH não tem entrada, então começa no 2.
+-- BIRTH não tem entrada nem banho, então pula o 1 e o 3.
 with etapas(slug, etapa_tipo) as (
   values
     ('basic', 'entrada'::public.etapa_tipo),
@@ -117,6 +122,7 @@ with etapas(slug, etapa_tipo) as (
     ('master-album', 'album'::public.etapa_tipo),
 
     ('birth', 'nascimento'::public.etapa_tipo),
+    ('birth', 'fechamento'::public.etapa_tipo),
     ('birth', 'edicao_foto'::public.etapa_tipo),
     ('birth', 'reels'::public.etapa_tipo)
 )

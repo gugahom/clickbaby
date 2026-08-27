@@ -202,8 +202,22 @@ function Etapa({
           </span>
         )}
       </span>
+      {/*
+        O nome NÃO pode parecer parte do rótulo da rodada.
+        
+        Antes "Parto" e "Gestão" eram os dois `text-xs text-muted-foreground`,
+        e o olho lia "Foto" em destaque seguido de "Parto · Gestão" como um
+        bloco só — a fronteira entre "que material" e "quem está" sumia. São
+        três informações diferentes e precisam de três pesos.
+        
+        Agora o nome ganha a cor de texto normal e um selo discreto: destaca-se
+        do rótulo cinza sem competir com o nome da etapa, que segue sendo o
+        primeiro a ser lido.
+      */}
       {pessoas && (
-        <span className="text-xs font-medium text-muted-foreground">· {pessoas}</span>
+        <span className="rounded bg-muted px-1.5 py-px text-xs font-medium text-foreground/80">
+          {pessoas}
+        </span>
       )}
     </span>
   )

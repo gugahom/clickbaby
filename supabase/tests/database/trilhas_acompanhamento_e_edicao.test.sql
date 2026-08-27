@@ -117,8 +117,8 @@ select is(
 select is(
   (select array_agg(ordem order by ordem) from public.caso_etapas
     where caso_id = 'aaaa1111-0000-0000-0000-000000000002'),
-  array[2, 5, 6],
-  'BIRTH: nascimento(2), edicao_foto(5), reels(6)'
+  array[2, 4, 5, 6],
+  'BIRTH: nascimento(2), fechamento(4), edicao_foto(5), reels(6) — sem entrada nem banho'
 );
 
 

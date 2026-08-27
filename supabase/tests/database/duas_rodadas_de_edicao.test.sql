@@ -34,12 +34,17 @@ values (
   '2026-09-28 08:00:00+00'
 );
 
--- BIRTH: NÃO tem fechamento. Nunca ganha segunda rodada.
+-- BASIC: NÃO tem fechamento. Nunca ganha segunda rodada.
+--
+-- Era o BIRTH até 27/08/2026, quando o gestor corrigiu o cadastro e o BIRTH
+-- passou a ter fechamento (migration 20260827190426) — e com ele, segunda
+-- rodada. O BASIC assumiu o papel de exemplo porque continua sendo pacote de
+-- captura curta, sem banho nem fechamento.
 insert into public.casos (id, mae_nome, pacote_id, maternidade_id, previsao_em)
 values (
   'eeee4444-0000-0000-0000-000000000002',
   'MAE UMA RODADA',
-  (select id from public.pacotes where slug = 'birth'),
+  (select id from public.pacotes where slug = 'basic'),
   (select id from public.maternidades where sigla = 'HSC'),
   '2026-09-28 10:00:00+00'
 );
@@ -195,7 +200,7 @@ select is(
   (select count(*)::int from public.caso_etapas
     where caso_id = 'eeee4444-0000-0000-0000-000000000002' and rodada = 2),
   0,
-  'BIRTH não tem fechamento, então não tem segunda rodada — nem concluindo tudo'
+  'BASIC não tem fechamento, então não tem segunda rodada — nem concluindo tudo'
 );
 
 
