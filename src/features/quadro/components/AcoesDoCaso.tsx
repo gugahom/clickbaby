@@ -4,18 +4,23 @@ import { Botao } from '@/components/ui/Botao'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { AnotarDialogo } from './AnotarDialogo'
 import {
   IconeCaneta,
   IconeCheck,
   IconeAtribuir,
   IconeHandoff,
+  IconeNota,
+  IconeRendicao,
   IconePause,
   IconePlay,
 } from '@/components/ui/icones'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
-  useAdicionarReels,
+  useAdicionarVideo,
+  useAnotarEtapa,
+  usePlanejarRendicao,
   useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
@@ -29,7 +34,7 @@ import {
 } from '../api/useAcoes'
 import {
   podeAtribuir,
-  podeAdicionarReels,
+  podeAdicionarVideo,
   podeCancelar,
   podeConcluir,
   podeConfirmarEntrega,
@@ -37,6 +42,7 @@ import {
   podeMoverParaUti,
   podePausar,
   podeRetornarDaUti,
+  podePlanejarRendicao,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -81,6 +87,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
   const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
+  const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
+  const [anotarDe, setAnotarDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
@@ -89,7 +97,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const concluir = useConcluirEtapa()
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
-  const adicionarReels = useAdicionarReels()
+  const adicionarVideo = useAdicionarVideo()
+  const planejarRendicao = usePlanejarRendicao()
+  const anotar = useAnotarEtapa()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -100,7 +110,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     pausar.isPending ||
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
-    adicionarReels.isPending ||
+    adicionarVideo.isPending ||
     concluir.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
@@ -123,15 +133,12 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
-  const novoReels = podeAdicionarReels(caso, etapas)
+  const novoVideo = podeAdicionarVideo(caso, etapas)
 
-  // "Editar reels" é iniciar_etapa na etapa de vídeo — não existe estado
-  // "em reels" separado: o caso segue na lista da esquerda e TAMBÉM aparece na
-  // seção REELS enquanto a edição está em andamento.
+  // O VÍDEO aqui é o horizontal, que de fábrica só o MASTER tem. Serve só para
+  // saber se ainda cabe ACRESCENTÁ-LO — dar play nele é como em qualquer outra
+  // etapa, pela lista acima.
   const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
-  const edicaoDeVideo = etapaVideo
-    ? podeIniciar(etapaVideo, etapas)
-    : { habilitada: false, motivo: 'Este caso não tem etapa de vídeo.' }
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
@@ -140,7 +147,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     confirmacao !== null ||
     handoffDe !== null ||
     observacaoDe !== null ||
-    atribuirDe !== null
+    atribuirDe !== null ||
+    rendicaoDe !== null ||
+    anotarDe !== null
 
   return (
     <div className="space-y-3">
@@ -160,6 +169,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const conclusao = podeConcluir(etapa, etapas)
             const handoff = podeTransferir(etapa)
             const designacao = podeAtribuir(etapa)
+            const rendicao = podePlanejarRendicao(etapa)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
@@ -182,6 +192,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
                     {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
+                    {etapa.proximoResponsavelNome && (
+                      <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">
+                        rende para {etapa.proximoResponsavelNome}
+                      </span>
+                    )}
                     {etapa.estacao && (
                       <span className="rounded bg-muted px-1 py-0.5 font-mono">
                         {etapa.estacao}
@@ -283,6 +298,43 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         <IconeHandoff className="size-[18px]" />
                       </BotaoIcone>
                     )}
+
+                    {/* Slot PRÓPRIO, não compartilhado com os de cima. Atribuir
+                        e handoff trocam o responsável agora; isto só anuncia
+                        quem assume depois — as duas coisas convivem, e a
+                        fotógrafa que sabe que sai em 15 minutos precisa das
+                        duas na mesma linha. */}
+                    <BotaoIcone
+                      rotulo={
+                        etapa.proximoResponsavelNome
+                          ? `Rendição: ${etapa.proximoResponsavelNome} assume`
+                          : 'Planejar rendição de turno'
+                      }
+                      disabled={ocupado || !rendicao.habilitada}
+                      motivo={rendicao.motivo}
+                      tom={etapa.proximoResponsavelNome ? 'acao' : 'neutro'}
+                      onClick={() => {
+                        setErro(null)
+                        setRendicaoDe(etapa)
+                      }}
+                    >
+                      <IconeRendicao className="size-[18px]" />
+                    </BotaoIcone>
+
+                    {/* Sem trava de status: anotar vale ANTES de a etapa
+                        começar — é o único momento em que o aviso serve. Vale
+                        até em etapa concluída, para corrigir o relato. */}
+                    <BotaoIcone
+                      rotulo={etapa.observacao ? 'Editar aviso' : 'Escrever aviso'}
+                      disabled={ocupado}
+                      tom={etapa.observacao ? 'acao' : 'neutro'}
+                      onClick={() => {
+                        setErro(null)
+                        setAnotarDe(etapa)
+                      }}
+                    >
+                      <IconeNota className="size-[18px]" />
+                    </BotaoIcone>
                   </div>
                 )}
               </li>
@@ -313,27 +365,21 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           </Botao>
         )}
 
-        {/* Um botão só, dois significados, conforme o caso já tem vídeo ou não.
-            Sem etapa de vídeo: cria (adicionar_reels). Com etapa: começa a
-            editar (iniciar_etapa), que é o que faz o caso aparecer na seção
-            REELS. */}
-        {etapaVideo ? (
+        {/* Só o ACRESCENTAR, e só quando a etapa não existe.
+            "Editar vídeo" saiu daqui: era um atalho para dar play na etapa de
+            vídeo, e desde que cada etapa da trilha ganhou seu próprio play na
+            lista acima, ele repetia um botão que já está a dois centímetros
+            dali — com a desvantagem de sugerir que o vídeo é especial entre as
+            três edições, o que deixou de ser verdade.
+            Acrescentar continua aqui porque é ação de CASO (muda o escopo do
+            trabalho), não de etapa, e não teria onde morar na lista. */}
+        {!etapaVideo && (
           <Botao
-            onClick={() =>
-              executar(iniciar.mutateAsync({ casoEtapaId: etapaVideo.id }))
-            }
-            disabled={ocupado || !edicaoDeVideo.habilitada}
-            title={edicaoDeVideo.motivo}
+            onClick={() => executar(adicionarVideo.mutateAsync({ casoId: caso.id }))}
+            disabled={ocupado || !novoVideo.habilitada}
+            title={novoVideo.motivo}
           >
-            Editar reels
-          </Botao>
-        ) : (
-          <Botao
-            onClick={() => executar(adicionarReels.mutateAsync({ casoId: caso.id }))}
-            disabled={ocupado || !novoReels.habilitada}
-            title={novoReels.motivo}
-          >
-            Adicionar reels
+            Adicionar vídeo
           </Botao>
         )}
       </div>
@@ -416,6 +462,46 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             executar(
               atribuir.mutateAsync({ casoEtapaId: atribuirDe.id, paraPessoaId }),
               () => setAtribuirDe(null),
+            )
+          }
+        />
+      )}
+
+      {anotarDe && (
+        <AnotarDialogo
+          etapa={anotarDe}
+          ocupado={anotar.isPending}
+          erro={erro}
+          onCancelar={() => setAnotarDe(null)}
+          onConfirmar={(observacao) =>
+            executar(
+              anotar.mutateAsync({ casoEtapaId: anotarDe.id, observacao }),
+              () => setAnotarDe(null),
+            )
+          }
+        />
+      )}
+
+      {rendicaoDe && (
+        <DialogoPessoa
+          titulo={`Quem assume ${ROTULO_ETAPA[rendicaoDe.tipo]}?`}
+          contexto={
+            rendicaoDe.proximoResponsavelNome
+              ? `${rendicaoDe.responsavelNome ?? '—'} está com a etapa e ${rendicaoDe.proximoResponsavelNome} assume. Escolher outra pessoa substitui o combinado.`
+              : `${rendicaoDe.responsavelNome ?? '—'} está com a etapa. Quem for escolhido aqui NÃO assume agora — fica anunciado para a virada de turno.`
+          }
+          rotuloConfirmar="Anunciar"
+          excluirPessoaId={rendicaoDe.responsavelId}
+          ocupado={planejarRendicao.isPending}
+          erro={erro}
+          onCancelar={() => setRendicaoDe(null)}
+          onConfirmar={(proximaPessoaId) =>
+            executar(
+              planejarRendicao.mutateAsync({
+                casoEtapaId: rendicaoDe.id,
+                proximaPessoaId,
+              }),
+              () => setRendicaoDe(null),
             )
           }
         />

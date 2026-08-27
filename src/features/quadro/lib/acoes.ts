@@ -30,30 +30,55 @@ export interface Disponibilidade {
 
 const OK: Disponibilidade = { habilitada: true }
 
+/** Resolvida = não segura mais ninguém. Dispensada conta: não vai acontecer. */
+function resolvida(e: EtapaQuadro): boolean {
+  return e.status === 'concluida' || e.status === 'dispensada'
+}
+
 /**
- * A etapa anterior (por `ordem`) precisa estar resolvida antes desta abrir.
+ * O que precisa sair da frente antes desta etapa abrir.
  *
- * É trava de TELA, não de banco: `concluir_etapa` continua aceitando qualquer
+ * A REGRA NÃO É LINEAR, E A VERSÃO ANTERIOR ESTAVA ERRADA
+ * Antes isto era "toda etapa com `ordem` menor precisa estar resolvida". Com
+ * uma etapa de edição por caso e ela sempre no fim, funcionava por acidente.
+ * Deixou de funcionar quando a edição virou trilha própria (migration
+ * 20260827140400): `edicao_foto` tem ordem 5 e `fechamento` tem 4, então a
+ * regra antiga travaria a edição das fotos do parto até o banho acontecer —
+ * exatamente o contrário da operação, onde a editora começa assim que o bebê
+ * nasce.
+ *
+ * A precedência real é por TRILHA:
+ *
+ *   ACOMPANHAMENTO  sequencial entre si. Entrada antes de nascimento,
+ *                   nascimento antes de banho, banho antes de fechamento.
+ *   EDIÇÃO          libera quando o NASCIMENTO conclui, e as etapas dela não
+ *                   se seguram entre si — foto, reels e vídeo podem estar com
+ *                   três pessoas diferentes ao mesmo tempo.
+ *
+ * Continua sendo trava de TELA, não de banco: `concluir_etapa` aceita qualquer
  * ordem de propósito, porque campo admite registro retroativo (seção 9 do
  * CLAUDE.md) — alguém pode ter fotografado o banho e só registrar depois. O que
  * a trava evita é o caminho fácil de sair aprovando tudo de cima para baixo sem
  * o trabalho ter acontecido.
- *
- * Dispensada conta como resolvida: é uma etapa que não vai acontecer, e ela não
- * pode segurar a fila atrás de si.
  */
 function anteriorPendente(
   etapa: EtapaQuadro,
   etapas: EtapaQuadro[],
 ): EtapaQuadro | null {
+  if (etapa.trilha === 'edicao') {
+    const nascimento = etapas.find((e) => e.tipo === 'nascimento')
+    // Sem etapa de nascimento não há o que esperar. Não acontece nos pacotes
+    // de hoje (todos têm), mas devolver null é o comportamento seguro: a tela
+    // oferece a ação e o banco decide.
+    if (!nascimento || resolvida(nascimento)) return null
+    return nascimento
+  }
+
   const anteriores = etapas
-    .filter((e) => e.ordem < etapa.ordem)
+    .filter((e) => e.trilha === 'acompanhamento' && e.ordem < etapa.ordem)
     .sort((a, b) => b.ordem - a.ordem)
 
-  const bloqueia = anteriores.find(
-    (e) => e.status !== 'concluida' && e.status !== 'dispensada',
-  )
-  return bloqueia ?? null
+  return anteriores.find((e) => !resolvida(e)) ?? null
 }
 
 export function podeIniciar(
@@ -111,6 +136,25 @@ export function podeAtribuir(etapa: EtapaQuadro): Disponibilidade {
   return OK
 }
 
+/**
+ * Anunciar quem assume na virada de turno.
+ *
+ * Espelha as guardas de `planejar_rendicao` (migration 20260827141600): exige
+ * responsável atual, porque rendição é quem vem DEPOIS de alguém — sem isso o
+ * que se quer é atribuir. Vale em qualquer status não terminal, inclusive
+ * `atribuida`: a fotógrafa que sabe que sai em 15 minutos combina a troca
+ * antes de começar, não depois.
+ */
+export function podePlanejarRendicao(etapa: EtapaQuadro): Disponibilidade {
+  if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
+    return { habilitada: false, motivo: 'Trabalho terminado.' }
+  }
+  if (!etapa.responsavelId) {
+    return { habilitada: false, motivo: 'Atribua um responsável antes.' }
+  }
+  return OK
+}
+
 export function podeTransferir(etapa: EtapaQuadro): Disponibilidade {
   if (etapa.status === 'concluida' || etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Trabalho terminado não se transfere.' }
@@ -150,11 +194,16 @@ export function podeRetornarDaUti(caso: CasoQuadro): Disponibilidade {
 }
 
 /**
- * A etapa de vídeo pode não existir: só os pacotes com reels a trazem. Quando
- * falta, o botão vira "Adicionar reels" (adicionar_reels); quando existe, vira
- * "Editar reels", que é iniciar_etapa naquela etapa.
+ * O VÍDEO HORIZONTAL só existe de fábrica no MASTER e MASTER + ÁLBUM. Quando
+ * falta, o botão vira "Adicionar vídeo" (adicionar_video); quando existe, vira
+ * "Editar vídeo", que é iniciar_etapa naquela etapa.
+ *
+ * O REELS não passa por aqui: desde a migration 20260827140400 ele está em
+ * TODO pacote, então não há o que adicionar. Enquanto reels e vídeo eram a
+ * mesma etapa, esta função se chamava podeAdicionarReels e falava do que hoje
+ * é o horizontal.
  */
-export function podeAdicionarReels(
+export function podeAdicionarVideo(
   caso: CasoQuadro,
   etapas: EtapaQuadro[],
 ): Disponibilidade {

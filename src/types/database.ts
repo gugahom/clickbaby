@@ -49,10 +49,12 @@ export type Database = {
           ordem: number
           pausa_acumulada: string
           pausado_em: string | null
+          proximo_responsavel_id: string | null
           responsavel_id: string | null
           status: Database["public"]["Enums"]["status_etapa"]
           subiu_por: string | null
           tipo: Database["public"]["Enums"]["etapa_tipo"]
+          trilha: string | null
           updated_at: string
         }
         Insert: {
@@ -69,10 +71,12 @@ export type Database = {
           ordem?: number
           pausa_acumulada?: string
           pausado_em?: string | null
+          proximo_responsavel_id?: string | null
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
           tipo: Database["public"]["Enums"]["etapa_tipo"]
+          trilha?: string | null
           updated_at?: string
         }
         Update: {
@@ -89,10 +93,12 @@ export type Database = {
           ordem?: number
           pausa_acumulada?: string
           pausado_em?: string | null
+          proximo_responsavel_id?: string | null
           responsavel_id?: string | null
           status?: Database["public"]["Enums"]["status_etapa"]
           subiu_por?: string | null
           tipo?: Database["public"]["Enums"]["etapa_tipo"]
+          trilha?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -129,6 +135,13 @@ export type Database = {
             columns: ["caso_id"]
             isOneToOne: false
             referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_proximo_responsavel_id_fkey"
+            columns: ["proximo_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
             referencedColumns: ["id"]
           },
           {
@@ -433,6 +446,27 @@ export type Database = {
           },
         ]
       }
+      feriados: {
+        Row: {
+          created_at: string
+          data: string
+          descricao: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          descricao: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          descricao?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       handoffs: {
         Row: {
           caso_etapa_id: string
@@ -566,6 +600,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          prazo_dias_uteis: number | null
           prazo_entrega: string | null
           slug: string
           updated_at: string
@@ -575,6 +610,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          prazo_dias_uteis?: number | null
           prazo_entrega?: string | null
           slug: string
           updated_at?: string
@@ -584,6 +620,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          prazo_dias_uteis?: number | null
           prazo_entrega?: string | null
           slug?: string
           updated_at?: string
@@ -724,7 +761,9 @@ export type Database = {
           pacote_id: string | null
           pacote_nome: string | null
           pacote_slug: string | null
+          prazo_dias_uteis: number | null
           prazo_entrega_horas: number | null
+          prazo_total_horas: number | null
           previsao_em: string | null
           situacao_clinica:
             | Database["public"]["Enums"]["situacao_clinica"]
@@ -759,7 +798,11 @@ export type Database = {
       }
     }
     Functions: {
-      adicionar_reels: { Args: { p_caso_id: string }; Returns: boolean }
+      adicionar_video: { Args: { p_caso_id: string }; Returns: boolean }
+      anotar_etapa: {
+        Args: { p_caso_etapa_id: string; p_observacao: string }
+        Returns: undefined
+      }
       atribuir_etapa: {
         Args: { p_caso_etapa_id: string; p_para_pessoa_id: string }
         Returns: undefined
@@ -778,7 +821,15 @@ export type Database = {
       eh_pessoa_ativa: { Args: never; Returns: boolean }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
+      ordem_padrao_da_etapa: {
+        Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
+        Returns: number
+      }
       pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      planejar_rendicao: {
+        Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
+        Returns: undefined
+      }
       registrar_entregavel: {
         Args: {
           p_caso_id: string
@@ -788,6 +839,10 @@ export type Database = {
         Returns: undefined
       }
       retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }
+      somar_dias_uteis: {
+        Args: { p_dias: number; p_inicio: string }
+        Returns: string
+      }
       sync_upsert_caso: {
         Args: {
           p_bebe_nome: string

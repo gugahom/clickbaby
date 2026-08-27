@@ -170,3 +170,48 @@ export function IconeAtribuir({ className }: PropsIcone) {
     </svg>
   )
 }
+
+export function IconeRendicao({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Duas pessoas com uma seta entre elas: quem está e quem assume. NÃO é
+          o handoff (que é uma pessoa e uma seta de saída) — aqui as duas
+          coexistem na tela, porque a troca ainda não aconteceu. */}
+      <circle cx="6" cy="7" r="3" />
+      <path d="M1.5 20v-1a4 4 0 0 1 4-4h1" />
+      <circle cx="18" cy="7" r="3" />
+      <path d="M22.5 20v-1a4 4 0 0 0-4-4h-1" />
+      <path d="M10 11.5h4M12.5 10l1.5 1.5-1.5 1.5" />
+    </svg>
+  )
+}
+
+export function IconeNota({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Balão com linhas: um recado sobre a etapa. Distinto da caneta, que
+          edita o CADASTRO do caso — são coisas diferentes e ficam perto uma da
+          outra na tela. */}
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 8.6 8.5z" />
+      <path d="M8.5 10.5h7M8.5 14h4.5" />
+    </svg>
+  )
+}

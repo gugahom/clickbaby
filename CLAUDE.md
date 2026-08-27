@@ -34,10 +34,12 @@ usar inglês.
 | **Pacote**                 | Produto vendido. Define **quais etapas existem** naquele caso                                                                                       |
 | **Maternidade**            | Hospital onde o caso acontece                                                                                                                       |
 | **Handoff**                | Passagem de uma etapa de uma pessoa para outra, tipicamente na troca de turno                                                                       |
+| **Rendição planejada**     | Quem já sabe que vai ASSUMIR a etapa na virada de turno. Não é um segundo responsável: só uma pessoa trabalha por vez                               |
+| **Trilha**                 | CAMPO (o que acontece na maternidade) ou EDIÇÃO (o que acontece na ilha). Derivada do tipo da etapa; define precedência e a divisão do card         |
 | **Situação clínica**       | Estado da mãe/bebê: aguardando, internada, indução, trabalho de parto, nasceu, UTI, alta                                                            |
 | **Entregável**             | Link final para a família: Google Photos, WeTransfer, cadeado, reels, álbum                                                                         |
 | **Fila de edição**         | Etapas de edição pendentes, distribuídas pela coordenação                                                                                           |
-| **SLA / prazo de entrega** | Prazo que a empresa promete ao cliente (48h na maioria, maior no MASTER); conta a partir do nascimento concluído                                    |
+| **SLA / prazo de entrega** | Prazo que a empresa promete ao cliente (48h na maioria; 10 dias úteis no MASTER); conta a partir do nascimento concluído                       |
 | **CEL CLICK**              | Celulares corporativos usados para capturar vídeo — 6 aparelhos, compartilhados                                                                     |
 | **Estação**                | PC de edição. 4 de foto, 2 de vídeo                                                                                                                 |
 | **Sync**                   | Edge Function que lê a agenda do Google Calendar e cria/atualiza/cancela casos automaticamente                                                      |
@@ -59,17 +61,40 @@ uma integração de verificação fica para depois, se fizer sentido.
 O pacote define quais etapas o caso tem. Estrutura cumulativa, confirmada com o cliente
 (vira dado em `pacote_etapas`, no seed — não é schema):
 
-| Pacote                   | Entrada | Nascimento | Banho | Fechamento | Vídeo          | Álbum | SLA    |
-| ------------------------ | ------- | ---------- | ----- | ---------- | -------------- | ----- | ------ |
-| BASIC                    | ✓       | ✓          |       |            |                |       | 48h    |
-| BASIC + REELS            | ✓       | ✓          |       |            | ✓ (venda)      |       | 48h    |
-| BASIC REELS              | ✓       | ✓          |       |            | ✓ (contrato)   |       | 48h    |
-| STANDARD                 | ✓       | ✓          | ✓     | ✓          |                |       | 48h    |
-| BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓              |       | 48h    |
-| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal |       | 7 dias |
-| MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓ + horizontal | ✓     | 7 dias |
-| BIRTH                    |         | ✓          |       |            | ✓ (venda)      |       | 24h    |
-| BIRTH + REELS            |         | ✓          |       |            | ✓ (venda)      |       | 24h    |
+As etapas vivem em **duas trilhas**, e a divisão é a que a operação já usa —
+atendimento de um lado, operação interna do outro. Ela não é só rótulo de tela:
+é a regra de precedência (ver abaixo) e a divisão do card.
+
+|                          | CAMPO   |            |       |            | EDIÇÃO      |       |            |       |               |
+| ------------------------ | ------- | ---------- | ----- | ---------- | ----------- | ----- | ---------- | ----- | ------------- |
+| Pacote                   | Entrada | Nascimento | Banho | Fechamento | Edição Fotos | Reels | Ed. Vídeo | Álbum | SLA           |
+| BASIC                    | ✓       | ✓          |       |            | ✓           | ✓     |            |       | 48h           |
+| BASIC + REELS            | ✓       | ✓          |       |            | ✓           | ✓     |            |       | 48h           |
+| BASIC REELS              | ✓       | ✓          |       |            | ✓           | ✓     |            |       | 48h           |
+| STANDARD                 | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     |            |       | 48h           |
+| BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     |            |       | 48h           |
+| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     | ✓          |       | 10 dias úteis |
+| MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     | ✓          | ✓     | 10 dias úteis |
+| BIRTH                    |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
+| BIRTH + REELS            |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
+
+**REELS e VÍDEO são etapas diferentes** (confirmado 27/08/2026, migration
+`20260827140400`). `reels` é o vertical curto e existe em TODOS os pacotes —
+mesmo os que não o vendem, a equipe faz. `edicao_video` é o HORIZONTAL, só no
+MASTER. Até essa data todo pacote usava `edicao_video` para o que na verdade
+era o reels, e `reels` estava órfão no enum.
+
+**Edição de fotos existe em todos**, e é UMA etapa por caso, não uma por bloco
+de captura: as fotos do banho entram na mesma edição já em andamento.
+
+**Precedência não é linear.** CAMPO é sequencial entre si; EDIÇÃO libera quando
+o nascimento conclui — banho e fechamento não seguram a edição, e a edição não
+segura eles:
+
+```
+entrada → nascimento ─┬→ banho → fechamento     (CAMPO)
+                      └→ foto · reels · vídeo   (EDIÇÃO)
+```
 
 - **Entrada existe em todos menos BIRTH e BIRTH + REELS.**
 - **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a
@@ -83,8 +108,14 @@ O pacote define quais etapas o caso tem. Estrutura cumulativa, confirmada com o 
   quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
   **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
   sem mudança de modelo. Não há composição de múltiplos pacotes num caso.
-- **SLA:** 48h na maioria; MASTER e MASTER + ÁLBUM em 7 dias (provisório, ajustável); BIRTH e
-  BIRTH + REELS em 24h. O relógio começa quando a etapa de nascimento é concluída. Ver seção 9.
+- **SLA:** 48h na maioria; BIRTH e BIRTH + REELS em 24h; MASTER e MASTER + ÁLBUM em
+  **10 dias úteis** (conferido com o gestor em 27/08/2026, no lugar dos 7 dias corridos
+  provisórios). Dia útil não cabe num `interval`, então esses dois usam
+  `pacotes.prazo_dias_uteis` e a função `somar_dias_uteis`, que pula fim de semana e as
+  datas em `feriados` — tabela que nasceu VAZIA porque a lista que a operação respeita
+  ainda não foi confirmada. Um pacote tem um prazo OU o outro, nunca os dois (constraint
+  `pacotes_prazo_exclusivo`). O relógio começa quando a etapa de nascimento é concluída.
+  Ver seção 9.
 
 ---
 
@@ -415,7 +446,8 @@ Implicações para a implementação:
   sempre zero e a métrica de produtividade da seção 9 fura por completo. Ainda não
   implementado; entra quando a fila de edição for construída (é validação de tela/fluxo,
   não da RPC genérica de conclusão).
-- **SLA de entrega é a régua principal.** Cada pacote tem `prazo_entrega` (intervalo). O
+- **SLA de entrega é a régua principal.** Cada pacote tem `prazo_entrega` (intervalo) OU
+  `prazo_dias_uteis` (inteiro), nunca os dois. O
   vencimento de um caso é derivado: `concluido_em` da etapa de nascimento + `prazo_entrega`.
   Métrica de cobrança: quantas entregas estouraram o prazo (48h na maioria dos pacotes).
   Isso é mais concreto e defensável que "fulana demorou" — é o SLA que a própria empresa

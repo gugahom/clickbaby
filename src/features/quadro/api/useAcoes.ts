@@ -168,9 +168,38 @@ export function useRetornarDaUti() {
   )
 }
 
-export function useAdicionarReels() {
+/**
+ * Escreve (ou apaga, com texto vazio) a observação de uma etapa, em qualquer
+ * status. Não é transição de estado — ver anotar_etapa na migration
+ * 20260827155728.
+ */
+export function useAnotarEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; observacao: string }>(
+    ({ casoEtapaId, observacao }) =>
+      chamar('anotar_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_observacao: observacao,
+      }),
+  )
+}
+
+/**
+ * Anuncia quem assume a etapa na virada de turno, sem trocar o responsável.
+ * `proximaPessoaId: null` cancela o plano.
+ */
+export function usePlanejarRendicao() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; proximaPessoaId: string | null }>(
+    ({ casoEtapaId, proximaPessoaId }) =>
+      chamar('planejar_rendicao', {
+        p_caso_etapa_id: casoEtapaId,
+        p_proxima_pessoa_id: proximaPessoaId,
+      }),
+  )
+}
+
+export function useAdicionarVideo() {
   return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
-    chamar('adicionar_reels', { p_caso_id: casoId }),
+    chamar('adicionar_video', { p_caso_id: casoId }),
   )
 }
 

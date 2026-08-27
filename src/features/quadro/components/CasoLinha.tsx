@@ -5,8 +5,10 @@ import { formatarHora } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
-import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
+import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
+import { TrilhasDoCaso } from './TrilhasDoCaso'
+import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { IconeCaneta } from '@/components/ui/icones'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
@@ -28,8 +30,6 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   const sla = estadoSla(caso, agora)
   const cor = corDoCaso(caso.corCalendar)
   const hora = formatarHora(caso.previsaoEm)
-  const etapaAtual = etapas.find((e) => e.status === 'em_andamento')
-  const concluidas = etapas.filter((e) => e.status === 'concluida').length
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
@@ -73,7 +73,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="relative w-full py-3 pr-14 pl-3 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
+        className="relative w-full py-3.5 pr-14 pl-3.5 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -101,7 +101,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                   {titulo}
                 </h3>
 
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
                   {caso.pacoteNome ? (
                     <span className="font-medium text-foreground">{caso.pacoteNome}</span>
                   ) : (
@@ -140,32 +140,15 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
               )}
             </div>
 
-            {/* Trilha de etapas: inline no desktop, resumida no mobile.
-                Rascunho não tem etapas — nada de "0/0". */}
-            {etapas.length > 0 && (
-              <div className="mt-2">
-                <div className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-sm md:flex">
-                  {etapas.map((etapa, i) => (
-                    <span key={etapa.id} className="flex items-center gap-1.5">
-                      <span className={classeEtapa(etapa)}>{ROTULO_ETAPA[etapa.tipo]}</span>
-                      {i < etapas.length - 1 && (
-                        <span className="text-border" aria-hidden="true">
-                          ·
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
+            {/* As duas trilhas. Rascunho não tem etapas — nada de "0/0". */}
+            <TrilhasDoCaso etapas={etapas} />
 
-                <div className="flex items-center justify-between text-sm md:hidden">
-                  <span className="text-muted-foreground">
-                    {etapaAtual ? ROTULO_ETAPA[etapaAtual.tipo] : 'Não iniciado'} ·{' '}
-                    {concluidas}/{etapas.length}
-                  </span>
-                  {sla.rotulo && (
-                    <span className={CLASSE_URGENCIA[sla.urgencia]}>{sla.rotulo}</span>
-                  )}
-                </div>
+            {/* No mobile o SLA não cabe na linha do título; desce para cá. */}
+            {sla.rotulo && (
+              <div className="mt-1.5 md:hidden">
+                <span className={clsx('text-sm', CLASSE_URGENCIA[sla.urgencia])}>
+                  {sla.rotulo}
+                </span>
               </div>
             )}
           </div>
@@ -191,6 +174,9 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         clique interno borbulharia abrindo o detalhe junto — foi o defeito da
         referência da v0, e não vale repetir por economia de markup.
 
+        Ancorado no TOPO, não na base: a faixa de avisos ocupa o rodapé do
+        cartão quando existe, e um botão absoluto ali cairia por cima do texto.
+
         SEMPRE VISÍVEL, nunca só no hover. A primeira versão revelava no hover
         no desktop; em celular, que é o aparelho real da operação (seção 6),
         hover não existe — o botão ficaria invisível e clicável ao mesmo tempo,
@@ -205,31 +191,23 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         rotulo={`${caso.ehRascunho ? 'Completar' : 'Editar'} cadastro de ${titulo}`}
         tom={caso.ehRascunho ? 'pendencia' : 'neutro'}
         onClick={() => setEditando(true)}
-        className="absolute right-1.5 bottom-1.5"
+        className="absolute top-11 right-1.5"
       >
         <IconeCaneta className="size-4" />
       </BotaoIcone>
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
 
+      {/* Fora do <button> do cabeçalho e antes do painel: a faixa é sempre
+          visível, aberto ou fechado. Um aviso que só aparecesse ao expandir o
+          caso não seria visto na TV, que é onde ele precisa ser visto. */}
+      <AvisosDoCaso etapas={etapas} />
+
       <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
         {aberto && <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />}
       </div>
     </div>
   )
-}
-
-function classeEtapa(etapa: EtapaQuadro): string {
-  switch (etapa.status) {
-    case 'concluida':
-      return 'text-concluido font-medium'
-    case 'em_andamento':
-      return 'text-andamento font-bold'
-    case 'dispensada':
-      return 'text-muted-foreground line-through'
-    default:
-      return 'text-muted-foreground'
-  }
 }
 
 export function BadgeRascunho() {

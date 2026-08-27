@@ -55,21 +55,41 @@ export interface CasoQuadro {
   updatedAt: string | null
 }
 
+/**
+ * ACOMPANHAMENTO é o que a empresa faz junto da família; EDIÇÃO é o que
+ * acontece na ilha. Vem GERADA do banco a partir do tipo — não é derivada aqui
+ * de propósito: duas definições da mesma divisão acabariam discordando, e ela
+ * decide precedência, não só layout.
+ *
+ * Era 'campo' até a migration 20260827155728. A palavra é do gestor, e o valor
+ * mudou no banco junto com o rótulo: dois nomes para a mesma coisa é a
+ * divergência de vocabulário que a seção 2 do CLAUDE.md manda evitar.
+ */
+export type TrilhaEtapa = 'acompanhamento' | 'edicao'
+
 export interface EtapaQuadro {
   id: string
   casoId: string
   tipo: EtapaTipo
+  trilha: TrilhaEtapa
   status: StatusEtapa
   ordem: number
   observacao: string | null
   /** Necessário para o handoff: transferir_etapa exige responsável atual. */
   responsavelId: string | null
+  /**
+   * Quem já sabe que assume esta etapa na virada de turno. NÃO é um segundo
+   * responsável — só uma pessoa trabalha por vez. Ver a migration
+   * 20260827141600.
+   */
+  proximoResponsavelId: string | null
   iniciadoEm: string | null
   concluidoEm: string | null
   /** Janela de pausa aberta. O tempo aqui não conta como trabalho. */
   pausadoEm: string | null
   estacao: string | null
   responsavelNome: string | null
+  proximoResponsavelNome: string | null
 }
 
 /** Um bloco de dia do Quadro, já com o contador resolvido. */
@@ -125,6 +145,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
 
 type LinhaEtapaComResponsavel = LinhaEtapa & {
   responsavel: { nome: string } | null
+  proximo_responsavel: { nome: string } | null
 }
 
 export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
@@ -132,15 +153,18 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     id: linha.id,
     casoId: linha.caso_id,
     tipo: linha.tipo,
+    trilha: (linha.trilha ?? 'acompanhamento') as TrilhaEtapa,
     status: linha.status,
     ordem: linha.ordem,
     observacao: linha.observacao,
     responsavelId: linha.responsavel_id,
+    proximoResponsavelId: linha.proximo_responsavel_id,
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     pausadoEm: linha.pausado_em,
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
+    proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,
   }
 }
 
@@ -149,9 +173,12 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   nascimento: 'Nascimento',
   banho: 'Banho',
   fechamento: 'Fechamento',
-  edicao_foto: 'Edição foto',
-  edicao_video: 'Vídeo',
-  reels: 'Reels',
+  // A trilha de EDIÇÃO é rotulada como edição, a pedido do gestor: na TV da
+  // sala, "Vídeo" solto ao lado de "Banho" não dizia se era captura ou
+  // pós-produção.
+  edicao_foto: 'Edição Fotos',
+  reels: 'Edição Reels',
+  edicao_video: 'Edição Vídeo',
   album: 'Álbum',
 }
 

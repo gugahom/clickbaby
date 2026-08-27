@@ -24,6 +24,7 @@ import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
 import { RascunhosPainel } from './components/RascunhosPainel'
+import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -42,6 +43,7 @@ export function QuadroPage() {
   const { data, isPending, error } = useQuadro()
   const retornarDaUti = useRetornarDaUti()
   const [erroUti, setErroUti] = useState<string | null>(null)
+  const [erroReels, setErroReels] = useState<string | null>(null)
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
@@ -150,10 +152,11 @@ export function QuadroPage() {
       quantidade={emReels.length}
       criterio="Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia."
       vazio="Nenhum vídeo aberto."
+      erro={erroReels}
     >
       {emReels.map((caso) => {
         const etapas = etapasPorCaso.get(caso.id) ?? []
-        const video = etapas.find((e) => e.tipo === 'edicao_video')
+        const video = etapas.find((e) => e.tipo === 'reels')
         const situacao = situacaoDoVideo(etapas)
         // Quem está com a etapa importa mais que o estado quando já tem dono:
         // a pergunta na sala de edição é "quem está com esse?".
@@ -177,6 +180,14 @@ export function QuadroPage() {
             hoje={hoje}
             destaque="reels"
             detalhe={detalhe}
+            acao={
+              // Play/pause/concluir no próprio cartão: sem isto a seção só
+              // informava, e agir exigia achar o mesmo caso na lista da
+              // esquerda, abrir e descer até a etapa.
+              video ? (
+                <AcoesDaEtapa etapa={video} etapas={etapas} onErro={setErroReels} />
+              ) : null
+            }
           />
         )
       })}
