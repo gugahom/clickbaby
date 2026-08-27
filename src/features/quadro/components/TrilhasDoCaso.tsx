@@ -42,7 +42,7 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
   const edicao = etapas.filter((e) => e.trilha === 'edicao')
 
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-3 space-y-2.5">
       <Trilha trilha="acompanhamento" etapas={acompanhamento} />
       <Trilha trilha="edicao" etapas={edicao} />
     </div>
@@ -54,29 +54,49 @@ function Trilha({ trilha, etapas }: { trilha: TrilhaEtapa; etapas: EtapaQuadro[]
 
   const feitas = etapas.filter((e) => e.status === 'concluida').length
 
-  return (
-    <div className="flex items-start gap-2 text-sm">
-      {/* Rótulo de largura fixa: com as duas linhas alinhadas, a vista corre
-          na vertical e acha a trilha certa sem ler. */}
-      <span
-        className={clsx(
-          'mt-0.5 w-[6.5rem] flex-shrink-0 text-[10px] font-bold tracking-[0.08em] uppercase',
-          trilha === 'acompanhamento' ? 'text-marca' : 'text-acento',
-        )}
-      >
-        {ROTULO_TRILHA[trilha]}
-      </span>
+  const contador = (
+    <span className="flex-shrink-0 text-xs tabular-nums text-muted-foreground">
+      {feitas}/{etapas.length}
+    </span>
+  )
 
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+  /*
+   * EMPILHA NO CELULAR, LADO A LADO NO DESKTOP.
+   *
+   * A calha do rótulo tem 6.5rem. Num aparelho de 375px isso é mais de um
+   * quarto da largura só para dizer "ACOMPANHAMENTO", e sobrava tão pouco que
+   * quatro etapas quebravam em três linhas — o card ficava alto e apertado ao
+   * mesmo tempo, que foi a queixa.
+   *
+   * Empilhado, as etapas usam a largura inteira e cabem em menos linhas. A
+   * altura total sai igual ou menor, e o respiro aparece. Do `sm` para cima a
+   * calha volta, porque aí ela paga: as duas trilhas alinham na vertical e a
+   * vista acha a certa sem ler.
+   */
+  return (
+    <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
+      <div className="flex items-center justify-between gap-2 sm:block sm:w-[6.5rem] sm:flex-shrink-0 sm:pt-0.5">
+        <span
+          className={clsx(
+            'text-[10px] font-bold tracking-[0.08em] uppercase',
+            trilha === 'acompanhamento' ? 'text-marca' : 'text-acento',
+          )}
+        >
+          {ROTULO_TRILHA[trilha]}
+        </span>
+        {/* No celular o contador acompanha o rótulo; no desktop vai para o fim
+            da fita. Dois nós, um visível por vez — mais simples que mover o
+            mesmo elemento entre dois contêineres. */}
+        <span className="sm:hidden">{contador}</span>
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
         {etapas.map((etapa) => (
           <Etapa key={etapa.id} etapa={etapa} />
         ))}
 
-        {/* Contador da trilha, à direita do que couber. Na TV é o que responde
-            "quanto falta aqui" sem contar item por item. */}
-        <span className="ml-auto flex-shrink-0 text-xs tabular-nums text-muted-foreground">
-          {feitas}/{etapas.length}
-        </span>
+        {/* Na TV é o que responde "quanto falta aqui" sem contar item por item. */}
+        <span className="ml-auto hidden sm:block">{contador}</span>
       </div>
     </div>
   )

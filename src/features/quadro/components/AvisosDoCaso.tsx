@@ -21,6 +21,11 @@ interface PropsAvisosDoCaso {
  * Mostrar as duas juntas acumularia texto no card a cada etapa concluída, até
  * a faixa virar ruído permanente e ninguém mais ler.
  *
+ * UMA LINHA, NUNCA DUAS
+ * Com dois avisos a faixa virava um bloco e passava a competir com o card em
+ * vez de acompanhá-lo. Os avisos entram lado a lado numa linha só, com corte
+ * por reticências — o texto inteiro fica no title e dentro do caso expandido.
+ *
  * POR QUE FORA DAS TRILHAS
  * O texto é livre e comprido; dentro da trilha ele quebraria a leitura em
  * coluna que faz as duas linhas funcionarem. Aqui embaixo, com fundo próprio,
@@ -37,22 +42,37 @@ export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
 
   if (avisos.length === 0) return null
 
+  // UMA linha, sempre. Com dois avisos a faixa virava um bloco de duas linhas
+  // e roubava a atenção do card inteiro — ela é um lembrete, não o conteúdo.
+  // Estourando a largura, corta com reticências; o texto completo fica no
+  // title e, inteiro, dentro do caso expandido.
+  const completo = avisos
+    .map((e) => `${ROTULO_ETAPA[e.tipo]} — ${e.observacao}`)
+    .join('  ·  ')
+
   return (
     <div className="border-t border-rascunho-borda bg-rascunho-fundo">
-      {avisos.map((etapa) => (
-        <p
-          key={etapa.id}
-          className="px-3 py-1.5 text-sm text-rascunho md:px-4"
-        >
-          <span className="font-bold tracking-wide uppercase">
-            {ROTULO_ETAPA[etapa.tipo]}
+      <p
+        className="truncate px-3 py-2 text-sm text-rascunho md:px-4"
+        title={completo}
+      >
+        {avisos.map((etapa, i) => (
+          <span key={etapa.id}>
+            {i > 0 && (
+              <span className="mx-2 opacity-40" aria-hidden="true">
+                ·
+              </span>
+            )}
+            <span className="font-bold tracking-wide uppercase">
+              {ROTULO_ETAPA[etapa.tipo]}
+            </span>
+            <span className="mx-1.5 opacity-60" aria-hidden="true">
+              —
+            </span>
+            <span className="font-medium">{etapa.observacao}</span>
           </span>
-          <span className="mx-1.5 opacity-60" aria-hidden="true">
-            —
-          </span>
-          <span className="font-medium">{etapa.observacao}</span>
-        </p>
-      ))}
+        ))}
+      </p>
     </div>
   )
 }

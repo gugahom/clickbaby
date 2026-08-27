@@ -73,7 +73,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="relative w-full py-3 pr-14 pl-3 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
+        className="relative w-full py-3.5 pr-14 pl-3.5 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -101,7 +101,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                   {titulo}
                 </h3>
 
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
                   {caso.pacoteNome ? (
                     <span className="font-medium text-foreground">{caso.pacoteNome}</span>
                   ) : (
