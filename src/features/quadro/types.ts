@@ -192,23 +192,19 @@ export const ROTULO_RODADA: Record<number, string> = {
   2: 'B+F',
 }
 
-/** O numeral que o gestor pediu no card: Ⅰ, Ⅱ. */
-export const NUMERAL_RODADA: Record<number, string> = {
-  1: 'I',
-  2: 'II',
-}
 
 export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   entrada: 'Entrada',
   nascimento: 'Nascimento',
   banho: 'Banho',
   fechamento: 'Fechamento',
-  // A trilha de EDIÇÃO é rotulada como edição, a pedido do gestor: na TV da
-  // sala, "Vídeo" solto ao lado de "Banho" não dizia se era captura ou
-  // pós-produção.
-  edicao_foto: 'Edição Fotos',
-  reels: 'Edição Reels',
-  edicao_video: 'Edição Vídeo',
+  // SEM o prefixo "Edição": a faixa do card já se chama EDIÇÃO, e repetir a
+  // palavra em cada item gastava metade da linha dizendo o que o rótulo da
+  // esquerda já dizia. O que distingue os itens entre si é o resto — Foto,
+  // Reels, Vídeo — e é isso que fica.
+  edicao_foto: 'Foto',
+  reels: 'Reels',
+  edicao_video: 'Vídeo',
   album: 'Álbum',
 }
 

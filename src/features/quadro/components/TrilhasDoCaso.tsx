@@ -1,6 +1,5 @@
 import clsx from 'clsx'
 import {
-  NUMERAL_RODADA,
   ROTULO_ETAPA,
   ROTULO_RODADA,
   type EtapaQuadro,
@@ -72,8 +71,24 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
   const reels = etapas.filter((e) => e.tipo === 'reels')
   const edicao = etapas.filter((e) => e.trilha === 'edicao' && e.tipo !== 'reels')
 
+  /*
+   * GRID no desktop, para as três faixas alinharem SOZINHAS.
+   *
+   * Antes a calha do rótulo era `w-[6.5rem]` — número escolhido no olho, e
+   * errado: "ACOMPANHAMENTO" é mais largo que isso e transbordava, encostando
+   * na primeira etapa enquanto as outras duas faixas ficavam com folga. As
+   * três linhas não batiam.
+   *
+   * Com `grid-cols-[max-content_1fr]` a coluna mede exatamente o maior rótulo,
+   * seja ele qual for. Cada Trilha vira `contents` no desktop, então os dois
+   * filhos dela entram direto no grid do pai e alinham por construção — sem
+   * medida mágica para alguém precisar refazer quando um rótulo mudar.
+   *
+   * No celular o grid não vale: ali as faixas empilham, e cada Trilha volta a
+   * ser sua própria caixa.
+   */
   return (
-    <div className="mt-3 space-y-2.5">
+    <div className="mt-3 space-y-2.5 sm:grid sm:grid-cols-[max-content_1fr] sm:gap-x-4 sm:gap-y-2.5 sm:space-y-0">
       <Trilha faixa="acompanhamento" etapas={acompanhamento} />
       <Trilha faixa="edicao" etapas={edicao} />
       {/* `soMarcador`: a faixa de reels informa, não convida. As duas outras
@@ -104,21 +119,19 @@ function Trilha({
   )
 
   /*
-   * EMPILHA NO CELULAR, LADO A LADO NO DESKTOP.
+   * EMPILHA NO CELULAR, GRID NO DESKTOP.
    *
-   * A calha do rótulo tem 6.5rem. Num aparelho de 375px isso é mais de um
-   * quarto da largura só para dizer "ACOMPANHAMENTO", e sobrava tão pouco que
-   * quatro etapas quebravam em três linhas — o card ficava alto e apertado ao
-   * mesmo tempo, que foi a queixa.
+   * Num aparelho de 375px a calha do rótulo comeria mais de um quarto da
+   * largura só para dizer "ACOMPANHAMENTO", e sobraria tão pouco que quatro
+   * etapas quebrariam em três linhas — o card ficaria alto e apertado ao mesmo
+   * tempo. Empilhado, as etapas usam a largura inteira.
    *
-   * Empilhado, as etapas usam a largura inteira e cabem em menos linhas. A
-   * altura total sai igual ou menor, e o respiro aparece. Do `sm` para cima a
-   * calha volta, porque aí ela paga: as duas trilhas alinham na vertical e a
-   * vista acha a certa sem ler.
+   * Do `sm` para cima, `contents` dissolve esta caixa e joga os dois filhos no
+   * grid do pai (ver TrilhasDoCaso), que é o que faz as três faixas alinharem.
    */
   return (
-    <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
-      <div className="flex items-center justify-between gap-2 sm:block sm:w-[6.5rem] sm:flex-shrink-0 sm:pt-0.5">
+    <div className="flex flex-col gap-1 text-sm sm:contents">
+      <div className="flex items-center justify-between gap-2 sm:block sm:pt-0.5">
         <span
           className={clsx(
             'text-[10px] font-bold tracking-[0.08em] uppercase',
@@ -133,7 +146,10 @@ function Trilha({
         <span className="sm:hidden">{contador}</span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+      {/* gap-x generoso: com 12px as etapas se liam como uma palavra só. O
+          marcador de cada uma precisa de ar à esquerda para o olho separar
+          "onde termina uma e começa a outra" sem ler o texto. */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
         {etapas.map((etapa) => (
           <Etapa
             key={etapa.id}
@@ -166,17 +182,14 @@ function Etapa({
   soMarcador: boolean
 }) {
   const pessoas = nomesDaEtapa(etapa)
-  const numeral = comRodada ? NUMERAL_RODADA[etapa.rodada] : null
   const bloco = comRodada ? ROTULO_RODADA[etapa.rodada] : null
 
   return (
     <span className="inline-flex items-center gap-1">
       <Marcador status={etapa.status} />
       <span className={CLASSE_STATUS[etapa.status]}>
-        {/* O numeral vem PRIMEIRO, e sozinho já ordena as rodadas de longe.
-            O nome do bloco vem depois, para quem chega perto e precisa saber
-            de que material se trata. */}
-        {numeral && <span className="mr-1 font-bold tabular-nums">{numeral}</span>}
+        {/* Sem numeral: "Ⅰ"/"Ⅱ" ao lado de "Parto"/"B+F" dizia a mesma coisa
+            duas vezes, e o nome do bloco é o que a equipe usa para falar. */}
         {!soMarcador && ROTULO_ETAPA[etapa.tipo]}
         {bloco && (
           <span

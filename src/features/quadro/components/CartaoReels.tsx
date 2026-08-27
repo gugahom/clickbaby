@@ -3,7 +3,7 @@ import { rotularDia } from '@/lib/formato'
 import { useRegistrarEstacao } from '../api/useAcoes'
 import { corDoCaso } from '../lib/cores-calendar'
 import { mensagemDeErro } from '../lib/erros'
-import { NUMERAL_RODADA, ROTULO_RODADA, type CasoQuadro, type EtapaQuadro } from '../types'
+import { ROTULO_RODADA, type CasoQuadro, type EtapaQuadro } from '../types'
 import { AcoesDaEtapa } from './AcoesDaEtapa'
 
 interface PropsCartaoReels {
@@ -90,11 +90,8 @@ function LinhaDeRodada({
     <li className="flex items-center gap-2 rounded-md bg-muted/50 py-1 pr-1 pl-2">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm">
-          {comNumeral && (
-            <span className="font-bold tabular-nums text-acento">
-              {NUMERAL_RODADA[etapa.rodada]}
-            </span>
-          )}
+          {/* Sem numeral: o nome do bloco já separa as duas, e é como a
+              equipe fala. */}
           <span className="font-medium">
             {comNumeral ? ROTULO_RODADA[etapa.rodada] : 'Reels'}
           </span>
