@@ -289,3 +289,22 @@ export function IconeReabrir({ className }: PropsIcone) {
     </svg>
   )
 }
+
+/** Círculo com barra: "isto não vai acontecer". */
+export function IconeDispensar({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 5.6l12.8 12.8" />
+    </svg>
+  )
+}

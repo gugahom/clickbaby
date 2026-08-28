@@ -83,6 +83,13 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,
   },
+  // Remove trabalho do checklist, e dispensada conta como resolvida na trava
+  // de encerramento: quem alcançasse esta RPC destravaria o encerramento de
+  // qualquer caso.
+  dispensar_etapa: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+  },
 }
 
 /** Caminho que a função encerra em 'sem_efeito' antes de tocar qualquer linha. */

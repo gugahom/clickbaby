@@ -15,11 +15,11 @@ import {
   IconeRendicao,
   IconePause,
   IconePlay,
+  IconeDispensar,
 } from '@/components/ui/icones'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
-  useAdicionarVideo,
   useAnotarEtapa,
   useReabrirEtapa,
   usePlanejarRendicao,
@@ -33,10 +33,10 @@ import {
   useRetornarDaUti,
   useTransferirEtapa,
   usePessoasAtivas,
+  useDispensarEtapa,
 } from '../api/useAcoes'
 import {
   podeAtribuir,
-  podeAdicionarVideo,
   podeCancelar,
   podeConcluir,
   podeConfirmarEntrega,
@@ -46,6 +46,7 @@ import {
   podeRetornarDaUti,
   podePlanejarRendicao,
   podeReabrir,
+  podeDispensar,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -101,10 +102,10 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const concluir = useConcluirEtapa()
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
-  const adicionarVideo = useAdicionarVideo()
   const planejarRendicao = usePlanejarRendicao()
   const anotar = useAnotarEtapa()
   const reabrir = useReabrirEtapa()
+  const dispensar = useDispensarEtapa()
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
@@ -115,7 +116,6 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     pausar.isPending ||
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
-    adicionarVideo.isPending ||
     concluir.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
@@ -138,12 +138,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
-  const novoVideo = podeAdicionarVideo(caso, etapas)
 
-  // O VÍDEO aqui é o horizontal, que de fábrica só o MASTER tem. Serve só para
-  // saber se ainda cabe ACRESCENTÁ-LO — dar play nele é como em qualquer outra
-  // etapa, pela lista acima.
-  const etapaVideo = etapas.find((e) => e.tipo === 'edicao_video') ?? null
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
   // Com um diálogo aberto, o erro vai DENTRO dele: o <dialog> modal inertiza o
@@ -176,6 +171,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const designacao = podeAtribuir(etapa)
             const rendicao = podePlanejarRendicao(etapa)
             const reabertura = podeReabrir(etapa, caso)
+            const dispensa = podeDispensar(etapa, caso)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
@@ -227,11 +223,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   )}
                 </div>
 
-                {/* Etapa CONCLUÍDA fica só com o desfazer. Concluir é um gesto
-                    de um toque, feito com uma mão num corredor — e até a
-                    migration 20260827172830 era irreversível. Dispensada não
-                    entra: ali não houve trabalho a devolver. */}
-                {etapa.status === 'concluida' && (
+                {/* Etapa RESOLVIDA fica só com o desfazer. Concluir e
+                    dispensar são gestos de um toque, feitos com uma mão num
+                    corredor — e dispensar acabou de nascer, então nasce com o
+                    caminho de volta em vez de esperar a primeira queixa. */}
+                {encerrada && (
                   <div className="flex flex-shrink-0 items-center">
                     <BotaoIcone
                       rotulo="Reabrir etapa"
@@ -368,6 +364,24 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     >
                       <IconeNota className="size-[18px]" />
                     </BotaoIcone>
+
+                    {/* DISPENSAR fica por último, e em cinza.
+                    
+                        É a ação menos frequente do grupo e a única que remove
+                        trabalho do checklist — pô-la ao lado do play, com cor,
+                        convidaria ao toque errado num aparelho usado de pé com
+                        uma mão. Fica alcançável e discreta, com o desfazer
+                        aparecendo no lugar dela depois. */}
+                    <BotaoIcone
+                      rotulo="Dispensar etapa"
+                      motivo={dispensa.motivo}
+                      disabled={ocupado || !dispensa.habilitada}
+                      onClick={() =>
+                        executar(dispensar.mutateAsync({ casoEtapaId: etapa.id }))
+                      }
+                    >
+                      <IconeDispensar className="size-[18px]" />
+                    </BotaoIcone>
                   </div>
                 )}
               </li>
@@ -398,23 +412,18 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           </Botao>
         )}
 
-        {/* Só o ACRESCENTAR, e só quando a etapa não existe.
-            "Editar vídeo" saiu daqui: era um atalho para dar play na etapa de
-            vídeo, e desde que cada etapa da trilha ganhou seu próprio play na
-            lista acima, ele repetia um botão que já está a dois centímetros
-            dali — com a desvantagem de sugerir que o vídeo é especial entre as
-            três edições, o que deixou de ser verdade.
-            Acrescentar continua aqui porque é ação de CASO (muda o escopo do
-            trabalho), não de etapa, e não teria onde morar na lista. */}
-        {!etapaVideo && (
-          <Botao
-            onClick={() => executar(adicionarVideo.mutateAsync({ casoId: caso.id }))}
-            disabled={ocupado || !novoVideo.habilitada}
-            title={novoVideo.motivo}
-          >
-            Adicionar vídeo
-          </Botao>
-        )}
+        {/* "Adicionar vídeo" SAIU daqui (28/08/2026, a pedido do gestor).
+        
+            O botão acrescentava a etapa `edicao_video` — o horizontal — a um
+            caso que não a tem. A ideia era a venda avulsa do horizontal num
+            pacote que não o inclui; na operação isso não acontece, e num
+            MASTER a etapa já vem do pacote, então o botão aparecia justamente
+            onde não servia para nada. Ficava num cartão de BASIC oferecendo um
+            trabalho que ninguém vendeu.
+        
+            A RPC `adicionar_video` CONTINUA existindo, e o caminho para o dia
+            em que a venda avulsa acontecer é outro e melhor: trocar o pacote do
+            caso, que é o registro do que foi vendido. */}
       </div>
 
       {/* Links de entrega. A fotógrafa gera fora do sistema e cola aqui; sem ao

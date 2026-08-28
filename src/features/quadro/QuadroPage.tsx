@@ -349,24 +349,26 @@ export function QuadroPage() {
             <h1 className="truncate text-lg font-bold tracking-tight md:text-2xl">
               Painel de atividades
             </h1>
-            <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
-              {isPending
-                ? 'Carregando…'
-                : buscando
-                  ? `${totalAbertos} de ${totalGeral} ${totalGeral === 1 ? 'caso' : 'casos'}`
-                  : `${totalAbertos} ${totalAbertos === 1 ? 'caso' : 'casos'} em ${blocos.length} ${blocos.length === 1 ? 'dia' : 'dias'}`}
-              {/* Só aparece quando NÃO está conectado. Um selo verde permanente
-                  vira ruído que ninguém lê; o que a pessoa precisa saber é o
-                  contrário — que a tela pode estar velha. */}
-              {!conectado && !isPending && (
+            {/*
+              O "x casos em x dias" saiu (28/08/2026, a pedido do gestor). Era
+              um número que ninguém usa para decidir nada: quem olha o Quadro
+              quer ver os CASOS, e a contagem ocupava a linha logo abaixo do
+              título, que é a mais lida da tela.
+              
+              O aviso de conexão fica — ele não é estatística, é a única coisa
+              que diz que a tela pode estar velha. E só aparece quando está
+              ruim: um selo verde permanente vira ruído que ninguém lê.
+            */}
+            {!conectado && !isPending && (
+              <p className="mt-0.5">
                 <span
                   className="rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-medium text-atencao"
                   title="Sem conexão ao vivo. A tela pode não refletir o que outra pessoa acabou de fazer."
                 >
                   fora do ao vivo
                 </span>
-              )}
-            </p>
+              </p>
+            )}
           </div>
 
           {/* No desktop só resta a escolha entre o Quadro e o arquivo; UTI e
@@ -406,7 +408,17 @@ export function QuadroPage() {
           espremeria o título e os botões de aba num beco.
         */}
         <div className="mt-3 flex">
-          <CampoBusca valor={busca} onMudar={setBusca} />
+          {/* O contador vive AQUI agora, e não mais como subtítulo permanente.
+              É a diferença entre estatística e resposta: "88 casos em 37 dias"
+              ninguém usa para decidir nada; "3 de 88" é o que diz que a busca
+              funcionou, e some junto com ela. */}
+          <CampoBusca
+            valor={busca}
+            onMudar={setBusca}
+            {...(buscando && !isPending
+              ? { resultado: `${totalAbertos} de ${totalGeral}` }
+              : {})}
+          />
         </div>
 
         {/* Mobile: as duas colunas não cabem lado a lado, então viram abas. */}
