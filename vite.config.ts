@@ -55,7 +55,31 @@ function redirectsDoPages() {
 function exigirSupabaseRemoto(url: string | undefined) {
   if (!url) {
     throw new Error(
-      'VITE_SUPABASE_URL nao definida. O build de producao precisa dela no .env.',
+      `VITE_SUPABASE_URL nao definida.
+
+Esta mensagem aparece no log do build, e quase sempre em UM destes dois casos:
+
+1. LOCAL -- nao existe .env. Ele e gitignorado de proposito; copie o
+   .env.example e preencha.
+
+2. CLOUDFLARE PAGES -- a variavel esta no lugar errado, ou o deploy e mais
+   velho que ela.
+
+   O Vite EMBUTE o valor no bundle em tempo de BUILD. Variavel de runtime
+   (a lista que o Workers/Pages usa para o codigo em execucao) nunca chega
+   aqui: quando o site roda, o build ja aconteceu ha muito tempo. As duas
+   listas convivem na mesma tela e tem nomes parecidos -- e essa e a
+   confusao que da nesta mensagem.
+
+   Ela precisa estar nas variaveis de BUILD, no ambiente Production
+   (Preview e uma lista separada; preencher so uma faz o deploy de branch
+   quebrar e o de main passar, ou o contrario).
+
+   E depois REIMPLANTE. Adicionar variavel nao dispara build sozinha: o
+   ultimo deploy verde continua servindo o bundle antigo, e a tela fica
+   "atrasada" sem nenhum erro visivel.
+
+Ver docs/deploy.md.`,
     )
   }
   if (url.includes('127.0.0.1') || url.includes('localhost')) {
@@ -68,8 +92,20 @@ Apague-o e rode de novo. Ver scripts/dev-local.mjs.`)
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
+  // Prefixo '' de proposito: assim o loadEnv devolve tambem o que veio do
+  // process.env, que e como a variavel chega no Cloudflare (la nao ha .env --
+  // ele e gitignorado). Com o prefixo padrao 'VITE_' funcionaria igual; o ''
+  // esta aqui para o dia em que uma variavel sem prefixo precisar ser lida.
   const env = loadEnv(mode, process.cwd(), '')
-  if (command === 'build') exigirSupabaseRemoto(env.VITE_SUPABASE_URL)
+
+  if (command === 'build') {
+    exigirSupabaseRemoto(env.VITE_SUPABASE_URL)
+    // Uma linha no log do build dizendo para ONDE este bundle vai falar.
+    // Sem ela, descobrir que um deploy saiu apontando para o lugar errado
+    // exige baixar o bundle e procurar dentro -- foi o que precisou ser feito
+    // uma vez. So o host: a anon key nao entra em log nem sendo publica.
+    console.log(`[clickbaby] build apontando para ${new URL(env.VITE_SUPABASE_URL!).host}`)
+  }
 
   return {
     base: BASE,
