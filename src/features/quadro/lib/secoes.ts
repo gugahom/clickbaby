@@ -145,6 +145,55 @@ export function reelsAbertosDaSecao(etapas: EtapaQuadro[]): EtapaQuadro[] {
     .sort((a, b) => a.rodada - b.rodada)
 }
 
+/**
+ * A seção MASTER: o VÍDEO HORIZONTAL aberto.
+ *
+ * POR QUE É UMA SEÇÃO SEPARADA DO REELS
+ * São dois trabalhos com naturezas opostas, e a migration 20260827140400 os
+ * separou justamente por isso. `reels` é o vertical curto, existe em todo
+ * pacote, e vence em 48h ou menos. `edicao_video` é o horizontal, só no MASTER,
+ * e tem DEZ DIAS ÚTEIS. Misturados numa lista ordenada por vencimento, o vídeo
+ * do MASTER afunda para sempre no fim — e "no fim de uma lista que ninguém
+ * rola" é onde um prazo de dez dias vira um prazo estourado.
+ *
+ * SEM HARDCODE DE PACOTE. O filtro é "tem etapa `edicao_video` aberta", e só os
+ * dois MASTER têm essa etapa. Se amanhã um pacote novo vender o horizontal, ele
+ * entra aqui sozinho — nada a editar no código. O CLAUDE.md proíbe fixar regra
+ * de pacote em código, e a mesma razão vale aqui.
+ *
+ * O critério de "aberta" é o mesmo do reels: em andamento, pausada, ou liberada
+ * por `podeIniciar`. Um MASTER cujo parto ainda não aconteceu não aparece.
+ */
+export function videosMasterAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
+  return etapas
+    .filter((e) => e.tipo === 'edicao_video')
+    .filter((e) => e.status !== 'concluida' && e.status !== 'dispensada')
+    .filter(
+      (e) =>
+        e.status === 'em_andamento' ||
+        e.status === 'pausada' ||
+        podeIniciar(e, etapas).habilitada,
+    )
+    .sort((a, b) => a.rodada - b.rodada)
+}
+
+export function casosComVideoMasterAberto(
+  casos: CasoQuadro[],
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+): CasoQuadro[] {
+  return casos
+    .filter((caso) => {
+      if (caso.ehTerminal) return false
+      return videosMasterAbertos(etapasPorCaso.get(caso.id) ?? []).length > 0
+    })
+    .sort((a, b) => {
+      if (a.venceEm === b.venceEm) return 0
+      if (a.venceEm === null) return 1
+      if (b.venceEm === null) return -1
+      return a.venceEm.localeCompare(b.venceEm)
+    })
+}
+
 export function casosConcluidos(casos: CasoQuadro[]): CasoQuadro[] {
   return casos
     .filter((c) => c.ehTerminal)

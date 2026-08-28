@@ -14,7 +14,9 @@ import {
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
+  casosComVideoMasterAberto,
   reelsAbertosDaSecao,
+  videosMasterAbertos,
   casosConcluidos,
   casosNaUti,
 } from './lib/secoes'
@@ -23,8 +25,9 @@ import { DiaBloco } from './components/DiaBloco'
 import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
+import { PainelDobravel } from './components/PainelDobravel'
 import { RascunhosPainel } from './components/RascunhosPainel'
-import { CartaoReels } from './components/CartaoReels'
+import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -32,7 +35,7 @@ import type { EtapaQuadro } from './types'
  * pergunta "o que temos hoje" e a pergunta "quem está na UTI" são olhadas ao
  * mesmo tempo — inclusive na TV da sala de edição.
  */
-type Aba = 'lista' | 'uti' | 'reels' | 'concluidos' | 'rascunhos'
+type Aba = 'lista' | 'uti' | 'reels' | 'master' | 'concluidos' | 'rascunhos'
 
 /** Mapa vazio estável: `new Map()` inline nasce sem tipo e vira `any` nos usos. */
 const SEM_ETAPAS: Map<string, EtapaQuadro[]> = new Map()
@@ -44,13 +47,14 @@ export function QuadroPage() {
   const retornarDaUti = useRetornarDaUti()
   const [erroUti, setErroUti] = useState<string | null>(null)
   const [erroReels, setErroReels] = useState<string | null>(null)
+  const [erroMaster, setErroMaster] = useState<string | null>(null)
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
-  const { blocos, rascunhos, naUti, emReels, concluidos, totalAbertos } = useMemo(() => {
+  const { blocos, rascunhos, naUti, emReels, emMaster, concluidos, totalAbertos } = useMemo(() => {
     const casos = data?.casos ?? []
     const etapas = data?.etapasPorCaso ?? SEM_ETAPAS
     const abertos = blocosAbertos(agruparPorDia(casos))
@@ -59,6 +63,7 @@ export function QuadroPage() {
       rascunhos: casos.filter((c) => c.ehRascunho && !c.ehTerminal && !c.naUti),
       naUti: casosNaUti(casos),
       emReels: casosComVideoAberto(casos, etapas),
+      emMaster: casosComVideoMasterAberto(casos, etapas),
       concluidos: casosConcluidos(casos),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
     }
@@ -95,14 +100,31 @@ export function QuadroPage() {
             />
           ))}
 
-          {restantes > 0 && (
-            <div className="pt-1 pb-2 text-center">
-              <Botao
-                onClick={() => setDiasVisiveis((n) => n + DIAS_POR_PAGINA)}
-                className="w-full sm:w-auto"
-              >
-                Carregar mais dias ({restantes} restantes)
-              </Botao>
+          {/* Ida e volta. Sem o "exibir menos", carregar mais era um caminho
+              de mão única: quem abrisse 30 dias para procurar um caso ficava
+              com os 30 rolando embaixo pelo resto do turno, e a única saída
+              era recarregar a página — que também perde o que estiver aberto. */}
+          {(restantes > 0 || diasVisiveis > DIAS_INICIAIS) && (
+            <div className="flex flex-col gap-2 pt-1 pb-2 sm:flex-row sm:justify-center">
+              {restantes > 0 && (
+                <Botao
+                  onClick={() => setDiasVisiveis((n) => n + DIAS_POR_PAGINA)}
+                  className="w-full sm:w-auto"
+                >
+                  Carregar mais dias ({restantes} restantes)
+                </Botao>
+              )}
+              {diasVisiveis > DIAS_INICIAIS && (
+                // Contorno, não primário: desfazer não disputa atenção com
+                // avançar.
+                <Botao
+                  variante="contorno"
+                  onClick={() => setDiasVisiveis(DIAS_INICIAIS)}
+                  className="w-full sm:w-auto"
+                >
+                  Exibir menos
+                </Botao>
+              )}
             </div>
           )}
         </div>
@@ -110,14 +132,8 @@ export function QuadroPage() {
     </>
   )
 
-  const painelUti = (
-    <PainelLateral
-      titulo="UTI"
-      quantidade={naUti.length}
-      criterio="Fora do dia e com o prazo de entrega congelado."
-      vazio="Nenhum bebê na UTI."
-      erro={erroUti}
-    >
+  const conteudoUti = (
+    <>
       {naUti.map((caso) => (
         <CartaoLateral
           key={caso.id}
@@ -143,27 +159,72 @@ export function QuadroPage() {
           }
         />
       ))}
-    </PainelLateral>
+    </>
   )
+
+  const conteudoReels = emReels.map((caso) => (
+    <CartaoDeEdicao
+      key={caso.id}
+      caso={caso}
+      hoje={hoje}
+      etapas={etapasPorCaso.get(caso.id) ?? []}
+      daSecao={reelsAbertosDaSecao(etapasPorCaso.get(caso.id) ?? [])}
+      onErro={setErroReels}
+    />
+  ))
+
+  const conteudoMaster = emMaster.map((caso) => (
+    <CartaoDeEdicao
+      key={caso.id}
+      caso={caso}
+      hoje={hoje}
+      etapas={etapasPorCaso.get(caso.id) ?? []}
+      daSecao={videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])}
+      // Uma rodada só: o rótulo de bloco do reels ("Parto") não se aplica.
+      rotularLinha={() => 'Vídeo'}
+      onErro={setErroMaster}
+    />
+  ))
+
+  const CRITERIO_REELS =
+    'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
+  const CRITERIO_MASTER =
+    'Horizontal do MASTER, liberado ou em andamento. Prazo de 10 dias úteis.'
+  const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
 
   const painelReels = (
     <PainelLateral
       titulo="Reels"
       quantidade={emReels.length}
-      criterio="Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia."
+      criterio={CRITERIO_REELS}
       vazio="Nenhum vídeo aberto."
       erro={erroReels}
     >
-      {emReels.map((caso) => (
-        <CartaoReels
-          key={caso.id}
-          caso={caso}
-          hoje={hoje}
-          etapas={etapasPorCaso.get(caso.id) ?? []}
-          reels={reelsAbertosDaSecao(etapasPorCaso.get(caso.id) ?? [])}
-          onErro={setErroReels}
-        />
-      ))}
+      {conteudoReels}
+    </PainelLateral>
+  )
+
+  const painelUti = (
+    <PainelLateral
+      titulo="UTI"
+      quantidade={naUti.length}
+      criterio={CRITERIO_UTI}
+      vazio="Nenhum bebê na UTI."
+      erro={erroUti}
+    >
+      {conteudoUti}
+    </PainelLateral>
+  )
+
+  const painelMaster = (
+    <PainelLateral
+      titulo="Master"
+      quantidade={emMaster.length}
+      criterio={CRITERIO_MASTER}
+      vazio="Nenhum vídeo de MASTER aberto."
+      erro={erroMaster}
+    >
+      {conteudoMaster}
     </PainelLateral>
   )
 
@@ -241,11 +302,17 @@ export function QuadroPage() {
           <BotaoAba ativa={aba === 'lista'} onClick={() => setAba('lista')}>
             Lista
           </BotaoAba>
-          <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
-            UTI ({naUti.length})
-          </BotaoAba>
+          {/* Mesma hierarquia do desktop: Reels primeiro, depois Master e
+              UTI. No mobile não dá para uma seção ser "maior", então quem
+              carrega a ordem é a posição — e a tira rola para a direita. */}
           <BotaoAba ativa={aba === 'reels'} onClick={() => setAba('reels')}>
             Reels ({emReels.length})
+          </BotaoAba>
+          <BotaoAba ativa={aba === 'master'} onClick={() => setAba('master')}>
+            Master ({emMaster.length})
+          </BotaoAba>
+          <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
+            UTI ({naUti.length})
           </BotaoAba>
           <BotaoAba
             ativa={aba === 'rascunhos'}
@@ -285,9 +352,39 @@ export function QuadroPage() {
                   ENTRE os cartões, senão eles voltam a ser linhas de uma
                   grade e a separação do item 5 não existe. */}
               <div className="min-h-0 overflow-y-auto pr-1">{listaPorDia}</div>
-              <div className="grid min-h-0 grid-rows-2 gap-4">
-                {painelUti}
-                {painelReels}
+              {/*
+                REELS EM CIMA E COM A SOBRA; MASTER e UTI dobráveis embaixo.
+                
+                Era `grid-rows-2` com UTI e Reels em metades iguais — e a UTI,
+                quase sempre vazia, guardava meia coluna para dizer "nenhum
+                bebê na UTI" enquanto a lista de reels, que é o trabalho do
+                turno, rolava dentro da outra metade.
+                
+                `min-h-0` no contêiner e no REELS é o que faz a divisão
+                funcionar: sem ele, um filho flex se recusa a encolher abaixo
+                do próprio conteúdo e a coluna transborda a tela — que é
+                exatamente o "scroll pra achar" que não se quer.
+              */}
+              <div className="flex min-h-0 flex-col gap-3">
+                <div className="min-h-0 flex-1">{painelReels}</div>
+                <PainelDobravel
+                  titulo="Master"
+                  quantidade={emMaster.length}
+                  criterio={CRITERIO_MASTER}
+                  vazio="Nenhum vídeo de MASTER aberto."
+                  erro={erroMaster}
+                >
+                  {conteudoMaster}
+                </PainelDobravel>
+                <PainelDobravel
+                  titulo="UTI"
+                  quantidade={naUti.length}
+                  criterio={CRITERIO_UTI}
+                  vazio="Nenhum bebê na UTI."
+                  erro={erroUti}
+                >
+                  {conteudoUti}
+                </PainelDobravel>
               </div>
             </div>
 
@@ -296,6 +393,7 @@ export function QuadroPage() {
               {aba === 'lista' && listaPorDia}
               {aba === 'uti' && painelUti}
               {aba === 'reels' && painelReels}
+              {aba === 'master' && painelMaster}
             </div>
           </>
         )}

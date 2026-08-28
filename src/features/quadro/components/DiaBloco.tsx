@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
-import { diasAtras, rotularDia } from '@/lib/formato'
+import { dataCurta, diasAtras, ehRotuloRelativo, rotularDia } from '@/lib/formato'
 import type { BlocoDia, EtapaQuadro } from '../types'
 import { CasoLinha } from './CasoLinha'
 import { Diafragma } from './Diafragma'
@@ -36,6 +36,10 @@ export function DiaBloco({
   const idPainel = useId()
   const idCabecalho = useId()
   const rotulo = bloco.dia === null ? 'Sem data prevista' : rotularDia(bloco.dia, hoje)
+  // 'Hoje' diz QUANDO e esconde QUAL dia é. Quem escreve num prontuário ou
+  // fala no telefone precisa do número, e conferir no relógio do aparelho é
+  // um desvio de atenção. Os outros rótulos já trazem a data por extenso.
+  const data = bloco.dia && ehRotuloRelativo(bloco.dia, hoje) ? dataCurta(bloco.dia) : null
   const atraso = bloco.dia === null ? 0 : diasAtras(bloco.dia, hoje)
   const emAtraso = atraso > 0
 
@@ -114,6 +118,14 @@ export function DiaBloco({
               <span className="text-base font-bold tracking-tight first-letter:uppercase md:text-lg">
                 {rotulo}
               </span>
+              {data && (
+                // Peso normal e cor apagada: é referência, não manchete. Se
+                // competisse com "Hoje", teria trocado uma leitura rápida por
+                // duas.
+                <span className="font-mono text-xs font-normal text-muted-foreground">
+                  {data}
+                </span>
+              )}
               {emAtraso && (
                 <span className="rounded-full bg-atrasado px-2 py-0.5 text-[11px] font-semibold text-white">
                   {atraso === 1 ? 'há 1 dia' : `há ${atraso} dias`}

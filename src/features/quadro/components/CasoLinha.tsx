@@ -73,7 +73,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="relative w-full py-3.5 pr-14 pl-3.5 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
+        className="relative w-full py-3.5 pr-[4.75rem] pl-3.5 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -186,12 +186,25 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         No rascunho ele é o gesto principal do cartão: é o que tira o caso do
         limbo. Por isso ganha borda e a cor da pendência; nos demais é
         conveniência e fica em cinza.
+
+        AO LADO DO CHEVRON, NÃO ABAIXO DELE.
+        
+        Antes era `top-11`: 44px de deslocamento mais 44px de alvo exigem um
+        cartão de 88px para caber. Um rascunho não tem etapas nem SLA, então o
+        cartão dele é mais curto que isso — e a caneta ficava pendurada para
+        fora da borda inferior, justamente no cartão em que ela é a ação
+        principal.
+        
+        Lado a lado, a posição não depende mais da altura do cartão: o alvo
+        está no mesmo lugar num rascunho de duas linhas e num MASTER com três
+        trilhas. O `pr` do cabeçalho reserva a calha para os dois.
       */}
       <BotaoIcone
         rotulo={`${caso.ehRascunho ? 'Completar' : 'Editar'} cadastro de ${titulo}`}
         tom={caso.ehRascunho ? 'pendencia' : 'neutro'}
         onClick={() => setEditando(true)}
-        className="absolute top-11 right-1.5"
+        // top-0.5 centra os 44px do alvo na linha dos 20px do chevron.
+        className="absolute top-0.5 right-8"
       >
         <IconeCaneta className="size-4" />
       </BotaoIcone>
