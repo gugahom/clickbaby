@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { formatarHora } from '@/lib/formato'
+import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
@@ -12,6 +13,12 @@ import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { IconeCaneta } from '@/components/ui/icones'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
+
+/** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
+const CorDoAlerta: Record<NivelAlerta, string> = {
+  proximo: 'var(--atencao)',
+  iminente: 'var(--atrasado)',
+}
 
 interface PropsCasoLinha {
   caso: CasoQuadro
@@ -30,6 +37,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
   const sla = estadoSla(caso, agora)
   const cor = corDoCaso(caso.corCalendar)
   const hora = formatarHora(caso.previsaoEm)
+  const alerta = alertaDeHorario(caso, etapas, agora)
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
@@ -50,6 +58,21 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         // de que a coisa inteira é clicável.
         'group relative overflow-hidden rounded-cartao border border-border bg-card shadow-cartao transition-shadow hover:shadow-cartao-alto',
         caso.ehRascunho && 'border-rascunho-borda bg-rascunho-fundo/50',
+        /*
+          O ANEL, SÓ NO VERMELHO.
+          
+          O gestor pediu o card inteiro amarelo e depois vermelho. O card
+          inteiro já tem três donos — âmbar de rascunho, verde de pronto para
+          entrega, branco do resto — e um quarto significado por cima faria a
+          cor deixar de dizer qualquer coisa: um rascunho amarelo e um
+          atendimento em uma hora ficariam idênticos.
+          
+          Então a urgência mora na ESPINHA (abaixo), que é estreita, some do
+          resto e já é o canal de "o que importa neste caso agora" — o pronto
+          para entrega usa o mesmo truque. O anel só entra na meia hora final,
+          quando vale gastar a atualização visual do cartão inteiro.
+        */
+        alerta?.nivel === 'iminente' && 'ring-2 ring-atrasado/45',
         prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
         caso.ehTerminal && 'opacity-60 shadow-none',
       )}
@@ -83,9 +106,32 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
 
               Pronto para entrega ROUBA a espinha: naquele estado, "quem é este
               caso na agenda" importa menos que "este aqui está te esperando". */}
+          {/*
+            A ESPINHA É O ALERTA.
+            
+            Precedência: hora chegando > pronto para entrega > cor do Calendar.
+            Os dois primeiros não coexistem na prática (um caso pronto para
+            entrega já passou de todo horário marcado), mas a ordem está
+            escrita para não depender disso.
+            
+            No vermelho ela pulsa. Numa TV a quatro metros, texto de 13px não
+            se lê e cor parada compete com as outras oito do quadro —
+            movimento, não. É o mesmo recurso do marcador de etapa em
+            andamento, e continua raro o bastante para funcionar.
+          */}
           <div
-            className="w-1.5 flex-shrink-0 rounded-full"
-            style={{ backgroundColor: prontoParaEntrega ? 'var(--pronto)' : cor }}
+            className={clsx(
+              'flex-shrink-0 rounded-full transition-all',
+              alerta ? 'w-2.5' : 'w-1.5',
+              alerta?.nivel === 'iminente' && 'motion-safe:animate-pulse',
+            )}
+            style={{
+              backgroundColor: alerta
+                ? CorDoAlerta[alerta.nivel]
+                : prontoParaEntrega
+                  ? 'var(--pronto)'
+                  : cor,
+            }}
             aria-hidden="true"
           />
 
@@ -100,6 +146,28 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                   )}
                   {titulo}
                 </h3>
+
+                {/*
+                  A contagem, para quem está perto. A espinha diz "olhe aqui" do
+                  outro lado da sala; isto diz QUANTO falta, que é a pergunta de
+                  quem já olhou. Nomeia também O QUÊ — sem isso, um card com
+                  banho e fechamento marcados no mesmo dia não diz para qual dos
+                  dois está apitando.
+                */}
+                {alerta && (
+                  <p className="mt-1">
+                    <span
+                      className={clsx(
+                        'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold',
+                        alerta.nivel === 'iminente'
+                          ? 'bg-atrasado text-white'
+                          : 'bg-atencao/15 text-atencao',
+                      )}
+                    >
+                      {alerta.oQue} {alerta.rotulo}
+                    </span>
+                  </p>
+                )}
 
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
                   {caso.pacoteNome ? (

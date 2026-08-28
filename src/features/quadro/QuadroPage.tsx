@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
-import { useRetornarDaUti } from './api/useAcoes'
+import { useReabrirCaso, useRetornarDaUti, type EtapaTipo } from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
 import { mensagemDeErro } from './lib/erros'
 import {
@@ -20,6 +20,7 @@ import {
   casosConcluidos,
   casosNaUti,
 } from './lib/secoes'
+import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
 import { DiaBloco } from './components/DiaBloco'
 import { CasoLinha } from './components/CasoLinha'
@@ -28,6 +29,10 @@ import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
 import { RascunhosPainel } from './components/RascunhosPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
+import { CampoBusca } from './components/CampoBusca'
+import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
+import { IconeReabrir } from '@/components/ui/icones'
+import type { CasoQuadro } from './types'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -48,16 +53,38 @@ export function QuadroPage() {
   const [erroUti, setErroUti] = useState<string | null>(null)
   const [erroReels, setErroReels] = useState<string | null>(null)
   const [erroMaster, setErroMaster] = useState<string | null>(null)
+  const [busca, setBusca] = useState('')
+  const [reabrindo, setReabrindo] = useState<CasoQuadro | null>(null)
+  const [erroReabrir, setErroReabrir] = useState<string | null>(null)
+  const reabrirCaso = useReabrirCaso()
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
-  const { blocos, rascunhos, naUti, emReels, emMaster, concluidos, totalAbertos } = useMemo(() => {
-    const casos = data?.casos ?? []
+  const buscando = busca.trim() !== ''
+
+  const {
+    blocos,
+    rascunhos,
+    naUti,
+    emReels,
+    emMaster,
+    concluidos,
+    totalAbertos,
+    totalGeral,
+  } = useMemo(() => {
+    const todos = data?.casos ?? []
     const etapas = data?.etapasPorCaso ?? SEM_ETAPAS
+
+    // A busca filtra ANTES do agrupamento, e por isso vale para tudo de uma
+    // vez: dias, rascunhos, concluídos e as três seções. Filtrar depois
+    // exigiria repetir a regra em cada lista, e elas divergiriam na primeira
+    // vez que alguem mexesse em uma só.
+    const casos = filtrarCasos(todos, busca)
     const abertos = blocosAbertos(agruparPorDia(casos))
+
     return {
       blocos: abertos,
       rascunhos: casos.filter((c) => c.ehRascunho && !c.ehTerminal && !c.naUti),
@@ -66,8 +93,11 @@ export function QuadroPage() {
       emMaster: casosComVideoMasterAberto(casos, etapas),
       concluidos: casosConcluidos(casos),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
+      // O denominador do "3 de 88". Sem ele a busca diria "3 casos" e não
+      // haveria como saber se sobrou pouco por filtro ou por dia vazio.
+      totalGeral: blocosAbertos(agruparPorDia(todos)).reduce((soma, b) => soma + b.total, 0),
     }
-  }, [data])
+  }, [data, busca])
 
   if (error) {
     return (
@@ -84,19 +114,30 @@ export function QuadroPage() {
   const listaPorDia = (
     <>
       {blocos.length === 0 ? (
-        <Aviso titulo="Nenhum dia aberto">
-          Todo caso previsto já foi resolvido ou está na UTI. Um dia só sai do Quadro
-          quando não sobra trabalho nele — nunca por passagem de data.
-        </Aviso>
+        buscando ? (
+          <Aviso titulo={`Nada encontrado para “${busca.trim()}”`}>
+            A busca olha nome da mãe, do bebê, pacote e maternidade. O caso pode
+            estar em Rascunhos ou Concluídos — as abas filtram pelo mesmo termo.
+          </Aviso>
+        ) : (
+          <Aviso titulo="Nenhum dia aberto">
+            Todo caso previsto já foi resolvido ou está na UTI. Um dia só sai do
+            Quadro quando não sobra trabalho nele — nunca por passagem de data.
+          </Aviso>
+        )
       ) : (
         <div className="space-y-5">
           {mostrados.map((bloco, i) => (
             <DiaBloco
-              key={bloco.dia ?? 'sem-data'}
+              // A chave carrega o estado de busca de propósito: o DiaBloco
+              // guarda "aberto" em estado próprio, e sem remontar ele ignoraria
+              // a mudança. Um resultado escondido dentro de um dia fechado é
+              // uma busca que respondeu e não mostrou.
+              key={`${bloco.dia ?? 'sem-data'}-${buscando}`}
               bloco={bloco}
               hoje={hoje}
               etapasPorCaso={etapasPorCaso}
-              abertoInicialmente={i < 2}
+              abertoInicialmente={buscando || i < 2}
             />
           ))}
 
@@ -230,17 +271,49 @@ export function QuadroPage() {
 
   const listaConcluidos =
     concluidos.length === 0 ? (
-      <Aviso titulo="Nenhum caso concluído ainda">
+      <Aviso
+        titulo={
+          buscando
+            ? `Nada concluído para “${busca.trim()}”`
+            : 'Nenhum caso concluído ainda'
+        }
+      >
         Casos encerrados e cancelados aparecem aqui.
       </Aviso>
     ) : (
       <div className="space-y-2 p-3 md:p-4">
         {concluidos.map((caso) => (
-          <CasoLinha
-            key={caso.id}
-            caso={caso}
-            etapas={etapasPorCaso.get(caso.id) ?? []}
-          />
+          <div key={caso.id}>
+            <CasoLinha caso={caso} etapas={etapasPorCaso.get(caso.id) ?? []} />
+
+            {/*
+              REABRIR, e só no ENCERRADO.
+              
+              O gestor: "aqui no quadro de concluído eu não achei nenhuma opção
+              pra reativar o cliente e colocar a edição". Não havia mesmo — o
+              caso saia do Quadro e não voltava, e o retrabalho acontecia fora
+              do sistema, que é onde ele deixa de ser medido.
+              
+              Cancelado não ganha o botão: desfazer um cancelamento é vender de
+              novo, não editar de novo. A RPC também recusa — isto aqui é só
+              para não oferecer o que vai ser negado.
+            */}
+            {caso.statusOperacional === 'encerrado' && (
+              <div className="mt-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErroReabrir(null)
+                    setReabrindo(caso)
+                  }}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-marca-suave hover:text-marca"
+                >
+                  <IconeReabrir className="size-4" />
+                  Reabrir para alteração
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
     )
@@ -254,7 +327,9 @@ export function QuadroPage() {
             <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
               {isPending
                 ? 'Carregando…'
-                : `${totalAbertos} ${totalAbertos === 1 ? 'caso' : 'casos'} em ${blocos.length} ${blocos.length === 1 ? 'dia' : 'dias'}`}
+                : buscando
+                  ? `${totalAbertos} de ${totalGeral} ${totalGeral === 1 ? 'caso' : 'casos'}`
+                  : `${totalAbertos} ${totalAbertos === 1 ? 'caso' : 'casos'} em ${blocos.length} ${blocos.length === 1 ? 'dia' : 'dias'}`}
               {/* Só aparece quando NÃO está conectado. Um selo verde permanente
                   vira ruído que ninguém lê; o que a pessoa precisa saber é o
                   contrário — que a tela pode estar velha. */}
@@ -291,6 +366,22 @@ export function QuadroPage() {
               Concluídos ({concluidos.length})
             </BotaoAba>
           </div>
+        </div>
+
+        {/*
+          A BUSCA É UMA SÓ, e serve a aba que estiver aberta.
+          
+          Uma por aba seria mais arrumado e pior de usar: quem procura a
+          Jéssica não sabe se ela está no Quadro, nos Rascunhos ou nos
+          Concluídos — é por não saber que está procurando. Com um campo só, o
+          termo continua valendo ao trocar de aba, e a resposta é achar em vez
+          de digitar de novo.
+          
+          Linha própria, e não ao lado do título: num aparelho de 375px ela
+          espremeria o título e os botões de aba num beco.
+        */}
+        <div className="mt-3 flex">
+          <CampoBusca valor={busca} onMudar={setBusca} />
         </div>
 
         {/* Mobile: as duas colunas não cabem lado a lado, então viram abas. */}
@@ -398,6 +489,23 @@ export function QuadroPage() {
           </>
         )}
       </div>
+
+      {reabrindo && (
+        <ReabrirCasoDialogo
+          caso={reabrindo}
+          etapas={etapasPorCaso.get(reabrindo.id) ?? []}
+          ocupado={reabrirCaso.isPending}
+          erro={erroReabrir}
+          onCancelar={() => setReabrindo(null)}
+          onConfirmar={(motivo, etapas) => {
+            setErroReabrir(null)
+            reabrirCaso
+              .mutateAsync({ casoId: reabrindo.id, motivo, etapas: etapas as EtapaTipo[] })
+              .then(() => setReabrindo(null))
+              .catch((e) => setErroReabrir(mensagemDeErro(e)))
+          }}
+        />
+      )}
     </div>
   )
 }

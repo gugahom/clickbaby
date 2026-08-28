@@ -53,6 +53,12 @@ export interface CasoQuadro {
   etapasConcluidas: number
   /** Serve para ordenar a aba Concluídos pelo que foi resolvido por último. */
   updatedAt: string | null
+  /**
+   * Quando o caso voltou de um encerramento, por pedido de alteração da
+   * família. NULL na esmagadora maioria — e quando presente, é a base do
+   * `venceEm`: a revisão ganha o prazo do pacote contado da reabertura.
+   */
+  reabertoEm: string | null
 }
 
 /**
@@ -93,6 +99,12 @@ export interface EtapaQuadro {
   concluidoEm: string | null
   /** Janela de pausa aberta. O tempo aqui não conta como trabalho. */
   pausadoEm: string | null
+  /**
+   * Hora combinada para ESTA etapa — banho e fechamento, marcados com a
+   * família depois do parto. Data PLANEJADA, a única que a invariante 3.4
+   * permite vir do cliente. É o que alimenta o alerta de aproximação.
+   */
+  previsaoEm: string | null
   estacao: string | null
   responsavelNome: string | null
   proximoResponsavelNome: string | null
@@ -146,6 +158,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     etapasTotal: linha.etapas_total ?? 0,
     etapasConcluidas: linha.etapas_concluidas ?? 0,
     updatedAt: linha.updated_at,
+    reabertoEm: linha.reaberto_em,
   }
 }
 
@@ -169,6 +182,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     pausadoEm: linha.pausado_em,
+    previsaoEm: linha.previsao_em,
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
     proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,

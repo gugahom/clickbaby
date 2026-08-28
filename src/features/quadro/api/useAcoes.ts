@@ -4,6 +4,7 @@ import type { Database } from '@/types/database'
 import { chavesQuadro } from './useQuadro'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
+export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
 
 export interface EntregavelResumo {
   id: string
@@ -251,6 +252,34 @@ export interface PessoaOpcao {
  * Cache longo de propósito: cadastro muda em escala de semanas, e a lista é
  * aberta no meio de um handoff — não é hora de esperar rede.
  */
+/**
+ * Traz de volta um caso encerrado, com o motivo e as etapas a refazer.
+ *
+ * O motivo não é burocracia: ele vira a observação de cada etapa criada, e é
+ * o que a editora lê para saber o que a família pediu. A RPC recusa em branco.
+ */
+export function useReabrirCaso() {
+  return useAcaoDoQuadro<{ casoId: string; motivo: string; etapas: EtapaTipo[] }>(
+    ({ casoId, motivo, etapas }) =>
+      chamar('reabrir_caso', {
+        p_caso_id: casoId,
+        p_motivo: motivo,
+        p_etapas: etapas,
+      }),
+  )
+}
+
+/** A hora combinada de uma etapa (banho, fechamento). `null` limpa. */
+export function useAgendarEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; previsaoEm: string | null }>(
+    ({ casoEtapaId, previsaoEm }) =>
+      chamar('agendar_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_previsao_em: previsaoEm,
+      }),
+  )
+}
+
 export function usePessoasAtivas() {
   return useQuery({
     queryKey: ['pessoas', 'ativas'],
