@@ -152,3 +152,40 @@ function rotular(minutos: number): string {
   const resto = atraso % 60
   return `atrasado ${horas}h${resto > 0 ? String(resto).padStart(2, '0') : ''}`
 }
+
+/**
+ * Os casos em alerta sobem para o topo do dia.
+ *
+ * O PEDIDO: "esses cards urgentes devem subir na lista do dia para serem os
+ * primeiros a serem vistos como prioridade de atendimento inicial".
+ *
+ * POR QUE A ORDEM CRONOLÓGICA NÃO BASTAVA. Ela está certa como leitura de
+ * agenda, e continua valendo — o problema é o que se acumula ACIMA. Um dia
+ * com doze casos põe os das 8h no topo, resolvidos ou não, e o atendimento das
+ * 17h que começa em dez minutos fica no fim de uma lista que rola. A cor
+ * resolvia "qual é", não resolvia "onde está".
+ *
+ * SORT ESTÁVEL, e só três pesos. Quem não está em alerta não se mexe: mantém
+ * exatamente a ordem por hora que já vinha de `agruparPorDia`. Só os poucos
+ * cartões dentro da janela mudam de lugar, e só pela hora que ela dura.
+ *
+ * O CARTÃO QUE PULA PRECISA SE EXPLICAR, senão a lista parece instável. Ele se
+ * explica: sobe junto com o anel colorido e o chip dizendo "Entrada em 9 min".
+ * E desce de volta sozinho quando alguém dá play — o mesmo gesto que apaga o
+ * alerta devolve o caso ao lugar cronológico dele.
+ */
+export function ordenarPorUrgencia(
+  casos: CasoQuadro[],
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+  agora: Date,
+): CasoQuadro[] {
+  // Peso calculado UMA vez por caso, e não dentro do comparador: `sort` chama
+  // o comparador O(n log n) vezes, e `alertaDeHorario` percorre as etapas.
+  const pesos = new Map<string, number>()
+  for (const caso of casos) {
+    const alerta = alertaDeHorario(caso, etapasPorCaso.get(caso.id) ?? [], agora)
+    pesos.set(caso.id, alerta === null ? 2 : alerta.nivel === 'iminente' ? 0 : 1)
+  }
+
+  return [...casos].sort((a, b) => (pesos.get(a.id) ?? 2) - (pesos.get(b.id) ?? 2))
+}

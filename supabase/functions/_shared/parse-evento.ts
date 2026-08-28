@@ -46,8 +46,28 @@ const PACOTES_CANONICOS = [
   "BIRTH+REELS",
 ] as const;
 
-// Siglas de maternidade conhecidas (seção 7 do CLAUDE.md).
-const SIGLAS_MATERNIDADE = ["GNDI", "HSC", "HNSG", "HNSF", "CWB"] as const;
+// Maternidades conhecidas (seção 7 do CLAUDE.md).
+//
+// Cada uma tem a SIGLA que vai para o banco e as FORMAS como ela aparece
+// escrita no título do evento. As cinco primeiras só têm uma forma, e por
+// isso a versão anterior deste arquivo dava conta comparando a última
+// PALAVRA do título. As três novas quebraram isso: "LUIZA DE MARILAC" são
+// três palavras, e comparar só a última acharia "MARILAC" e deixaria "LUIZA
+// DE" grudado no nome do pacote — que aí não casa com nada e o caso vira
+// rascunho pendente.
+//
+// A sigla é o que aparece no chip do cartão. As formas são o que a equipe
+// digita, e uma sigla pode ter várias.
+const MATERNIDADES = [
+  { sigla: "GNDI", formas: ["GNDI"] },
+  { sigla: "HSC", formas: ["HSC"] },
+  { sigla: "HNSG", formas: ["HNSG"] },
+  { sigla: "HNSF", formas: ["HNSF"] },
+  { sigla: "CWB", formas: ["CWB"] },
+  { sigla: "ROCIO", formas: ["ROCIO"] },
+  { sigla: "MACKENZIE", formas: ["MACKENZIE", "MACK"] },
+  { sigla: "MARILAC", formas: ["LUIZA DE MARILAC", "MARILAC"] },
+] as const;
 
 // Exportado para o sync (supabase/functions/sync-calendar) reusar na hora
 // de casar pacote_bruto (saída deste parser) contra pacotes.nome no banco
@@ -63,7 +83,13 @@ export function normalizar(texto: string): string {
 }
 
 const PACOTES_CANONICOS_NORMALIZADOS = PACOTES_CANONICOS.map(normalizar);
-const SIGLAS_NORMALIZADAS = SIGLAS_MATERNIDADE.map(normalizar);
+
+// Todas as formas, achatadas e ordenadas da MAIS LONGA para a mais curta.
+// A ordem é a regra inteira: "LUIZA DE MARILAC" tem que ser tentada antes de
+// "MARILAC", senão a curta casa primeiro e sobra "LUIZA DE" como pacote.
+const FORMAS_MATERNIDADE = MATERNIDADES
+  .flatMap((m) => m.formas.map((f) => ({ sigla: m.sigla, palavras: normalizar(f).split(" ") })))
+  .sort((a, b) => b.palavras.length - a.palavras.length);
 
 // Retorna o texto ORIGINAL (só com espaço nas pontas colapsado), não uma
 // versão reescrita — "pacote_bruto reconhecido" é o que veio no título,
@@ -75,10 +101,33 @@ function combinaComPacoteCanonico(texto: string): string | null {
     : null;
 }
 
+/** O segmento INTEIRO é uma maternidade conhecida? */
 function combinaComSigla(texto: string): string | null {
-  const normalizado = normalizar(texto);
-  const indice = SIGLAS_NORMALIZADAS.indexOf(normalizado);
-  return indice === -1 ? null : SIGLAS_MATERNIDADE[indice];
+  const alvo = normalizar(texto);
+  const achada = FORMAS_MATERNIDADE.find((f) => f.palavras.join(" ") === alvo);
+  return achada ? achada.sigla : null;
+}
+
+/**
+ * Arranca a maternidade do FIM de uma lista de palavras.
+ *
+ * Devolve a sigla e o que sobrou antes dela — que é o texto do pacote. Sem
+ * isso, um título com a maternidade embutida ("BABY REELS LUIZA DE MARILAC")
+ * só poderia ser lido palavra a palavra, e nomes de várias palavras ficariam
+ * de fora.
+ */
+function extrairMaternidadeDoFim(
+  palavras: string[],
+): { sigla: string; restante: string[] } | null {
+  for (const forma of FORMAS_MATERNIDADE) {
+    const n = forma.palavras.length;
+    if (palavras.length < n) continue;
+    const cauda = palavras.slice(-n).map((p) => normalizar(p)).join(" ");
+    if (cauda === forma.palavras.join(" ")) {
+      return { sigla: forma.sigla, restante: palavras.slice(0, -n) };
+    }
+  }
+  return null;
 }
 
 export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
@@ -130,12 +179,12 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
     // BEBÊ - PACOTE[ MATERNIDADE], maternidade embutida sem "-" própria.
     const bebe = segmentos[0];
     const palavras = segmentos[1].split(" ").filter((p) => p.length > 0);
-    const ultimaPalavra = palavras[palavras.length - 1];
-    const siglaTentativa = ultimaPalavra ? combinaComSigla(ultimaPalavra) : null;
+    const achada = extrairMaternidadeDoFim(palavras);
+    const siglaTentativa = achada ? achada.sigla : null;
 
-    if (siglaTentativa && palavras.length > 1) {
+    if (achada && achada.restante.length > 0) {
       const pacoteReconhecido = combinaComPacoteCanonico(
-        palavras.slice(0, -1).join(" "),
+        achada.restante.join(" "),
       );
       if (pacoteReconhecido) {
         return {
@@ -169,10 +218,10 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
   const palavras = (segmentos[0] ?? "").split(" ").filter((p) => p.length > 0);
   const bebe = palavras[0] ?? "";
   const restoPalavras = palavras.slice(1);
-  const ultimaPalavra = restoPalavras[restoPalavras.length - 1];
-  const siglaTentativa = ultimaPalavra ? combinaComSigla(ultimaPalavra) : null;
-  const pacoteTexto = siglaTentativa
-    ? restoPalavras.slice(0, -1).join(" ")
+  const achada = extrairMaternidadeDoFim(restoPalavras);
+  const siglaTentativa = achada ? achada.sigla : null;
+  const pacoteTexto = achada
+    ? achada.restante.join(" ")
     : restoPalavras.join(" ");
 
   return {

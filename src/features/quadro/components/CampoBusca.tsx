@@ -54,7 +54,7 @@ export function CampoBusca({ valor, onMudar, resultado }: PropsCampoBusca) {
         placeholder="Buscar mãe, bebê, pacote…"
         // `search` nativo desenha um X próprio no WebKit, com 12px de alvo e
         // fora do nosso desenho. O nosso substitui.
-        className="h-11 w-full rounded-full border border-border bg-card pr-10 pl-9 text-sm transition-colors placeholder:text-muted-foreground focus:border-marca focus:ring-2 focus:ring-marca/20 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-11 w-full rounded-full border border-border bg-card pr-11 pl-9 text-sm transition-colors placeholder:text-muted-foreground focus:border-marca focus:ring-2 focus:ring-marca/20 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       />
 
       {valor !== '' && (
@@ -62,7 +62,10 @@ export function CampoBusca({ valor, onMudar, resultado }: PropsCampoBusca) {
           type="button"
           onClick={() => onMudar('')}
           aria-label="Limpar busca"
-          className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          // size-11, não size-9: 44px é o mínimo da seção 6 do CLAUDE.md, e o
+          // campo tem exatamente essa altura, então o alvo cabe inteiro dentro
+          // dele. O ícone continua com 16px — quem cresce é a área de toque.
+          className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <IconeX className="size-4" />
         </button>

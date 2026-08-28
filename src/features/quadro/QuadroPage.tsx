@@ -20,6 +20,7 @@ import {
   casosConcluidos,
   casosNaUti,
 } from './lib/secoes'
+import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
 import { DiaBloco } from './components/DiaBloco'
@@ -83,7 +84,13 @@ export function QuadroPage() {
     // exigiria repetir a regra em cada lista, e elas divergiriam na primeira
     // vez que alguem mexesse em uma só.
     const casos = filtrarCasos(todos, busca)
-    const abertos = blocosAbertos(agruparPorDia(casos))
+
+    // A urgência entra POR CIMA da ordem por hora, não no lugar dela: quem não
+    // está em alerta mantém a posição cronológica. Ver ordenarPorUrgencia.
+    const abertos = blocosAbertos(agruparPorDia(casos)).map((bloco) => ({
+      ...bloco,
+      casos: ordenarPorUrgencia(bloco.casos, etapas, agora),
+    }))
 
     return {
       blocos: abertos,
@@ -97,7 +104,11 @@ export function QuadroPage() {
       // haveria como saber se sobrou pouco por filtro ou por dia vazio.
       totalGeral: blocosAbertos(agruparPorDia(todos)).reduce((soma, b) => soma + b.total, 0),
     }
-  }, [data, busca])
+    // `agora` entra nas dependências porque a ordem depende dele: um caso entra
+    // na janela de alerta sozinho, com o relógio andando, e precisa subir sem
+    // que ninguém recarregue. O relógio bate de minuto em minuto e são ~90
+    // casos — reagrupar custa nada.
+  }, [data, busca, agora])
 
   if (error) {
     return (
@@ -323,7 +334,21 @@ export function QuadroPage() {
       <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border bg-card/85 px-3 py-3 backdrop-blur md:px-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight md:text-2xl">Quadro</h1>
+            {/*
+              "Painel de atividades" no título, "Quadro" na aba.
+              
+              Não é inconsistência: são duas coisas. O título nomeia a TELA
+              inteira, que hoje tem quatro visões; a aba nomeia UMA delas, e
+              trocar o rótulo dela para "Painel de atividades" a colocaria em
+              pé de igualdade com Rascunhos e Concluídos — que são recortes
+              dela, não irmãs.
+              
+              `truncate` porque em 375px o título novo é quase o dobro do
+              antigo e disputaria a linha com os botões de aba.
+            */}
+            <h1 className="truncate text-lg font-bold tracking-tight md:text-2xl">
+              Painel de atividades
+            </h1>
             <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
               {isPending
                 ? 'Carregando…'

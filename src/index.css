@@ -76,6 +76,7 @@
   --color-andamento: var(--andamento);
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
+  --color-alerta-proximo: var(--alerta-proximo);
   --color-rascunho: var(--rascunho);
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
@@ -135,6 +136,24 @@
   --andamento: oklch(0.52 0.17 248);
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
+
+  /* HORA CHEGANDO — e por que ela não é amarela.
+  
+     O gestor pediu "amarelo a uma hora, vermelho a meia hora". A primeira
+     versão usou `--atencao` (matiz 68) e o resultado na tela foi imediato: o
+     cartão em alerta ficou da mesma cor do cartão em rascunho (matiz 92-95).
+     Dois amarelos pálidos lado a lado, dizendo coisas sem relação nenhuma —
+     "falta cadastro" e "o atendimento começa em 40 minutos". Nenhum ajuste de
+     opacidade separa isso; são vizinhos no círculo.
+  
+     Então o alerta passa a ser LARANJA (45), e vira uma rampa: laranja a uma
+     hora, vermelho (25) a meia hora. O amarelo fica sendo do rascunho, sem
+     disputa, e a escalada ganha uma leitura que "amarelo depois vermelho" não
+     tinha — as duas etapas agora são a mesma cor esquentando.
+  
+     L 0.52 e não mais claro porque este valor também é TEXTO no chip: precisa
+     dos 4.5:1 sobre branco. */
+  --alerta-proximo: oklch(0.52 0.175 45);
 
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
      do logo (97), sem perder o 4.5:1 que o texto precisa. */
@@ -248,5 +267,114 @@
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 1px;
+  }
+}
+
+/* ============================================================================
+   O ANEL DE ALERTA — quando o horário do caso está chegando.
+   ============================================================================
+
+   O gestor pediu o card inteiro amarelo a uma hora e vermelho a meia hora.
+   Da primeira vez isso ficou na espinha (a barra da esquerda) e num chip, e
+   ele achou tímido — quer algo que dê senso de urgência ao card.
+
+   POR QUE UM ANEL E NÃO O FUNDO. O fundo do card já tem três donos: âmbar de
+   rascunho, verde de pronto para entrega, branco do resto. Pintar o fundo de
+   amarelo faria um rascunho e um atendimento em uma hora ficarem idênticos —
+   a cor deixaria de dizer qual dos dois é. A BORDA está livre: hoje ela é
+   sempre a mesma linha cinza de 1px, e não carrega significado nenhum.
+
+   POR QUE NÃO É `border`. Trocar 1px por 2px empurraria o conteúdo do card e
+   a lista inteira daria um pulo a cada vez que um caso entra ou sai da janela
+   de alerta. Este anel é desenhado DENTRO, com padding + mask, então tem a
+   espessura que quiser sem mexer no layout.
+
+   A LUZ QUE GIRA, só no vermelho. O `@property` é o que permite animar um
+   ângulo: sem ele o `--angulo-alerta` seria um texto qualquer e o
+   conic-gradient saltaria de 0 para 360 em vez de percorrer. Movimento é o
+   que ainda se lê numa TV a quatro metros, onde cor parada compete com as
+   outras oito do quadro — e ele fica reservado à meia hora final, senão vira
+   exatamente o carnaval que se está tentando evitar. */
+
+@property --angulo-alerta {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes girar-alerta {
+  to {
+    --angulo-alerta: 360deg;
+  }
+}
+
+@layer components {
+  /* O véu da cor sobre o cartão — SÓ na meia hora final.
+  
+     Ele existia nos dois níveis e foi medido contra o fundo do rascunho: 24 de
+     distância em RGB. Dois lavados pálidos que dizem coisas sem relação
+     ("falta cadastro" e "começa em 40 minutos"), e nenhuma opacidade os
+     separa — só os deixa mais ou menos parecidos. O anel, esse, está a 230 de
+     distância: é ele que distingue.
+  
+     Então o PREENCHIMENTO fica sendo do rascunho e o CONTORNO do alerta — dois
+     canais, dois significados, sem ambiguidade possível. O véu volta na meia
+     hora final, onde é vermelho e não colide com nada, e aí ele ganha uma
+     função extra: a escalada deixa de ser só troca de cor e passa a ser QUANTO
+     do cartão está envolvido — primeiro a borda, depois o cartão inteiro.
+  
+     É uma CAMADA e não uma classe `bg-*`: `bg-atrasado/6` e `bg-card` são a
+     mesma propriedade, e no Tailwind quem vence é a ordem no CSS gerado, não a
+     ordem na string — o véu simplesmente não aparecia. Sobreposto, ele soma ao
+     fundo que já existe em vez de substituí-lo. */
+  .anel-alerta-vivo::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--cor-alerta);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  .anel-alerta::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: var(--cor-alerta);
+    /* O par de máscaras é o truque do anel: uma cobre a caixa inteira, a
+       outra só a área interna ao padding, e o `exclude` deixa passar apenas
+       a diferença — a moldura. Sem isso o gradiente cobriria o card todo. */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .anel-alerta-vivo::after {
+    background: conic-gradient(
+      from var(--angulo-alerta),
+      var(--cor-alerta) 0deg,
+      var(--cor-alerta) 290deg,
+      oklch(from var(--cor-alerta) 0.92 calc(c * 0.35) h) 335deg,
+      var(--cor-alerta) 360deg
+    );
+    animation: girar-alerta 2.4s linear infinite;
+  }
+
+  /* Sem movimento, o anel continua existindo — só para de girar. Tirar o
+     alerta de quem pediu menos animação seria tirar a informação junto. */
+  @media (prefers-reduced-motion: reduce) {
+    .anel-alerta-vivo::after {
+      background: var(--cor-alerta);
+      animation: none;
+    }
   }
 }
