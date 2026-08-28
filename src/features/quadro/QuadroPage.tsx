@@ -20,6 +20,7 @@ import {
   casosConcluidos,
   casosNaUti,
 } from './lib/secoes'
+import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
 import { DiaBloco } from './components/DiaBloco'
@@ -83,7 +84,13 @@ export function QuadroPage() {
     // exigiria repetir a regra em cada lista, e elas divergiriam na primeira
     // vez que alguem mexesse em uma só.
     const casos = filtrarCasos(todos, busca)
-    const abertos = blocosAbertos(agruparPorDia(casos))
+
+    // A urgência entra POR CIMA da ordem por hora, não no lugar dela: quem não
+    // está em alerta mantém a posição cronológica. Ver ordenarPorUrgencia.
+    const abertos = blocosAbertos(agruparPorDia(casos)).map((bloco) => ({
+      ...bloco,
+      casos: ordenarPorUrgencia(bloco.casos, etapas, agora),
+    }))
 
     return {
       blocos: abertos,
@@ -97,7 +104,11 @@ export function QuadroPage() {
       // haveria como saber se sobrou pouco por filtro ou por dia vazio.
       totalGeral: blocosAbertos(agruparPorDia(todos)).reduce((soma, b) => soma + b.total, 0),
     }
-  }, [data, busca])
+    // `agora` entra nas dependências porque a ordem depende dele: um caso entra
+    // na janela de alerta sozinho, com o relógio andando, e precisa subir sem
+    // que ninguém recarregue. O relógio bate de minuto em minuto e são ~90
+    // casos — reagrupar custa nada.
+  }, [data, busca, agora])
 
   if (error) {
     return (
