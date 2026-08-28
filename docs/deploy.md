@@ -94,3 +94,77 @@ npx vite preview
 O preview sobe em `http://localhost:4173/quadro/` e serve o build real, contra o
 Supabase remoto. Vale conferir três coisas: a tela carrega, navegar para a Fila
 muda a URL para `/quadro/fila`, e recarregar nessa URL continua funcionando.
+
+---
+
+## Quando produção não muda depois de um merge
+
+O sintoma é sempre o mesmo — "mergeei e o site continua igual" — e as causas
+são poucas. Verifique nesta ordem, que vai da mais provável para a menos.
+
+### 1. O deploy realmente aconteceu?
+
+Compare o que está no ar com o que o `main` produz. O nome do arquivo carrega
+um hash do conteúdo, então **hash igual significa bundle idêntico**:
+
+```bash
+curl -s https://clickbaby.com.br/quadro/ | grep -oE '/quadro/assets/index-[^"]+\.js'
+npm run build   # o nome aparece na saída
+```
+
+Se batem, produção **é** o `main` e o problema está em outro lugar (dado, sessão,
+aba antiga). Se não batem, siga.
+
+### 2. O build falhou por causa da variável de ambiente
+
+É o caso mais comum, e o log diz:
+
+```
+VITE_SUPABASE_URL nao definida.
+```
+
+O Vite **embute** o valor no bundle em tempo de build. Uma variável de *runtime*
+nunca chega lá: quando o site roda, o build já aconteceu. As duas listas moram na
+mesma tela do painel e têm nomes parecidos — é daí que vem a confusão.
+
+- A variável tem que estar nas variáveis de **build**.
+- **Production** e **Preview** são listas separadas. Preencher só uma faz o
+  deploy de branch quebrar e o de `main` passar, ou o contrário.
+- **Adicionar variável não dispara build.** O último deploy verde continua
+  servindo o bundle antigo, e a tela fica atrasada sem erro nenhum visível.
+  Depois de mexer nas variáveis, use *Retry deployment* ou publique de novo.
+
+Desde `fix/build-diz-onde-esta-a-variavel`, todo build verde imprime para onde
+ele vai falar:
+
+```
+[clickbaby] build apontando para opfplextlmakxsxcufey.supabase.co
+```
+
+Se essa linha não aparece no log, o build não chegou até ali.
+
+### 3. Publicar à mão
+
+Não depende do painel nem da integração com o git. Serve para destravar na hora
+e para provar que o problema é do gatilho, não do código:
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name=clickbaby --branch=main
+```
+
+`dist`, não `dist/quadro` — mesma razão do *Build output directory*: o
+`_redirects` mora na raiz do publicado. O `--branch=main` é o que faz o deploy
+virar produção; sem ele vira preview, com URL própria e sem tocar o domínio.
+
+O `wrangler` pede login na primeira vez (`npx wrangler login`), e as variáveis
+de build **não** se aplicam aqui: quem constrói é a sua máquina, com o seu
+`.env`. É por isso que este caminho funciona mesmo com o painel mal configurado —
+e por isso ele não corrige a causa.
+
+### 4. A integração com o git parou
+
+Se o `main` não constrói sozinho mas o deploy manual funciona, o gatilho é que
+está desligado. No painel, em *Builds & deployments*: confirme que o repositório
+segue conectado, que a branch de produção é `main`, e que não há filtro de
+caminho excluindo o que mudou.
