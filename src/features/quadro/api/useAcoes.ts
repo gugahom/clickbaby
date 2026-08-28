@@ -269,6 +269,23 @@ export function useReabrirCaso() {
   )
 }
 
+/**
+ * Marca a etapa como DISPENSADA — ela não vai acontecer neste caso.
+ *
+ * É o que destrava um BIRTH sem fechamento: dispensada conta como resolvida na
+ * trava de encerramento, então o caso passa a poder fechar. Reversível pelo
+ * mesmo botão de desfazer da conclusão.
+ */
+export function useDispensarEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; motivo?: string }>(
+    ({ casoEtapaId, motivo }) =>
+      chamar('dispensar_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_motivo: motivo ?? null,
+      }),
+  )
+}
+
 /** A hora combinada de uma etapa (banho, fechamento). `null` limpa. */
 export function useAgendarEtapa() {
   return useAcaoDoQuadro<{ casoEtapaId: string; previsaoEm: string | null }>(

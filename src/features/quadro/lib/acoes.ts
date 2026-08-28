@@ -169,11 +169,39 @@ export function podeReabrir(
   etapa: EtapaQuadro,
   caso: CasoQuadro,
 ): Disponibilidade {
-  if (etapa.status !== 'concluida') {
-    return { habilitada: false, motivo: 'Só se reabre etapa concluída.' }
+  // Dispensada entra junto desde a migration 20260828211156: dispensar é um
+  // toque só, e lançar um gesto de um toque sem caminho de volta repetiria o
+  // problema que o próprio reabrir_etapa existe para resolver.
+  if (etapa.status !== 'concluida' && etapa.status !== 'dispensada') {
+    return { habilitada: false, motivo: 'Só se reabre etapa concluída ou dispensada.' }
   }
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  return OK
+}
+
+/**
+ * Dispensar: dizer que esta etapa NÃO VAI acontecer neste caso.
+ *
+ * O nascimento fica de fora porque é dele que o prazo do caso deriva — a RPC
+ * também recusa, e isto aqui existe só para não oferecer o que será negado.
+ */
+export function podeDispensar(
+  etapa: EtapaQuadro,
+  caso: CasoQuadro,
+): Disponibilidade {
+  if (caso.ehTerminal) {
+    return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  if (etapa.tipo === 'nascimento') {
+    return { habilitada: false, motivo: 'O prazo do caso sai daqui — nascimento não se dispensa.' }
+  }
+  if (etapa.status === 'concluida') {
+    return { habilitada: false, motivo: 'Já concluída — o trabalho aconteceu.' }
+  }
+  if (etapa.status === 'dispensada') {
+    return { habilitada: false, motivo: 'Já dispensada.' }
   }
   return OK
 }

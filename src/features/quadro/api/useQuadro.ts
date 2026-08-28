@@ -82,5 +82,23 @@ export function useQuadro() {
   return useQuery({
     queryKey: chavesQuadro.lista(),
     queryFn: carregarQuadro,
+    /*
+     * DOIS MINUTOS — o mesmo passo do cron do sync.
+     *
+     * O Realtime cobre o que a EQUIPE faz: ação de alguém no banco chega aqui
+     * na hora. Ele não cobre o que chega de FORA — um card criado no Google
+     * Calendar entra pelo job do pg_cron a cada 2 minutos (migration
+     * 20260828015512), e aí só aparecia na próxima vez que alguém recarregasse
+     * a página. Numa TV que fica ligada o dia inteiro, "alguém recarregar"
+     * nunca acontece.
+     *
+     * Alinhado com o cron de propósito: buscar mais rápido que a fonte muda só
+     * gasta requisição, e mais devagar deixaria o caso novo esperando por uma
+     * janela que não é a do sync.
+     *
+     * `refetchIntervalInBackground` fica FALSO (o padrão): aba escondida não
+     * precisa ser buscada, e ao voltar o TanStack refaz a busca sozinho.
+     */
+    refetchInterval: 2 * 60 * 1000,
   })
 }
