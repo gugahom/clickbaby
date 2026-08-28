@@ -6,20 +6,31 @@ import { mensagemDeErro } from '../lib/erros'
 import { ROTULO_RODADA, type CasoQuadro, type EtapaQuadro } from '../types'
 import { AcoesDaEtapa } from './AcoesDaEtapa'
 
-interface PropsCartaoReels {
+interface PropsCartaoDeEdicao {
   caso: CasoQuadro
   hoje: string
   /** Todas as etapas do caso — a precedência depende delas, não só dos reels. */
   etapas: EtapaQuadro[]
-  /** As rodadas de reels ainda abertas, já em ordem. */
-  reels: EtapaQuadro[]
+  /** As etapas desta seção ainda abertas, já em ordem. */
+  daSecao: EtapaQuadro[]
+  /**
+   * Como nomear cada linha. O reels nomeia pelo BLOCO ("Parto", "B+F") porque
+   * tem duas rodadas; o vídeo do MASTER tem uma só, e "Parto" ali seria uma
+   * distinção sem contraparte.
+   */
+  rotularLinha?: (etapa: EtapaQuadro) => string
   onErro: (mensagem: string | null) => void
 }
 
 /**
- * O cartão da seção REELS.
+ * O cartão das seções de EDIÇÃO — REELS e MASTER.
  *
- * POR QUE NÃO É MAIS O CartaoLateral
+ * As duas fazem a mesma pergunta ("que edição há para fazer, e em que PC"),
+ * mudando só a etapa que olham e como nomeiam a linha. Duplicar o cartão para
+ * trocar um rótulo faria o campo do PC e o grupo de ações existirem em dois
+ * lugares que precisariam ser corrigidos juntos.
+ *
+ * POR QUE NÃO É O CartaoLateral
  * Aquele responde uma pergunta por caso — "quem está neste estado e há quanto
  * tempo". A seção REELS deixou de caber nisso: um caso pode ter DUAS rodadas
  * de reels abertas ao mesmo tempo, cada uma com sua pessoa e seu estado, e o
@@ -36,7 +47,17 @@ interface PropsCartaoReels {
  * Fica por RODADA e não por caso porque é a rodada que está aberta numa
  * máquina — a do parto pode ter sido feita num PC e a do B+F em outro.
  */
-export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoReels) {
+export function CartaoDeEdicao({
+  caso,
+  hoje,
+  etapas,
+  daSecao,
+  // O fallback não deveria disparar: só existem as rodadas 1 e 2. Se um dia
+  // existir uma 3, aparecer "Rodada 3" na tela é melhor que uma linha sem
+  // nome nenhum — e denuncia o rótulo que ficou faltando.
+  rotularLinha = (e) => ROTULO_RODADA[e.rodada] ?? `Rodada ${e.rodada}`,
+  onErro,
+}: PropsCartaoDeEdicao) {
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
   const cor = corDoCaso(caso.corCalendar)
 
@@ -56,8 +77,14 @@ export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoRe
         </div>
 
         <ul className="mt-2 space-y-1.5">
-          {reels.map((etapa) => (
-            <LinhaDeRodada key={etapa.id} etapa={etapa} etapas={etapas} onErro={onErro} />
+          {daSecao.map((etapa) => (
+            <LinhaDeRodada
+              key={etapa.id}
+              etapa={etapa}
+              etapas={etapas}
+              rotulo={rotularLinha(etapa)}
+              onErro={onErro}
+            />
           ))}
         </ul>
       </div>
@@ -68,10 +95,12 @@ export function CartaoReels({ caso, hoje, etapas, reels, onErro }: PropsCartaoRe
 function LinhaDeRodada({
   etapa,
   etapas,
+  rotulo,
   onErro,
 }: {
   etapa: EtapaQuadro
   etapas: EtapaQuadro[]
+  rotulo: string
   onErro: (mensagem: string | null) => void
 }) {
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
@@ -90,7 +119,7 @@ function LinhaDeRodada({
             
             E "Reels" nunca acrescentou nada: a seção inteira é de reels.
           */}
-          <span className="font-medium">{ROTULO_RODADA[etapa.rodada]}</span>
+          <span className="font-medium">{rotulo}</span>
           {responsavel && (
             <span className="truncate text-xs text-muted-foreground">· {responsavel}</span>
           )}

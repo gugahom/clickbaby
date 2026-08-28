@@ -344,7 +344,17 @@ Deno.serve(async (req) => {
 //    A chave vem de variavel de ambiente na hora de chamar, nunca colada
 //    num arquivo do repo.
 //
-// 6. Sem cron configurado ainda (proxima fatia) -- so invocacao manual. Quando
-//    entrar, o disparo vem de pg_cron + pg_net de dentro do banco, com a chave
-//    no Vault: nenhum cliente precisa dela.
+// 6. QUEM CHAMA EM PRODUCAO: o job "sync-calendar" do pg_cron, a cada 2
+//    minutos (migration 20260828015512). O disparo sai de dentro do banco via
+//    pg_net, com a URL e a chave lidas do Vault -- nenhum cliente precisa
+//    delas. Ate essa migration NADA chamava esta funcao automaticamente: ela
+//    estava no ar e o intake principal do sistema era 100% manual.
+//
+//    Ligar num ambiente e um gesto explicito:
+//      SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... //        node scripts/configurar-sync-cron.mjs
+//    Sem os segredos, o job acorda e volta a dormir sem erro -- e o que mantem
+//    o banco local quieto depois de um db reset.
+//
+//    Conferir o que ele fez:
+//      select * from cron.job_run_details order by start_time desc limit 10;
 // =============================================================================

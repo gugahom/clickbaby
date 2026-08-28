@@ -44,6 +44,24 @@ export function rotularDia(dia: string, hoje: string): string {
   return rotuloDiaCompleto.format(diaParaData(dia))
 }
 
+/**
+ * '27/08' — a data crua, para acompanhar um rótulo relativo.
+ *
+ * SÓ faz sentido ao lado de 'Hoje'/'Amanhã'/'Ontem'. Os outros rótulos já
+ * trazem dia e mês por extenso, e repetir viraria "quinta-feira, 21 de agosto
+ * 21/08".
+ */
+export function dataCurta(dia: string): string {
+  const [, mes, d] = dia.split('-')
+  return `${d}/${mes}`
+}
+
+/** Um rótulo relativo esconde a data; estes três são os que precisam dela ao lado. */
+export function ehRotuloRelativo(dia: string, hoje: string): boolean {
+  const delta = difDias(dia, hoje)
+  return delta === 0 || delta === 1 || delta === -1
+}
+
 /** Quantos dias no passado (positivo) o dia está. 0 ou negativo = hoje ou futuro. */
 export function diasAtras(dia: string, hoje: string): number {
   return -difDias(dia, hoje)
