@@ -323,7 +323,21 @@ export function QuadroPage() {
       <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border bg-card/85 px-3 py-3 backdrop-blur md:px-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight md:text-2xl">Quadro</h1>
+            {/*
+              "Painel de atividades" no título, "Quadro" na aba.
+              
+              Não é inconsistência: são duas coisas. O título nomeia a TELA
+              inteira, que hoje tem quatro visões; a aba nomeia UMA delas, e
+              trocar o rótulo dela para "Painel de atividades" a colocaria em
+              pé de igualdade com Rascunhos e Concluídos — que são recortes
+              dela, não irmãs.
+              
+              `truncate` porque em 375px o título novo é quase o dobro do
+              antigo e disputaria a linha com os botões de aba.
+            */}
+            <h1 className="truncate text-lg font-bold tracking-tight md:text-2xl">
+              Painel de atividades
+            </h1>
             <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
               {isPending
                 ? 'Carregando…'

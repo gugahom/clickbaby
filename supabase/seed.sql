@@ -139,9 +139,8 @@ on conflict (pacote_id, etapa_tipo) do update set ordem = excluded.ordem;
 -- 20260821113040 (fonte de verdade pro remoto), ON CONFLICT DO NOTHING
 -- dos dois lados pra um `db reset` do zero não duplicar nem quebrar.
 --
--- A sigla precisa casar EXATAMENTE com o que parseEventoCalendar extrai
--- do título do evento do Calendar (maiúscula, sem espaço) — são as mesmas
--- 5 siglas já cadastradas no parser (SIGLAS_MATERNIDADE em
+-- A sigla precisa casar EXATAMENTE com o que parseEventoCalendar devolve
+-- — são as mesmas 8 siglas cadastradas no parser (MATERNIDADES em
 -- supabase/functions/_shared/parse-evento.ts). Ponta do parser e ponta do
 -- seed precisam concordar; é isso que
 -- supabase/tests/database/seed_maternidades.test.sql prova.
@@ -152,5 +151,12 @@ insert into public.maternidades (nome, sigla) values
   ('Santa Cruz', 'HSC'),
   ('Nossa Senhora das Graças', 'HNSG'),
   ('Curitiba', 'CWB'),
-  ('Fátima', 'HNSF')
+  ('Fátima', 'HNSF'),
+  -- Três pedidas pelo gestor em 28/08/2026 (migration 20260828194055). O
+  -- gestor entregou por NOME, não por sigla: ROCIO e MACKENZIE saem do
+  -- próprio nome, e "Luiza de Marilac" virou MARILAC porque é a palavra que
+  -- distingue. O parser aceita as duas formas escritas de cada uma.
+  ('Rocio', 'ROCIO'),
+  ('Mackenzie', 'MACKENZIE'),
+  ('Luiza de Marilac', 'MARILAC')
 on conflict (sigla) do nothing;

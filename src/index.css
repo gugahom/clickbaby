@@ -250,3 +250,106 @@
     outline-offset: 1px;
   }
 }
+
+/* ============================================================================
+   O ANEL DE ALERTA — quando o horário do caso está chegando.
+   ============================================================================
+
+   O gestor pediu o card inteiro amarelo a uma hora e vermelho a meia hora.
+   Da primeira vez isso ficou na espinha (a barra da esquerda) e num chip, e
+   ele achou tímido — quer algo que dê senso de urgência ao card.
+
+   POR QUE UM ANEL E NÃO O FUNDO. O fundo do card já tem três donos: âmbar de
+   rascunho, verde de pronto para entrega, branco do resto. Pintar o fundo de
+   amarelo faria um rascunho e um atendimento em uma hora ficarem idênticos —
+   a cor deixaria de dizer qual dos dois é. A BORDA está livre: hoje ela é
+   sempre a mesma linha cinza de 1px, e não carrega significado nenhum.
+
+   POR QUE NÃO É `border`. Trocar 1px por 2px empurraria o conteúdo do card e
+   a lista inteira daria um pulo a cada vez que um caso entra ou sai da janela
+   de alerta. Este anel é desenhado DENTRO, com padding + mask, então tem a
+   espessura que quiser sem mexer no layout.
+
+   A LUZ QUE GIRA, só no vermelho. O `@property` é o que permite animar um
+   ângulo: sem ele o `--angulo-alerta` seria um texto qualquer e o
+   conic-gradient saltaria de 0 para 360 em vez de percorrer. Movimento é o
+   que ainda se lê numa TV a quatro metros, onde cor parada compete com as
+   outras oito do quadro — e ele fica reservado à meia hora final, senão vira
+   exatamente o carnaval que se está tentando evitar. */
+
+@property --angulo-alerta {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes girar-alerta {
+  to {
+    --angulo-alerta: 360deg;
+  }
+}
+
+@layer components {
+  /* O véu da cor sobre o cartão.
+  
+     É uma CAMADA, e não uma classe `bg-*`, por duas razões. A primeira é
+     mecânica: `bg-atencao/6` e `bg-card` são a mesma propriedade, e no
+     Tailwind quem vence é a ordem no CSS gerado, não a ordem na string de
+     classes — o véu simplesmente não aparecia. A segunda é de desenho:
+     sobreposto, ele SOMA ao fundo que já existe, então um rascunho com hora
+     chegando mantém o âmbar dele por baixo em vez de perdê-lo.
+  
+     6% é pouco de propósito: o suficiente para o cartão inteiro parecer
+     envolvido pela cor, pouco o bastante para não competir com o verde de
+     pronto para entrega nem com o âmbar do rascunho. Quem grita é o anel. */
+  .anel-alerta::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--cor-alerta);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  .anel-alerta::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: var(--cor-alerta);
+    /* O par de máscaras é o truque do anel: uma cobre a caixa inteira, a
+       outra só a área interna ao padding, e o `exclude` deixa passar apenas
+       a diferença — a moldura. Sem isso o gradiente cobriria o card todo. */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .anel-alerta-vivo::after {
+    background: conic-gradient(
+      from var(--angulo-alerta),
+      var(--cor-alerta) 0deg,
+      var(--cor-alerta) 290deg,
+      oklch(from var(--cor-alerta) 0.92 calc(c * 0.35) h) 335deg,
+      var(--cor-alerta) 360deg
+    );
+    animation: girar-alerta 2.4s linear infinite;
+  }
+
+  /* Sem movimento, o anel continua existindo — só para de girar. Tirar o
+     alerta de quem pediu menos animação seria tirar a informação junto. */
+  @media (prefers-reduced-motion: reduce) {
+    .anel-alerta-vivo::after {
+      background: var(--cor-alerta);
+      animation: none;
+    }
+  }
+}

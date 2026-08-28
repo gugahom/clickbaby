@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type CSSProperties } from 'react'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { formatarHora } from '@/lib/formato'
@@ -51,6 +51,11 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
 
   return (
     <div
+      // A cor do anel viaja por variável para o CSS poder usá-la dentro do
+      // conic-gradient, que não alcança classe do Tailwind.
+      {...(alerta
+        ? { style: { '--cor-alerta': CorDoAlerta[alerta.nivel] } as CSSProperties }
+        : {})}
       className={clsx(
         // Cartão, não linha de grade. O que separa um caso do seguinte agora é
         // o chão pastel aparecendo no vão, não um filete de 1px — era essa a
@@ -59,20 +64,30 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         'group relative overflow-hidden rounded-cartao border border-border bg-card shadow-cartao transition-shadow hover:shadow-cartao-alto',
         caso.ehRascunho && 'border-rascunho-borda bg-rascunho-fundo/50',
         /*
-          O ANEL, SÓ NO VERMELHO.
+          A BORDA É O ALERTA — e ela é alta.
           
-          O gestor pediu o card inteiro amarelo e depois vermelho. O card
-          inteiro já tem três donos — âmbar de rascunho, verde de pronto para
-          entrega, branco do resto — e um quarto significado por cima faria a
-          cor deixar de dizer qualquer coisa: um rascunho amarelo e um
-          atendimento em uma hora ficariam idênticos.
+          O gestor pediu o card inteiro amarelo e depois vermelho. O FUNDO não
+          pode: ele já tem três donos (âmbar de rascunho, verde de pronto para
+          entrega, branco do resto) e um quarto significado por cima faria um
+          rascunho e um atendimento em uma hora ficarem idênticos. A BORDA
+          estava livre — hoje é sempre a mesma linha cinza, sem significado
+          nenhum — e é o maior contorno do cartão. É dela que sai a urgência.
           
-          Então a urgência mora na ESPINHA (abaixo), que é estreita, some do
-          resto e já é o canal de "o que importa neste caso agora" — o pronto
-          para entrega usa o mesmo truque. O anel só entra na meia hora final,
-          quando vale gastar a atualização visual do cartão inteiro.
+          Um `ring-2` discreto foi a primeira tentativa e o gestor achou
+          tímido, com razão: 2px de vermelho a 45% de opacidade some ao lado da
+          espinha. Agora o anel é opaco, e no vermelho uma luz percorre o
+          perímetro — ver `.anel-alerta` em index.css, que explica por que ele
+          é desenhado com mask em vez de `border` (2px de borda de verdade
+          empurrariam o conteúdo e a lista pularia a cada caso que entra ou sai
+          da janela).
+          
+          O fundo ganha só um véu da cor — 6% é pouco o bastante para não
+          disputar com o âmbar do rascunho e o suficiente para o cartão inteiro
+          parecer envolvido, que é o que ele pediu.
         */
-        alerta?.nivel === 'iminente' && 'ring-2 ring-atrasado/45',
+        alerta && 'anel-alerta',
+        alerta?.nivel === 'iminente' && 'anel-alerta-vivo',
+
         prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
         caso.ehTerminal && 'opacity-60 shadow-none',
       )}

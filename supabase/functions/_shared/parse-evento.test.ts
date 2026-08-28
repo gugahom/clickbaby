@@ -296,3 +296,65 @@ Deno.test("espaços extras ao redor de mãe/bebê são removidos", () => {
   assertEqual(resultado.mae, "CARLA", "mae sem espaço nas pontas");
   assertEqual(resultado.bebe, "LUCAS", "bebe sem espaço nas pontas");
 });
+
+
+// ---------------------------------------------------------------------------
+// As três maternidades novas (28/08/2026). Duas delas têm nome de mais de uma
+// palavra em alguma forma, que é o que a versão anterior deste parser não
+// conseguia ler: ela comparava só a ÚLTIMA palavra do título.
+// ---------------------------------------------------------------------------
+
+Deno.test("maternidade nova em segmento próprio", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/PEDRO - BABY REELS - ROCIO"),
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "ROCIO" },
+    "ROCIO como segmento próprio",
+  );
+});
+
+Deno.test("LUIZA DE MARILAC como segmento inteiro", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/PEDRO - BABY REELS - LUIZA DE MARILAC"),
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC" },
+    "nome de três palavras em segmento próprio",
+  );
+});
+
+// O caso que quebrava: nome de três palavras EMBUTIDO, sem "-" separando.
+// Comparando só a última palavra, o parser achava "MARILAC" e deixava "BABY
+// REELS LUIZA DE" como texto de pacote — que não casa com nada, e o caso
+// virava rascunho pendente sem pacote.
+Deno.test("LUIZA DE MARILAC embutida no segmento do pacote", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/PEDRO - BABY REELS LUIZA DE MARILAC"),
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC" },
+    "nome de três palavras embutido",
+  );
+});
+
+Deno.test("MARILAC sozinho continua valendo", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/PEDRO - BASIC MARILAC"),
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BASIC", maternidade_sigla: "MARILAC" },
+    "forma curta",
+  );
+});
+
+Deno.test("MACK e MACKENZIE apontam para a mesma sigla", () => {
+  for (const forma of ["MACK", "MACKENZIE"]) {
+    assertEqual(
+      parseEventoCalendar(`ANA/PEDRO - STANDARD ${forma}`),
+      { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "STANDARD", maternidade_sigla: "MACKENZIE" },
+      `duas formas, uma sigla: ${forma}`,
+    );
+  }
+});
+
+// Sem "-" nenhum, que é o terceiro caminho do parser.
+Deno.test("maternidade nova sem hífen no título", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/PEDRO BIRTH+REELS ROCIO"),
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BIRTH+REELS", maternidade_sigla: "ROCIO" },
+    "caminho sem hífen",
+  );
+});
