@@ -16,7 +16,9 @@ import { BotaoIcone } from '@/components/ui/BotaoIcone'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
 const CorDoAlerta: Record<NivelAlerta, string> = {
-  proximo: 'var(--atencao)',
+  // Laranja, não amarelo: `--atencao` colidia com o âmbar do rascunho — ver
+  // a nota de `--alerta-proximo` em index.css.
+  proximo: 'var(--alerta-proximo)',
   iminente: 'var(--atrasado)',
 }
 
@@ -176,7 +178,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                         'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold',
                         alerta.nivel === 'iminente'
                           ? 'bg-atrasado text-white'
-                          : 'bg-atencao/15 text-atencao',
+                          : 'bg-alerta-proximo/12 text-alerta-proximo',
                       )}
                     >
                       {alerta.oQue} {alerta.rotulo}

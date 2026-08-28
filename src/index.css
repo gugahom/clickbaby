@@ -76,6 +76,7 @@
   --color-andamento: var(--andamento);
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
+  --color-alerta-proximo: var(--alerta-proximo);
   --color-rascunho: var(--rascunho);
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
@@ -135,6 +136,24 @@
   --andamento: oklch(0.52 0.17 248);
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
+
+  /* HORA CHEGANDO — e por que ela não é amarela.
+  
+     O gestor pediu "amarelo a uma hora, vermelho a meia hora". A primeira
+     versão usou `--atencao` (matiz 68) e o resultado na tela foi imediato: o
+     cartão em alerta ficou da mesma cor do cartão em rascunho (matiz 92-95).
+     Dois amarelos pálidos lado a lado, dizendo coisas sem relação nenhuma —
+     "falta cadastro" e "o atendimento começa em 40 minutos". Nenhum ajuste de
+     opacidade separa isso; são vizinhos no círculo.
+  
+     Então o alerta passa a ser LARANJA (45), e vira uma rampa: laranja a uma
+     hora, vermelho (25) a meia hora. O amarelo fica sendo do rascunho, sem
+     disputa, e a escalada ganha uma leitura que "amarelo depois vermelho" não
+     tinha — as duas etapas agora são a mesma cor esquentando.
+  
+     L 0.52 e não mais claro porque este valor também é TEXTO no chip: precisa
+     dos 4.5:1 sobre branco. */
+  --alerta-proximo: oklch(0.52 0.175 45);
 
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
      do logo (97), sem perder o 4.5:1 que o texto precisa. */
@@ -290,19 +309,25 @@
 }
 
 @layer components {
-  /* O véu da cor sobre o cartão.
+  /* O véu da cor sobre o cartão — SÓ na meia hora final.
   
-     É uma CAMADA, e não uma classe `bg-*`, por duas razões. A primeira é
-     mecânica: `bg-atencao/6` e `bg-card` são a mesma propriedade, e no
-     Tailwind quem vence é a ordem no CSS gerado, não a ordem na string de
-     classes — o véu simplesmente não aparecia. A segunda é de desenho:
-     sobreposto, ele SOMA ao fundo que já existe, então um rascunho com hora
-     chegando mantém o âmbar dele por baixo em vez de perdê-lo.
+     Ele existia nos dois níveis e foi medido contra o fundo do rascunho: 24 de
+     distância em RGB. Dois lavados pálidos que dizem coisas sem relação
+     ("falta cadastro" e "começa em 40 minutos"), e nenhuma opacidade os
+     separa — só os deixa mais ou menos parecidos. O anel, esse, está a 230 de
+     distância: é ele que distingue.
   
-     6% é pouco de propósito: o suficiente para o cartão inteiro parecer
-     envolvido pela cor, pouco o bastante para não competir com o verde de
-     pronto para entrega nem com o âmbar do rascunho. Quem grita é o anel. */
-  .anel-alerta::before {
+     Então o PREENCHIMENTO fica sendo do rascunho e o CONTORNO do alerta — dois
+     canais, dois significados, sem ambiguidade possível. O véu volta na meia
+     hora final, onde é vermelho e não colide com nada, e aí ele ganha uma
+     função extra: a escalada deixa de ser só troca de cor e passa a ser QUANTO
+     do cartão está envolvido — primeiro a borda, depois o cartão inteiro.
+  
+     É uma CAMADA e não uma classe `bg-*`: `bg-atrasado/6` e `bg-card` são a
+     mesma propriedade, e no Tailwind quem vence é a ordem no CSS gerado, não a
+     ordem na string — o véu simplesmente não aparecia. Sobreposto, ele soma ao
+     fundo que já existe em vez de substituí-lo. */
+  .anel-alerta-vivo::before {
     content: "";
     position: absolute;
     inset: 0;
