@@ -8,6 +8,7 @@
 # Ver o cabeçalho de scripts/auditar-privilegios.mjs.
 
 GRANT ALL ON FUNCTION public.adicionar_video(p_caso_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.agendar_etapa(p_caso_etapa_id uuid, p_previsao_em timestamp with time zone) TO authenticated;
 GRANT ALL ON FUNCTION public.anotar_etapa(p_caso_etapa_id uuid, p_observacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) TO authenticated;
@@ -20,6 +21,7 @@ GRANT ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) TO authenticate
 GRANT ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_pessoa_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.reabrir_caso(p_caso_id uuid, p_motivo text, p_etapas public.etapa_tipo[]) TO authenticated;
 GRANT ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) TO authenticated;
@@ -51,6 +53,7 @@ GRANT UPDATE(termo_status) ON TABLE public.casos TO authenticated;
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
 REVOKE ALL ON FUNCTION public.adicionar_video(p_caso_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.agendar_etapa(p_caso_etapa_id uuid, p_previsao_em timestamp with time zone) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.anotar_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) FROM PUBLIC;
@@ -68,6 +71,7 @@ REVOKE ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ordem_padrao_da_etapa(p_tipo public.etapa_tipo) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_pessoa_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.reabrir_caso(p_caso_id uuid, p_motivo text, p_etapas public.etapa_tipo[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) FROM PUBLIC;

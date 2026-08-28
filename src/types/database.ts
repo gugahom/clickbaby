@@ -49,6 +49,7 @@ export type Database = {
           ordem: number
           pausa_acumulada: string
           pausado_em: string | null
+          previsao_em: string | null
           proximo_responsavel_id: string | null
           responsavel_id: string | null
           rodada: number
@@ -72,6 +73,7 @@ export type Database = {
           ordem?: number
           pausa_acumulada?: string
           pausado_em?: string | null
+          previsao_em?: string | null
           proximo_responsavel_id?: string | null
           responsavel_id?: string | null
           rodada?: number
@@ -95,6 +97,7 @@ export type Database = {
           ordem?: number
           pausa_acumulada?: string
           pausado_em?: string | null
+          previsao_em?: string | null
           proximo_responsavel_id?: string | null
           responsavel_id?: string | null
           rodada?: number
@@ -177,6 +180,7 @@ export type Database = {
           observacao: string | null
           pacote_id: string | null
           previsao_em: string | null
+          reaberto_em: string | null
           situacao_clinica: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega: Database["public"]["Enums"]["status_entrega"]
           status_operacional: Database["public"]["Enums"]["status_operacional"]
@@ -198,6 +202,7 @@ export type Database = {
           observacao?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
+          reaberto_em?: string | null
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
@@ -219,6 +224,7 @@ export type Database = {
           observacao?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
+          reaberto_em?: string | null
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
@@ -768,6 +774,7 @@ export type Database = {
           prazo_entrega_horas: number | null
           prazo_total_horas: number | null
           previsao_em: string | null
+          reaberto_em: string | null
           situacao_clinica:
             | Database["public"]["Enums"]["situacao_clinica"]
             | null
@@ -802,6 +809,10 @@ export type Database = {
     }
     Functions: {
       adicionar_video: { Args: { p_caso_id: string }; Returns: boolean }
+      agendar_etapa: {
+        Args: { p_caso_etapa_id: string; p_previsao_em: string }
+        Returns: undefined
+      }
       anotar_etapa: {
         Args: { p_caso_etapa_id: string; p_observacao: string }
         Returns: undefined
@@ -818,7 +829,12 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_observacao?: string }
         Returns: undefined
       }
+      configurar_segredo_do_sync: {
+        Args: { p_nome: string; p_valor: string }
+        Returns: string
+      }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      disparar_sync_calendar: { Args: never; Returns: string }
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
@@ -831,6 +847,14 @@ export type Database = {
       pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       planejar_rendicao: {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
+        Returns: undefined
+      }
+      reabrir_caso: {
+        Args: {
+          p_caso_id: string
+          p_etapas: Database["public"]["Enums"]["etapa_tipo"][]
+          p_motivo: string
+        }
         Returns: undefined
       }
       reabrir_etapa: {

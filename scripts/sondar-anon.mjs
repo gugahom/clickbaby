@@ -71,6 +71,18 @@ const RPCS_TRANSICAO = {
     p_para_pessoa_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',
   },
+  // Desfaz um encerramento e cria trabalho novo num caso entregue. Entra na
+  // lista pelo mesmo motivo de cancelar_caso: é restrita por papel, e papel
+  // só vale se o GRANT não deixar anon chegar antes.
+  reabrir_caso: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+    p_etapas: ['edicao_foto'],
+  },
+  agendar_etapa: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_previsao_em: null,
+  },
 }
 
 /** Caminho que a função encerra em 'sem_efeito' antes de tocar qualquer linha. */
