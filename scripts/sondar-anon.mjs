@@ -188,6 +188,39 @@ await esperaNegado(
   { method: 'POST', body: JSON.stringify(RPC_SYNC) },
 )
 
+/*
+ * As duas do agendamento do sync (migration 20260828015512).
+ *
+ * São da MESMA família perigosa que sync_upsert_caso: SECURITY DEFINER que não
+ * valida o chamador — não pode, roda sem usuário logado —, com o GRANT como
+ * única barreira. `disparar_sync_calendar` monta um Authorization com a
+ * service_role key; `configurar_segredo_do_sync` escreve no Vault.
+ *
+ * Entram aqui porque o pgTAP local é ESTRUTURALMENTE CEGO para esta classe de
+ * regressão: os default privileges do remoto reconcedem EXECUTE a anon num
+ * `drop function` + `create function`, e no local isso não acontece. Foi
+ * exatamente assim que sync_upsert_caso ficou explorável em produção entre as
+ * migrations 20260821100857 e 20260821102004.
+ *
+ * Nenhuma das duas escreve nada se o acesso for negado — e negado é o que se
+ * espera. Se um dia uma delas passar, a sonda falha ANTES de a chamada ter
+ * efeito, porque o 403 vem do privilégio, não do corpo.
+ */
+await esperaNegado(
+  'RPC disparar_sync_calendar',
+  `${alvo.url}/rest/v1/rpc/disparar_sync_calendar`,
+  { method: 'POST', body: '{}' },
+)
+
+await esperaNegado(
+  'RPC configurar_segredo_do_sync (escreve no Vault)',
+  `${alvo.url}/rest/v1/rpc/configurar_segredo_do_sync`,
+  {
+    method: 'POST',
+    body: JSON.stringify({ p_nome: 'sync_calendar_chave', p_valor: 'sonda' }),
+  },
+)
+
 if (falhas.length === 0) {
   console.log(`OK — ${passaram} sondas, anon negado em todas.`)
   process.exit(0)
