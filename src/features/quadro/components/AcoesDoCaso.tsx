@@ -83,6 +83,15 @@ type Confirmacao = { tipo: 'entrega' } | { tipo: 'cancelamento' } | null
  * local de etapa. O gating por papel também segue igual — as RPCs barram no
  * backend, a tela só evita oferecer o que será negado.
  */
+/** Mesma divisão de três faixas do card. Reels sai da edição por decisão de
+ *  TELA, e essa decisão precisa valer aqui também — duas listas da mesma
+ *  etapa dizendo trilhas diferentes seria pior que não dizer. */
+const ROTULO_FAIXA_DETALHE: Record<string, string> = {
+  acompanhamento: 'Acompanhamento',
+  edicao: 'Edição',
+  reels: 'Reels',
+}
+
 export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const { pessoa } = useAuth()
   const papel = pessoa?.papelSistema ?? 'operador'
@@ -176,7 +185,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
             return (
-              <li key={etapa.id} className="flex items-center gap-3 py-1 pl-3 pr-1">
+              <li key={etapa.id} className="flex items-center gap-3 py-1.5 pr-1 pl-3">
                 <span
                   className={clsx('size-2 flex-shrink-0 rounded-full', pontoEtapa(etapa))}
                   aria-hidden="true"
@@ -185,22 +194,30 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                 <div className="min-w-0 flex-1 py-1">
                   <div
                     className={clsx(
-                      'text-sm font-medium',
+                      'flex flex-wrap items-center gap-1.5 text-sm font-bold tracking-tight',
                       encerrada && 'text-muted-foreground',
                     )}
                   >
                     {ROTULO_ETAPA[etapa.tipo]}
-                    {/* Sem o sufixo, a lista mostraria "Edição Fotos" duas
-                        vezes e não haveria como saber em qual se está
-                        clicando. */}
+                    {/* Sem o sufixo, a lista mostraria "Foto" duas vezes e não
+                        haveria como saber em qual se está clicando. */}
                     {etapas.some((o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada) && (
-                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
                         {ROTULO_RODADA[etapa.rodada]}
                       </span>
                     )}
                   </div>
+                  {/* TRILHA · STATUS na segunda linha, na cor da seção.
+                  
+                      A trilha não aparecia aqui, e essa lista é o único lugar
+                      onde as sete etapas convivem fora das três fitas — sem
+                      ela, "Foto" e "Parto" ficam lado a lado sem dizer que uma
+                      é edição e a outra é reels. */}
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                    <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
+                    <span className="font-semibold text-acento">
+                      {ROTULO_FAIXA_DETALHE[etapa.tipo === 'reels' ? 'reels' : etapa.trilha]}
+                    </span>
+                    <span>· {ROTULO_STATUS_ETAPA[etapa.status]}</span>
                     {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
                     {etapa.proximoResponsavelNome && (
                       <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">

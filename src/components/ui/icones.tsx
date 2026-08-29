@@ -107,8 +107,8 @@ export function IconeCaneta({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M21.2 4.8a2.7 2.7 0 0 0-3.8-3.8L3 15.4V21h5.6z" />
-      <path d="m15.5 3.5 5 5" />
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }
@@ -215,8 +215,8 @@ export function IconeDesfazer({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M3 7v6h6" />
-      <path d="M3.5 13a9 9 0 1 0 2.3-9.3L3 7" />
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
     </svg>
   )
 }
@@ -269,8 +269,9 @@ export function IconeReabrir({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.7L3 8" />
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
     </svg>
   )
 }

@@ -1,4 +1,5 @@
 import { AcoesDoCaso } from './AcoesDoCaso'
+import { JanelaDeEntrega } from './JanelaDeEntrega'
 import { HistoricoDoCaso } from './HistoricoDoCaso'
 import type { EstadoSla } from '../lib/sla'
 import { ROTULO_SITUACAO, type CasoQuadro, type EtapaQuadro } from '../types'
@@ -38,6 +39,12 @@ export function CasoDetalhe({ caso, etapas, sla }: PropsCasoDetalhe) {
           <p className="text-sm whitespace-pre-line">{caso.observacao}</p>
         </section>
       )}
+
+      {/* Antes das etapas de propósito: a janela responde "quanto tempo eu
+          tenho e onde o trabalho caiu dentro dele", que é o enquadramento de
+          tudo que vem depois. Depois da lista, ela viraria um resumo do que já
+          foi lido. */}
+      <JanelaDeEntrega caso={caso} etapas={etapas} />
 
       <section>
         <TituloSecao>Etapas</TituloSecao>
