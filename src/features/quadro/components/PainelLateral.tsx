@@ -49,7 +49,7 @@ export function PainelLateral({
       <header className="flex-shrink-0 border-b border-border bg-acento-suave px-3.5 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="rotulo-sobrescrito text-acento-forte">{titulo}</h2>
-          <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-acento-forte px-2 py-0.5 text-sm font-bold tabular-nums text-white">
+          <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white">
             {quantidade}
           </span>
         </div>

@@ -67,7 +67,7 @@ export function PainelDobravel({
               <span className="rotulo-sobrescrito text-acento-forte">{titulo}</span>
               {/* Mesmo disco do PainelLateral: fechada, a seção é uma linha, e o
                   contador é a única informação dela. */}
-              <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-acento-forte px-2 py-0.5 text-sm font-bold tabular-nums text-white">
+              <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white">
                 {quantidade}
               </span>
             </div>

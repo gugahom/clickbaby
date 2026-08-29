@@ -3,6 +3,19 @@ import { AnimatePresence, m, useReducedMotion } from 'motion/react'
 import clsx from 'clsx'
 import { Chevron, IconeCheck } from './icones'
 
+/** Quanto o painel pode crescer antes de rolar por dentro. Também é o número
+ *  que decide se ele abre para cima. */
+const ALTURA_MAXIMA = 256
+
+interface Posicao {
+  paraCima: boolean
+  topo?: number | undefined
+  base?: number | undefined
+  esquerda?: number | undefined
+  direita?: number | undefined
+  largura?: number | undefined
+}
+
 export interface ItemDropdown {
   id: string
   rotulo: string
@@ -62,15 +75,55 @@ export function Dropdown({
   id,
 }: PropsDropdown) {
   const [aberto, setAberto] = useState(false)
+  const [caixaDoPainel, setCaixaDoPainel] = useState<Posicao | null>(null)
   const caixa = useRef<HTMLDivElement>(null)
+  const botao = useRef<HTMLButtonElement>(null)
   const gerado = useId()
   const idGatilho = id ?? gerado
   const semMovimento = useReducedMotion()
 
   const escolhido = selecionado ? itens.find((i) => i.id === selecionado) : undefined
 
+  /*
+   * O PAINEL É `fixed`, e essa é a diferença que importa.
+   *
+   * Como `absolute`, ele era filho do fluxo do diálogo: o <dialog> tem overflow
+   * próprio, então um painel que passava do fim dele fazia o MODAL crescer e
+   * ganhar barra de rolagem — era preciso rolar o diálogo para achar os itens.
+   *
+   * `fixed` posiciona pela janela, não pelo ancestral, então o painel sobrepõe
+   * em vez de empurrar. E funciona DENTRO do <dialog> justamente porque o
+   * diálogo está na top layer: um portal para o <body> ficaria ATRÁS dele.
+   *
+   * O preço é medir o gatilho à mão e remedir em scroll e resize — `fixed`
+   * não acompanha nada sozinho.
+   */
   useEffect(() => {
     if (!aberto) return
+
+    function medir() {
+      const g = botao.current
+      if (!g) return
+      const r = g.getBoundingClientRect()
+      const abaixo = window.innerHeight - r.bottom
+      // Abre para CIMA quando não cabe embaixo e sobra mais espaço em cima.
+      // Sem isso, um gatilho no rodapé da tela abriria um painel cortado.
+      const paraCima = abaixo < ALTURA_MAXIMA + 16 && r.top > abaixo
+      setCaixaDoPainel({
+        paraCima,
+        topo: paraCima ? undefined : r.bottom + 4,
+        base: paraCima ? window.innerHeight - r.top + 4 : undefined,
+        esquerda: alinhamento === 'esquerda' ? r.left : undefined,
+        direita: alinhamento === 'direita' ? window.innerWidth - r.right : undefined,
+        largura: gatilho ? undefined : r.width,
+      })
+    }
+
+    medir()
+    // `true` na captura: o scroll de um contêiner interno (a lista do Quadro)
+    // não borbulha até a janela, e sem capturar o painel ficaria para trás.
+    window.addEventListener('scroll', medir, true)
+    window.addEventListener('resize', medir)
 
     function foraDaCaixa(evento: MouseEvent) {
       if (caixa.current && !caixa.current.contains(evento.target as Node)) {
@@ -88,15 +141,18 @@ export function Dropdown({
     document.addEventListener('mousedown', foraDaCaixa)
     document.addEventListener('keydown', esc, true)
     return () => {
+      window.removeEventListener('scroll', medir, true)
+      window.removeEventListener('resize', medir)
       document.removeEventListener('mousedown', foraDaCaixa)
       document.removeEventListener('keydown', esc, true)
     }
-  }, [aberto])
+  }, [aberto, alinhamento, gatilho])
 
   return (
     <div ref={caixa} className={clsx('relative', className)}>
       {gatilho ? (
         <button
+          ref={botao}
           type="button"
           id={idGatilho}
           onClick={() => setAberto((v) => !v)}
@@ -113,6 +169,7 @@ export function Dropdown({
         </button>
       ) : (
         <button
+          ref={botao}
           type="button"
           id={idGatilho}
           onClick={() => setAberto((v) => !v)}
@@ -146,7 +203,11 @@ export function Dropdown({
             role="menu"
             aria-orientation="vertical"
             aria-labelledby={idGatilho}
-            initial={semMovimento ? { opacity: 1 } : { opacity: 0, y: -8, scaleY: 0.96 }}
+            initial={
+              semMovimento
+                ? { opacity: 1 }
+                : { opacity: 0, y: caixaDoPainel?.paraCima ? 8 : -8, scaleY: 0.96 }
+            }
             animate={{ opacity: 1, y: 0, scaleY: 1 }}
             exit={
               semMovimento
@@ -156,18 +217,26 @@ export function Dropdown({
             transition={
               semMovimento ? { duration: 0 } : { type: 'spring', bounce: 0.15, duration: 0.28 }
             }
+            style={{
+              position: 'fixed',
+              top: caixaDoPainel?.topo,
+              bottom: caixaDoPainel?.base,
+              left: caixaDoPainel?.esquerda,
+              right: caixaDoPainel?.direita,
+              width: caixaDoPainel?.largura,
+              maxHeight: ALTURA_MAXIMA,
+            }}
             className={clsx(
               // z-50: dentro de um <dialog> o painel precisa passar por cima do
               // conteúdo do próprio diálogo, que já tem empilhamento próprio.
-              'absolute z-50 mt-1 origin-top overflow-hidden rounded-md border border-border bg-card shadow-cartao-alto',
-              // Lista longa rola por dentro em vez de empurrar a tela: são ~10
-              // pessoas hoje, e a lista de maternidades cresce.
-              'max-h-64 overflow-y-auto',
-              alinhamento === 'direita' ? 'right-0' : 'left-0',
+              'z-50 overflow-y-auto rounded-md border border-border bg-card shadow-cartao-alto',
+              // A origem acompanha o lado de onde ele nasce, senão um painel
+              // que abre para cima parece cair do gatilho.
+              caixaDoPainel?.paraCima ? 'origin-bottom' : 'origin-top',
               // Com gatilho próprio a largura é do conteúdo; com o botão
               // padrão ela acompanha o campo, que é o que se espera de um
               // seletor de formulário.
-              gatilho ? 'min-w-44' : 'w-full',
+              gatilho && 'min-w-44',
             )}
           >
             <ul className="py-1">

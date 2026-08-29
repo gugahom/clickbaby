@@ -32,7 +32,6 @@ import { RascunhosPainel } from './components/RascunhosPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
-import { IconeReabrir } from '@/components/ui/icones'
 import type { CasoQuadro } from './types'
 import type { EtapaQuadro } from './types'
 
@@ -294,37 +293,19 @@ export function QuadroPage() {
     ) : (
       <div className="space-y-2 p-3 md:p-4">
         {concluidos.map((caso) => (
-          <div key={caso.id}>
-            <CasoLinha caso={caso} etapas={etapasPorCaso.get(caso.id) ?? []} />
-
-            {/*
-              REABRIR, e só no ENCERRADO.
-              
-              O gestor: "aqui no quadro de concluído eu não achei nenhuma opção
-              pra reativar o cliente e colocar a edição". Não havia mesmo — o
-              caso saia do Quadro e não voltava, e o retrabalho acontecia fora
-              do sistema, que é onde ele deixa de ser medido.
-              
-              Cancelado não ganha o botão: desfazer um cancelamento é vender de
-              novo, não editar de novo. A RPC também recusa — isto aqui é só
-              para não oferecer o que vai ser negado.
-            */}
-            {caso.statusOperacional === 'encerrado' && (
-              <div className="mt-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setErroReabrir(null)
-                    setReabrindo(caso)
-                  }}
-                  className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-marca-suave hover:text-marca"
-                >
-                  <IconeReabrir className="size-4" />
-                  Reabrir para alteração
-                </button>
-              </div>
-            )}
-          </div>
+          // O botão solto de reabrir saiu daqui e virou item do menu do
+          // próprio cartão — ver CasoLinha. Ele pendurava abaixo do cartão,
+          // fora da moldura dele, e era a única ação da tela que morava do
+          // lado de fora do objeto sobre o qual agia.
+          <CasoLinha
+            key={caso.id}
+            caso={caso}
+            etapas={etapasPorCaso.get(caso.id) ?? []}
+            onReabrir={(c) => {
+              setErroReabrir(null)
+              setReabrindo(c)
+            }}
+          />
         ))}
       </div>
     )
@@ -618,7 +599,7 @@ function BotaoAba({
                 // CHEIO, e não um tint. É o único contador da tela que pede
                 // ação — rascunho é cadastro incompleto esperando alguém — e
                 // um disco pintado é o que faz o olho voltar para ele.
-                ? 'bg-rascunho-cheio text-white'
+                ? 'bg-contador text-white'
                 : 'bg-muted text-muted-foreground',
           )}
         >

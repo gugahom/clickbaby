@@ -11,8 +11,8 @@ import { CasoDetalhe } from './CasoDetalhe'
 import { TrilhasDoCaso } from './TrilhasDoCaso'
 import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
-import { IconeCaneta } from '@/components/ui/icones'
-import { BotaoIcone } from '@/components/ui/BotaoIcone'
+import { IconeCaneta, IconeMais, IconeReabrir } from '@/components/ui/icones'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
 const CorDoAlerta: Record<NivelAlerta, string> = {
@@ -25,9 +25,15 @@ const CorDoAlerta: Record<NivelAlerta, string> = {
 interface PropsCasoLinha {
   caso: CasoQuadro
   etapas: EtapaQuadro[]
+  /**
+   * Quando presente, o menu do cartão oferece reabrir. Só a aba Concluídos
+   * passa — nas outras a ação não existe, e um item permanentemente
+   * desabilitado é pior que item nenhum.
+   */
+  onReabrir?: ((caso: CasoQuadro) => void) | undefined
 }
 
-export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
+export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState(false)
   const idPainel = useId()
@@ -281,44 +287,65 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
       </button>
 
       {/*
-        FORA do <button>. Um <button> dentro de outro é HTML inválido e o
-        clique interno borbulharia abrindo o detalhe junto — foi o defeito da
-        referência da v0, e não vale repetir por economia de markup.
+        O MENU DO CARTÃO, no lugar da caneta solta.
 
-        Ancorado no TOPO, não na base: a faixa de avisos ocupa o rodapé do
-        cartão quando existe, e um botão absoluto ali cairia por cima do texto.
+        FORA do <button> do cabeçalho: um <button> dentro de outro é HTML
+        inválido e o clique interno borbulharia abrindo o detalhe junto — foi o
+        defeito da referência da v0, e não vale repetir por economia de markup.
 
-        SEMPRE VISÍVEL, nunca só no hover. A primeira versão revelava no hover
-        no desktop; em celular, que é o aparelho real da operação (seção 6),
-        hover não existe — o botão ficaria invisível e clicável ao mesmo tempo,
-        que é o pior dos dois mundos. Fica quieto pelo contraste, não pela
-        opacidade.
+        POR QUE VIROU MENU. A caneta fazia uma coisa só, e o "Reabrir para
+        alteração" vivia como um botão solto pendurado ABAIXO do cartão, na aba
+        Concluídos — duas ações do mesmo caso em dois lugares e duas formas. No
+        menu elas viram uma lista, e a próxima ação de caso entra sem inventar
+        outro canto.
 
-        No rascunho ele é o gesto principal do cartão: é o que tira o caso do
-        limbo. Por isso ganha borda e a cor da pendência; nos demais é
-        conveniência e fica em cinza.
+        AO LADO DO CHEVRON, NÃO ABAIXO. Antes era `top-11`: 44px de deslocamento
+        mais 44px de alvo exigem um cartão de 88px, e um rascunho — que não tem
+        etapas nem SLA — fica em 82px. A caneta pendurava para fora da borda,
+        justamente no cartão em que ela é a ação principal.
 
-        AO LADO DO CHEVRON, NÃO ABAIXO DELE.
-        
-        Antes era `top-11`: 44px de deslocamento mais 44px de alvo exigem um
-        cartão de 88px para caber. Um rascunho não tem etapas nem SLA, então o
-        cartão dele é mais curto que isso — e a caneta ficava pendurada para
-        fora da borda inferior, justamente no cartão em que ela é a ação
-        principal.
-        
-        Lado a lado, a posição não depende mais da altura do cartão: o alvo
-        está no mesmo lugar num rascunho de duas linhas e num MASTER com três
-        trilhas. O `pr` do cabeçalho reserva a calha para os dois.
+        O TOM DE PENDÊNCIA no rascunho fica: ali o menu é o gesto que tira o
+        caso do limbo, e precisa se distinguir do botão quieto dos demais.
       */}
-      <BotaoIcone
-        rotulo={`${caso.ehRascunho ? 'Completar' : 'Editar'} cadastro de ${titulo}`}
-        tom={caso.ehRascunho ? 'pendencia' : 'neutro'}
-        onClick={() => setEditando(true)}
-        // top-0.5 centra os 44px do alvo na linha dos 20px do chevron.
-        className="absolute top-0.5 right-8"
-      >
-        <IconeCaneta className="size-4" />
-      </BotaoIcone>
+      <div className="absolute top-0.5 right-8">
+        <Dropdown
+          alinhamento="direita"
+          rotulo="Ações do caso"
+          onEscolher={(item) => {
+            if (item.id === 'editar') setEditando(true)
+            if (item.id === 'reabrir') onReabrir?.(caso)
+          }}
+          itens={[
+            {
+              id: 'editar',
+              rotulo: caso.ehRascunho ? 'Completar cadastro' : 'Editar cadastro',
+              icone: <IconeCaneta className="size-4" />,
+            },
+            ...(onReabrir && caso.statusOperacional === 'encerrado'
+              ? [
+                  {
+                    id: 'reabrir',
+                    rotulo: 'Reabrir para alteração',
+                    icone: <IconeReabrir className="size-4" />,
+                  },
+                ]
+              : []),
+          ]}
+          gatilho={
+            <span
+              aria-label={`Ações de ${titulo}`}
+              className={clsx(
+                'inline-flex size-11 items-center justify-center rounded-full transition-colors',
+                caso.ehRascunho
+                  ? 'border border-rascunho-borda bg-card text-rascunho'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              <IconeMais className="size-4" />
+            </span>
+          }
+        />
+      </div>
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
 

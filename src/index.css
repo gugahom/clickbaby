@@ -76,6 +76,7 @@
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
   --color-alerta-proximo: var(--alerta-proximo);
+  --color-contador: var(--contador);
   /* Texto SOBRE pílula tingida — ver a nota junto dos valores. */
   --color-concluido-tinta: var(--concluido-tinta);
   --color-andamento-tinta: var(--andamento-tinta);
@@ -213,6 +214,22 @@
      dos 4.5:1 sobre branco. */
   --alerta-proximo: oklch(0.52 0.175 45);
 
+  /* CONTADOR — uma cor para toda contagem da tela.
+  
+     O disco de rascunhos e os das seções (REELS, MASTER, UTI) eram dois rosas
+     diferentes: um vinha de `--rascunho`, o outro de `--acento-forte`. Do lado
+     um do outro, isso lia como se as cores quisessem dizer algo, e não diziam
+     — um contador é um contador.
+  
+     Unificados, a regra do rosa fica legível: CHEIO é contagem, rótulo
+     minúsculo em caixa alta é seção. Duas funções, duas formas, uma família
+     de cor — e aí a proximidade entre `--rascunho` e `--acento` deixa de ser
+     um problema, porque passa a ser proposital.
+  
+     Branco em cima dá 4.69:1. Foi por isso que ficou em L 0.58 e não no 0.62
+     pedido, que dá 3.91. */
+  --contador: oklch(0.58 0.17 12);
+
   /* A FAIXA DO CABEÇALHO.
   
      A referência usa um gradiente de azul-noite a vinho, e ele é o que mais
@@ -255,23 +272,20 @@
      texto usa é mais escuro na mesma matiz, e o valor pedido vive em
      `--rascunho-cheio`.
   
-     A MATIZ É 310 (magenta), e ela foi ESCOLHIDA POR MEDIÇÃO. Na 12, onde a
-     troca começou, o rascunho ficava a 33 de distância RGB do `--acento` — dois
-     rosas quase iguais dizendo coisas sem relação (um é estrutura, o outro é
-     estado). Girar para o coral piorava: ali estão o vermelho de atrasado (25)
-     e o laranja do alerta (45). Girando para o outro lado, na 310, a distância
-     do acento vai a 101, e as do vermelho e do laranja a 184 e 200 — o pior
-     caso triplica sem sair da família do rosa.
-  
-     Testei até a 290, que separa ainda mais, mas ali começa a ler como violeta
-     e encosta na matiz do `--marca` (273). */
-  --rascunho: oklch(0.52 0.19 310);
+     A MATIZ VOLTOU PARA 12. Ela chegou a girar para a 310 (magenta) para se
+     afastar do `--acento`, que está na 357 — a 33 de distância RGB, dois rosas
+     quase iguais. O gestor preferiu o rosa original, e a solução da colisão
+     mudou de MATIZ para PAPEL: todo contador da tela passou a usar este mesmo
+     rosa (ver `--contador`), então os dois deixaram de ser "duas coisas rosa
+     por acaso" e viraram um só significado — rosa cheio é contagem, rosa em
+     rótulo minúsculo é seção. */
+  --rascunho: oklch(0.52 0.19 12);
   /* O valor pedido era 0.62/0.15 — medido, ele dá 3.91:1 com texto branco, e
      o disco do contador é exatamente branco sobre ele. 0.58/0.17 é o vizinho
      mais próximo que passa: 4.69:1, e a olho é o mesmo rosa. */
-  --rascunho-cheio: oklch(0.58 0.17 310);
-  --rascunho-fundo: oklch(0.968 0.022 310);
-  --rascunho-borda: oklch(0.875 0.07 310);
+  --rascunho-cheio: oklch(0.58 0.17 12);
+  --rascunho-fundo: oklch(0.968 0.022 12);
+  --rascunho-borda: oklch(0.875 0.07 12);
 
   /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
      branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
