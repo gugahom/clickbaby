@@ -113,7 +113,7 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="relative w-full py-3.5 pr-[4.75rem] pl-3.5 text-left transition-colors hover:bg-marca-suave/60 md:pl-4"
+        className="relative w-full py-4 pr-[4.75rem] pl-3.5 text-left transition-colors hover:bg-marca-suave/40 md:pl-4"
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -155,9 +155,9 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-4">
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-[15px] font-semibold md:text-base">
+                <h3 className="truncate text-base font-bold tracking-tight md:text-[17px]">
                   {hora && (
-                    <span className="mr-2 font-mono text-sm text-muted-foreground">
+                    <span className="mr-2 text-sm font-medium tabular-nums text-muted-foreground">
                       {hora}
                     </span>
                   )}
@@ -187,26 +187,42 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
                 )}
 
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
+                  {/* Pacote e maternidade viram PÍLULAS DE CONTORNO.
+                  
+                      Eram texto solto separado por espaço, e a linha lia como
+                      uma frase: "BIRTH + REELS GNDI rascunho". São três dados
+                      distintos, e a moldura é o que diz onde um termina e o
+                      outro começa sem precisar de pontuação.
+                  
+                      Contorno e não preenchimento: preenchidas, seis pílulas por
+                      cartão virariam blocos de cor competindo com a espinha e
+                      com o chip de alerta, que são os dois que precisam gritar. */}
                   {caso.pacoteNome ? (
-                    <span className="font-medium text-foreground">{caso.pacoteNome}</span>
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-foreground">
+                      {caso.pacoteNome}
+                    </span>
                   ) : (
-                    <span className="text-rascunho">sem pacote</span>
+                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-medium text-rascunho">
+                      sem pacote
+                    </span>
                   )}
                   {caso.maternidadeSigla ? (
-                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                    <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-medium">
                       {caso.maternidadeSigla}
                     </span>
                   ) : (
-                    <span className="text-rascunho">sem maternidade</span>
+                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-medium text-rascunho">
+                      sem maternidade
+                    </span>
                   )}
                   {prontoParaEntrega && (
-                    <span className="rounded-full bg-pronto px-2 py-0.5 text-[11px] font-semibold text-white">
+                    <span className="rounded-full bg-pronto px-2 py-0.5 text-[11px] font-bold text-white">
                       Pronto para entrega
                     </span>
                   )}
                   {caso.ehRascunho && <BadgeRascunho />}
                   {caso.ehTerminal && (
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs uppercase">
+                    <span className="rotulo-sobrescrito rounded-full bg-muted px-2 py-1 text-muted-foreground">
                       {caso.statusOperacional}
                     </span>
                   )}

@@ -101,6 +101,14 @@
      texto corrido cansa em duas linhas. Ver a nota no index.html. */
   --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  /* MONO SÓ PARA CÓDIGO: sigla de maternidade, "pc-1", LOCAL/REMOTO. Coisas
+     que se leem letra a letra e que ganham em parecer identificador.
+  
+     Hora e contagem NÃO usam mono. Foi a primeira tentativa e ficou estranho:
+     a JetBrains é larga, e "14:45" ao lado de um nome em Plus Jakarta lia como
+     etiqueta de sistema em vez de horário de atendimento. Onde o que se quer é
+     só que os dígitos não dancem, `tabular-nums` na fonte de texto resolve sem
+     trocar a voz. */
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* RAIOS numa escada, e não valores soltos. O cartão cresceu de 0.75 para
@@ -295,11 +303,20 @@
     font-family: var(--font-sans);
   }
 
-  /* Display SÓ nos títulos de tela e seção. Um h3 é nome de mãe, que é dado
-     e não título — em Syne ele viraria manchete e competiria com o próprio
-     rótulo do dia. */
-  h1,
-  h2 {
+  /* Display SÓ no título da tela, e por CLASSE no resto.
+  
+     A primeira versão pegava `h1, h2` por seletor, e isso passou longe do
+     alvo: o cabeçalho do dia é um `h2` que envolve o botão INTEIRO — rótulo,
+     data, selo de atraso e contador. Todos herdavam a display, e os dígitos da
+     Syne são largos: "28/08" ficava esticado ao lado de um texto que não
+     estava.
+  
+     Um `h3` também nunca deveria entrar — ali é nome de mãe, que é dado e não
+     título; em Syne viraria manchete e competiria com o rótulo do dia.
+  
+     Então: o seletor cobre só o `h1`, que é um por tela e é texto puro. Quem
+     mais quiser a display pede por `font-display`, no elemento exato. */
+  h1 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
@@ -436,6 +453,10 @@
      a seção sem competir com ela. Já existía espalhado em quatro lugares com
      três valores de tracking diferentes; aqui vira um só. */
   .rotulo-sobrescrito {
+    /* Sans explícita: o rótulo é etiqueta, não título, e alguns deles são
+       `h2` — sem esta linha herdariam a display se o seletor de título voltar
+       a crescer. Em 11px com tracking largo, uma display fica dura. */
+    font-family: var(--font-sans);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.14em;

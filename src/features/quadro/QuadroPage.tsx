@@ -611,7 +611,7 @@ function BotaoAba({
       {contagem !== undefined && contagem > 0 && (
         <span
           className={clsx(
-            'rounded-full px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums',
+            'rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
             ativa
               ? 'bg-white/25 text-white'
               : tom === 'rascunho'

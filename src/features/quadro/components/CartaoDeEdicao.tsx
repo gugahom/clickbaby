@@ -62,7 +62,7 @@ export function CartaoDeEdicao({
   const cor = corDoCaso(caso.corCalendar)
 
   return (
-    <li className="flex items-stretch gap-2.5 rounded-md border border-border bg-card px-3 py-2.5 shadow-cartao">
+    <li className="flex items-stretch gap-2.5 rounded-cartao border border-border bg-card px-3 py-3 shadow-cartao transition-shadow hover:shadow-cartao-alto">
       <div
         className="w-1 flex-shrink-0 rounded-sm"
         style={{ backgroundColor: cor }}
@@ -70,7 +70,7 @@ export function CartaoDeEdicao({
       />
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{titulo}</div>
+        <div className="truncate text-sm font-bold tracking-tight">{titulo}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {caso.maternidadeSigla && <span>{caso.maternidadeSigla}</span>}
           <span>· {caso.dia ? rotularDia(caso.dia, hoje) : 'sem data'}</span>
@@ -106,7 +106,7 @@ function LinhaDeRodada({
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
 
   return (
-    <li className="flex items-center gap-2 rounded-md bg-muted/50 py-1 pr-1 pl-2">
+    <li className="flex items-center gap-2 rounded-md bg-muted/60 py-1 pr-1 pl-2.5">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm">
           {/*

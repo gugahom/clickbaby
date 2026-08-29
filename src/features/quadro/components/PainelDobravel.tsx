@@ -53,28 +53,28 @@ export function PainelDobravel({
   const idCorpo = useId()
 
   return (
-    <section className="flex flex-shrink-0 flex-col overflow-hidden rounded-cartao border border-border bg-card shadow-painel">
+    <section className="flex flex-shrink-0 flex-col overflow-hidden rounded-painel border border-border bg-card shadow-painel">
       <h2>
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
           aria-controls={idCorpo}
-          className="flex w-full items-center gap-3 border-b border-transparent bg-acento-suave px-3 py-2.5 text-left transition-colors hover:bg-acento-suave/70"
+          className="flex w-full cursor-pointer items-center gap-3 border-b border-transparent bg-acento-suave px-3.5 py-3 text-left transition-colors hover:bg-acento-suave/70"
         >
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-bold tracking-[0.12em] text-acento-forte uppercase">
-                {titulo}
-              </span>
-              <span className="text-lg font-bold tabular-nums text-acento-forte">
+            <div className="flex items-center justify-between gap-2">
+              <span className="rotulo-sobrescrito text-acento-forte">{titulo}</span>
+              {/* Mesmo disco do PainelLateral: fechada, a seção é uma linha, e o
+                  contador é a única informação dela. */}
+              <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-acento-forte px-2 py-0.5 text-sm font-bold tabular-nums text-white">
                 {quantidade}
               </span>
             </div>
             {/* O critério só aparece aberta: fechada, a seção é uma linha, e
                 explicar o filtro de algo que não se está vendo gasta a altura
                 que o REELS ia usar. */}
-            {aberto && <p className="mt-0.5 text-xs text-muted-foreground">{criterio}</p>}
+            {aberto && <p className="mt-1 text-xs leading-snug text-muted-foreground">{criterio}</p>}
           </div>
           <Chevron
             className={clsx(

@@ -66,7 +66,7 @@ export function AppShell() {
           <div className="flex min-w-0 items-center gap-2">
             {/* A data. Some no celular: ali a barra de status do sistema já a
                 mostra a dois centímetros daqui. */}
-            <span className="hidden rounded-full bg-white/10 px-3 py-1.5 font-mono text-xs text-white/85 lg:inline">
+            <span className="hidden rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium tabular-nums text-white/85 lg:inline">
               {rotularCabecalho(hojeNoFuso())}
             </span>
 
