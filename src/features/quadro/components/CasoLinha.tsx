@@ -241,7 +241,17 @@ export function CasoLinha({ caso, etapas }: PropsCasoLinha) {
               )}
             </div>
 
-            {/* As duas trilhas. Rascunho não tem etapas — nada de "0/0". */}
+            {/* Um filete separando IDENTIDADE de ESTADO.
+            
+                Acima dele está quem é o caso — hora, nomes, pacote, maternidade
+                —, que não muda. Abaixo, o que está acontecendo com ele, que muda
+                o dia inteiro. Sem a linha, o cartão era um bloco só e o olho
+                percorria as duas coisas como se fossem a mesma leitura.
+                
+                Só quando há etapas: num rascunho ele separaria o nome de nada. */}
+            {etapas.length > 0 && <div className="mt-3 border-t border-border/70" />}
+
+            {/* As três trilhas. Rascunho não tem etapas — nada de "0/0". */}
             <TrilhasDoCaso etapas={etapas} />
 
             {/* No mobile o SLA não cabe na linha do título; desce para cá. */}

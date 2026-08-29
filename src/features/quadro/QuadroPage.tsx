@@ -615,7 +615,10 @@ function BotaoAba({
             ativa
               ? 'bg-white/25 text-white'
               : tom === 'rascunho'
-                ? 'bg-rascunho/15 text-rascunho'
+                // CHEIO, e não um tint. É o único contador da tela que pede
+                // ação — rascunho é cadastro incompleto esperando alguém — e
+                // um disco pintado é o que faz o olho voltar para ele.
+                ? 'bg-rascunho-cheio text-white'
                 : 'bg-muted text-muted-foreground',
           )}
         >

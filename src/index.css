@@ -82,6 +82,7 @@
   --color-andamento-tinta: var(--andamento-tinta);
   --color-atencao-tinta: var(--atencao-tinta);
   --color-rascunho: var(--rascunho);
+  --color-rascunho-cheio: var(--rascunho-cheio);
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
 
@@ -131,8 +132,11 @@
      com raio negativo, então a mancha é mais larga que o cartão e mais clara
      — o objeto passa a flutuar em vez de estar colado. É daqui que vem a
      "leveza" que faltava, mais do que de qualquer cor. */
+  /* Um pouco mais presente do que antes: sobre o chão pastel o cartão branco
+     se destacava por COR; sobre um off-white quase branco, quem separa é só a
+     sombra, e ela precisa de mais corpo para o cartão não derreter no fundo. */
   --shadow-cartao:
-    0 1px 2px oklch(0.37 0.05 273 / 5%), 0 8px 24px -12px oklch(0.37 0.05 273 / 12%);
+    0 1px 2px oklch(0.37 0.05 273 / 7%), 0 10px 28px -12px oklch(0.37 0.05 273 / 18%);
   --shadow-cartao-alto:
     0 2px 4px oklch(0.37 0.05 273 / 5%), 0 18px 40px -18px oklch(0.37 0.05 273 / 22%);
   --shadow-painel:
@@ -145,8 +149,18 @@
   /* O chão pastel e o cartão branco. A ordem inverteu: antes a página era o
      branco mais quente e a linha o branco puro; agora a página é tingida e o
      cartão flutua nela. */
-  --background: oklch(0.967 0.017 264);
-  --background-fim: oklch(0.974 0.014 350);
+  /* O CHÃO DEIXOU DE SER PASTEL.
+  
+     Ele era um gradiente azul-bebê -> rosa, e existia por uma razão precisa: o
+     cabeçalho era branco, e sem o chão tingido a tela voltava a ler como
+     planilha. Essa razão acabou — a faixa escura da marca faz esse trabalho
+     agora, e melhor. Com os dois no ar, sobrava cor de mais e o pastel passou
+     a competir com os cartões em vez de sustentá-los.
+  
+     Agora é um off-white QUENTE (matiz 60), e não um cinza neutro: uma tela
+     grande de cinza puro lida sob luz de hospital fica azulada e dura. O
+     `--background-fim` some junto com o gradiente. */
+  --background: oklch(0.985 0.006 60);
   --card: oklch(1 0 0);
 
   /* Tinta, não preto puro: #000 sobre branco vibra sob luz de hospital. */
@@ -159,8 +173,8 @@
      borda não precisa mais carregar a grade sozinha. Ela agora só fecha a
      forma do cartão. */
   --border: oklch(0.905 0.008 264);
-  --ring: oklch(0.52 0.15 250);
-  --primary: oklch(0.52 0.15 250);
+  --ring: oklch(0.29 0.055 273);
+  --primary: oklch(0.29 0.055 273);
   --primary-foreground: oklch(0.99 0 0);
 
   --concluido: oklch(0.52 0.16 152);
@@ -234,15 +248,42 @@
 
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
      do logo (97), sem perder o 4.5:1 que o texto precisa. */
-  --rascunho: oklch(0.47 0.105 92);
-  --rascunho-fundo: oklch(0.972 0.04 95);
-  --rascunho-borda: oklch(0.88 0.075 95);
+  /* RASCUNHO DEIXOU DE SER ÂMBAR.
+  
+     Era a manteiga da marca, e a troca por rosa foi pedida. O valor cheio
+     (0.62 / 0.15 / 12) serve para SUPERFÍCIE — o disco do contador, a borda —
+     mas reprova como texto sobre branco: dá 3.9:1. Então o `--rascunho` que o
+     texto usa é mais escuro na mesma matiz, e o valor pedido vive em
+     `--rascunho-cheio`.
+  
+     ATENÇÃO ao vizinho: `--acento` está na matiz 357 e este na 12 — quinze
+     graus de distância. São dois rosas com significados diferentes (um é
+     estrutura, o outro é estado), e o que os separa passa a ser a FORMA: o
+     acento aparece como rótulo minúsculo em caixa alta, o rascunho como
+     preenchimento de cartão e pílula. Se algum dia um deles virar as duas
+     coisas, essa separação cai. */
+  --rascunho: oklch(0.52 0.19 12);
+  /* O valor pedido era 0.62/0.15 — medido, ele dá 3.91:1 com texto branco, e
+     o disco do contador é exatamente branco sobre ele. 0.58/0.17 é o vizinho
+     mais próximo que passa: 4.69:1, e a olho é o mesmo rosa. */
+  --rascunho-cheio: oklch(0.58 0.17 12);
+  --rascunho-fundo: oklch(0.968 0.022 12);
+  --rascunho-borda: oklch(0.875 0.07 12);
 
   /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
      branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
-  --marca: oklch(0.48 0.14 252);
-  --marca-forte: oklch(0.37 0.12 254);
-  --marca-suave: oklch(0.965 0.022 252);
+  /* O AZUL DA MARCA ESCURECEU, e ficou menos saturado: de L 0.48 / C 0.14
+     para L 0.29 / C 0.055. É quase tinta de caneta, e é o que a referência
+     usa em botão ativo, aba selecionada e ação primária.
+  
+     O AZUL DE `--andamento` NÃO acompanha, de propósito. Ele não é marca, é
+     ESTADO: "alguém está trabalhando nisto agora". Escurecendo os dois juntos,
+     um botão de aba e uma etapa em andamento passariam a ter a mesma cor — e a
+     tela perderia justamente a distinção entre "onde estou" e "o que está
+     acontecendo". */
+  --marca: oklch(0.29 0.055 273);
+  --marca-forte: oklch(0.21 0.045 273);
+  --marca-suave: oklch(0.962 0.012 273);
 
   /* Rosa da marca. Acento: contadores, títulos de seção, marcadores. Usado
      pouco de propósito — ver a nota no topo. */
@@ -320,16 +361,9 @@
   }
 
   body {
-    /* `fixed` é o ponto: sem isso o gradiente rola junto com a lista e vira
-       elemento. Preso, ele lê como luz na sala. */
+    /* Cor chapada. O gradiente pastel saiu com o chão — ver a nota em
+       `--background`. No escuro, que segue desligado, ele continua valendo. */
     background-color: var(--background);
-    background-image: linear-gradient(
-      160deg,
-      var(--background) 0%,
-      var(--background) 45%,
-      var(--background-fim) 100%
-    );
-    background-attachment: fixed;
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     /* Alvos de toque de 44px e fonte generosa: a tela é usada de pé, com uma

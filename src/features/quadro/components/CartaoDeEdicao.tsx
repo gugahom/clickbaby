@@ -214,6 +214,15 @@ const SELO: Record<StatusEtapa, { rotulo: string; classe: string; anel: boolean 
   dispensada: { rotulo: 'Dispensado', classe: 'bg-muted text-muted-foreground', anel: false },
 }
 
+/** Grafia única da estação. Muda aqui, muda em todo lugar. */
+const PREFIXO = 'pc-'
+
+/** Tira o prefixo para o campo mostrar só o número, tolerando o que já está
+ *  gravado sem ele (ou com outra caixa) de antes desta regra existir. */
+function semPrefixo(valor: string): string {
+  return valor.replace(/^\s*pc\s*-?\s*/i, '').trim()
+}
+
 /**
  * O PC, atrás de um ícone.
  *
@@ -238,7 +247,11 @@ function CampoEstacao({
 }) {
   const registrar = useRegistrarEstacao()
   const doServidor = etapa.estacao ?? ''
-  const [texto, setTexto] = useState(doServidor)
+  // O campo edita SÓ O SUFIXO. "pc-" é prefixo fixo desenhado ao lado do input:
+  // a editora digita "1", e o que vai para o banco é "pc-1". Ela escrevia as
+  // quatro letras toda vez, e nada impedia "PC1", "pc 1" ou "Pc-1" — três
+  // grafias do mesmo PC, que numa busca futura seriam três máquinas.
+  const [texto, setTexto] = useState(semPrefixo(doServidor))
   const [ultimoVisto, setUltimoVisto] = useState(doServidor)
   const [aberto, setAberto] = useState(false)
 
@@ -248,18 +261,21 @@ function CampoEstacao({
   // renderizaria uma vez com o texto velho antes de corrigir.
   if (doServidor !== ultimoVisto) {
     setUltimoVisto(doServidor)
-    setTexto(doServidor)
+    setTexto(semPrefixo(doServidor))
   }
 
   function salvar() {
     setAberto(false)
-    const limpo = texto.trim()
-    if (limpo === doServidor) return
+    const sufixo = texto.trim()
+    // Em branco LIMPA — a RPC trata `''` como "apagar a estação". Sem esta
+    // linha, apagar o número gravaria um "pc-" solto.
+    const completo = sufixo === '' ? '' : `${PREFIXO}${sufixo}`
+    if (completo === doServidor) return
 
     onErro(null)
-    registrar.mutateAsync({ casoEtapaId: etapa.id, estacao: limpo }).catch((e) => {
+    registrar.mutateAsync({ casoEtapaId: etapa.id, estacao: completo }).catch((e) => {
       onErro(mensagemDeErro(e))
-      setTexto(doServidor)
+      setTexto(semPrefixo(doServidor))
     })
   }
 
@@ -296,29 +312,36 @@ function CampoEstacao({
   }
 
   return (
-    <input
-      type="text"
-      // `autoFocus` e não um foco agendado: o input nasce já pronto para
-      // digitar, sem depender de requestAnimationFrame — que o navegador
-      // pausa em aba oculta e que faria o foco simplesmente não acontecer.
-      // Aqui ele não rouba nada: só existe porque alguém acabou de clicar.
-      autoFocus
-      value={texto}
-      onChange={(e) => setTexto(e.target.value)}
-      onBlur={salvar}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') {
-          setTexto(doServidor)
-          setAberto(false)
-        }
-      }}
-      placeholder="pc-"
-      aria-label={rotulo}
-      maxLength={20}
-      // Estreito de propósito: cabe "pc-1" e não convida a escrever um bilhete.
-      // Para isso existe o aviso da etapa.
-      className="w-20 flex-shrink-0 rounded-full border border-marca bg-card px-2 py-0.5 font-mono text-xs text-foreground outline-none"
-    />
+    <span className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full border border-marca bg-card py-0.5 pr-1.5 pl-2 font-mono text-xs">
+      {/* O prefixo é DESENHO, não texto editável: ninguém consegue apagá-lo
+          nem escrever outro no lugar. É o que garante uma grafia só. */}
+      <span aria-hidden="true" className="text-muted-foreground select-none">
+        {PREFIXO}
+      </span>
+      <input
+        type="text"
+        // `autoFocus` e não um foco agendado: o input nasce já pronto para
+        // digitar, sem depender de requestAnimationFrame — que o navegador
+        // pausa em aba oculta e que faria o foco simplesmente não acontecer.
+        // Aqui ele não rouba nada: só existe porque alguém acabou de clicar.
+        autoFocus
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={salvar}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') {
+            setTexto(semPrefixo(doServidor))
+            setAberto(false)
+          }
+        }}
+        placeholder="1"
+        aria-label={rotulo}
+        // Curto de propósito: aqui vai um número de máquina, não um bilhete.
+        // Para bilhete existe o aviso da etapa.
+        maxLength={6}
+        className="w-8 bg-transparent text-foreground outline-none"
+      />
+    </span>
   )
 }

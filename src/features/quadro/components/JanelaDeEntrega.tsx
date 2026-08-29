@@ -1,11 +1,10 @@
 import clsx from 'clsx'
 import { formatarDataHora } from '@/lib/formato'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
-import { ROTULO_ETAPA, ROTULO_RODADA, type CasoQuadro, type EtapaQuadro } from '../types'
+import type { CasoQuadro } from '../types'
 
 interface PropsJanelaDeEntrega {
   caso: CasoQuadro
-  etapas: EtapaQuadro[]
 }
 
 /**
@@ -19,22 +18,15 @@ interface PropsJanelaDeEntrega {
  * gastas foram de trabalho ou de espera, nem onde o trabalho caiu dentro da
  * janela.
  *
- * Aqui a régua é a janela inteira: começa quando o nascimento conclui e termina
- * no vencimento. A barra cheia é o que já passou. Abaixo, cada edição aparece
- * na POSIÇÃO e na LARGURA reais — quando começou, quanto durou. De relance se
- * lê o que nenhum número dizia: "o prazo está pela metade e a edição de fotos
- * só começou agora", ou "tudo foi feito nas primeiras seis horas e o resto é
- * espera".
+ * A régua é a janela inteira: começa quando o nascimento conclui e termina no
+ * vencimento. A parte cheia é o que já passou. É uma pergunta que número
+ * nenhum respondia — "vence em 22h" não diz se isso é muito ou pouco do que
+ * foi prometido, e 22h restantes de 24 é o oposto de 22h restantes de 10 dias.
  *
  * SÓ APARECE COM O RELÓGIO ARMADO. Sem nascimento concluído não há janela —
  * `vence_em` é nulo, e desenhar uma régua sem as duas pontas seria inventar.
- *
- * AS BARRAS SÃO TEMPO DE PAREDE, não tempo de ciclo: vão do `iniciado_em` ao
- * `concluido_em`, pausas incluídas. É de propósito — a pergunta aqui é "quando
- * isto ocupou a janela", e uma pausa ocupa a janela igual. O tempo de ciclo
- * descontado vive no histórico, que é onde se cobra produtividade.
  */
-export function JanelaDeEntrega({ caso, etapas }: PropsJanelaDeEntrega) {
+export function JanelaDeEntrega({ caso }: PropsJanelaDeEntrega) {
   const agora = useRelogioDeMinuto()
 
   if (!caso.nascimentoConcluidoEm || !caso.venceEm) return null
@@ -50,30 +42,6 @@ export function JanelaDeEntrega({ caso, etapas }: PropsJanelaDeEntrega) {
   const decorrido = limitar(posicao(agora.getTime()))
   const estourou = agora.getTime() > fim
 
-  // Só o que TEM lugar na régua. Uma etapa que nunca começou não tem posição, e
-  // empurrá-la para a esquerda diria que ela aconteceu no início.
-  const barras = etapas
-    .filter((e) => e.trilha === 'edicao' && e.iniciadoEm)
-    .map((e) => {
-      const de = new Date(e.iniciadoEm as string).getTime()
-      const ate = e.concluidoEm ? new Date(e.concluidoEm).getTime() : agora.getTime()
-      const rodadas = etapas.filter((o) => o.tipo === e.tipo).length
-      return {
-        id: e.id,
-        status: e.status,
-        esquerda: limitar(posicao(de)),
-        largura: Math.max(1.5, limitar(posicao(ate)) - limitar(posicao(de))),
-        rotulo:
-          rodadas > 1
-            ? `${ROTULO_ETAPA[e.tipo]} ${ROTULO_RODADA[e.rodada] ?? e.rodada}`
-            : ROTULO_ETAPA[e.tipo],
-        titulo: `${ROTULO_ETAPA[e.tipo]} — de ${formatarDataHora(e.iniciadoEm)}${
-          e.concluidoEm ? ` a ${formatarDataHora(e.concluidoEm)}` : ', em andamento'
-        }`,
-      }
-    })
-    .sort((a, b) => a.esquerda - b.esquerda)
-
   return (
     <section aria-label="Janela de entrega">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
@@ -88,9 +56,9 @@ export function JanelaDeEntrega({ caso, etapas }: PropsJanelaDeEntrega) {
         </span>
       </div>
 
-      {/* A RÉGUA. `h-2` e não mais grossa: ela é o pano de fundo das barras,
-          não o assunto. */}
-      <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+      {/* Sem as barras por cima, a régua deixou de ser pano de fundo e virou o
+          assunto — daí 10px em vez de 8. */}
+      <div className="relative h-2.5 overflow-hidden rounded-full bg-muted">
         <div
           className={clsx(
             'absolute inset-y-0 left-0 rounded-full transition-[width]',
@@ -100,41 +68,17 @@ export function JanelaDeEntrega({ caso, etapas }: PropsJanelaDeEntrega) {
         />
       </div>
 
-      {/* AS EDIÇÕES, cada uma no seu lugar e com a sua largura. Uma linha por
-          etapa, e não todas na mesma: sobrepostas, duas edições simultâneas
-          viravam uma barra só e o paralelismo — que é a regra de precedência do
-          sistema — desapareceria justamente aqui. */}
-      {barras.length > 0 && (
-        <div className="mt-1.5 space-y-1">
-          {barras.map((b) => (
-            <div key={b.id} className="relative h-5" title={b.titulo}>
-              <div
-                className={clsx(
-                  'absolute inset-y-0 flex items-center rounded-full px-1.5',
-                  b.status === 'concluida'
-                    ? 'bg-concluido/15 text-concluido-tinta'
-                    : b.status === 'pausada'
-                      ? 'bg-atencao/15 text-atencao-tinta'
-                      : 'bg-andamento/15 text-andamento-tinta',
-                )}
-                style={{ left: `${b.esquerda}%`, width: `${b.largura}%` }}
-              >
-                {/* O rótulo vive DENTRO quando cabe e escapa para fora quando
-                    não — uma barra de dez minutos numa janela de 48h tem dois
-                    pixels, e um texto cortado ali não seria nome de nada. */}
-                <span
-                  className={clsx(
-                    'text-[11px] font-semibold whitespace-nowrap',
-                    b.largura < 18 && 'absolute left-full ml-1.5',
-                  )}
-                >
-                  {b.rotulo}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* AS BARRAS POR ETAPA SAÍRAM (29/08, a pedido do gestor).
+      
+          Elas mostravam cada edição na posição e na largura reais dentro da
+          janela. A ideia se sustenta, mas na prática um caso com quatro
+          edições virava quatro linhas de rótulo empilhadas logo abaixo de uma
+          régua de 8px — mais altura de legenda do que de gráfico, para uma
+          leitura que a lista de etapas logo abaixo já dá em texto.
+      
+          A RÉGUA FICA, que é o que respondia a pergunta de fato nova: quanto da
+          janela já passou. Se as barras voltarem um dia, o lugar delas é uma
+          tela própria de análise, não o card aberto no corredor. */}
 
       <div className="mt-1.5 flex justify-between gap-2 text-[11px] text-muted-foreground">
         <span className="tabular-nums">
