@@ -28,13 +28,13 @@ export function CampoBusca({ valor, onMudar, resultado }: PropsCampoBusca) {
   const id = useId()
 
   return (
-    <div className="relative flex-1 sm:max-w-xs">
+    <div className="relative min-w-0 flex-1">
       <label htmlFor={id} className="sr-only">
         Buscar por mãe, bebê, pacote ou maternidade
       </label>
 
       <IconeLupa
-        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
 
@@ -54,7 +54,7 @@ export function CampoBusca({ valor, onMudar, resultado }: PropsCampoBusca) {
         placeholder="Buscar mãe, bebê, pacote…"
         // `search` nativo desenha um X próprio no WebKit, com 12px de alvo e
         // fora do nosso desenho. O nosso substitui.
-        className="h-11 w-full rounded-full border border-border bg-card pr-11 pl-9 text-sm transition-colors placeholder:text-muted-foreground focus:border-marca focus:ring-2 focus:ring-marca/20 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-12 w-full rounded-full border border-border bg-card pr-12 pl-11 text-sm shadow-cartao transition placeholder:text-muted-foreground focus:border-acento/50 focus:ring-4 focus:ring-acento/10 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       />
 
       {valor !== '' && (
@@ -65,7 +65,7 @@ export function CampoBusca({ valor, onMudar, resultado }: PropsCampoBusca) {
           // size-11, não size-9: 44px é o mínimo da seção 6 do CLAUDE.md, e o
           // campo tem exatamente essa altura, então o alvo cabe inteiro dentro
           // dele. O ícone continua com 16px — quem cresce é a área de toque.
-          className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute top-1/2 right-0.5 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <IconeX className="size-4" />
         </button>

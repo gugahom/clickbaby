@@ -1,4 +1,5 @@
 import { AcoesDoCaso } from './AcoesDoCaso'
+import { JanelaDeEntrega } from './JanelaDeEntrega'
 import { HistoricoDoCaso } from './HistoricoDoCaso'
 import type { EstadoSla } from '../lib/sla'
 import { ROTULO_SITUACAO, type CasoQuadro, type EtapaQuadro } from '../types'
@@ -39,6 +40,12 @@ export function CasoDetalhe({ caso, etapas, sla }: PropsCasoDetalhe) {
         </section>
       )}
 
+      {/* Antes das etapas de propósito: a janela responde "quanto tempo eu
+          tenho e onde o trabalho caiu dentro dele", que é o enquadramento de
+          tudo que vem depois. Depois da lista, ela viraria um resumo do que já
+          foi lido. */}
+      <JanelaDeEntrega caso={caso} />
+
       <section>
         <TituloSecao>Etapas</TituloSecao>
         <AcoesDoCaso caso={caso} etapas={etapas} />
@@ -74,10 +81,13 @@ function Campo({
 }) {
   return (
     <div>
-      <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {rotulo}
-      </div>
-      <div className="text-sm">{valor}</div>
+      <div className="rotulo-sobrescrito text-muted-foreground">{rotulo}</div>
+      {/* NEGRITO no valor.
+      
+          Rótulo e valor tinham pesos parecidos, e a grade de quatro colunas
+          virava oito linhas de texto com a mesma voz. O peso separa o que é
+          etiqueta do que é dado — e aqui o dado é o que se procura. */}
+      <div className="mt-0.5 text-sm font-bold tracking-tight">{valor}</div>
       {detalhe && <div className="mt-0.5 text-xs text-muted-foreground">{detalhe}</div>}
     </div>
   )

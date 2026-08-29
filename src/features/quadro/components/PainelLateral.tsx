@@ -39,19 +39,21 @@ export function PainelLateral({
   children,
 }: PropsPainelLateral) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-cartao border border-border bg-card shadow-painel">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-painel border border-border bg-card shadow-painel">
       {/* O rosa da marca vive aqui: são os dois pontos da tela que se leem de
-          longe, na TV da sala de edição. Usado pouco, é visto. */}
-      <header className="flex-shrink-0 border-b border-border bg-acento-suave px-3 py-2.5">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-sm font-bold tracking-[0.12em] text-acento-forte uppercase">
-            {titulo}
-          </h2>
-          <span className="text-lg font-bold tabular-nums text-acento-forte">
+          longe, na TV da sala de edição. Usado pouco, é visto.
+      
+          O CONTADOR virou disco cheio. Era um número solto do mesmo tamanho do
+          título, e os dois disputavam a linha; num disco ele vira objeto — se
+          lê de longe sem ser lido, que é o que a TV precisa. */}
+      <header className="flex-shrink-0 border-b border-border bg-acento-suave px-3.5 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="rotulo-sobrescrito text-acento-forte">{titulo}</h2>
+          <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white">
             {quantidade}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{criterio}</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">{criterio}</p>
       </header>
 
       {erro && (
@@ -61,9 +63,9 @@ export function PainelLateral({
       )}
 
       {quantidade === 0 ? (
-        <p className="px-3 py-6 text-center text-xs text-muted-foreground">{vazio}</p>
+        <p className="px-3 py-8 text-center text-xs text-muted-foreground">{vazio}</p>
       ) : (
-        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">{children}</ul>
+        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5">{children}</ul>
       )}
     </section>
   )

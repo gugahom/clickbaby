@@ -48,10 +48,9 @@
  * "fofa" em segundos, e às 3h num corredor de maternidade a leitura certa é
  * densidade, não doçura.
  *
- * A MANTEIGA finalmente trabalha. Era a única cor do logo sem função na tela.
- * O estado de rascunho já usava um âmbar escurecido — que é a mesma matiz
- * (97 vs 75). Aproximei os dois: rascunho agora É a manteiga da marca, e a
- * seção de rascunhos herda isso.
+ * A MANTEIGA saiu de cena em 29/08. Ela era a cor do rascunho — a única do
+ * logo com função na tela — e o gestor pediu rosa no lugar. Hoje o âmbar
+ * (`--atencao`) responde só por PAUSADO, que é estado e não cadastro.
  *
  * O escuro segue definido em [data-tema="escuro"], desligado. A seção 5 do
  * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é
@@ -77,7 +76,13 @@
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
   --color-alerta-proximo: var(--alerta-proximo);
+  --color-contador: var(--contador);
+  /* Texto SOBRE pílula tingida — ver a nota junto dos valores. */
+  --color-concluido-tinta: var(--concluido-tinta);
+  --color-andamento-tinta: var(--andamento-tinta);
+  --color-atencao-tinta: var(--atencao-tinta);
   --color-rascunho: var(--rascunho);
+  --color-rascunho-cheio: var(--rascunho-cheio);
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
 
@@ -97,15 +102,45 @@
   --color-pronto-fundo: var(--pronto-fundo);
   --color-pronto-borda: var(--pronto-borda);
 
+  /* TIPOGRAFIA. Syne só no título e no wordmark — é display, e display em
+     texto corrido cansa em duas linhas. Ver a nota no index.html. */
+  --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  /* MONO SÓ PARA CÓDIGO: sigla de maternidade, "pc-1", LOCAL/REMOTO. Coisas
+     que se leem letra a letra e que ganham em parecer identificador.
+  
+     Hora e contagem NÃO usam mono. Foi a primeira tentativa e ficou estranho:
+     a JetBrains é larga, e "14:45" ao lado de um nome em Plus Jakarta lia como
+     etiqueta de sistema em vez de horário de atendimento. Onde o que se quer é
+     só que os dígitos não dancem, `tabular-nums` na fonte de texto resolve sem
+     trocar a voz. */
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* RAIOS numa escada, e não valores soltos. O cartão cresceu de 0.75 para
+     0.875rem: com a sombra nova alcançando mais longe, o canto anterior ficava
+     duro para o tamanho da pétala de luz. */
   --radius-md: 0.5rem;
-  --radius-cartao: 0.75rem;
+  --radius-cartao: 0.875rem;
+  --radius-painel: 1.25rem;
 
   /* Elevação. No claro a sombra é o que separa a linha do papel — no escuro
      essa função era da luminância. */
-  --shadow-cartao: 0 1px 2px oklch(0.45 0.03 265 / 5%), 0 2px 6px oklch(0.45 0.03 265 / 6%);
+  /* SOMBRA LONGA E RASA, no lugar da curta e escura.
+  
+     A anterior tinha 6px de alcance: separava o cartão do fundo por CONTRASTE,
+     e o resultado eram objetos recortados, como adesivos. A nova espalha 24px
+     com raio negativo, então a mancha é mais larga que o cartão e mais clara
+     — o objeto passa a flutuar em vez de estar colado. É daqui que vem a
+     "leveza" que faltava, mais do que de qualquer cor. */
+  /* Um pouco mais presente do que antes: sobre o chão pastel o cartão branco
+     se destacava por COR; sobre um off-white quase branco, quem separa é só a
+     sombra, e ela precisa de mais corpo para o cartão não derreter no fundo. */
+  --shadow-cartao:
+    0 1px 2px oklch(0.37 0.05 273 / 7%), 0 10px 28px -12px oklch(0.37 0.05 273 / 18%);
   --shadow-cartao-alto:
-    0 1px 2px oklch(0.45 0.03 265 / 6%), 0 6px 16px oklch(0.45 0.03 265 / 10%);
-  --shadow-painel: 0 1px 3px oklch(0.45 0.03 265 / 6%), 0 8px 24px oklch(0.45 0.03 265 / 7%);
+    0 2px 4px oklch(0.37 0.05 273 / 5%), 0 18px 40px -18px oklch(0.37 0.05 273 / 22%);
+  --shadow-painel:
+    0 1px 2px oklch(0.37 0.05 273 / 4%), 0 12px 32px -16px oklch(0.37 0.05 273 / 14%);
 }
 
 :root {
@@ -114,8 +149,18 @@
   /* O chão pastel e o cartão branco. A ordem inverteu: antes a página era o
      branco mais quente e a linha o branco puro; agora a página é tingida e o
      cartão flutua nela. */
-  --background: oklch(0.967 0.017 264);
-  --background-fim: oklch(0.974 0.014 350);
+  /* O CHÃO DEIXOU DE SER PASTEL.
+  
+     Ele era um gradiente azul-bebê -> rosa, e existia por uma razão precisa: o
+     cabeçalho era branco, e sem o chão tingido a tela voltava a ler como
+     planilha. Essa razão acabou — a faixa escura da marca faz esse trabalho
+     agora, e melhor. Com os dois no ar, sobrava cor de mais e o pastel passou
+     a competir com os cartões em vez de sustentá-los.
+  
+     Agora é um off-white QUENTE (matiz 60), e não um cinza neutro: uma tela
+     grande de cinza puro lida sob luz de hospital fica azulada e dura. O
+     `--background-fim` some junto com o gradiente. */
+  --background: oklch(0.985 0.006 60);
   --card: oklch(1 0 0);
 
   /* Tinta, não preto puro: #000 sobre branco vibra sob luz de hospital. */
@@ -128,14 +173,28 @@
      borda não precisa mais carregar a grade sozinha. Ela agora só fecha a
      forma do cartão. */
   --border: oklch(0.905 0.008 264);
-  --ring: oklch(0.52 0.15 250);
-  --primary: oklch(0.52 0.15 250);
+  --ring: oklch(0.29 0.055 273);
+  --primary: oklch(0.29 0.055 273);
   --primary-foreground: oklch(0.99 0 0);
 
   --concluido: oklch(0.52 0.16 152);
   --andamento: oklch(0.52 0.17 248);
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
+
+  /* AS MESMAS TRÊS, MAIS ESCURAS, para texto sobre pílula tingida.
+  
+     Medido: com o texto no valor normal sobre o próprio tom a 10-12%, "Entrada"
+     dava 4.35:1 e "Banho" 4.24:1 — abaixo do 4.5 que texto pequeno exige. O
+     tint escurece o fundo o suficiente para comer a margem, e baixar o tint até
+     resolver apagaria a pílula.
+  
+     Então o texto ganha valor próprio: mesma matiz, L de 0.45. A cor CHEIA
+     (ponto, borda, barra) continua sendo a de cima — são usos diferentes e
+     não precisam do mesmo valor. */
+  --concluido-tinta: oklch(0.45 0.15 152);
+  --andamento-tinta: oklch(0.45 0.16 248);
+  --atencao-tinta: oklch(0.45 0.13 68);
 
   /* HORA CHEGANDO — e por que ela não é amarela.
   
@@ -147,25 +206,101 @@
      opacidade separa isso; são vizinhos no círculo.
   
      Então o alerta passa a ser LARANJA (45), e vira uma rampa: laranja a uma
-     hora, vermelho (25) a meia hora. O amarelo fica sendo do rascunho, sem
-     disputa, e a escalada ganha uma leitura que "amarelo depois vermelho" não
-     tinha — as duas etapas agora são a mesma cor esquentando.
+     hora, vermelho (25) a meia hora. A escalada ganha uma leitura que "amarelo
+     depois vermelho" não tinha — as duas etapas são a mesma cor esquentando.
+     (O rascunho, que era o amarelo em disputa, virou magenta depois disso.)
   
      L 0.52 e não mais claro porque este valor também é TEXTO no chip: precisa
      dos 4.5:1 sobre branco. */
   --alerta-proximo: oklch(0.52 0.175 45);
 
+  /* CONTADOR — uma cor para toda contagem da tela.
+  
+     O disco de rascunhos e os das seções (REELS, MASTER, UTI) eram dois rosas
+     diferentes: um vinha de `--rascunho`, o outro de `--acento-forte`. Do lado
+     um do outro, isso lia como se as cores quisessem dizer algo, e não diziam
+     — um contador é um contador.
+  
+     Unificados, a regra do rosa fica legível: CHEIO é contagem, rótulo
+     minúsculo em caixa alta é seção. Duas funções, duas formas, uma família
+     de cor — e aí a proximidade entre `--rascunho` e `--acento` deixa de ser
+     um problema, porque passa a ser proposital.
+  
+     Branco em cima dá 4.69:1. Foi por isso que ficou em L 0.58 e não no 0.62
+     pedido, que dá 3.91. */
+  --contador: oklch(0.58 0.17 12);
+
+  /* A FAIXA DO CABEÇALHO.
+  
+     A referência usa um gradiente de azul-noite a vinho, e ele é o que mais
+     ancora a tela como aplicativo. Aqui ele é feito com as DUAS cores da
+     marca, na mesma travessia: o azul da íris (`marca-forte`) escurecido, indo
+     para o rosa (`acento-forte`) também escurecido. Mesma estrutura, cores
+     nossas — que era o pedido.
+  
+     Escuro o bastante para o texto branco passar de 12:1 nas duas pontas. */
+  --gradiente-cabecalho: linear-gradient(
+    100deg,
+    oklch(0.23 0.075 262) 0%,
+    oklch(0.3 0.1 300) 55%,
+    oklch(0.36 0.12 355) 100%
+  );
+
+  /* O GRADIENTE DA AÇÃO FINAL — confirmar entrega.
+  
+     Vem da referência, nas nossas cores: o rosa da marca abrindo para um rosa
+     mais quente. É o único botão da tela com gradiente, e de propósito:
+     confirmar entrega é o gesto que ENCERRA o caso, o único irreversível do
+     fluxo normal, e a única coisa que a fotógrafa procura quando o trabalho
+     acabou. Um segundo botão assim e o primeiro deixa de significar.
+  
+     As duas pontas ficam em L 0.54-0.56 para o texto branco passar de 4.5:1 nas
+     duas — um gradiente que escurece de um lado costuma reprovar no outro. */
+  --gradiente-acento: linear-gradient(
+    135deg,
+    oklch(0.56 0.2 357) 0%,
+    oklch(0.55 0.18 25) 100%
+  );
+
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
      do logo (97), sem perder o 4.5:1 que o texto precisa. */
-  --rascunho: oklch(0.47 0.105 92);
-  --rascunho-fundo: oklch(0.972 0.04 95);
-  --rascunho-borda: oklch(0.88 0.075 95);
+  /* RASCUNHO DEIXOU DE SER ÂMBAR.
+  
+     Era a manteiga da marca, e a troca por rosa foi pedida. O valor cheio
+     (0.62 / 0.15 / 12) serve para SUPERFÍCIE — o disco do contador, a borda —
+     mas reprova como texto sobre branco: dá 3.9:1. Então o `--rascunho` que o
+     texto usa é mais escuro na mesma matiz, e o valor pedido vive em
+     `--rascunho-cheio`.
+  
+     A MATIZ VOLTOU PARA 12. Ela chegou a girar para a 310 (magenta) para se
+     afastar do `--acento`, que está na 357 — a 33 de distância RGB, dois rosas
+     quase iguais. O gestor preferiu o rosa original, e a solução da colisão
+     mudou de MATIZ para PAPEL: todo contador da tela passou a usar este mesmo
+     rosa (ver `--contador`), então os dois deixaram de ser "duas coisas rosa
+     por acaso" e viraram um só significado — rosa cheio é contagem, rosa em
+     rótulo minúsculo é seção. */
+  --rascunho: oklch(0.52 0.19 12);
+  /* O valor pedido era 0.62/0.15 — medido, ele dá 3.91:1 com texto branco, e
+     o disco do contador é exatamente branco sobre ele. 0.58/0.17 é o vizinho
+     mais próximo que passa: 4.69:1, e a olho é o mesmo rosa. */
+  --rascunho-cheio: oklch(0.58 0.17 12);
+  --rascunho-fundo: oklch(0.968 0.022 12);
+  --rascunho-borda: oklch(0.875 0.07 12);
 
   /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
      branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
-  --marca: oklch(0.48 0.14 252);
-  --marca-forte: oklch(0.37 0.12 254);
-  --marca-suave: oklch(0.965 0.022 252);
+  /* O AZUL DA MARCA ESCURECEU, e ficou menos saturado: de L 0.48 / C 0.14
+     para L 0.29 / C 0.055. É quase tinta de caneta, e é o que a referência
+     usa em botão ativo, aba selecionada e ação primária.
+  
+     O AZUL DE `--andamento` NÃO acompanha, de propósito. Ele não é marca, é
+     ESTADO: "alguém está trabalhando nisto agora". Escurecendo os dois juntos,
+     um botão de aba e uma etapa em andamento passariam a ter a mesma cor — e a
+     tela perderia justamente a distinção entre "onde estou" e "o que está
+     acontecendo". */
+  --marca: oklch(0.29 0.055 273);
+  --marca-forte: oklch(0.21 0.045 273);
+  --marca-suave: oklch(0.962 0.012 273);
 
   /* Rosa da marca. Acento: contadores, títulos de seção, marcadores. Usado
      pouco de propósito — ver a nota no topo. */
@@ -243,23 +378,45 @@
   }
 
   body {
-    /* `fixed` é o ponto: sem isso o gradiente rola junto com a lista e vira
-       elemento. Preso, ele lê como luz na sala. */
+    /* Cor chapada. O gradiente pastel saiu com o chão — ver a nota em
+       `--background`. No escuro, que segue desligado, ele continua valendo. */
     background-color: var(--background);
-    background-image: linear-gradient(
-      160deg,
-      var(--background) 0%,
-      var(--background) 45%,
-      var(--background-fim) 100%
-    );
-    background-attachment: fixed;
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     /* Alvos de toque de 44px e fonte generosa: a tela é usada de pé, com uma
      * mão só, em aparelho compartilhado (seção 6 do CLAUDE.md). */
-    font-family:
-      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
   }
+
+  /* Display SÓ no título da tela, e por CLASSE no resto.
+  
+     A primeira versão pegava `h1, h2` por seletor, e isso passou longe do
+     alvo: o cabeçalho do dia é um `h2` que envolve o botão INTEIRO — rótulo,
+     data, selo de atraso e contador. Todos herdavam a display, e os dígitos da
+     Syne são largos: "28/08" ficava esticado ao lado de um texto que não
+     estava.
+  
+     Um `h3` também nunca deveria entrar — ali é nome de mãe, que é dado e não
+     título; em Syne viraria manchete e competiria com o rótulo do dia.
+  
+     Então: o seletor cobre só o `h1`, que é um por tela e é texto puro. Quem
+     mais quiser a display pede por `font-display`, no elemento exato. */
+  h1 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* SYNE SÓ NO TÍTULO DA TELA, e a medição explica por quê.
+  
+     Em 800/48px ela ocupa 38,1px por caractere contra 24,3px da Plus Jakarta:
+     57% mais larga. "Quarta-feira, 26 de agosto" mede 1002px nela e 635px na
+     outra. E a altura-x é menor (24 contra 27), então as minúsculas encolhem
+     enquanto a linha estica — as descidas de "j" e "g" somem no meio de uma
+     palavra pesada.
+  
+     Numa frase curta e grande, isso é caráter. Repetido em cinco cabeçalhos de
+     dia cheios de palavras, vira leitura difícil — e uma assinatura repetida
+     cinco vezes deixa de ser assinatura. */ 
 
   /* Foco sempre visível: a linha do caso é um header clicável de verdade,
    * navegável por teclado. No claro o anel precisa de offset positivo — sem o
@@ -376,5 +533,35 @@
       background: var(--cor-alerta);
       animation: none;
     }
+  }
+}
+
+/* ============================================================================
+   Utilitários da nova casca visual.
+   ============================================================================ */
+
+@layer components {
+  /* A faixa do cabeçalho. Ver `--gradiente-cabecalho` no topo. */
+  .superficie-cabecalho {
+    background-image: var(--gradiente-cabecalho);
+  }
+
+  /* Só o botão de confirmar entrega. Ver `--gradiente-acento`. */
+  .superficie-acento {
+    background-image: var(--gradiente-acento);
+  }
+
+  /* RÓTULO SOBRESCRITO: o texto pequeno, espaçado e em caixa alta que anuncia
+     a seção sem competir com ela. Já existía espalhado em quatro lugares com
+     três valores de tracking diferentes; aqui vira um só. */
+  .rotulo-sobrescrito {
+    /* Sans explícita: o rótulo é etiqueta, não título, e alguns deles são
+       `h2` — sem esta linha herdariam a display se o seletor de título voltar
+       a crescer. Em 11px com tracking largo, uma display fica dura. */
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 }

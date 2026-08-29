@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { formatarDataHora } from '@/lib/formato'
@@ -104,20 +105,20 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
             não gera nem confere o link.
           </p>
 
-          <label className="block">
+          <div>
             <span className="text-sm font-medium">Tipo</span>
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoEntregavel)}
-              className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-            >
-              {Object.entries(ROTULO_TIPO).map(([valor, rotulo]) => (
-                <option key={valor} value={valor}>
-                  {rotulo}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-1">
+              <Dropdown
+                rotulo="Selecione o tipo"
+                selecionado={tipo}
+                onEscolher={(item) => setTipo(item.id as TipoEntregavel)}
+                itens={Object.entries(ROTULO_TIPO).map(([valor, rot]) => ({
+                  id: valor,
+                  rotulo: rot,
+                }))}
+              />
+            </div>
+          </div>
 
           <label className="block">
             <span className="text-sm font-medium">Link</span>

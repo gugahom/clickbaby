@@ -57,10 +57,19 @@ export function Dialogo({
         e.preventDefault()
         if (!ocupado) onCancelar()
       }}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-md border border-border bg-card p-0 text-foreground backdrop:bg-black/60"
+      /*
+        O diálogo herda a mesma linguagem do cartão: raio de painel, sombra
+        que alcança longe, e o título na display.
+        
+        O backdrop ganhou desfoque. Só escurecer separava o modal do resto por
+        luminância; desfocando, o que está atrás deixa de ser legível e a
+        atenção não tem para onde escapar — numa tela em que o fundo é uma
+        lista de casos coloridos, isso importa mais do que numa tela lisa.
+      */
+      className="m-auto w-[min(30rem,calc(100vw-2rem))] rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
     >
-      <div className="space-y-4 p-5">
-        <h2 className="text-base font-semibold">{titulo}</h2>
+      <div className="space-y-4 p-5 md:p-6">
+        <h2 className="text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>
 
         {children}
 

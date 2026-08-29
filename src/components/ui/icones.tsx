@@ -71,9 +71,9 @@ export function IconePlay({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Preenchido, não contornado: é a ação de partida e precisa de peso
-          óptico maior que as vizinhas. */}
-      <path d="M8 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5Z" />
+      {/* Preenchido, e não vazado como no lucide: em 16px o triângulo
+          vazado vira três riscos e perde a leitura de "play". */}
+      <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" />
     </svg>
   )
 }
@@ -90,7 +90,7 @@ export function IconeCheck({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <path d="m5 13 4.5 4.5L19 7" />
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   )
 }
@@ -108,7 +108,7 @@ export function IconeCaneta({ className }: PropsIcone) {
       aria-hidden="true"
     >
       <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }
@@ -141,10 +141,8 @@ export function IconePause({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Preenchido como o play, e no mesmo lugar do grupo: os dois são a mesma
-          alavanca em estados opostos, não duas ações diferentes. */}
-      <rect x="7" y="5" width="3.5" height="14" rx="1" />
-      <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+      <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
+      <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
     </svg>
   )
 }
@@ -161,11 +159,8 @@ export function IconeAtribuir({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Pessoa + sinal de mais: designar alguém. Ocupa o mesmo lugar do
-          handoff no grupo, porque as duas respondem "quem é o responsável" —
-          mudam só o momento e o que aconteceu de fato. */}
-      <path d="M15 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
-      <circle cx="8.5" cy="7" r="3.5" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
       <path d="M19 8v6M22 11h-6" />
     </svg>
   )
@@ -183,14 +178,10 @@ export function IconeRendicao({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Duas pessoas com uma seta entre elas: quem está e quem assume. NÃO é
-          o handoff (que é uma pessoa e uma seta de saída) — aqui as duas
-          coexistem na tela, porque a troca ainda não aconteceu. */}
-      <circle cx="6" cy="7" r="3" />
-      <path d="M1.5 20v-1a4 4 0 0 1 4-4h1" />
-      <circle cx="18" cy="7" r="3" />
-      <path d="M22.5 20v-1a4 4 0 0 0-4-4h-1" />
-      <path d="M10 11.5h4M12.5 10l1.5 1.5-1.5 1.5" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   )
 }
@@ -207,11 +198,7 @@ export function IconeNota({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Balão com linhas: um recado sobre a etapa. Distinto da caneta, que
-          edita o CADASTRO do caso — são coisas diferentes e ficam perto uma da
-          outra na tela. */}
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 8.6 8.5z" />
-      <path d="M8.5 10.5h7M8.5 14h4.5" />
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   )
 }
@@ -228,10 +215,8 @@ export function IconeDesfazer({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      {/* Seta girando para trás: desfazer. Deliberadamente NÃO é uma lixeira —
-          reabrir não apaga nada, devolve a etapa ao trabalho. */}
-      <path d="M3 8v5h5" />
-      <path d="M3.5 12.5a8.5 8.5 0 1 0 2.4-5.4L3 10" />
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
     </svg>
   )
 }
@@ -248,8 +233,8 @@ export function IconeLupa({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
     </svg>
   )
 }
@@ -284,8 +269,9 @@ export function IconeReabrir({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
     </svg>
   )
 }
@@ -303,8 +289,64 @@ export function IconeDispensar({ className }: PropsIcone) {
       className={className}
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M5.6 5.6l12.8 12.8" />
+      <circle cx="12" cy="12" r="10" />
+      <path d="m4.9 4.9 14.2 14.2" />
+    </svg>
+  )
+}
+
+/** Monitor: a estação de edição. */
+export function IconeMonitor({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </svg>
+  )
+}
+
+/** Porta com seta saindo: sair da conta. */
+export function IconeSair({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  )
+}
+
+/** Três pontos: "mais ações". */
+export function IconeMais({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="5" r="1.75" />
+      <circle cx="12" cy="12" r="1.75" />
+      <circle cx="12" cy="19" r="1.75" />
     </svg>
   )
 }

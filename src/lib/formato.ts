@@ -62,6 +62,28 @@ export function ehRotuloRelativo(dia: string, hoje: string): boolean {
   return delta === 0 || delta === 1 || delta === -1
 }
 
+const diaPorExtenso = new Intl.DateTimeFormat('pt-BR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+
+/**
+ * "Sexta, 29 de agosto" — o sobrescrito acima do título da tela.
+ *
+ * Difere de `rotularDia`: aquele é relativo ("Hoje") porque nomeia um BLOCO
+ * dentro de uma lista de vários dias, e ali o que importa é a distância até
+ * hoje. Este nomeia o dia em que a pessoa está, e aí "Hoje" seria uma
+ * tautologia.
+ */
+export function dataPorExtenso(dia: string): string {
+  const [ano, mes, d] = dia.split('-').map(Number)
+  const texto = diaPorExtenso.format(new Date(ano ?? 1970, (mes ?? 1) - 1, d ?? 1))
+  // O Intl devolve "sexta-feira, 29 de agosto"; o "-feira" é ruído num rótulo
+  // que existe para ser lido de canto de olho.
+  return (texto.charAt(0).toUpperCase() + texto.slice(1)).replace('-feira', '')
+}
+
 /** Quantos dias no passado (positivo) o dia está. 0 ou negativo = hoje ou futuro. */
 export function diasAtras(dia: string, hoje: string): number {
   return -difDias(dia, hoje)

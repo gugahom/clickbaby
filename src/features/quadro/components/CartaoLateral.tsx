@@ -40,14 +40,14 @@ export function CartaoLateral({
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
   return (
-    <li className="flex items-stretch gap-2.5 rounded-md border border-border bg-card px-3 py-2.5 shadow-cartao">
+    <li className="flex items-stretch gap-2.5 rounded-cartao border border-border bg-card px-3 py-3 shadow-cartao transition-shadow hover:shadow-cartao-alto">
       <div
         className="w-1 flex-shrink-0 rounded-sm"
         style={{ backgroundColor: corDoCaso(caso.corCalendar) }}
         aria-hidden="true"
       />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{titulo}</div>
+        <div className="truncate text-sm font-bold tracking-tight">{titulo}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {caso.maternidadeSigla && (
             <span className="font-mono">{caso.maternidadeSigla}</span>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { useCadastros } from '../api/useCadastros'
 import { useEditarCaso } from '../api/useEditarCaso'
@@ -141,7 +142,12 @@ function Selecao({
   faltando: boolean
 }) {
   return (
-    <label className="block">
+    /*
+      <div> e não <label>: o gatilho agora é um <button>, e um label envolvendo
+      um botão faz o clique no texto DISPARAR o botão — o painel abriria ao
+      tocar no rótulo, que é exatamente onde a pessoa não clica de propósito.
+    */
+    <div>
       <span className="flex items-center gap-2 text-sm font-medium">
         {rotulo}
         {faltando && (
@@ -150,19 +156,21 @@ function Selecao({
           </span>
         )}
       </span>
-      <select
-        value={valor}
-        disabled={carregando}
-        onChange={(e) => aoMudar(e.target.value)}
-        className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background/60 px-3 text-base transition-colors focus:border-marca focus:bg-card disabled:opacity-50"
-      >
-        <option value="">{carregando ? 'Carregando…' : '— não definido —'}</option>
-        {opcoes.map((o) => (
-          <option key={o.valor} value={o.valor}>
-            {o.rotulo}
-          </option>
-        ))}
-      </select>
-    </label>
+      <div className="mt-1.5">
+        <Dropdown
+          rotulo={carregando ? 'Carregando…' : '— não definido —'}
+          desabilitado={carregando}
+          selecionado={valor}
+          onEscolher={(item) => aoMudar(item.id)}
+          itens={[
+            // O "nada" é um item da lista, e não uma opção vazia: num rascunho,
+            // desfazer uma escolha errada precisa ser tão alcançável quanto
+            // fazê-la.
+            { id: '', rotulo: '— não definido —' },
+            ...opcoes.map((o) => ({ id: o.valor, rotulo: o.rotulo })),
+          ]}
+        />
+      </div>
+    </div>
   )
 }

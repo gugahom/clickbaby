@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { AnotarDialogo } from './AnotarDialogo'
 import {
@@ -83,6 +84,15 @@ type Confirmacao = { tipo: 'entrega' } | { tipo: 'cancelamento' } | null
  * local de etapa. O gating por papel também segue igual — as RPCs barram no
  * backend, a tela só evita oferecer o que será negado.
  */
+/** Mesma divisão de três faixas do card. Reels sai da edição por decisão de
+ *  TELA, e essa decisão precisa valer aqui também — duas listas da mesma
+ *  etapa dizendo trilhas diferentes seria pior que não dizer. */
+const ROTULO_FAIXA_DETALHE: Record<string, string> = {
+  acompanhamento: 'Acompanhamento',
+  edicao: 'Edição',
+  reels: 'Reels',
+}
+
 export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const { pessoa } = useAuth()
   const papel = pessoa?.papelSistema ?? 'operador'
@@ -176,7 +186,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               etapa.status === 'concluida' || etapa.status === 'dispensada'
 
             return (
-              <li key={etapa.id} className="flex items-center gap-3 py-1 pl-3 pr-1">
+              <li key={etapa.id} className="flex items-center gap-3 py-1.5 pr-1 pl-3">
                 <span
                   className={clsx('size-2 flex-shrink-0 rounded-full', pontoEtapa(etapa))}
                   aria-hidden="true"
@@ -185,22 +195,30 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                 <div className="min-w-0 flex-1 py-1">
                   <div
                     className={clsx(
-                      'text-sm font-medium',
+                      'flex flex-wrap items-center gap-1.5 text-sm font-bold tracking-tight',
                       encerrada && 'text-muted-foreground',
                     )}
                   >
                     {ROTULO_ETAPA[etapa.tipo]}
-                    {/* Sem o sufixo, a lista mostraria "Edição Fotos" duas
-                        vezes e não haveria como saber em qual se está
-                        clicando. */}
+                    {/* Sem o sufixo, a lista mostraria "Foto" duas vezes e não
+                        haveria como saber em qual se está clicando. */}
                     {etapas.some((o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada) && (
-                      <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
                         {ROTULO_RODADA[etapa.rodada]}
                       </span>
                     )}
                   </div>
+                  {/* TRILHA · STATUS na segunda linha, na cor da seção.
+                  
+                      A trilha não aparecia aqui, e essa lista é o único lugar
+                      onde as sete etapas convivem fora das três fitas — sem
+                      ela, "Foto" e "Parto" ficam lado a lado sem dizer que uma
+                      é edição e a outra é reels. */}
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                    <span>{ROTULO_STATUS_ETAPA[etapa.status]}</span>
+                    <span className="font-semibold text-acento">
+                      {ROTULO_FAIXA_DETALHE[etapa.tipo === 'reels' ? 'reels' : etapa.trilha]}
+                    </span>
+                    <span>· {ROTULO_STATUS_ETAPA[etapa.status]}</span>
                     {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
                     {etapa.proximoResponsavelNome && (
                       <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">
@@ -440,15 +458,27 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             quem gera os links são as fotógrafas. Cancelar continua restrito —
             cancelar é decisão comercial sobre o contrato, não o fim natural do
             trabalho. */}
+        {/* O ÚNICO botão com gradiente da tela.
+        
+            Ele era `destrutivo` — vermelho, a mesma cor de cancelar caso, que
+            fica dois centímetros ao lado. Confirmar entrega é o oposto de
+            cancelar: é o fim BOM do trabalho. Vestir os dois de vermelho pedia
+            para a pessoa ler o rótulo para saber qual era qual, num gesto que
+            não se desfaz.
+        
+            Agora ele usa o rosa da marca em gradiente, e cancelar volta a ser
+            um botão quieto de contorno. A cor mais forte da tela fica com a
+            ação que a fotógrafa procura quando o trabalho acabou. */}
         <Botao
-          variante="destrutivo"
           onClick={() => {
             setErro(null)
             setConfirmacao({ tipo: 'entrega' })
           }}
           disabled={ocupado || !entrega.habilitada}
           title={entrega.motivo}
+          className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
         >
+          <IconeCheck className="size-4" />
           Confirmar entrega
         </Botao>
 
@@ -742,23 +772,18 @@ function DialogoPessoa({
     >
       <p className="text-sm text-muted-foreground">{contexto}</p>
 
-      <label className="block">
+      <div>
         <span className="text-sm font-medium">Pessoa</span>
-        <select
-          value={paraPessoaId}
-          onChange={(e) => setParaPessoaId(e.target.value)}
-          className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-        >
-          <option value="">
-            {isPending ? 'Carregando…' : 'Selecione uma pessoa'}
-          </option>
-          {opcoes.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
-      </label>
+        <div className="mt-1">
+          <Dropdown
+            rotulo={isPending ? 'Carregando…' : 'Selecione uma pessoa'}
+            desabilitado={isPending}
+            selecionado={paraPessoaId}
+            onEscolher={(item) => setParaPessoaId(item.id)}
+            itens={opcoes.map((p) => ({ id: p.id, rotulo: p.nome }))}
+          />
+        </div>
+      </div>
 
       {comMotivo && (
         <label className="block">
