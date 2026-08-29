@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { hojeNoFuso } from '@/lib/formato'
+import { dataPorExtenso, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
 import { useReabrirCaso, useRetornarDaUti, type EtapaTipo } from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
@@ -331,9 +331,18 @@ export function QuadroPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border bg-card/85 px-3 py-3 backdrop-blur md:px-5">
-        <div className="flex items-center justify-between gap-2">
+      {/* Sem `bg-card`: o chão pastel passa por baixo do cabeçalho da página
+          agora, e quem separa é o `backdrop-blur` mais a borda. O branco aqui
+          criava uma segunda faixa logo abaixo da faixa da marca, e as duas
+          juntas empurravam a lista para o meio da tela. */}
+      <header className="sticky top-0 z-10 flex-shrink-0 border-b border-border/70 bg-background/80 px-3 py-4 backdrop-blur-md md:px-5">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            {/* O SOBRESCRITO. A data por extenso saiu do cabeçalho da marca,
+                onde é referência curta, e aparece aqui por extenso porque
+                acima do título ela é contexto: diz de que dia é este painel
+                antes de a pessoa ler qualquer caso. */}
+            <p className="rotulo-sobrescrito text-acento">{dataPorExtenso(hoje)}</p>
             {/*
               "Painel de atividades" no título, "Quadro" na aba.
               
@@ -346,7 +355,11 @@ export function QuadroPage() {
               `truncate` porque em 375px o título novo é quase o dobro do
               antigo e disputaria a linha com os botões de aba.
             */}
-            <h1 className="truncate text-lg font-bold tracking-tight md:text-2xl">
+            {/* QUEBRA, não corta. Em 375px "Painel de atividades" em Syne
+                ExtraBold não cabe numa linha, e `truncate` entregava "Painel
+                de ativida…" — um título pela metade é pior que um título em
+                duas linhas. `text-balance` reparte as duas de forma pareja. */}
+            <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-balance md:text-4xl">
               Painel de atividades
             </h1>
             {/*
@@ -373,7 +386,15 @@ export function QuadroPage() {
 
           {/* No desktop só resta a escolha entre o Quadro e o arquivo; UTI e
               Reels estão sempre visíveis na coluna direita. */}
-          <div className="hidden flex-shrink-0 gap-1 lg:flex" role="group" aria-label="Visão">
+          {/* As abas viram um GRUPO com moldura própria: um trilho arredondado
+              onde a ativa é uma pílula cheia. Soltas, três pílulas lado a lado
+              não diziam que eram alternativas entre si — pareciam três botões
+              independentes, e um deles por acaso aceso. */}
+          <div
+            className="hidden flex-shrink-0 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-cartao lg:flex"
+            role="group"
+            aria-label="Visão"
+          >
             <BotaoAba ativa={aba === 'lista'} onClick={() => setAba('lista')}>
               Quadro
             </BotaoAba>
@@ -389,8 +410,12 @@ export function QuadroPage() {
             >
               Rascunhos
             </BotaoAba>
-            <BotaoAba ativa={aba === 'concluidos'} onClick={() => setAba('concluidos')}>
-              Concluídos ({concluidos.length})
+            <BotaoAba
+              ativa={aba === 'concluidos'}
+              onClick={() => setAba('concluidos')}
+              contagem={concluidos.length}
+            >
+              Concluídos
             </BotaoAba>
           </div>
         </div>
@@ -561,34 +586,43 @@ function BotaoAba({
   tom?: 'marca' | 'rascunho'
   children: React.ReactNode
 }) {
+  /*
+   * <button> cru e não o Botao: dentro do trilho, a moldura e a sombra do
+   * Botao desenhariam uma segunda caixa dentro da caixa. Aqui a pílula ativa
+   * é só fundo cheio, e as inativas não têm forma nenhuma até o hover — é o
+   * trilho que dá a forma do conjunto.
+   */
   return (
-    <Botao
-      variante={ativa ? 'primario' : 'contorno'}
+    <button
+      type="button"
       onClick={onClick}
       aria-pressed={ativa}
       className={clsx(
-        'flex-shrink-0 px-4',
+        // min-h-11: a seção 6 pede 44px, e trocar o Botao por <button> cru
+        // tinha deixado as abas em 36px. O trilho do desktop encolhe junto
+        // com o padding dele, então o grupo não engorda por causa disso.
+        'inline-flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm transition-colors',
         ativa
-          ? 'shadow-cartao'
-          : 'bg-card/60 text-muted-foreground hover:bg-marca-suave hover:text-marca',
+          ? 'bg-marca font-bold text-white'
+          : 'font-medium text-muted-foreground hover:bg-marca-suave hover:text-marca',
       )}
     >
       {children}
       {contagem !== undefined && contagem > 0 && (
         <span
           className={clsx(
-            'rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
+            'rounded-full px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums',
             ativa
               ? 'bg-white/25 text-white'
               : tom === 'rascunho'
-                ? 'bg-rascunho text-white'
+                ? 'bg-rascunho/15 text-rascunho'
                 : 'bg-muted text-muted-foreground',
           )}
         >
           {contagem}
         </span>
       )}
-    </Botao>
+    </button>
   )
 }
 

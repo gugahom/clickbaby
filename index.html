@@ -5,8 +5,33 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#16181d" />
+    <!-- O tema é CLARO desde a virada do chão pastel; os dois valores aqui
+         ficaram de uma versão anterior e faziam o navegador desenhar barra e
+         formulários nativos em escuro sobre uma tela clara. -->
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#2b2540" />
+
+    <!--
+      SYNE + PLUS JAKARTA SANS.
+
+      A tela vinha na stack do sistema, e isso explica boa parte de por que ela
+      parecia mais crua que a referência: nenhuma escolha tipográfica tinha
+      sido feita. Syne é uma display geométrica de contraste alto — ela carrega
+      o título e o wordmark sozinha, e só aparece aí. O texto corrido fica na
+      Plus Jakarta Sans, que tem altura de x generosa (importante para 13px
+      lidos de pé num corredor), e números continuam na JetBrains Mono, que é
+      tabular por natureza — horário e contador não dançam ao mudar.
+
+      `display=swap` de propósito: a seção 6 do CLAUDE.md diz que o sinal cai.
+      Com swap, a tela aparece na fonte do sistema e troca quando a web font
+      chega; sem ele, ficaria em branco esperando a rede.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <title>Painel de atividades · Clickbaby</title>
   </head>
   <body>

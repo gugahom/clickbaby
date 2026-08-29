@@ -29,20 +29,32 @@ export function Logo({
    * outra não. Em preto, a marca identifica sem competir. No login não há
    * disputa: é a única coisa na tela, e aí a versão colorida é a certa.
    */
-  variante?: 'cor' | 'preta'
+  variante?: 'cor' | 'preta' | 'clara'
 }) {
-  const arquivo = variante === 'preta' ? 'logo-clickbaby-preta.png' : 'logo-clickbaby.png'
+  // `clara` é a PRETA invertida por filtro, e não um arquivo novo.
+  //
+  // A faixa do cabeçalho voltou a ser escura, e ali a logo cinza sumiria. A
+  // saída óbvia seria gerar um PNG branco; `invert(1)` sobre a preta dá
+  // exatamente o mesmo resultado, porque a preta já é monocromática sobre
+  // transparente — sem asset novo, sem passo de build, sem mais um arquivo
+  // para manter em sincronia quando a marca mudar.
+  //
+  // O que se perde é a lente pastel, mas ela já não estava ali: a variante
+  // preta existe justamente para não competir com o diafragma de progresso,
+  // que usa as mesmas duas cores.
+  const monocromatica = variante === 'preta' || variante === 'clara'
+  const arquivo = monocromatica ? 'logo-clickbaby-preta.png' : 'logo-clickbaby.png'
   return (
     <img
       src={`${import.meta.env.BASE_URL}${arquivo}`}
       alt="Estúdio Click Baby"
       width={1200}
-      height={variante === 'preta' ? 336 : 310}
+      height={monocromatica ? 336 : 310}
       // A do login é a primeira imagem da primeira tela: vale carregar cedo.
       // A do cabeçalho reaparece em toda navegação e sai do cache.
       loading={prioridade ? 'eager' : 'lazy'}
       decoding="async"
-      className={clsx('h-auto w-auto object-contain', className)}
+      className={clsx('h-auto w-auto object-contain', variante === 'clara' && 'invert', className)}
     />
   )
 }

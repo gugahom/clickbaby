@@ -97,15 +97,34 @@
   --color-pronto-fundo: var(--pronto-fundo);
   --color-pronto-borda: var(--pronto-borda);
 
+  /* TIPOGRAFIA. Syne só no título e no wordmark — é display, e display em
+     texto corrido cansa em duas linhas. Ver a nota no index.html. */
+  --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* RAIOS numa escada, e não valores soltos. O cartão cresceu de 0.75 para
+     0.875rem: com a sombra nova alcançando mais longe, o canto anterior ficava
+     duro para o tamanho da pétala de luz. */
   --radius-md: 0.5rem;
-  --radius-cartao: 0.75rem;
+  --radius-cartao: 0.875rem;
+  --radius-painel: 1.25rem;
 
   /* Elevação. No claro a sombra é o que separa a linha do papel — no escuro
      essa função era da luminância. */
-  --shadow-cartao: 0 1px 2px oklch(0.45 0.03 265 / 5%), 0 2px 6px oklch(0.45 0.03 265 / 6%);
+  /* SOMBRA LONGA E RASA, no lugar da curta e escura.
+  
+     A anterior tinha 6px de alcance: separava o cartão do fundo por CONTRASTE,
+     e o resultado eram objetos recortados, como adesivos. A nova espalha 24px
+     com raio negativo, então a mancha é mais larga que o cartão e mais clara
+     — o objeto passa a flutuar em vez de estar colado. É daqui que vem a
+     "leveza" que faltava, mais do que de qualquer cor. */
+  --shadow-cartao:
+    0 1px 2px oklch(0.37 0.05 273 / 5%), 0 8px 24px -12px oklch(0.37 0.05 273 / 12%);
   --shadow-cartao-alto:
-    0 1px 2px oklch(0.45 0.03 265 / 6%), 0 6px 16px oklch(0.45 0.03 265 / 10%);
-  --shadow-painel: 0 1px 3px oklch(0.45 0.03 265 / 6%), 0 8px 24px oklch(0.45 0.03 265 / 7%);
+    0 2px 4px oklch(0.37 0.05 273 / 5%), 0 18px 40px -18px oklch(0.37 0.05 273 / 22%);
+  --shadow-painel:
+    0 1px 2px oklch(0.37 0.05 273 / 4%), 0 12px 32px -16px oklch(0.37 0.05 273 / 14%);
 }
 
 :root {
@@ -154,6 +173,22 @@
      L 0.52 e não mais claro porque este valor também é TEXTO no chip: precisa
      dos 4.5:1 sobre branco. */
   --alerta-proximo: oklch(0.52 0.175 45);
+
+  /* A FAIXA DO CABEÇALHO.
+  
+     A referência usa um gradiente de azul-noite a vinho, e ele é o que mais
+     ancora a tela como aplicativo. Aqui ele é feito com as DUAS cores da
+     marca, na mesma travessia: o azul da íris (`marca-forte`) escurecido, indo
+     para o rosa (`acento-forte`) também escurecido. Mesma estrutura, cores
+     nossas — que era o pedido.
+  
+     Escuro o bastante para o texto branco passar de 12:1 nas duas pontas. */
+  --gradiente-cabecalho: linear-gradient(
+    100deg,
+    oklch(0.3 0.09 262) 0%,
+    oklch(0.32 0.1 300) 55%,
+    oklch(0.36 0.12 355) 100%
+  );
 
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
      do logo (97), sem perder o 4.5:1 que o texto precisa. */
@@ -257,8 +292,16 @@
     -webkit-font-smoothing: antialiased;
     /* Alvos de toque de 44px e fonte generosa: a tela é usada de pé, com uma
      * mão só, em aparelho compartilhado (seção 6 do CLAUDE.md). */
-    font-family:
-      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
+  }
+
+  /* Display SÓ nos títulos de tela e seção. Um h3 é nome de mãe, que é dado
+     e não título — em Syne ele viraria manchete e competiria com o próprio
+     rótulo do dia. */
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
 
   /* Foco sempre visível: a linha do caso é um header clicável de verdade,
@@ -376,5 +419,26 @@
       background: var(--cor-alerta);
       animation: none;
     }
+  }
+}
+
+/* ============================================================================
+   Utilitários da nova casca visual.
+   ============================================================================ */
+
+@layer components {
+  /* A faixa do cabeçalho. Ver `--gradiente-cabecalho` no topo. */
+  .superficie-cabecalho {
+    background-image: var(--gradiente-cabecalho);
+  }
+
+  /* RÓTULO SOBRESCRITO: o texto pequeno, espaçado e em caixa alta que anuncia
+     a seção sem competir com ela. Já existía espalhado em quatro lugares com
+     três valores de tracking diferentes; aqui vira um só. */
+  .rotulo-sobrescrito {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 }

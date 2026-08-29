@@ -88,16 +88,23 @@ export function DiaBloco({
             // abrir/fechar, empurrando o bloco inteiro — e `transition-all`
             // ainda animaria essa largura, transformando um deslocamento de
             // layout em algo que se vê acontecer.
-            'flex w-full items-center gap-3 rounded-cartao border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow] md:gap-4 md:px-4',
-            aberto
-              ? clsx(
-                  'border-transparent',
-                  emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'hover:bg-card/70',
-                )
-              : clsx(
-                  'border-border shadow-cartao hover:shadow-cartao-alto',
-                  emAtraso ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'bg-card/70 hover:bg-card',
-                ),
+            'flex w-full items-center gap-3 rounded-painel border px-3 py-3 text-left transition-[background-color,border-color,box-shadow] md:gap-4 md:px-4',
+            /*
+              O rótulo do dia ganhou SUPERFÍCIE, aberto ou fechado.
+              
+              Ele era texto solto no chão quando aberto, e ficava competindo em
+              peso com o primeiro cartão logo abaixo — dois blocos de tamanho
+              parecido, um deles sem forma. Agora é uma faixa em rosa muito
+              diluído: identifica o dia como cabeçalho sem virar mais um
+              cartão, porque não é branco.
+              
+              A borda continua existindo SEMPRE e só trocando de cor, pela
+              mesma razão de antes: o 1px entrando e saindo empurraria o bloco.
+            */
+            emAtraso
+              ? 'border-atrasado/20 bg-atrasado/8 hover:bg-atrasado/12'
+              : 'border-acento/15 bg-acento-suave hover:bg-acento-suave/70',
+            !aberto && 'shadow-cartao hover:shadow-cartao-alto',
           )}
         >
           {/* O diafragma: uma pá por caso, acesa quando o caso se resolve. É a
@@ -115,14 +122,14 @@ export function DiaBloco({
               {/* first-letter, não `capitalize`: o Intl devolve
                   "terça-feira, 18 de agosto" e `capitalize` viraria
                   "Terça-Feira, 18 De Agosto". */}
-              <span className="text-base font-bold tracking-tight first-letter:uppercase md:text-lg">
+              <span className="text-lg font-extrabold tracking-tight first-letter:uppercase md:text-xl">
                 {rotulo}
               </span>
               {data && (
                 // Peso normal e cor apagada: é referência, não manchete. Se
                 // competisse com "Hoje", teria trocado uma leitura rápida por
                 // duas.
-                <span className="font-mono text-xs font-normal text-muted-foreground">
+                <span className="font-mono text-sm font-semibold text-muted-foreground">
                   {data}
                 </span>
               )}
