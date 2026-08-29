@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { dataCurta, diasAtras, ehRotuloRelativo, rotularDia } from '@/lib/formato'
@@ -160,19 +161,17 @@ export function DiaBloco({
         </button>
       </h2>
 
-      <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
-        {aberto && (
-          <div className="mt-1.5 space-y-2">
-            {ativos.map((caso) => (
-              <CasoLinha
-                key={caso.id}
-                caso={caso}
-                etapas={etapasPorCaso.get(caso.id) ?? []}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
+        <div className="mt-1.5 space-y-2">
+          {ativos.map((caso) => (
+            <CasoLinha
+              key={caso.id}
+              caso={caso}
+              etapas={etapasPorCaso.get(caso.id) ?? []}
+            />
+          ))}
+        </div>
+      </Sanfona>
     </section>
   )
 }

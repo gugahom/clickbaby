@@ -1,4 +1,5 @@
 import { useId, useState, type CSSProperties } from 'react'
+import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { formatarHora } from '@/lib/formato'
@@ -354,9 +355,9 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
           caso não seria visto na TV, que é onde ele precisa ser visto. */}
       <AvisosDoCaso etapas={etapas} />
 
-      <div id={idPainel} role="region" aria-labelledby={idCabecalho} hidden={!aberto}>
-        {aberto && <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />}
-      </div>
+      <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
+        <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />
+      </Sanfona>
     </div>
   )
 }

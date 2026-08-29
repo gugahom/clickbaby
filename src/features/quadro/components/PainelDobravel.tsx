@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { Alerta } from '@/components/ui/Alerta'
@@ -51,12 +52,14 @@ export function PainelDobravel({
 }: PropsPainelDobravel) {
   const [aberto, setAberto] = useState(abertoInicialmente)
   const idCorpo = useId()
+  const idTitulo = useId()
 
   return (
     <section className="flex flex-shrink-0 flex-col overflow-hidden rounded-painel border border-border bg-card shadow-painel">
       <h2>
         <button
           type="button"
+          id={idTitulo}
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
           aria-controls={idCorpo}
@@ -85,24 +88,20 @@ export function PainelDobravel({
         </button>
       </h2>
 
-      <div id={idCorpo} hidden={!aberto}>
-        {aberto && (
-          <div className="flex max-h-48 flex-col border-t border-border">
-            {erro && (
-              <div className="flex-shrink-0 p-2">
-                <Alerta>{erro}</Alerta>
-              </div>
-            )}
-            {quantidade === 0 ? (
-              <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                {vazio}
-              </p>
-            ) : (
-              <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">{children}</ul>
-            )}
-          </div>
-        )}
-      </div>
+      <Sanfona aberto={aberto} id={idCorpo} rotuladoPor={idTitulo}>
+        <div className="flex max-h-48 flex-col border-t border-border">
+          {erro && (
+            <div className="flex-shrink-0 p-2">
+              <Alerta>{erro}</Alerta>
+            </div>
+          )}
+          {quantidade === 0 ? (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">{vazio}</p>
+          ) : (
+            <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">{children}</ul>
+          )}
+        </div>
+      </Sanfona>
     </section>
   )
 }
