@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useRelogioDeMinuto } from '../lib/useRelogio'
 import {
   ROTULO_ETAPA,
   ROTULO_RODADA,
@@ -33,11 +34,19 @@ const ROTULO_FAIXA: Record<Faixa, string> = {
   reels: 'Reels',
 }
 
-const COR_FAIXA: Record<Faixa, string> = {
-  acompanhamento: 'text-marca',
-  edicao: 'text-acento',
-  reels: 'text-rascunho',
-}
+/*
+ * AS TRÊS FAIXAS NA MESMA COR.
+ *
+ * Eram azul, rosa e âmbar, uma para cada. Parecia organizar e não organizava:
+ * a cor do rÓTULO não diz nada sobre o estado das etapas ao lado dele, e as
+ * três competiam com as cores que SÃO informação — o verde de concluído, o
+ * azul de em andamento, o âmbar de pausado. Um rótulo âmbar acima de uma
+ * pílula âmbar sugeria uma relação que não existe.
+ *
+ * Na mesma cor, os rótulos viram calha: leem-se como estrutura, e a cor volta
+ * a ser exclusiva do estado. É o que dá a "cara mais limpa".
+ */
+const COR_FAIXA = 'text-acento'
 
 /**
  * O corpo do card, dividido nas duas trilhas.
@@ -65,6 +74,10 @@ const COR_FAIXA: Record<Faixa, string> = {
  * como o que ele descreveu — uma pessoa ativa e a próxima anunciada.
  */
 export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
+  // O relógio das pílulas em andamento. Bate de minuto em minuto — o mesmo
+  // hook que faz o rótulo de SLA andar sozinho, sem um segundo temporizador.
+  const agora = useRelogioDeMinuto()
+
   if (etapas.length === 0) return null
 
   const acompanhamento = etapas.filter((e) => e.trilha === 'acompanhamento')
@@ -89,12 +102,12 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
    */
   return (
     <div className="mt-3 space-y-2.5 sm:grid sm:grid-cols-[max-content_1fr] sm:gap-x-4 sm:gap-y-2.5 sm:space-y-0">
-      <Trilha faixa="acompanhamento" etapas={acompanhamento} />
-      <Trilha faixa="edicao" etapas={edicao} />
+      <Trilha faixa="acompanhamento" etapas={acompanhamento} agora={agora} />
+      <Trilha faixa="edicao" etapas={edicao} agora={agora} />
       {/* `soMarcador`: a faixa de reels informa, não convida. As duas outras
           nomeiam a etapa porque é ali que se age; aqui a ação está na seção,
           e repetir os nomes gastaria a linha sem oferecer nada. */}
-      <Trilha faixa="reels" etapas={reels} soMarcador />
+      <Trilha faixa="reels" etapas={reels} soMarcador agora={agora} />
     </div>
   )
 }
@@ -103,17 +116,19 @@ function Trilha({
   faixa,
   etapas,
   soMarcador = false,
+  agora,
 }: {
   faixa: Faixa
   etapas: EtapaQuadro[]
   soMarcador?: boolean
+  agora: Date
 }) {
   if (etapas.length === 0) return null
 
   const feitas = etapas.filter((e) => e.status === 'concluida').length
 
   const contador = (
-    <span className="flex-shrink-0 text-xs tabular-nums text-muted-foreground">
+    <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
       {feitas}/{etapas.length}
     </span>
   )
@@ -132,12 +147,7 @@ function Trilha({
   return (
     <div className="flex flex-col gap-1 text-sm sm:contents">
       <div className="flex items-center justify-between gap-2 sm:block sm:pt-0.5">
-        <span
-          className={clsx(
-            'text-[10px] font-bold tracking-[0.08em] uppercase',
-            COR_FAIXA[faixa],
-          )}
-        >
+        <span className={clsx('rotulo-sobrescrito', COR_FAIXA)}>
           {ROTULO_FAIXA[faixa]}
         </span>
         {/* No celular o contador acompanha o rótulo; no desktop vai para o fim
@@ -146,15 +156,17 @@ function Trilha({
         <span className="sm:hidden">{contador}</span>
       </div>
 
-      {/* gap-x generoso: com 12px as etapas se liam como uma palavra só. O
-          marcador de cada uma precisa de ar à esquerda para o olho separar
-          "onde termina uma e começa a outra" sem ler o texto. */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
+      {/* O ar entre as etapas caiu de 20px para 8px. Ele era generoso porque
+          as etapas eram texto solto e precisavam de espaço para o olho saber
+          onde uma terminava; agora cada uma tem moldura própria, e o mesmo
+          espaço vira buraco no meio da fita. */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         {etapas.map((etapa) => (
           <Etapa
             key={etapa.id}
             etapa={etapa}
             soMarcador={soMarcador}
+            agora={agora}
             // O sufixo de rodada só aparece quando há MAIS DE UMA rodada
             // daquela etapa no caso. Num BASIC, que nunca terá a segunda,
             // "Fotos Ⅰ Parto" seria uma distinção sem contraparte — ruído que
@@ -172,70 +184,121 @@ function Trilha({
   )
 }
 
+/**
+ * A ETAPA COMO PÍLULA.
+ *
+ * Era um ponto colorido seguido de texto solto. Numa fita de quatro etapas o
+ * olho tinha que decidir, sem ajuda nenhuma, onde uma acabava e a outra
+ * começava — e o nome de quem estava nela, pendurado ao lado, entrava na mesma
+ * corrente de palavras. A pílula resolve isso por construção: uma forma, um
+ * assunto.
+ *
+ * PINTADA QUANDO HÁ ALGUÉM NELA. Pendente é contorno neutro; concluída,
+ * em andamento e pausada ganham fundo, borda e texto na cor do estado. A
+ * diferença entre "isto ainda não aconteceu" e "isto está acontecendo" passa a
+ * ser de MATERIAL, não de tom de cinza — legível na TV da sala de edição, que
+ * é a distância que manda aqui.
+ *
+ * O NOME VEM DENTRO, num chip próprio. Fora, ele era mais uma palavra na fita;
+ * dentro, ele pertence visivelmente àquela etapa e a nenhuma outra.
+ *
+ * O RELÓGIO CORRENDO é a aposta desta versão. Uma etapa em andamento mostra há
+ * quanto tempo está aberta, ali na pílula. A empresa inteira quer evidência
+ * objetiva de tempo de edição (seção 9 do CLAUDE.md) — e até agora esse número
+ * só existia depois, num relatório. Ver o cronômetro correr enquanto o trabalho
+ * acontece é a diferença entre medir e acompanhar. É também o único movimento
+ * da fita, e ele só existe onde há trabalho em curso.
+ */
 function Etapa({
   etapa,
   comRodada,
   soMarcador,
+  agora,
 }: {
   etapa: EtapaQuadro
   comRodada: boolean
   soMarcador: boolean
+  agora: Date
 }) {
   const pessoas = nomesDaEtapa(etapa)
-
-  /*
-   * NA FAIXA REELS o bloco é o ÚNICO nome, então nunca some.
-   *
-   * A regra de esconder o bloco quando há uma rodada só nasceu para a fita de
-   * edição, onde o nome da etapa já identifica o item e "Foto Parto" sem um
-   * "Foto B+F" ao lado seria uma distinção sem contraparte. Aqui é o oposto:
-   * `soMarcador` omite o nome da etapa (seria "Reels" repetido sob um rótulo
-   * que já diz REELS), e sem o bloco sobra um marcador sem palavra nenhuma —
-   * um item que existe, ocupa a linha e não diz o que é.
-   */
   const bloco = comRodada || soMarcador ? ROTULO_RODADA[etapa.rodada] : null
+  const decorrido = tempoDecorrido(etapa, agora)
 
   return (
-    <span className="inline-flex items-center gap-1">
+    <span
+      className={clsx(
+        'inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pr-2 pl-2.5 text-sm',
+        CLASSE_PILULA[etapa.status],
+      )}
+    >
       <Marcador status={etapa.status} />
-      <span className={CLASSE_STATUS[etapa.status]}>
-        {/* Sem numeral: "Ⅰ"/"Ⅱ" ao lado de "Parto"/"B+F" dizia a mesma coisa
-            duas vezes, e o nome do bloco é o que a equipe usa para falar. */}
+
+      <span className="truncate font-medium">
         {soMarcador ? (
-          // Sendo o nome do item, herda o peso e a cor do status como
-          // qualquer outro — em cinza minúsculo, um reels concluído não
-          // ficaria verde e a faixa perderia o estado à distância.
           bloco
         ) : (
           <>
             {ROTULO_ETAPA[etapa.tipo]}
-            {bloco && (
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                {bloco}
-              </span>
-            )}
+            {bloco && <span className="ml-1.5 font-normal opacity-70">{bloco}</span>}
           </>
         )}
       </span>
-      {/*
-        O nome NÃO pode parecer parte do rótulo da rodada.
-        
-        Antes "Parto" e "Gestão" eram os dois `text-xs text-muted-foreground`,
-        e o olho lia "Foto" em destaque seguido de "Parto · Gestão" como um
-        bloco só — a fronteira entre "que material" e "quem está" sumia. São
-        três informações diferentes e precisam de três pesos.
-        
-        Agora o nome ganha a cor de texto normal e um selo discreto: destaca-se
-        do rótulo cinza sem competir com o nome da etapa, que segue sendo o
-        primeiro a ser lido.
-      */}
+
+      {/* O chip de dentro herda a cor da pílula via `currentColor`, então ele
+          acompanha o estado sem uma segunda tabela de cores para manter. */}
       {pessoas && (
-        <span className="rounded bg-muted px-1.5 py-px text-xs font-medium text-foreground/80">
+        <span className="max-w-[8rem] truncate rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold">
           {pessoas}
+        </span>
+      )}
+
+      {decorrido && (
+        <span className="rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold tabular-nums">
+          {decorrido}
         </span>
       )}
     </span>
   )
+}
+
+/**
+ * Só EM ANDAMENTO mostra o relógio.
+ *
+ * Pausada não: ali o tempo parou por decisão de alguém, e um número congelado
+ * na tela lê como cronômetro quebrado. Concluída também não — o tempo dela é
+ * histórico, e vive no detalhe do caso.
+ *
+ * Desconta a pausa acumulada, pela mesma razão que o tempo de ciclo desconta:
+ * o intervalo em que ninguém trabalhou não é tempo de trabalho.
+ */
+function tempoDecorrido(etapa: EtapaQuadro, agora: Date): string | null {
+  if (etapa.status !== 'em_andamento' || !etapa.iniciadoEm) return null
+
+  const ms = agora.getTime() - new Date(etapa.iniciadoEm).getTime()
+  const minutos = Math.floor(ms / 60_000)
+  if (minutos < 1) return 'agora'
+  if (minutos < 60) return `${minutos}min`
+
+  const horas = Math.floor(minutos / 60)
+  const resto = minutos % 60
+  return resto === 0 ? `${horas}h` : `${horas}h${String(resto).padStart(2, '0')}`
+}
+
+/**
+ * A cor da pílula É o estado. Uma tabela, não condições espalhadas.
+ *
+ * `bg-current/…` nos chips internos depende de `text-…` estar aqui: é o que
+ * faz o chip do nome acompanhar a cor da pílula sem repetir a tabela.
+ */
+const CLASSE_PILULA: Record<StatusEtapa, string> = {
+  concluida: 'border-concluido/25 bg-concluido/10 text-concluido-tinta',
+  em_andamento: 'border-andamento/30 bg-andamento/12 font-semibold text-andamento-tinta',
+  pausada: 'border-atencao/30 bg-atencao/12 text-atencao-tinta',
+  atribuida: 'border-border bg-card text-foreground',
+  // Dispensada é a única cinza COM traço: ela não vai acontecer, e o risco diz
+  // isso sem precisar de legenda.
+  dispensada: 'border-border bg-muted/60 text-muted-foreground line-through',
+  pendente: 'border-border bg-transparent text-muted-foreground',
 }
 
 /**
@@ -244,6 +307,9 @@ function Etapa({
  * Só primeiro nome: na TV, "Sarah Fernandes de Oliveira" empurra a etapa
  * seguinte para fora da linha e o que se ganha é sobrenome que ninguém usa
  * para falar de alguém no corredor.
+ *
+ * Aparece só onde há trabalho acontecendo — atribuída, em andamento ou
+ * pausada. Concluída não mostra quem fez: isso é histórico, e vive no detalhe.
  */
 function nomesDaEtapa(etapa: EtapaQuadro): string | null {
   const trabalhando =
@@ -263,48 +329,34 @@ function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? nome
 }
 
-const CLASSE_STATUS: Record<StatusEtapa, string> = {
-  concluida: 'text-concluido',
-  em_andamento: 'font-semibold text-andamento',
-  pausada: 'font-medium text-atencao',
-  atribuida: 'text-foreground',
-  dispensada: 'text-muted-foreground line-through',
-  pendente: 'text-muted-foreground',
-}
-
 /**
- * O ponto antes do nome da etapa. É o que carrega o estado à distância: numa
- * TV a 4 metros a cor do texto de 13px já não se distingue, mas um disco cheio
- * contra um vazado, sim.
+ * O ponto dentro da pílula.
+ *
+ * Passou a herdar a cor por `currentColor`, em vez de ter a própria tabela: a
+ * pílula já carrega o estado na cor do texto, e duas tabelas para a mesma
+ * informação divergem na primeira vez que alguém mexer numa só.
+ *
+ * O que ele ainda faz sozinho é a FORMA: cheio quando há algo acontecendo,
+ * vazado quando não. Numa TV a quatro metros o disco cheio contra o vazado se
+ * distingue quando a cor já não se distingue.
  */
 function Marcador({ status }: { status: StatusEtapa }) {
   const comum = 'size-2 flex-shrink-0 rounded-full'
 
-  switch (status) {
-    case 'concluida':
-      return <span className={clsx(comum, 'bg-concluido')} aria-hidden="true" />
-    case 'em_andamento':
-      // Anel pulsando: a única etapa da tela que muda sozinha é a que está
-      // acontecendo agora, e é a que o olho tem que achar primeiro.
-      return (
-        <span
-          className={clsx(
-            comum,
-            'bg-andamento ring-2 ring-andamento/30 motion-safe:animate-pulse',
-          )}
-          aria-hidden="true"
-        />
-      )
-    case 'pausada':
-      return <span className={clsx(comum, 'bg-atencao')} aria-hidden="true" />
-    case 'dispensada':
-      return <span className={clsx(comum, 'bg-border')} aria-hidden="true" />
-    default:
-      return (
-        <span
-          className={clsx(comum, 'border-2 border-border bg-transparent')}
-          aria-hidden="true"
-        />
-      )
+  if (status === 'em_andamento') {
+    // O único anel pulsando da tela é o trabalho em curso — e é o que o olho
+    // tem que achar primeiro ao entrar na sala.
+    return (
+      <span
+        className={clsx(comum, 'bg-current ring-2 ring-current/25 motion-safe:animate-pulse')}
+        aria-hidden="true"
+      />
+    )
   }
+
+  if (status === 'pendente') {
+    return <span className={clsx(comum, 'border-2 border-current opacity-40')} aria-hidden="true" />
+  }
+
+  return <span className={clsx(comum, 'bg-current')} aria-hidden="true" />
 }

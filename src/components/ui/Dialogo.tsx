@@ -69,7 +69,7 @@ export function Dialogo({
       className="m-auto w-[min(30rem,calc(100vw-2rem))] rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
     >
       <div className="space-y-4 p-5 md:p-6">
-        <h2 className="font-display text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>
+        <h2 className="text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>
 
         {children}
 

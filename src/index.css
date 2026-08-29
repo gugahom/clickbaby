@@ -77,6 +77,10 @@
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
   --color-alerta-proximo: var(--alerta-proximo);
+  /* Texto SOBRE pílula tingida — ver a nota junto dos valores. */
+  --color-concluido-tinta: var(--concluido-tinta);
+  --color-andamento-tinta: var(--andamento-tinta);
+  --color-atencao-tinta: var(--atencao-tinta);
   --color-rascunho: var(--rascunho);
   --color-rascunho-fundo: var(--rascunho-fundo);
   --color-rascunho-borda: var(--rascunho-borda);
@@ -163,6 +167,20 @@
   --andamento: oklch(0.52 0.17 248);
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
+
+  /* AS MESMAS TRÊS, MAIS ESCURAS, para texto sobre pílula tingida.
+  
+     Medido: com o texto no valor normal sobre o próprio tom a 10-12%, "Entrada"
+     dava 4.35:1 e "Banho" 4.24:1 — abaixo do 4.5 que texto pequeno exige. O
+     tint escurece o fundo o suficiente para comer a margem, e baixar o tint até
+     resolver apagaria a pílula.
+  
+     Então o texto ganha valor próprio: mesma matiz, L de 0.45. A cor CHEIA
+     (ponto, borda, barra) continua sendo a de cima — são usos diferentes e
+     não precisam do mesmo valor. */
+  --concluido-tinta: oklch(0.45 0.15 152);
+  --andamento-tinta: oklch(0.45 0.16 248);
+  --atencao-tinta: oklch(0.45 0.13 68);
 
   /* HORA CHEGANDO — e por que ela não é amarela.
   
@@ -320,6 +338,18 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+
+  /* SYNE SÓ NO TÍTULO DA TELA, e a medição explica por quê.
+  
+     Em 800/48px ela ocupa 38,1px por caractere contra 24,3px da Plus Jakarta:
+     57% mais larga. "Quarta-feira, 26 de agosto" mede 1002px nela e 635px na
+     outra. E a altura-x é menor (24 contra 27), então as minúsculas encolhem
+     enquanto a linha estica — as descidas de "j" e "g" somem no meio de uma
+     palavra pesada.
+  
+     Numa frase curta e grande, isso é caráter. Repetido em cinco cabeçalhos de
+     dia cheios de palavras, vira leitura difícil — e uma assinatura repetida
+     cinco vezes deixa de ser assinatura. */ 
 
   /* Foco sempre visível: a linha do caso é um header clicável de verdade,
    * navegável por teclado. No claro o anel precisa de offset positivo — sem o

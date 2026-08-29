@@ -122,7 +122,7 @@ export function DiaBloco({
               {/* first-letter, não `capitalize`: o Intl devolve
                   "terça-feira, 18 de agosto" e `capitalize` viraria
                   "Terça-Feira, 18 De Agosto". */}
-              <span className="font-display text-lg font-extrabold tracking-tight first-letter:uppercase md:text-xl">
+              <span className="text-lg font-extrabold tracking-tight first-letter:uppercase md:text-xl">
                 {rotulo}
               </span>
               {data && (
