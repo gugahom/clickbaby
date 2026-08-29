@@ -2,9 +2,10 @@ import { Outlet } from 'react-router'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
+import { Dropdown } from '@/components/ui/Dropdown'
+import { Chevron, IconeSair } from '@/components/ui/icones'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
-import { hojeNoFuso } from '@/lib/formato'
 
 const ROTULO_PAPEL: Record<string, string> = {
   operador: 'Operação',
@@ -63,37 +64,46 @@ export function AppShell() {
             </span>
           </div>
 
-          <div className="flex min-w-0 items-center gap-2">
-            {/* A data. Some no celular: ali a barra de status do sistema já a
-                mostra a dois centímetros daqui. */}
-            <span className="hidden rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium tabular-nums text-white/85 lg:inline">
-              {rotularCabecalho(hojeNoFuso())}
-            </span>
-
-            {pessoa && (
-              <div className="flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-1 pr-3 pl-1">
-                <Avatar nome={pessoa.nome} />
-                {/* O nome some no mobile e sobra o avatar, que já carrega as
-                    iniciais e o nome completo no title. */}
-                <div className="hidden min-w-0 leading-tight sm:block">
-                  <div className="truncate text-sm font-semibold">{pessoa.nome}</div>
-                  <div className="truncate text-[11px] text-white/65">
-                    {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* <button> cru: sobre a faixa escura, o Botao traria o fundo claro
-                dele e viraria um bloco branco no canto. */}
-            <button
-              type="button"
-              onClick={() => void sair()}
-              className="inline-flex h-11 items-center rounded-full px-3 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              sair
-            </button>
-          </div>
+          {/*
+            A DATA SAIU e o "sair" foi para dentro.
+            
+            A data era referência rápida, mas o sobrescrito logo abaixo do
+            título já diz "Sábado, 29 de agosto" por extenso — duas datas na
+            mesma dobra, uma delas abreviada, e nenhuma das duas ganhava por
+            isso.
+            
+            O "sair" era o único botão permanente do canto, e o único gesto
+            realmente perigoso que ficava a um toque de distância num aparelho
+            compartilhado. Agora ele vive dentro do menu do usuário, que é onde
+            se procura por ele — e onde as próximas ações de conta vão caber
+            sem inventar mais um canto.
+          */}
+          {pessoa && (
+            <Dropdown
+              alinhamento="direita"
+              rotulo="Conta"
+              onEscolher={(item) => {
+                if (item.id === 'sair') void sair()
+              }}
+              itens={[
+                { id: 'sair', rotulo: 'Sair da conta', icone: <IconeSair className="size-4" />, destrutivo: true },
+              ]}
+              gatilho={
+                <span className="flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-1 pr-2 pl-1 transition-colors hover:bg-white/20">
+                  <Avatar nome={pessoa.nome} />
+                  {/* O nome some no mobile e sobra o avatar, que já carrega as
+                      iniciais e o nome completo no title. */}
+                  <span className="hidden min-w-0 text-left leading-tight sm:block">
+                    <span className="block truncate text-sm font-semibold">{pessoa.nome}</span>
+                    <span className="block truncate text-[11px] text-white/65">
+                      {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
+                    </span>
+                  </span>
+                  <Chevron className="size-4 flex-shrink-0 text-white/60" />
+                </span>
+              }
+            />
+          )}
         </div>
 
         {ehGestao && (
@@ -116,21 +126,4 @@ export function AppShell() {
       </main>
     </div>
   )
-}
-
-/** "28 ago · sex" — curto o bastante para caber ao lado do resto. */
-function rotularCabecalho(dia: string): string {
-  const [ano, mes, d] = dia.split('-').map(Number)
-  const data = new Date(ano ?? 1970, (mes ?? 1) - 1, d ?? 1)
-  const formato = new Intl.DateTimeFormat('pt-BR', {
-    day: 'numeric',
-    month: 'short',
-    weekday: 'short',
-  })
-  // O Intl devolve "sex., 28 de ago."; aqui a ordem é data primeiro, que é o
-  // que se procura, e sem os pontos que o formato longo arrasta.
-  const partes = Object.fromEntries(
-    formato.formatToParts(data).map((p) => [p.type, p.value.replace('.', '')]),
-  )
-  return `${partes.day} ${partes.month} · ${partes.weekday}`
 }

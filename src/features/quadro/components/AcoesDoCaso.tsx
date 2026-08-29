@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { AnotarDialogo } from './AnotarDialogo'
 import {
@@ -771,23 +772,18 @@ function DialogoPessoa({
     >
       <p className="text-sm text-muted-foreground">{contexto}</p>
 
-      <label className="block">
+      <div>
         <span className="text-sm font-medium">Pessoa</span>
-        <select
-          value={paraPessoaId}
-          onChange={(e) => setParaPessoaId(e.target.value)}
-          className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-        >
-          <option value="">
-            {isPending ? 'Carregando…' : 'Selecione uma pessoa'}
-          </option>
-          {opcoes.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
-      </label>
+        <div className="mt-1">
+          <Dropdown
+            rotulo={isPending ? 'Carregando…' : 'Selecione uma pessoa'}
+            desabilitado={isPending}
+            selecionado={paraPessoaId}
+            onEscolher={(item) => setParaPessoaId(item.id)}
+            itens={opcoes.map((p) => ({ id: p.id, rotulo: p.nome }))}
+          />
+        </div>
+      </div>
 
       {comMotivo && (
         <label className="block">

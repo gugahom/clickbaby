@@ -48,10 +48,9 @@
  * "fofa" em segundos, e às 3h num corredor de maternidade a leitura certa é
  * densidade, não doçura.
  *
- * A MANTEIGA finalmente trabalha. Era a única cor do logo sem função na tela.
- * O estado de rascunho já usava um âmbar escurecido — que é a mesma matiz
- * (97 vs 75). Aproximei os dois: rascunho agora É a manteiga da marca, e a
- * seção de rascunhos herda isso.
+ * A MANTEIGA saiu de cena em 29/08. Ela era a cor do rascunho — a única do
+ * logo com função na tela — e o gestor pediu rosa no lugar. Hoje o âmbar
+ * (`--atencao`) responde só por PAUSADO, que é estado e não cadastro.
  *
  * O escuro segue definido em [data-tema="escuro"], desligado. A seção 5 do
  * CLAUDE.md ainda diz "tema escuro obrigatório — metade da operação é
@@ -206,9 +205,9 @@
      opacidade separa isso; são vizinhos no círculo.
   
      Então o alerta passa a ser LARANJA (45), e vira uma rampa: laranja a uma
-     hora, vermelho (25) a meia hora. O amarelo fica sendo do rascunho, sem
-     disputa, e a escalada ganha uma leitura que "amarelo depois vermelho" não
-     tinha — as duas etapas agora são a mesma cor esquentando.
+     hora, vermelho (25) a meia hora. A escalada ganha uma leitura que "amarelo
+     depois vermelho" não tinha — as duas etapas são a mesma cor esquentando.
+     (O rascunho, que era o amarelo em disputa, virou magenta depois disso.)
   
      L 0.52 e não mais claro porque este valor também é TEXTO no chip: precisa
      dos 4.5:1 sobre branco. */
@@ -256,19 +255,23 @@
      texto usa é mais escuro na mesma matiz, e o valor pedido vive em
      `--rascunho-cheio`.
   
-     ATENÇÃO ao vizinho: `--acento` está na matiz 357 e este na 12 — quinze
-     graus de distância. São dois rosas com significados diferentes (um é
-     estrutura, o outro é estado), e o que os separa passa a ser a FORMA: o
-     acento aparece como rótulo minúsculo em caixa alta, o rascunho como
-     preenchimento de cartão e pílula. Se algum dia um deles virar as duas
-     coisas, essa separação cai. */
-  --rascunho: oklch(0.52 0.19 12);
+     A MATIZ É 310 (magenta), e ela foi ESCOLHIDA POR MEDIÇÃO. Na 12, onde a
+     troca começou, o rascunho ficava a 33 de distância RGB do `--acento` — dois
+     rosas quase iguais dizendo coisas sem relação (um é estrutura, o outro é
+     estado). Girar para o coral piorava: ali estão o vermelho de atrasado (25)
+     e o laranja do alerta (45). Girando para o outro lado, na 310, a distância
+     do acento vai a 101, e as do vermelho e do laranja a 184 e 200 — o pior
+     caso triplica sem sair da família do rosa.
+  
+     Testei até a 290, que separa ainda mais, mas ali começa a ler como violeta
+     e encosta na matiz do `--marca` (273). */
+  --rascunho: oklch(0.52 0.19 310);
   /* O valor pedido era 0.62/0.15 — medido, ele dá 3.91:1 com texto branco, e
      o disco do contador é exatamente branco sobre ele. 0.58/0.17 é o vizinho
      mais próximo que passa: 4.69:1, e a olho é o mesmo rosa. */
-  --rascunho-cheio: oklch(0.58 0.17 12);
-  --rascunho-fundo: oklch(0.968 0.022 12);
-  --rascunho-borda: oklch(0.875 0.07 12);
+  --rascunho-cheio: oklch(0.58 0.17 310);
+  --rascunho-fundo: oklch(0.968 0.022 310);
+  --rascunho-borda: oklch(0.875 0.07 310);
 
   /* Azul da marca (íris do logo), escurecido para servir de fundo com texto
      branco. Estrutura: faixa do topo, ações primárias, aba ativa. */
