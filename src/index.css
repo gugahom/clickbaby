@@ -211,9 +211,25 @@
      Escuro o bastante para o texto branco passar de 12:1 nas duas pontas. */
   --gradiente-cabecalho: linear-gradient(
     100deg,
-    oklch(0.3 0.09 262) 0%,
-    oklch(0.32 0.1 300) 55%,
+    oklch(0.23 0.075 262) 0%,
+    oklch(0.3 0.1 300) 55%,
     oklch(0.36 0.12 355) 100%
+  );
+
+  /* O GRADIENTE DA AÇÃO FINAL — confirmar entrega.
+  
+     Vem da referência, nas nossas cores: o rosa da marca abrindo para um rosa
+     mais quente. É o único botão da tela com gradiente, e de propósito:
+     confirmar entrega é o gesto que ENCERRA o caso, o único irreversível do
+     fluxo normal, e a única coisa que a fotógrafa procura quando o trabalho
+     acabou. Um segundo botão assim e o primeiro deixa de significar.
+  
+     As duas pontas ficam em L 0.54-0.56 para o texto branco passar de 4.5:1 nas
+     duas — um gradiente que escurece de um lado costuma reprovar no outro. */
+  --gradiente-acento: linear-gradient(
+    135deg,
+    oklch(0.56 0.2 357) 0%,
+    oklch(0.55 0.18 25) 100%
   );
 
   /* Rascunho = a manteiga da marca. A matiz veio de 75 para 92, encostando na
@@ -477,6 +493,11 @@
   /* A faixa do cabeçalho. Ver `--gradiente-cabecalho` no topo. */
   .superficie-cabecalho {
     background-image: var(--gradiente-cabecalho);
+  }
+
+  /* Só o botão de confirmar entrega. Ver `--gradiente-acento`. */
+  .superficie-acento {
+    background-image: var(--gradiente-acento);
   }
 
   /* RÓTULO SOBRESCRITO: o texto pequeno, espaçado e em caixa alta que anuncia

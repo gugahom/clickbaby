@@ -457,15 +457,27 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             quem gera os links são as fotógrafas. Cancelar continua restrito —
             cancelar é decisão comercial sobre o contrato, não o fim natural do
             trabalho. */}
+        {/* O ÚNICO botão com gradiente da tela.
+        
+            Ele era `destrutivo` — vermelho, a mesma cor de cancelar caso, que
+            fica dois centímetros ao lado. Confirmar entrega é o oposto de
+            cancelar: é o fim BOM do trabalho. Vestir os dois de vermelho pedia
+            para a pessoa ler o rótulo para saber qual era qual, num gesto que
+            não se desfaz.
+        
+            Agora ele usa o rosa da marca em gradiente, e cancelar volta a ser
+            um botão quieto de contorno. A cor mais forte da tela fica com a
+            ação que a fotógrafa procura quando o trabalho acabou. */}
         <Botao
-          variante="destrutivo"
           onClick={() => {
             setErro(null)
             setConfirmacao({ tipo: 'entrega' })
           }}
           disabled={ocupado || !entrega.habilitada}
           title={entrega.motivo}
+          className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
         >
+          <IconeCheck className="size-4" />
           Confirmar entrega
         </Botao>
 
