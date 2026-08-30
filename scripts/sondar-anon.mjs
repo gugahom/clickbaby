@@ -90,6 +90,13 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',
   },
+  // O outro lado da dispensa: acrescenta trabalho ao checklist de um caso
+  // alheio. Quem alcançasse esta RPC poderia impedir o encerramento de
+  // qualquer caso — o inverso exato do risco acima, e o mesmo estrago.
+  adicionar_etapa: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_tipo: 'banho',
+  },
 }
 
 /** Caminho que a função encerra em 'sem_efeito' antes de tocar qualquer linha. */

@@ -808,7 +808,13 @@ export type Database = {
       }
     }
     Functions: {
-      adicionar_video: { Args: { p_caso_id: string }; Returns: boolean }
+      adicionar_etapa: {
+        Args: {
+          p_caso_id: string
+          p_tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }
+        Returns: boolean
+      }
       agendar_etapa: {
         Args: { p_caso_etapa_id: string; p_previsao_em: string }
         Returns: undefined
@@ -835,6 +841,10 @@ export type Database = {
       }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       disparar_sync_calendar: { Args: never; Returns: string }
+      dispensar_etapa: {
+        Args: { p_caso_etapa_id: string; p_motivo?: string }
+        Returns: undefined
+      }
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }

@@ -227,9 +227,17 @@ export function usePlanejarRendicao() {
   )
 }
 
-export function useAdicionarVideo() {
-  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
-    chamar('adicionar_video', { p_caso_id: casoId }),
+/**
+ * Acrescenta ao caso uma etapa que o pacote dele não previa — o banho vendido
+ * na hora, o fechamento que passou a existir.
+ *
+ * Substitui `useAdicionarVideo`, que era isto com o tipo cravado em vídeo.
+ * Ver a migration 20260830063452: o pacote do caso NÃO muda, e a RPC recusa
+ * rascunho sem pacote.
+ */
+export function useAdicionarEtapa() {
+  return useAcaoDoQuadro<{ casoId: string; tipo: EtapaTipo }>(({ casoId, tipo }) =>
+    chamar('adicionar_etapa', { p_caso_id: casoId, p_tipo: tipo }),
   )
 }
 
