@@ -12,15 +12,21 @@
     <meta name="theme-color" content="#2b2540" />
 
     <!--
-      SYNE + PLUS JAKARTA SANS.
+      PLUS JAKARTA SANS, e só ela para texto.
 
       A tela vinha na stack do sistema, e isso explica boa parte de por que ela
       parecia mais crua que a referência: nenhuma escolha tipográfica tinha
-      sido feita. Syne é uma display geométrica de contraste alto — ela carrega
-      o título e o wordmark sozinha, e só aparece aí. O texto corrido fica na
-      Plus Jakarta Sans, que tem altura de x generosa (importante para 13px
-      lidos de pé num corredor), e números continuam na JetBrains Mono, que é
-      tabular por natureza — horário e contador não dançam ao mudar.
+      sido feita. A Plus Jakarta Sans resolve isso sozinha — altura de x
+      generosa (importante para 13px lidos de pé num corredor) e oito pesos,
+      que é o que dá hierarquia sem precisar de uma segunda família. Números
+      continuam na JetBrains Mono, mas SÓ como código: sigla de maternidade,
+      "pc-1", LOCAL/REMOTO.
+
+      A SYNE SAIU (30/08/2026, a pedido do gestor). Ela carregava o título da
+      tela — um h1, um por página — e nada mais. Duas famílias display para um
+      elemento é peso de rede que nenhum leitor recebe de volta, e o próprio
+      pedido foi de padronizar o título na fonte do resto. O contraste que ela
+      dava agora vem do peso 800 da Jakarta, que já estava sendo baixado.
 
       `display=swap` de propósito: a seção 6 do CLAUDE.md diz que o sinal cai.
       Com swap, a tela aparece na fonte do sistema e troca quando a web font
@@ -29,7 +35,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <title>Painel de atividades · Clickbaby</title>

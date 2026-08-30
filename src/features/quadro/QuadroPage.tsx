@@ -336,11 +336,24 @@ export function QuadroPage() {
               `truncate` porque em 375px o título novo é quase o dobro do
               antigo e disputaria a linha com os botões de aba.
             */}
-            {/* QUEBRA, não corta. Em 375px "Painel de atividades" em Syne
-                ExtraBold não cabe numa linha, e `truncate` entregava "Painel
-                de ativida…" — um título pela metade é pior que um título em
-                duas linhas. `text-balance` reparte as duas de forma pareja. */}
-            <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight text-balance md:text-4xl">
+            {/*
+              MENOR, E NA FONTE DO RESTO (30/08/2026, a pedido do gestor).
+
+              Era 24px no celular e 36px no desktop, em Syne ExtraBold. Num
+              painel operacional o título é a coisa que menos se lê: quem abre
+              esta tela já sabe onde está, e o que precisa achar são os CASOS.
+              Ele estava comprando três linhas de altura — sobrescrito, título,
+              abas — antes do primeiro dado da tela aparecer.
+
+              O tamanho que ele devolve não se perde: vai para o cabeçalho do
+              cartão, que é o que se lê cem vezes por turno. É a mesma tinta,
+              gasta onde rende.
+
+              Em 375px agora cabe numa linha só, mas `text-balance` fica: se um
+              dia a tela ganhar um título mais longo, ele reparte as duas linhas
+              de forma pareja em vez de deixar uma palavra órfã.
+            */}
+            <h1 className="mt-0.5 text-lg font-extrabold tracking-tight text-balance md:text-2xl">
               Painel de atividades
             </h1>
             {/*

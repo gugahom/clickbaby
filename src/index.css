@@ -102,9 +102,9 @@
   --color-pronto-fundo: var(--pronto-fundo);
   --color-pronto-borda: var(--pronto-borda);
 
-  /* TIPOGRAFIA. Syne só no título e no wordmark — é display, e display em
-     texto corrido cansa em duas linhas. Ver a nota no index.html. */
-  --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  /* TIPOGRAFIA. Uma família para tudo que é texto — o título incluído, desde
+     30/08/2026. O `--font-display` saiu junto com a Syne; a hierarquia vem de
+     peso e tamanho. Ver a nota do `h1` mais abaixo e a do index.html. */
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   /* MONO SÓ PARA CÓDIGO: sigla de maternidade, "pc-1", LOCAL/REMOTO. Coisas
      que se leem letra a letra e que ganham em parecer identificador.
@@ -388,35 +388,28 @@
     font-family: var(--font-sans);
   }
 
-  /* Display SÓ no título da tela, e por CLASSE no resto.
-  
-     A primeira versão pegava `h1, h2` por seletor, e isso passou longe do
-     alvo: o cabeçalho do dia é um `h2` que envolve o botão INTEIRO — rótulo,
-     data, selo de atraso e contador. Todos herdavam a display, e os dígitos da
-     Syne são largos: "28/08" ficava esticado ao lado de um texto que não
-     estava.
-  
-     Um `h3` também nunca deveria entrar — ali é nome de mãe, que é dado e não
-     título; em Syne viraria manchete e competiria com o rótulo do dia.
-  
-     Então: o seletor cobre só o `h1`, que é um por tela e é texto puro. Quem
-     mais quiser a display pede por `font-display`, no elemento exato. */
+  /* UMA FAMÍLIA SÓ, e o título entrou nela (30/08/2026, a pedido do gestor).
+
+     A Syne vivia aqui, cobrindo o `h1` e nada mais. A medição já dizia por que
+     ela não podia cobrir mais que isso: em 800/48px ocupa 38,1px por caractere
+     contra 24,3px da Plus Jakarta — 57% mais larga — e a altura-x é menor (24
+     contra 27), então as minúsculas encolhem enquanto a linha estica e as
+     descidas de "j" e "g" somem no meio de uma palavra pesada.
+
+     O que a medição não respondia é se valia a pena para UM elemento. Não
+     valia: uma família display inteira baixada para um título por página, e a
+     tela ganhando duas vozes onde o pedido era de uma. O contraste do título
+     agora vem do PESO — 800 da Jakarta, que já vinha na mesma requisição — e
+     do tamanho, que é o que sempre carregou hierarquia melhor que troca de
+     família.
+
+     Sobra o `letter-spacing`: em 800 e num tamanho grande, a Jakarta pede o
+     mesmo aperto que a Syne pedia. Sem ele o título fica frouxo ao lado do
+     sobrescrito, que é apertado por definição. */
   h1 {
-    font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
 
-  /* SYNE SÓ NO TÍTULO DA TELA, e a medição explica por quê.
-  
-     Em 800/48px ela ocupa 38,1px por caractere contra 24,3px da Plus Jakarta:
-     57% mais larga. "Quarta-feira, 26 de agosto" mede 1002px nela e 635px na
-     outra. E a altura-x é menor (24 contra 27), então as minúsculas encolhem
-     enquanto a linha estica — as descidas de "j" e "g" somem no meio de uma
-     palavra pesada.
-  
-     Numa frase curta e grande, isso é caráter. Repetido em cinco cabeçalhos de
-     dia cheios de palavras, vira leitura difícil — e uma assinatura repetida
-     cinco vezes deixa de ser assinatura. */ 
 
   /* Foco sempre visível: a linha do caso é um header clicável de verdade,
    * navegável por teclado. No claro o anel precisa de offset positivo — sem o

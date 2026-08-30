@@ -22,6 +22,14 @@ export interface ItemDropdown {
   icone?: ReactNode
   /** Ação sem volta — some do fluxo normal e ganha a cor de alerta. */
   destrutivo?: boolean
+  /**
+   * A ação existe mas não cabe agora. O item FICA na lista, apagado: sumir
+   * faria o menu mudar de tamanho e de ordem a cada estado, e quem procurasse
+   * "passar para outra pessoa" concluiria que a função não existe.
+   */
+  desabilitado?: boolean
+  /** Por que não cabe. Vira o `title` — é o que ensina a regra. */
+  motivo?: string | undefined
 }
 
 interface PropsDropdown {
@@ -158,6 +166,13 @@ export function Dropdown({
           onClick={() => setAberto((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={aberto}
+          // O NOME ACESSÍVEL VEM DAQUI, e não de um aria-label no gatilho
+          // passado. Nomear por dentro depende do cálculo de nome-por-conteúdo
+          // atravessar até o <span>, e some de vez quando o gatilho é só um
+          // ícone — que é o caso dos três menus de ícone da tela. Aqui é
+          // explícito: quem passa gatilho cuida da aparência, o nome é
+          // responsabilidade deste componente.
+          aria-label={rotulo}
           disabled={desabilitado}
           // min-h-11 mesmo com gatilho próprio: quem passa um gatilho cuida da
           // aparência, mas o alvo de toque é responsabilidade daqui — o chip de
@@ -247,18 +262,22 @@ export function Dropdown({
                     <button
                       type="button"
                       role="menuitem"
+                      disabled={item.desabilitado}
+                      title={item.motivo}
                       onClick={() => {
                         setAberto(false)
                         onEscolher(item)
                       }}
                       className={clsx(
                         // min-h-11: a linha É o alvo de toque (seção 6).
-                        'flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                        item.destrutivo
-                          ? 'text-atrasado hover:bg-atrasado/10'
-                          : marcado
-                            ? 'bg-marca-suave font-semibold text-marca'
-                            : 'hover:bg-muted',
+                        'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                        item.desabilitado
+                          ? 'cursor-not-allowed text-muted-foreground/60'
+                          : item.destrutivo
+                            ? 'cursor-pointer text-atrasado hover:bg-atrasado/10'
+                            : marcado
+                              ? 'cursor-pointer bg-marca-suave font-semibold text-marca'
+                              : 'cursor-pointer hover:bg-muted',
                       )}
                     >
                       {item.icone && <span className="flex-shrink-0">{item.icone}</span>}

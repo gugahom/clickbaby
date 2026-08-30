@@ -81,7 +81,7 @@ export function AppShell() {
           {pessoa && (
             <Dropdown
               alinhamento="direita"
-              rotulo="Conta"
+              rotulo={`Conta de ${pessoa.nome}`}
               onEscolher={(item) => {
                 if (item.id === 'sair') void sair()
               }}
