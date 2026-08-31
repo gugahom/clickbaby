@@ -3,16 +3,21 @@ import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
 import { formatarHora } from '@/lib/formato'
+import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
+import { podeCancelar } from '../lib/acoes'
+import { mensagemDeErro } from '../lib/erros'
+import { useCancelarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
 import { TrilhasDoCaso } from './TrilhasDoCaso'
 import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
-import { IconeCaneta, IconeMais, IconeReabrir } from '@/components/ui/icones'
+import { Dialogo } from '@/components/ui/Dialogo'
+import { IconeCaneta, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
 import { Dropdown } from '@/components/ui/Dropdown'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
@@ -37,8 +42,13 @@ interface PropsCasoLinha {
 export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState(false)
+  const [descartando, setDescartando] = useState(false)
+  const [erroDescarte, setErroDescarte] = useState<string | null>(null)
   const idPainel = useId()
   const idCabecalho = useId()
+
+  const { pessoa } = useAuth()
+  const cancelar = useCancelarCaso()
 
   // O relógio faz o rótulo do SLA andar sozinho: sem ele, um caso aberto na
   // tela mostraria o prazo congelado no instante em que carregou.
@@ -49,6 +59,26 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
   const alerta = alertaDeHorario(caso, etapas, agora)
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+
+  /*
+   * DESCARTAR RASCUNHO — mesma RPC de cancelar_caso, caminho mais curto.
+   *
+   * O gestor teve que descartar ~40 rascunhos criados por engano (o
+   * alargamento da janela do sync, corrigido na mesma sessão) um por um: abrir
+   * o card, achar "Cancelar caso" no rodapé do detalhe, digitar um motivo só
+   * pra preencher o campo obrigatório. Um rascunho pendente nunca virou
+   * contrato — não há decisão comercial nenhuma nisso, só ruído do sync que
+   * precisa sumir.
+   *
+   * Por isso este atalho: mesmo `cancelar_caso`, mesma restrição de papel
+   * (`podeCancelar` — é decisão que continua exigindo atendimento/adm, a RPC
+   * não sabe a diferença), mas direto do menu do cartão, com motivo padrão em
+   * vez de campo de texto. Só aparece em rascunho ainda aberto — um caso de
+   * verdade continua exigindo o motivo escrito, porque ali cancelar É uma
+   * decisão sobre o contrato.
+   */
+  const papel = pessoa?.papelSistema ?? 'operador'
+  const descarte = podeCancelar(caso, papel)
 
   // Todas as etapas feitas e o caso ainda aberto: é o único estado em que o
   // caso está esperando por uma PESSOA, não por trabalho. Por isso ganha peso
@@ -355,6 +385,10 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
           onEscolher={(item) => {
             if (item.id === 'editar') setEditando(true)
             if (item.id === 'reabrir') onReabrir?.(caso)
+            if (item.id === 'descartar') {
+              setErroDescarte(null)
+              setDescartando(true)
+            }
           }}
           itens={[
             {
@@ -368,6 +402,18 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
                     id: 'reabrir',
                     rotulo: 'Reabrir para alteração',
                     icone: <IconeReabrir className="size-4" />,
+                  },
+                ]
+              : []),
+            ...(caso.ehRascunho && !caso.ehTerminal
+              ? [
+                  {
+                    id: 'descartar',
+                    rotulo: 'Descartar rascunho',
+                    icone: <IconeX className="size-4" />,
+                    destrutivo: true,
+                    desabilitado: !descarte.habilitada,
+                    motivo: descarte.motivo,
                   },
                 ]
               : []),
@@ -388,6 +434,35 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
       </div>
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
+
+      {descartando && (
+        <Dialogo
+          titulo="Descartar este rascunho?"
+          rotuloConfirmar="Descartar rascunho"
+          confirmarDestrutivo
+          ocupado={cancelar.isPending}
+          erro={erroDescarte}
+          onCancelar={() => setDescartando(false)}
+          onConfirmar={() => {
+            setErroDescarte(null)
+            cancelar
+              .mutateAsync({
+                casoId: caso.id,
+                motivo: 'Rascunho descartado — evento do Calendar sem pacote/maternidade confiáveis.',
+              })
+              .then(
+                () => setDescartando(false),
+                (e) => setErroDescarte(mensagemDeErro(e)),
+              )
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo}. Ele nunca chegou a ter pacote e maternidade resolvidos — não é
+            um caso cancelado, é ruído do sync que não precisa mais aparecer. Não há
+            como desfazer.
+          </p>
+        </Dialogo>
+      )}
 
       {/* Fora do <button> do cabeçalho e antes do painel: a faixa é sempre
           visível, aberto ou fechado. Um aviso que só aparecesse ao expandir o

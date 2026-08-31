@@ -1,4 +1,5 @@
 import { podeIniciar } from './acoes'
+import { rascunhoDescartado } from './agrupar-por-dia'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
 /**
@@ -194,8 +195,15 @@ export function casosComVideoMasterAberto(
     })
 }
 
+/**
+ * "Concluídos" é trabalho que ACONTECEU e terminou — entregue ou cancelado
+ * depois de virar contrato de verdade. Um rascunho descartado nunca chegou
+ * a ser isso (ver `rascunhoDescartado`); contá-lo aqui lotaria a aba com
+ * ruído do sync, não com histórico — foi exatamente a queixa que motivou
+ * este filtro (31/08/2026).
+ */
 export function casosConcluidos(casos: CasoQuadro[]): CasoQuadro[] {
   return casos
-    .filter((c) => c.ehTerminal)
+    .filter((c) => c.ehTerminal && !rascunhoDescartado(c))
     .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
 }
