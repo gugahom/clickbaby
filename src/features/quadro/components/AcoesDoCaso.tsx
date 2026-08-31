@@ -17,6 +17,8 @@ import {
   IconePause,
   IconePlay,
   IconeDispensar,
+  IconeMais,
+  IconeAdicionar,
 } from '@/components/ui/icones'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
@@ -35,6 +37,7 @@ import {
   useTransferirEtapa,
   usePessoasAtivas,
   useDispensarEtapa,
+  useAdicionarEtapa,
 } from '../api/useAcoes'
 import {
   podeAtribuir,
@@ -48,6 +51,8 @@ import {
   podePlanejarRendicao,
   podeReabrir,
   podeDispensar,
+  podeAdicionarEtapa,
+  etapasAdicionaveis,
   podeTransferir,
   podeEncerrarCaso,
 } from '../lib/acoes'
@@ -60,6 +65,7 @@ import {
   ROTULO_STATUS_ETAPA,
   type CasoQuadro,
   type EtapaQuadro,
+  type EtapaTipo,
 } from '../types'
 
 interface PropsAcoes {
@@ -119,6 +125,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const transferir = useTransferirEtapa()
   const confirmarEntrega = useConfirmarEntrega()
   const cancelar = useCancelarCaso()
+  const adicionarEtapa = useAdicionarEtapa()
 
   const ocupado =
     iniciar.isPending ||
@@ -129,6 +136,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     concluir.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
+    adicionarEtapa.isPending ||
     cancelar.isPending
 
   function executar(promessa: Promise<unknown>, aoTerminar?: () => void) {
@@ -148,6 +156,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
+  const adicao = podeAdicionarEtapa(caso, etapas)
 
   const mostraAcoesDeCaso = podeEncerrarCaso(papel)
 
@@ -260,8 +269,30 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   </div>
                 )}
 
-                {/* Grupo de ações na própria linha. Etapa terminada perde os
-                    botões inteiros — no mobile, ícone morto é espaço perdido. */}
+                {/*
+                  DOIS BOTÕES E UM MENU — e a mudança é de mobile, medida.
+
+                  Eram SETE ícones nesta linha: play, concluir, concluir com
+                  observação, atribuir/handoff, rendição, aviso, dispensar. Em
+                  375px eles não cabiam ao lado do nome da etapa e do
+                  responsável: o grupo encostava no texto e a linha virava uma
+                  fileira de símbolos parecidos, todos do mesmo tamanho e da
+                  mesma cor, sem nenhum com precedência. Foi a queixa do teste
+                  no celular, e está certa.
+
+                  O CORTE NÃO É POR IMPORTÂNCIA, É POR FREQUÊNCIA. Play e
+                  concluir são o gesto do corredor — uma mão, três toques
+                  (seção 6) — e acontecem em toda etapa de todo caso. Os outros
+                  cinco acontecem quando algo foge do normal: passar para
+                  outra pessoa, avisar, dispensar. Esses aceitam dois toques,
+                  e ganham em troca um RÓTULO em vez de um pictograma que
+                  ninguém decifra de primeira.
+
+                  ITEM QUE NÃO CABE FICA APAGADO, não some: a lista mudar de
+                  tamanho a cada estado obrigaria a reler o menu toda vez, e o
+                  motivo (que o `title` carrega) é o que ensina a regra de
+                  precedência para quem ainda não a conhece.
+                */}
                 {!encerrada && (
                   <div className="flex flex-shrink-0 items-center">
                     {/* Play e pause são a MESMA alavanca em estados opostos, e
@@ -305,107 +336,140 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       <IconeCheck className="size-[18px]" />
                     </BotaoIcone>
 
-                    <BotaoIcone
-                      rotulo="Concluir com observação"
-                      disabled={ocupado || !conclusao.habilitada}
-                      motivo={conclusao.motivo}
-                      onClick={() => {
+                    <Dropdown
+                      alinhamento="direita"
+                      rotulo={`Mais ações de ${ROTULO_ETAPA[etapa.tipo]}`}
+                      onEscolher={(item) => {
                         setErro(null)
-                        setObservacaoDe(etapa)
+                        if (item.id === 'observacao') setObservacaoDe(etapa)
+                        if (item.id === 'atribuir') setAtribuirDe(etapa)
+                        if (item.id === 'handoff') setHandoffDe(etapa)
+                        if (item.id === 'rendicao') setRendicaoDe(etapa)
+                        if (item.id === 'anotar') setAnotarDe(etapa)
+                        if (item.id === 'dispensar') {
+                          executar(dispensar.mutateAsync({ casoEtapaId: etapa.id }))
+                        }
                       }}
-                    >
-                      <IconeCaneta className="size-[18px]" />
-                    </BotaoIcone>
-
-                    {/* Mesmo slot, dois verbos. Antes de começar é ATRIBUIR
-                        (designar quem vai fazer); depois é HANDOFF (passar
-                        trabalho em curso, que vira linha em handoffs). A linha
-                        não é o status, é se alguém já trabalhou. */}
-                    {designacao.habilitada ? (
-                      <BotaoIcone
-                        rotulo="Atribuir responsável"
-                        disabled={ocupado}
-                        onClick={() => {
-                          setErro(null)
-                          setAtribuirDe(etapa)
-                        }}
-                      >
-                        <IconeAtribuir className="size-[18px]" />
-                      </BotaoIcone>
-                    ) : (
-                      <BotaoIcone
-                        rotulo="Passar para outra pessoa"
-                        disabled={ocupado || !handoff.habilitada}
-                        motivo={handoff.motivo}
-                        onClick={() => {
-                          setErro(null)
-                          setHandoffDe(etapa)
-                        }}
-                      >
-                        <IconeHandoff className="size-[18px]" />
-                      </BotaoIcone>
-                    )}
-
-                    {/* Slot PRÓPRIO, não compartilhado com os de cima. Atribuir
-                        e handoff trocam o responsável agora; isto só anuncia
-                        quem assume depois — as duas coisas convivem, e a
-                        fotógrafa que sabe que sai em 15 minutos precisa das
-                        duas na mesma linha. */}
-                    <BotaoIcone
-                      rotulo={
-                        etapa.proximoResponsavelNome
-                          ? `Rendição: ${etapa.proximoResponsavelNome} assume`
-                          : 'Planejar rendição de turno'
+                      itens={[
+                        {
+                          id: 'observacao',
+                          rotulo: 'Concluir com observação',
+                          icone: <IconeCaneta className="size-4" />,
+                          desabilitado: ocupado || !conclusao.habilitada,
+                          motivo: conclusao.motivo,
+                        },
+                        /* Mesmo slot, dois verbos. Antes de começar é ATRIBUIR
+                           (designar quem vai fazer); depois é HANDOFF (passar
+                           trabalho em curso, que vira linha em handoffs). A
+                           linha não é o status, é se alguém já trabalhou. */
+                        designacao.habilitada
+                          ? {
+                              id: 'atribuir',
+                              rotulo: 'Atribuir responsável',
+                              icone: <IconeAtribuir className="size-4" />,
+                              desabilitado: ocupado,
+                            }
+                          : {
+                              id: 'handoff',
+                              rotulo: 'Passar para outra pessoa',
+                              icone: <IconeHandoff className="size-4" />,
+                              desabilitado: ocupado || !handoff.habilitada,
+                              motivo: handoff.motivo,
+                            },
+                        /* Item PRÓPRIO, não compartilhado com os de cima.
+                           Atribuir e handoff trocam o responsável agora; isto
+                           só anuncia quem assume depois — as duas coisas
+                           convivem, e a fotógrafa que sabe que sai em 15
+                           minutos precisa das duas à mão. */
+                        {
+                          id: 'rendicao',
+                          rotulo: etapa.proximoResponsavelNome
+                            ? `Rendição: ${etapa.proximoResponsavelNome} assume`
+                            : 'Planejar rendição de turno',
+                          icone: <IconeRendicao className="size-4" />,
+                          desabilitado: ocupado || !rendicao.habilitada,
+                          motivo: rendicao.motivo,
+                        },
+                        /* Sem trava de status: anotar vale ANTES de a etapa
+                           começar — é o único momento em que o aviso serve. */
+                        {
+                          id: 'anotar',
+                          rotulo: etapa.observacao ? 'Editar aviso' : 'Escrever aviso',
+                          icone: <IconeNota className="size-4" />,
+                          desabilitado: ocupado,
+                        },
+                        /* DISPENSAR por último, e em vermelho. É a única do
+                           menu que REMOVE trabalho do checklist, e a que
+                           destrava o encerramento de um caso — o mesmo peso
+                           visual de cancelar caso, pelo mesmo motivo. */
+                        {
+                          id: 'dispensar',
+                          rotulo: 'Dispensar etapa',
+                          icone: <IconeDispensar className="size-4" />,
+                          destrutivo: true,
+                          desabilitado: ocupado || !dispensa.habilitada,
+                          motivo: dispensa.motivo,
+                        },
+                      ]}
+                      gatilho={
+                        <span
+                          className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <IconeMais className="size-4" />
+                        </span>
                       }
-                      disabled={ocupado || !rendicao.habilitada}
-                      motivo={rendicao.motivo}
-                      tom={etapa.proximoResponsavelNome ? 'acao' : 'neutro'}
-                      onClick={() => {
-                        setErro(null)
-                        setRendicaoDe(etapa)
-                      }}
-                    >
-                      <IconeRendicao className="size-[18px]" />
-                    </BotaoIcone>
-
-                    {/* Sem trava de status: anotar vale ANTES de a etapa
-                        começar — é o único momento em que o aviso serve. Vale
-                        até em etapa concluída, para corrigir o relato. */}
-                    <BotaoIcone
-                      rotulo={etapa.observacao ? 'Editar aviso' : 'Escrever aviso'}
-                      disabled={ocupado}
-                      tom={etapa.observacao ? 'acao' : 'neutro'}
-                      onClick={() => {
-                        setErro(null)
-                        setAnotarDe(etapa)
-                      }}
-                    >
-                      <IconeNota className="size-[18px]" />
-                    </BotaoIcone>
-
-                    {/* DISPENSAR fica por último, e em cinza.
-                    
-                        É a ação menos frequente do grupo e a única que remove
-                        trabalho do checklist — pô-la ao lado do play, com cor,
-                        convidaria ao toque errado num aparelho usado de pé com
-                        uma mão. Fica alcançável e discreta, com o desfazer
-                        aparecendo no lugar dela depois. */}
-                    <BotaoIcone
-                      rotulo="Dispensar etapa"
-                      motivo={dispensa.motivo}
-                      disabled={ocupado || !dispensa.habilitada}
-                      onClick={() =>
-                        executar(dispensar.mutateAsync({ casoEtapaId: etapa.id }))
-                      }
-                    >
-                      <IconeDispensar className="size-[18px]" />
-                    </BotaoIcone>
+                    />
                   </div>
                 )}
               </li>
             )
           })}
         </ul>
+      )}
+
+      {/*
+        ACRESCENTAR UMA ETAPA QUE O PACOTE NÃO PREVIA.
+
+        O caso do gestor: um BASIC não tem banho, mas a fotógrafa está na
+        maternidade e vende o banho na hora. Até aqui esse trabalho acontecia e
+        o sistema não sabia — sem etapa não há play, o tempo não entra em lugar
+        nenhum, e o caso fecha dizendo que teve duas etapas quando teve três.
+
+        É O PAR DE DISPENSAR, e por isso mora colado na lista que ele muda:
+        dispensar tira do checklist o que não vai acontecer, isto acrescenta o
+        que passou a acontecer. Juntos, o checklist do caso deixa de ser uma
+        cópia congelada do pacote e passa a ser o que de fato foi combinado com
+        aquela família.
+
+        SÓ O QUE FALTA aparece no menu, e ele some inteiro quando não há o que
+        acrescentar — um botão permanentemente vazio ensinaria a ignorá-lo.
+        O PACOTE CONTINUA O MESMO: ele é o registro do que foi vendido no
+        contrato, e a etapa avulsa fica em `eventos` como etapa_adicionada.
+      */}
+      {adicao.habilitada && (
+        <Dropdown
+          className="w-fit"
+          rotulo="Acrescentar etapa"
+          onEscolher={(item) =>
+            executar(
+              adicionarEtapa.mutateAsync({
+                casoId: caso.id,
+                tipo: item.id as EtapaTipo,
+              }),
+            )
+          }
+          itens={etapasAdicionaveis(etapas).map((tipo) => ({
+            id: tipo,
+            rotulo: ROTULO_ETAPA[tipo],
+            desabilitado: ocupado,
+          }))}
+          gatilho={
+            <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-marca hover:text-marca">
+              <IconeAdicionar className="size-4" />
+              Acrescentar etapa
+            </span>
+          }
+        />
       )}
 
       {/* Ações que MOVEM o caso entre as seções da tela. Ficam separadas das

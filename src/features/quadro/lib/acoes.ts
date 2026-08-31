@@ -1,4 +1,4 @@
-import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
+import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro, type EtapaTipo } from '../types'
 
 /**
  * Quais ações fazem sentido AGORA, para esta etapa e para este papel.
@@ -255,16 +255,49 @@ export function podeRetornarDaUti(caso: CasoQuadro): Disponibilidade {
 }
 
 /**
- * O VÍDEO HORIZONTAL só existe de fábrica no MASTER e MASTER + ÁLBUM. Quando
- * falta, o botão vira "Adicionar vídeo" (adicionar_video); quando existe, vira
- * "Editar vídeo", que é iniciar_etapa naquela etapa.
+ * Ordem de leitura das etapas, a mesma de `ordem_padrao_da_etapa` no banco.
  *
- * O REELS não passa por aqui: desde a migration 20260827140400 ele está em
- * TODO pacote, então não há o que adicionar. Enquanto reels e vídeo eram a
- * mesma etapa, esta função se chamava podeAdicionarReels e falava do que hoje
- * é o horizontal.
+ * Escrita à mão em vez de derivada de ROTULO_ETAPA: a ordem de um objeto é a
+ * de inserção, e a lista existe justamente para que reordenar os rótulos por
+ * qualquer outro motivo não mude silenciosamente a ordem do menu.
  */
-export function podeAdicionarVideo(
+const TIPOS_EM_ORDEM: EtapaTipo[] = [
+  'entrada',
+  'nascimento',
+  'banho',
+  'fechamento',
+  'edicao_foto',
+  'reels',
+  'edicao_video',
+  'album',
+]
+
+/**
+ * O QUE AINDA DÁ PARA ACRESCENTAR a este caso.
+ *
+ * O pacote diz quais etapas o caso NASCE tendo; a realidade às vezes
+ * acrescenta. O exemplo do gestor é o banho: um BASIC não o inclui, mas a
+ * fotógrafa está na maternidade e vende o banho na hora. Antes disso acontecer
+ * no sistema, o trabalho era feito e não existia — sem etapa não há play, e o
+ * tempo dela não entrava em lugar nenhum.
+ *
+ * Só o que FALTA aparece. Uma etapa que já existe não se acrescenta: ela se
+ * inicia, se conclui ou se dispensa, e as três coisas já estão na linha dela.
+ * A rodada 2 também não entra aqui — ela nasce da trigger do fechamento.
+ */
+export function etapasAdicionaveis(etapas: EtapaQuadro[]): EtapaTipo[] {
+  const existentes = new Set(etapas.map((e) => e.tipo))
+  return TIPOS_EM_ORDEM.filter((t) => !existentes.has(t))
+}
+
+/**
+ * Espelha as guardas de `adicionar_etapa` (migration 20260830063452).
+ *
+ * A do PACOTE não é formalidade: `gerar_caso_etapas` desiste de gerar quando o
+ * caso já tem qualquer etapa, então acrescentar a um rascunho e confirmar o
+ * pacote depois deixaria o caso com aquela etapa e mais nenhuma.
+ */
+export function podeAdicionarEtapa(
   caso: CasoQuadro,
   etapas: EtapaQuadro[],
 ): Disponibilidade {
@@ -272,10 +305,13 @@ export function podeAdicionarVideo(
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
   }
   if (caso.faltaPacote) {
-    return { habilitada: false, motivo: 'Rascunho sem pacote definido.' }
+    return {
+      habilitada: false,
+      motivo: 'Rascunho sem pacote — confirme o pacote antes.',
+    }
   }
-  if (etapas.some((e) => e.tipo === 'edicao_video')) {
-    return { habilitada: false, motivo: 'Este caso já tem etapa de vídeo.' }
+  if (etapasAdicionaveis(etapas).length === 0) {
+    return { habilitada: false, motivo: 'O caso já tem todas as etapas.' }
   }
   return OK
 }

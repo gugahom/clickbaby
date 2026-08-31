@@ -162,9 +162,39 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-4">
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-base font-bold tracking-tight md:text-[17px]">
+                {/*
+                  O NOME CRESCEU (30/08/2026, a pedido do gestor).
+
+                  Era 16px no celular, 17 no desktop — o mesmo corpo do resto
+                  do cartão, distinguido só pelo negrito. O gestor leu isso
+                  como "apagado", e é uma leitura correta: mãe, pacote e
+                  maternidade são a LINHA DO CALENDAR, a frase que a equipe já
+                  usa para identificar um caso ("THAYANE/ALICE BIRTH+REELS
+                  GNDI"), e o cartão a servia em três registros diferentes —
+                  nome em negrito, pacote em 12px, sigla em 11px cinza.
+
+                  Agora o nome tem tamanho de título e os dois outros têm peso
+                  de dado, não de etiqueta. Os pixels vêm do título da página,
+                  que encolheu na mesma leva: um se lê uma vez por turno, o
+                  outro cem vezes.
+
+                  A HORA fica pequena e cinza de propósito. Ela qualifica o
+                  nome, não compete com ele — e num dia com doze casos é a
+                  coluna que o olho percorre, não a que ele procura.
+
+                  QUEBRA EM DUAS LINHAS, NÃO CORTA. Era `truncate`, e a 18px
+                  isso passou a morder nomes reais: "04:30 JESSICA · CARLOS
+                  RAFAEL" mede 269px nos 242 que sobram em 375px, e virava
+                  "CARLOS RAFAE…". Cortar o nome de um bebê para caber é
+                  perder justamente o dado que identifica o caso. `line-clamp-2`
+                  deixa a segunda linha acontecer e ainda põe um teto: um nome
+                  absurdamente longo para em duas linhas em vez de esticar o
+                  cartão. Nomes curtos seguem em uma linha só — o cartão só
+                  cresce quando há motivo.
+                */}
+                <h3 className="line-clamp-2 text-lg font-extrabold tracking-tight md:text-xl">
                   {hora && (
-                    <span className="mr-2 text-sm font-medium tabular-nums text-muted-foreground">
+                    <span className="mr-2 text-sm font-semibold tabular-nums text-muted-foreground">
                       {hora}
                     </span>
                   )}
@@ -193,32 +223,42 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
                   </p>
                 )}
 
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
-                  {/* Pacote e maternidade viram PÍLULAS DE CONTORNO.
-                  
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
+                  {/* Pacote e maternidade são PÍLULAS, e agora com peso.
+
                       Eram texto solto separado por espaço, e a linha lia como
                       uma frase: "BIRTH + REELS GNDI rascunho". São três dados
                       distintos, e a moldura é o que diz onde um termina e o
                       outro começa sem precisar de pontuação.
-                  
-                      Contorno e não preenchimento: preenchidas, seis pílulas por
-                      cartão virariam blocos de cor competindo com a espinha e
-                      com o chip de alerta, que são os dois que precisam gritar. */}
+
+                      O QUE MUDOU: o pacote ganhou preenchimento. A regra
+                      anterior — todas de contorno, para nenhuma competir com a
+                      espinha e com o chip de alerta — está certa para as
+                      pílulas de ESTADO, que aparecem várias por cartão e são
+                      justamente as que gritam. O pacote não é estado: é
+                      identidade, aparece uma vez, e é o dado mais
+                      consequente da linha (ele define o checklist inteiro do
+                      caso). O tom é o azul suave da marca, de croma baixo —
+                      preenche sem virar sinal.
+
+                      A maternidade fica de contorno, e é isso que mantém as
+                      duas distinguíveis: preenchida vs. vazada diz mais
+                      depressa "pacote" e "onde" do que ler as duas. */}
                   {caso.pacoteNome ? (
-                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-foreground">
+                    <span className="rounded-full bg-marca-suave px-2.5 py-0.5 text-[13px] font-bold text-marca">
                       {caso.pacoteNome}
                     </span>
                   ) : (
-                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-medium text-rascunho">
+                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-semibold text-rascunho">
                       sem pacote
                     </span>
                   )}
                   {caso.maternidadeSigla ? (
-                    <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-medium">
+                    <span className="rounded-full border border-border px-2 py-0.5 font-mono text-xs font-bold text-foreground">
                       {caso.maternidadeSigla}
                     </span>
                   ) : (
-                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-medium text-rascunho">
+                    <span className="rounded-full border border-rascunho-borda px-2 py-0.5 text-xs font-semibold text-rascunho">
                       sem maternidade
                     </span>
                   )}
@@ -311,7 +351,7 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
       <div className="absolute top-0.5 right-8">
         <Dropdown
           alinhamento="direita"
-          rotulo="Ações do caso"
+          rotulo={`Ações de ${titulo}`}
           onEscolher={(item) => {
             if (item.id === 'editar') setEditando(true)
             if (item.id === 'reabrir') onReabrir?.(caso)
@@ -334,7 +374,6 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
           ]}
           gatilho={
             <span
-              aria-label={`Ações de ${titulo}`}
               className={clsx(
                 'inline-flex size-11 items-center justify-center rounded-full transition-colors',
                 caso.ehRascunho
