@@ -18,6 +18,7 @@ import {
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
   eventoTemApenasData,
+  inicioDoEvento,
   type MaternidadeResumida,
   novoResumoVazio,
   type PacoteResumido,
@@ -28,20 +29,41 @@ import {
 } from "./logica.ts";
 
 // -----------------------------------------------------------------------
-// Janela de leitura — não puxa histórico infinito. Constantes nomeadas,
-// fácil de ajustar sem caçar números mágicos no meio do código.
+// Janela de leitura — DUAS janelas, não uma. Constantes nomeadas, fácil de
+// ajustar sem caçar números mágicos no meio do código.
 //
-// DIAS_PARA_TRAS foi de 3 para 21 (31/08/2026). Um caso ATRASADO fica aberto
-// no Quadro por semanas de propósito (invariante 3.5 do CLAUDE.md — nunca
-// sai por passagem de data). Com a janela de 3 dias, um evento assim SAÍA da
-// consulta ao Google antes de o trabalho terminar: qualquer correção feita
-// nele depois — reagendar, pintar de cinza, apagar — parava de chegar ao
-// sync, e o caso ficava preso mostrando um estado que já não era verdade.
-// 21 dias cobre a folga real de um caso atrasado sem inflar o lote (mesma
-// agenda, ~135 casos/mês).
+// A PRIMEIRA VERSÃO DESTA MUDANÇA (31/08/2026, mesmo dia) juntava as duas
+// coisas numa constante só e alargou de 3 para 21 dias. A intenção era
+// certa — um caso ATRASADO fica aberto por semanas de propósito (invariante
+// 3.5 do CLAUDE.md), e com 3 dias um evento assim saía da consulta ao Google
+// antes do trabalho terminar, então nenhuma correção feita nele depois
+// chegava ao sync. Mas alargar a janela de CONSULTA alargou junto a janela
+// de INTAKE: no primeiro disparo depois do deploy, 18 eventos com mais de 10
+// dias — nunca vistos pelo sync, porque a janela de 3 dias sempre os
+// excluiu — viraram rascunho pendente de uma vez, muitos deles sem pacote
+// ou maternidade reconhecíveis (histórico com formato de título antigo).
+// O gestor viu isso acontecer e é o motivo desta segunda volta.
+//
+// A DISTINÇÃO QUE FALTAVA: "quanto tempo um caso JÁ CONHECIDO pode ficar
+// aberto e ainda receber correção" é uma pergunta; "quanto tempo no passado
+// um evento NUNCA VISTO ainda pode virar caso novo" é outra — e são
+// perguntas com respostas diferentes. A primeira precisa ser larga (um caso
+// atrasado trava semanas). A segunda precisa ficar estreita: intake é sobre
+// o que está ACONTECENDO agora, não uma varredura do histórico do calendar
+// toda vez que o cron roda.
+//
+// DIAS_PARA_TRAS_CONSULTA (21) é só o que pedimos ao Google — a janela
+// ampla, usada para reencontrar casos JÁ ABERTOS cujo evento ainda existe
+// nela (correção, card cinza) e para a checagem de deleção
+// (cancelarEventosDeletados). DIAS_PARA_TRAS_NOVO_CASO (3, o valor
+// original) é o teto de idade que um evento DESCONHECIDO pode ter para
+// ainda virar caso — ver a checagem em processarEvento, logo abaixo do
+// parse. Um evento antigo e desconhecido não é processado; um evento
+// antigo mas já ligado a um caso aberto continua sendo.
 // -----------------------------------------------------------------------
 
-const DIAS_PARA_TRAS = 21;
+const DIAS_PARA_TRAS_CONSULTA = 21;
+const DIAS_PARA_TRAS_NOVO_CASO = 3;
 const SEMANAS_PARA_FRENTE = 6;
 
 const ESCOPO_CALENDAR_SOMENTE_LEITURA = "https://www.googleapis.com/auth/calendar.readonly";
@@ -185,11 +207,27 @@ async function processarEvento(
   evento: EventoGoogle,
   pacotes: readonly PacoteResumido[],
   maternidades: readonly MaternidadeResumida[],
+  idsAbertosConhecidos: ReadonlySet<string>,
+  limiteNovoCaso: Date,
 ): Promise<string> {
   const resultadoParse = parseEventoCalendar(evento.summary ?? "");
 
   if (resultadoParse.tipo === "ignorar") {
     return "ignorado";
+  }
+
+  // FORA DA JANELA DE INTAKE (31/08/2026, correção do mesmo dia — ver a nota
+  // grande no topo do arquivo). Um evento com mais de DIAS_PARA_TRAS_NOVO_CASO
+  // dias e que NENHUM caso aberto já referencia não vira caso: a janela ampla
+  // de consulta (DIAS_PARA_TRAS_CONSULTA) existe para reencontrar casos JÁ
+  // ABERTOS, não para descobrir histórico do Calendar que o sync nunca viu.
+  // Um evento conhecido (já é o event_id de um caso aberto) passa direto —
+  // é exatamente o que essa janela ampla precisa continuar cobrindo.
+  if (!idsAbertosConhecidos.has(evento.id)) {
+    const inicio = inicioDoEvento(evento.start);
+    if (inicio && inicio < limiteNovoCaso) {
+      return "fora_da_janela";
+    }
   }
 
   const previsaoEm = resolverPrevisaoEm(evento.start);
@@ -258,33 +296,35 @@ async function processarEvento(
 // lote e a data dele estava dentro do alcance da consulta, não sobrou outra
 // explicação: o evento foi apagado. Fora da janela não conta — aí o
 // silêncio é falta de alcance, não deleção.
+interface CasoAbertoResumido {
+  google_calendar_event_id: string;
+  previsao_em: string | null;
+}
+
+/**
+ * `abertos` chega já lido pelo chamador — a mesma consulta alimenta tanto o
+ * gate de intake (idsAbertosConhecidos, em processarEvento) quanto esta
+ * checagem. Um SELECT só, dois usos, e as duas partes enxergam exatamente o
+ * mesmo instantâneo do banco.
+ */
 async function cancelarEventosDeletados(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   eventos: readonly EventoGoogle[],
+  abertos: readonly CasoAbertoResumido[],
   timeMin: string,
   timeMax: string,
   resumo: ResumoSync,
 ): Promise<void> {
   const idsNoCalendar = new Set(eventos.map((e) => e.id));
 
-  const { data: abertos, error } = await supabase
-    .from("casos")
-    .select("google_calendar_event_id")
-    .not("google_calendar_event_id", "is", null)
-    .not("status_operacional", "in", "(encerrado,cancelado)")
-    .gte("previsao_em", timeMin)
-    .lte("previsao_em", timeMax);
+  for (const caso of abertos) {
+    // Só entra na suspeita de deleção quem CAÍA dentro da janela consultada
+    // — é o que prova que o evento DEVERIA ter vindo na resposta do Google
+    // se ainda existisse (ver a nota grande em cima da função, no topo do
+    // arquivo original desta checagem).
+    if (!caso.previsao_em || caso.previsao_em < timeMin || caso.previsao_em > timeMax) continue;
 
-  if (error) {
-    resumo.erros.push({
-      evento_id: "(verificação de deleção)",
-      erro: `Falha ao ler casos abertos para checar deleção: ${error.message}`,
-    });
-    return;
-  }
-
-  for (const caso of (abertos ?? []) as Array<{ google_calendar_event_id: string }>) {
     const eventId = caso.google_calendar_event_id;
     if (idsNoCalendar.has(eventId)) continue;
 
@@ -341,22 +381,39 @@ Deno.serve(async (req) => {
     const accessToken = await obterAccessToken(contaServico);
 
     const agora = Date.now();
-    const timeMin = new Date(agora - DIAS_PARA_TRAS * 24 * 60 * 60 * 1000).toISOString();
+    const timeMin = new Date(agora - DIAS_PARA_TRAS_CONSULTA * 24 * 60 * 60 * 1000).toISOString();
     const timeMax = new Date(agora + SEMANAS_PARA_FRENTE * 7 * 24 * 60 * 60 * 1000).toISOString();
+    const limiteNovoCaso = new Date(agora - DIAS_PARA_TRAS_NOVO_CASO * 24 * 60 * 60 * 1000);
 
     const eventos = await buscarEventos(accessToken, calendarId, timeMin, timeMax);
     resumo.total_eventos_lidos = eventos.length;
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const [{ data: pacotes, error: erroPacotes }, { data: maternidades, error: erroMaternidades }] =
-      await Promise.all([
-        supabase.from("pacotes").select("id, nome"),
-        supabase.from("maternidades").select("id, sigla"),
-      ]);
+    const [
+      { data: pacotes, error: erroPacotes },
+      { data: maternidades, error: erroMaternidades },
+      { data: abertos, error: erroAbertos },
+    ] = await Promise.all([
+      supabase.from("pacotes").select("id, nome"),
+      supabase.from("maternidades").select("id, sigla"),
+      // Um SELECT só, dois usos: o gate de intake (idsAbertosConhecidos,
+      // abaixo) e a checagem de deleção (cancelarEventosDeletados, no fim).
+      // Sem bound de data — o gate de intake precisa saber se o evento é
+      // conhecido independente de quão velho `previsao_em` seja.
+      supabase
+        .from("casos")
+        .select("google_calendar_event_id, previsao_em")
+        .not("google_calendar_event_id", "is", null)
+        .not("status_operacional", "in", "(encerrado,cancelado)"),
+    ]);
 
     if (erroPacotes) throw new Error(`Falha ao ler pacotes: ${erroPacotes.message}`);
     if (erroMaternidades) throw new Error(`Falha ao ler maternidades: ${erroMaternidades.message}`);
+    if (erroAbertos) throw new Error(`Falha ao ler casos abertos: ${erroAbertos.message}`);
+
+    const casosAbertos = (abertos ?? []) as CasoAbertoResumido[];
+    const idsAbertosConhecidos = new Set(casosAbertos.map((c) => c.google_calendar_event_id));
 
     for (const evento of eventos) {
       try {
@@ -365,11 +422,15 @@ Deno.serve(async (req) => {
           evento,
           pacotes as PacoteResumido[],
           maternidades as MaternidadeResumida[],
+          idsAbertosConhecidos,
+          limiteNovoCaso,
         );
         if (acao === "ignorado") {
           resumo.ignorados++;
         } else if (acao === "sem_horario") {
           resumo.sem_horario++;
+        } else if (acao === "fora_da_janela") {
+          resumo.fora_da_janela++;
         } else {
           contabilizarAcao(resumo, acao);
         }
@@ -391,7 +452,7 @@ Deno.serve(async (req) => {
     // Fecha o lote verificando quem SUMIU — ver a nota grande em
     // cancelarEventosDeletados. Vem depois do laço principal de propósito:
     // precisa da lista completa de ids que o Google devolveu AGORA.
-    await cancelarEventosDeletados(supabase, eventos, timeMin, timeMax, resumo);
+    await cancelarEventosDeletados(supabase, eventos, casosAbertos, timeMin, timeMax, resumo);
 
     return new Response(JSON.stringify(resumo, null, 2), {
       headers: { "Content-Type": "application/json" },

@@ -104,6 +104,22 @@ export function eventoTemApenasData(
   return !!start?.date && !start?.dateTime;
 }
 
+/**
+ * Quando o evento começa, só para medir IDADE — não é `resolverPrevisaoEm`.
+ * Um evento de dia inteiro conta a partir da meia-noite UTC do `date`, o que
+ * é impreciso em algumas horas, mas o uso (decidir se um evento DESCONHECIDO
+ * é velho demais para virar caso novo, ver index.ts) tolera isso — não é o
+ * valor que vai para o banco.
+ */
+export function inicioDoEvento(
+  start: { dateTime?: string | null; date?: string | null } | null | undefined,
+): Date | null {
+  const bruto = start?.dateTime ?? start?.date;
+  if (!bruto) return null;
+  const data = new Date(bruto);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
 // -----------------------------------------------------------------------
 // Resumo do lote — o que a Edge Function devolve na resposta HTTP
 // -----------------------------------------------------------------------
@@ -124,6 +140,13 @@ export interface ResumoSync {
    * já não existe mais para confirmar nada) e vale destacar no resumo.
    */
   deletados: number;
+  /**
+   * Evento antigo (mais que DIAS_PARA_TRAS_NOVO_CASO) e DESCONHECIDO — sem
+   * caso aberto correspondente. Não processado de propósito: ver a nota
+   * grande em index.ts sobre as duas janelas. Distinto de `ignorados`
+   * (que é sobre o TÍTULO não ter '/', não sobre a IDADE do evento).
+   */
+  fora_da_janela: number;
   // SEM o título do evento, deliberadamente. O título do Calendar é
   // "MÃE/BEBÊ - PACOTE [MATERNIDADE]" — nome de mãe e de recém-nascido, que
   // a seção 10 do CLAUDE.md trata como dado sensível de saúde e de menor.
@@ -143,6 +166,7 @@ export function novoResumoVazio(): ResumoSync {
     sem_efeito: 0,
     sem_horario: 0,
     deletados: 0,
+    fora_da_janela: 0,
     erros: [],
   };
 }

@@ -7,6 +7,7 @@ import {
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
   eventoTemApenasData,
+  inicioDoEvento,
   novoResumoVazio,
   resolverMaternidadeId,
   resolverPacoteId,
@@ -173,6 +174,30 @@ Deno.test("eventoTemApenasData é false sem start nenhum", () => {
   assertEqual(eventoTemApenasData({}), false, "start sem date nem dateTime");
 });
 
+// =============================================================================
+// inicioDoEvento — mede IDADE, não é resolverPrevisaoEm (aceita date-only)
+// =============================================================================
+
+Deno.test("inicioDoEvento usa dateTime quando presente", () => {
+  const d = inicioDoEvento({ dateTime: "2026-08-20T14:30:00Z" });
+  assertEqual(d?.toISOString(), "2026-08-20T14:30:00.000Z", "dateTime vira Date");
+});
+
+Deno.test("inicioDoEvento usa date quando não há dateTime — ao contrário de resolverPrevisaoEm", () => {
+  const d = inicioDoEvento({ date: "2026-08-20" });
+  assertEqual(d?.toISOString(), "2026-08-20T00:00:00.000Z", "date sozinho também vira Date");
+});
+
+Deno.test("inicioDoEvento retorna null sem start nem date/dateTime", () => {
+  assertEqual(inicioDoEvento(null), null, "start null");
+  assertEqual(inicioDoEvento(undefined), null, "start undefined");
+  assertEqual(inicioDoEvento({}), null, "start sem dateTime nem date");
+});
+
+Deno.test("inicioDoEvento retorna null para string inválida, sem lançar", () => {
+  assertEqual(inicioDoEvento({ dateTime: "isso não é uma data" }), null, "não trava, devolve null");
+});
+
 
 // =============================================================================
 // contabilizarAcao / novoResumoVazio
@@ -219,6 +244,7 @@ Deno.test("novoResumoVazio começa zerado", () => {
       sem_efeito: 0,
       sem_horario: 0,
       deletados: 0,
+      fora_da_janela: 0,
       erros: [],
     },
     "resumo inicial",
