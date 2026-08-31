@@ -1,6 +1,24 @@
 import type { BlocoDia, CasoQuadro } from '../types'
 
 /**
+ * Rascunho cancelado sem NUNCA ter tido pacote e maternidade resolvidos.
+ *
+ * Diferente de um caso real cancelado — ali havia contrato, havia trabalho
+ * planejado, cancelar é decisão comercial (seção 4 do CLAUDE.md). Um
+ * rascunho que nunca saiu do limbo é só ruído do sync (evento antigo,
+ * título ambíguo, o alargamento de janela corrigido em 31/08/2026) — não
+ * houve caso de verdade em momento nenhum.
+ *
+ * `eh_rascunho` é calculado ao vivo na view (`pacote_id is null or
+ * maternidade_id is null`), então continua true mesmo depois de cancelado —
+ * é exatamente essa persistência que permite distinguir "nunca foi resolvido"
+ * de "foi resolvido e depois cancelado".
+ */
+export function rascunhoDescartado(caso: CasoQuadro): boolean {
+  return caso.ehRascunho && caso.ehTerminal
+}
+
+/**
  * Agrupa os casos em blocos de dia.
  *
  * DUAS DIFERENÇAS DELIBERADAS EM RELAÇÃO À REFERÊNCIA DA v0:
@@ -19,13 +37,20 @@ import type { BlocoDia, CasoQuadro } from '../types'
  *
  * Casos terminais e casos na UTI continuam vindo dentro de `casos` (a aba
  * Concluídos e a seção UTI leem daqui e precisam saber de que dia eram), mas
- * ficam fora das contagens do bloco — ver montarBloco.
+ * ficam fora das contagens do bloco — ver montarBloco. EXCEÇÃO: um rascunho
+ * DESCARTADO (`rascunhoDescartado`) não entra nem aqui — nunca foi caso de
+ * verdade, não é histórico de dia nenhum.
  */
 export function agruparPorDia(casos: CasoQuadro[]): BlocoDia[] {
   const porDia = new Map<string, CasoQuadro[]>()
   const semData: CasoQuadro[] = []
 
   for (const caso of casos) {
+    // Descartado NÃO entra no bloco do dia — nem dimmed, nem contado. Um
+    // caso real terminal continua aparecendo (é histórico legítimo do dia);
+    // este nunca foi caso de verdade. Um dia cujo único conteúdo era ruído
+    // vira dia vazio e some sozinho por `blocosAbertos`/`fechado`.
+    if (rascunhoDescartado(caso)) continue
     if (caso.dia === null) {
       semData.push(caso)
       continue
