@@ -22,6 +22,7 @@ import {
   type MaternidadeResumida,
   novoResumoVazio,
   type PacoteResumido,
+  previsaoParaCasoConhecido,
   resolverMaternidadeId,
   resolverPacoteId,
   resolverPrevisaoEm,
@@ -223,40 +224,48 @@ async function processarEvento(
   // ABERTOS, não para descobrir histórico do Calendar que o sync nunca viu.
   // Um evento conhecido (já é o event_id de um caso aberto) passa direto —
   // é exatamente o que essa janela ampla precisa continuar cobrindo.
-  if (!idsAbertosConhecidos.has(evento.id)) {
+  const conhecido = idsAbertosConhecidos.has(evento.id);
+
+  if (!conhecido) {
     const inicio = inicioDoEvento(evento.start);
     if (inicio && inicio < limiteNovoCaso) {
       return "fora_da_janela";
     }
   }
 
-  const previsaoEm = resolverPrevisaoEm(evento.start);
   const cancelado = eventoIndicaCancelamento(evento.colorId);
 
-  if (!previsaoEm) {
-    // DIA MARCADO, HORA AINDA NÃO (30/08/2026, a pedido do gestor).
-    //
-    // Um evento de dia inteiro (só `date`, sem `dateTime`) significa que a
-    // equipe já sabe o DIA mas ainda não decidiu a HORA — não é um cadastro
-    // incompleto por erro, é um cadastro incompleto DE PROPÓSITO. O Quadro
-    // ordena e destaca por horário; um card sem hora não tem o que mostrar
-    // ali, e mostrar meia-noite como se fosse hora real (o comportamento
-    // antigo) inventava um dado que ninguém informou.
+  // O DIA DE UM CASO CONHECIDO SEMPRE ACOMPANHA O CALENDAR, com ou sem hora
+  // (31/08/2026, a pedido do gestor). "Sem hora não vira caso" (abaixo) é
+  // regra de INTAKE — um evento nunca visto ainda não tem informação
+  // suficiente pra nascer. Um caso que JÁ EXISTE e foi reagendado é outra
+  // pergunta: a equipe arrasta o card pro dia certo e às vezes perde a hora
+  // nesse gesto, e o card não pode continuar mostrando o dia ERRADO só por
+  // isso. Ver `previsaoParaCasoConhecido` em logica.ts.
+  const previsaoEm = conhecido
+    ? previsaoParaCasoConhecido(evento.start)
+    : resolverPrevisaoEm(evento.start);
+
+  if (!previsaoEm && !cancelado) {
+    // DIA MARCADO, HORA AINDA NÃO, e o evento é DESCONHECIDO (30/08/2026, a
+    // pedido do gestor). Um evento de dia inteiro (só `date`, sem
+    // `dateTime`) significa que a equipe já sabe o DIA mas ainda não
+    // decidiu a HORA — não é um cadastro incompleto por erro, é um
+    // cadastro incompleto DE PROPÓSITO. O Quadro ordena e destaca por
+    // horário; um card sem hora não tem o que mostrar ali, e mostrar
+    // meia-noite como se fosse hora real inventaria um dado que ninguém
+    // informou.
     //
     // Por isso NENHUM caso nasce aqui: nem caso normal, nem rascunho. O
     // evento volta a ser lido em todo disparo seguinte (está dentro da
     // janela), e assim que alguém adicionar a hora no Calendar, o próximo
-    // ciclo do cron cria o caso normalmente.
-    //
-    // Cancelamento é a ÚNICA exceção — um card cinza sem hora ainda cancela
-    // se já existir um caso para ele (ver mais abaixo: o cancelamento nem
-    // usa previsao_em).
-    if (!cancelado) {
-      if (eventoTemApenasData(evento.start)) {
-        return "sem_horario";
-      }
-      throw new Error("Evento sem start.dateTime nem start.date — não dá pra derivar previsao_em.");
+    // ciclo do cron cria o caso normalmente. Um evento CONHECIDO nunca cai
+    // aqui — `previsaoParaCasoConhecido` só devolve null se não houver
+    // `date` nem `dateTime` nenhum, o que é erro de verdade.
+    if (eventoTemApenasData(evento.start)) {
+      return "sem_horario";
     }
+    throw new Error("Evento sem start.dateTime nem start.date — não dá pra derivar previsao_em.");
   }
 
   const pacoteId = resolverPacoteId(resultadoParse.pacote_bruto, pacotes);

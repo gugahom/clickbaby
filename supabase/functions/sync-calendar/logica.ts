@@ -104,6 +104,43 @@ export function eventoTemApenasData(
   return !!start?.date && !start?.dateTime;
 }
 
+// -----------------------------------------------------------------------
+// previsao_em para um caso JÁ CONHECIDO — o dia sempre acompanha o
+// Calendar, com ou sem hora definida.
+// -----------------------------------------------------------------------
+//
+// A REGRA "sem hora não vira caso" (acima) é sobre INTAKE: um evento nunca
+// visto, sem hora, ainda não tem informação suficiente para nascer. Mas um
+// caso que JÁ EXISTE e é reagendado — a equipe arrasta o card pro dia
+// certo no Calendar, às vezes perdendo a hora nesse gesto antes de
+// redigitá-la — não pode ficar preso mostrando o dia ERRADO só porque a
+// hora ainda não voltou. "Não invente uma hora" e "o dia tem que estar
+// certo" são pedidos diferentes; o segundo vale mesmo sem o primeiro.
+//
+// O BUG QUE ISSO REVELOU, separado do de cima: `${date}T00:00:00Z` sempre
+// foi a conversão usada aqui (desde antes desta sessão), e ela é ERRADA
+// pra um evento de dia inteiro. `date` é o dia LOCAL da operação
+// (America/Sao_Paulo) que a equipe marcou — meia-noite em UTC é 21h do dia
+// ANTERIOR em São Paulo (UTC-3, sem horário de verão desde 2019). Um
+// evento de dia inteiro em 1/09 virava `2026-09-01T00:00:00Z`, que a view
+// (convertendo pra America/Sao_Paulo) lia como 31/08 21:00 — o card
+// aparecia sob o dia ERRADO, um a menos do que o Calendar mostra. Foi
+// exatamente isso que o gestor viu no Quadro.
+const OFFSET_SAO_PAULO = "-03:00";
+
+/** Meia-noite EM SÃO PAULO do `date` informado, como instante ISO (UTC). */
+function meiaNoiteEmSaoPaulo(date: string): string {
+  return `${date}T00:00:00${OFFSET_SAO_PAULO}`;
+}
+
+export function previsaoParaCasoConhecido(
+  start: { dateTime?: string | null; date?: string | null } | null | undefined,
+): string | null {
+  if (start?.dateTime) return start.dateTime;
+  if (start?.date) return meiaNoiteEmSaoPaulo(start.date);
+  return null;
+}
+
 /**
  * Quando o evento começa, só para medir IDADE — não é `resolverPrevisaoEm`.
  * Um evento de dia inteiro conta a partir da meia-noite UTC do `date`, o que
