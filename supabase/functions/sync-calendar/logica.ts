@@ -73,17 +73,35 @@ export function resolverMaternidadeId(
 }
 
 // -----------------------------------------------------------------------
-// previsao_em a partir do start do evento (dateTime com hora, ou date sem
-// hora para evento de dia inteiro)
+// previsao_em a partir do start do evento — SÓ quando há hora definida.
 // -----------------------------------------------------------------------
-
+//
+// ATÉ 30/08/2026 um evento de DIA INTEIRO (só `date`, sem `dateTime`) virava
+// previsão à meia-noite (`${date}T00:00:00Z`), e o caso nascia normalmente —
+// aparecia no Quadro como se "00:00" fosse um horário de verdade. Na
+// prática a equipe cria esses eventos ANTES de decidir a hora do parto: o
+// dia já está marcado, a hora não. Meia-noite não é uma hora, é a AUSÊNCIA
+// de uma escondida atrás de um valor que parece dado.
+//
+// Agora: só `dateTime` vira previsão. Data sem hora devolve null, e o
+// chamador (index.ts) usa `eventoTemApenasData` para diferenciar "ainda não
+// tem hora" (não é erro, não vira caso ainda) de "evento sem start nenhum"
+// (isso sim é malformado e continua sendo erro).
 export function resolverPrevisaoEm(
   start: { dateTime?: string | null; date?: string | null } | null | undefined,
 ): string | null {
-  if (!start) return null;
-  if (start.dateTime) return start.dateTime;
-  if (start.date) return `${start.date}T00:00:00Z`;
-  return null;
+  return start?.dateTime ?? null;
+}
+
+/**
+ * Evento de DIA INTEIRO: tem `date` mas não `dateTime` — dia marcado, hora
+ * ainda por decidir. Enquanto isso for verdade, o caso não nasce no Quadro
+ * (ver a nota grande em index.ts, junto de onde este resultado é usado).
+ */
+export function eventoTemApenasData(
+  start: { dateTime?: string | null; date?: string | null } | null | undefined,
+): boolean {
+  return !!start?.date && !start?.dateTime;
 }
 
 // -----------------------------------------------------------------------
@@ -98,6 +116,14 @@ export interface ResumoSync {
   rascunhos: number;
   ignorados: number;
   sem_efeito: number;
+  /** Evento de dia inteiro, ainda sem hora — não virou caso desta vez. */
+  sem_horario: number;
+  /**
+   * Casos cancelados por DELEÇÃO do evento no Calendar, não por card cinza
+   * — contado à parte de `cancelados` porque é um sinal indireto (o evento
+   * já não existe mais para confirmar nada) e vale destacar no resumo.
+   */
+  deletados: number;
   // SEM o título do evento, deliberadamente. O título do Calendar é
   // "MÃE/BEBÊ - PACOTE [MATERNIDADE]" — nome de mãe e de recém-nascido, que
   // a seção 10 do CLAUDE.md trata como dado sensível de saúde e de menor.
@@ -115,6 +141,8 @@ export function novoResumoVazio(): ResumoSync {
     rascunhos: 0,
     ignorados: 0,
     sem_efeito: 0,
+    sem_horario: 0,
+    deletados: 0,
     erros: [],
   };
 }

@@ -29,10 +29,12 @@ select is(
   'A0: existe exatamente um job chamado sync-calendar'
 );
 
+-- 2 minutos -> 1 minuto (migration 20260831132545, a pedido do gestor): uma
+-- falha isolada do sync não fica dois minutos sem tentar de novo.
 select is(
   (select schedule from cron.job where jobname = 'sync-calendar'),
-  '*/2 * * * *',
-  'A1: roda a cada dois minutos'
+  '* * * * *',
+  'A1: roda a cada minuto'
 );
 
 select is(
@@ -97,7 +99,7 @@ select throws_ok(
 select throws_ok(
   $$ select public.configurar_segredo_do_sync('sync_calendar_chave', '   ') $$,
   'Valor vazio para "sync_calendar_chave" — para desligar o sync, remova o job do cron.',
-  'C1: recusa valor em branco — um segredo vazio faria o job falhar em silêncio a cada dois minutos'
+  'C1: recusa valor em branco — um segredo vazio faria o job falhar em silêncio a cada minuto'
 );
 
 
