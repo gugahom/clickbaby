@@ -276,6 +276,41 @@ for (const sigla of ["GNDI", "HSC", "HNSG", "HNSF", "CWB"]) {
 }
 
 // =============================================================================
+// GNDI ganhou uma segunda forma: "BRIGIDA" (30/08/2026)
+//
+// A equipe passou a escrever o nome do hospital na agenda em vez da sigla do
+// convênio. Sem esta forma, esses títulos caíam em rascunho pendente — a
+// sigla saía null, e a suposta maternidade grudava no meio do pacote e
+// impedia o pacote de bater com a lista canônica também.
+// =============================================================================
+
+Deno.test("reconhece BRIGIDA como forma alternativa de GNDI", () => {
+  const resultado = parseEventoCalendar("A/B - STANDARD - BRIGIDA");
+  if (resultado.tipo !== "caso") throw new Error("deveria ser tipo caso");
+  assertEqual(resultado.maternidade_sigla, "GNDI", "BRIGIDA resolve para a sigla GNDI");
+});
+
+Deno.test("reconhece brigida minúscula", () => {
+  const resultado = parseEventoCalendar("A/B - STANDARD - brigida");
+  if (resultado.tipo !== "caso") throw new Error("deveria ser tipo caso");
+  assertEqual(resultado.maternidade_sigla, "GNDI", "minúscula também resolve");
+});
+
+Deno.test("reconhece BRIGIDA embutida sem dash, exemplo real de título", () => {
+  assertEqual(
+    parseEventoCalendar("THAYANE/ALICE BIRTH+REELS BRIGIDA"),
+    {
+      tipo: "caso",
+      mae: "THAYANE",
+      bebe: "ALICE",
+      pacote_bruto: "BIRTH+REELS",
+      maternidade_sigla: "GNDI",
+    },
+    "mesmo título do exemplo do CLAUDE.md, com BRIGIDA no lugar de GNDI",
+  );
+});
+
+// =============================================================================
 // Bebê de nome composto com dash (o parser suporta; sem dash, é limitação
 // conhecida documentada no código-fonte)
 // =============================================================================

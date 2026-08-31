@@ -11,6 +11,7 @@ import {
   DIAS_POR_PAGINA,
   agruparPorDia,
   blocosAbertos,
+  semFuturo,
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
@@ -86,7 +87,10 @@ export function QuadroPage() {
 
     // A urgência entra POR CIMA da ordem por hora, não no lugar dela: quem não
     // está em alerta mantém a posição cronológica. Ver ordenarPorUrgencia.
-    const abertos = blocosAbertos(agruparPorDia(casos)).map((bloco) => ({
+    //
+    // SEM FUTURO (30/08/2026, a pedido do gestor): o Quadro corta em `hoje`.
+    // Ver a nota de `semFuturo` em agrupar-por-dia.ts.
+    const abertos = semFuturo(blocosAbertos(agruparPorDia(casos)), hoje).map((bloco) => ({
       ...bloco,
       casos: ordenarPorUrgencia(bloco.casos, etapas, agora),
     }))
@@ -100,14 +104,20 @@ export function QuadroPage() {
       concluidos: casosConcluidos(casos),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
       // O denominador do "3 de 88". Sem ele a busca diria "3 casos" e não
-      // haveria como saber se sobrou pouco por filtro ou por dia vazio.
-      totalGeral: blocosAbertos(agruparPorDia(todos)).reduce((soma, b) => soma + b.total, 0),
+      // haveria como saber se sobrou pouco por filtro ou por dia vazio. Corta
+      // futuro pelo mesmo motivo que `abertos`: senão a busca vazia diria
+      // "88" enquanto a tela mostra só os dias até hoje.
+      totalGeral: semFuturo(blocosAbertos(agruparPorDia(todos)), hoje).reduce(
+        (soma, b) => soma + b.total,
+        0,
+      ),
     }
     // `agora` entra nas dependências porque a ordem depende dele: um caso entra
     // na janela de alerta sozinho, com o relógio andando, e precisa subir sem
     // que ninguém recarregue. O relógio bate de minuto em minuto e são ~90
-    // casos — reagrupar custa nada.
-  }, [data, busca, agora])
+    // casos — reagrupar custa nada. `hoje` entra pelo mesmo motivo que
+    // `semFuturo` existe: à meia-noite um dia deixa de ser futuro sozinho.
+  }, [data, busca, agora, hoje])
 
   if (error) {
     return (

@@ -93,3 +93,22 @@ export function blocosVisiveis(blocos: BlocoDia[], quantidade: number): BlocoDia
 export function blocosAbertos(blocos: BlocoDia[]): BlocoDia[] {
   return blocos.filter((b) => !b.fechado)
 }
+
+/**
+ * Corta os dias FUTUROS (30/08/2026, a pedido do gestor).
+ *
+ * O Quadro é "o que temos hoje", não uma prévia da agenda adiante — ver casos
+ * de amanhã em diante competia por espaço com o que precisa de ação agora, e
+ * "Carregar mais dias" já cobria semanas de casos que ainda nem existem de
+ * verdade (o comercial pode remarcar, cancelar, trocar pacote até lá).
+ *
+ * `dia` é comparável como STRING porque é 'YYYY-MM-DD' — a mesma razão pela
+ * qual `hojeNoFuso()` usa esse formato.
+ *
+ * Dia sem previsão (`dia === null`) NÃO é futuro, é ausência de dado — fica.
+ * Cortar um caso sem data escondido atrás de "provavelmente é futuro" seria
+ * inventar uma resposta que o dado não dá.
+ */
+export function semFuturo(blocos: BlocoDia[], hoje: string): BlocoDia[] {
+  return blocos.filter((b) => b.dia === null || b.dia <= hoje)
+}

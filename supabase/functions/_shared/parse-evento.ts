@@ -58,8 +58,17 @@ const PACOTES_CANONICOS = [
 //
 // A sigla é o que aparece no chip do cartão. As formas são o que a equipe
 // digita, e uma sigla pode ter várias.
+//
+// GNDI GANHOU UMA SEGUNDA FORMA (30/08/2026): a equipe passou a escrever
+// "BRIGIDA" na agenda em vez de "GNDI" — é o nome do hospital (Brígida, sem
+// acento na digitação), a sigla era só como o convênio aparecia. Os casos
+// com esse título estavam caindo em rascunho pendente: sem maternidade
+// reconhecida, sem pacote reconhecível no meio do texto (a suposta sigla
+// não batia com nada e sobrava grudada no pacote). A SIGLA NO BANCO
+// continua GNDI — é o valor de `maternidades.sigla` que view, RPC e chip
+// do cartão já usam; só o que o parser aceita LER do título mudou.
 const MATERNIDADES = [
-  { sigla: "GNDI", formas: ["GNDI"] },
+  { sigla: "GNDI", formas: ["GNDI", "BRIGIDA"] },
   { sigla: "HSC", formas: ["HSC"] },
   { sigla: "HNSG", formas: ["HNSG"] },
   { sigla: "HNSF", formas: ["HNSF"] },
