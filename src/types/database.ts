@@ -888,6 +888,10 @@ export type Database = {
         Args: { p_dias: number; p_inicio: string }
         Returns: string
       }
+      sync_cancelar_caso: {
+        Args: { p_google_event_id: string; p_motivo?: string }
+        Returns: string
+      }
       sync_upsert_caso: {
         Args: {
           p_bebe_nome: string
@@ -924,6 +928,9 @@ export type Database = {
         | "edicao_video"
         | "reels"
         | "album"
+        | "encontro_irmaos"
+        | "saida_uti"
+        | "alta"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -1101,6 +1108,9 @@ export const Constants = {
         "edicao_video",
         "reels",
         "album",
+        "encontro_irmaos",
+        "saida_uti",
+        "alta",
       ],
       papel_sistema: [
         "operador",
