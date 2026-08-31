@@ -220,6 +220,11 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   reels: 'Reels',
   edicao_video: 'Vídeo',
   album: 'Álbum',
+  // Só existem via "acrescentar etapa" (31/08/2026) — nenhum pacote as
+  // inclui de fábrica. Ver migration 20260831133153.
+  encontro_irmaos: 'Encontro de irmãos',
+  saida_uti: 'Saída de UTI',
+  alta: 'Alta',
 }
 
 export const ROTULO_STATUS_ETAPA: Record<StatusEtapa, string> = {

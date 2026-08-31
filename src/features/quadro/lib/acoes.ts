@@ -270,6 +270,11 @@ const TIPOS_EM_ORDEM: EtapaTipo[] = [
   'reels',
   'edicao_video',
   'album',
+  // Sem pacote nenhum de fábrica (31/08/2026) — só chegam por aqui, no fim
+  // da lista, na mesma ordem em que o gestor pediu.
+  'encontro_irmaos',
+  'saida_uti',
+  'alta',
 ]
 
 /**

@@ -667,10 +667,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       )}
 
       {confirmacao?.tipo === 'entrega' && (
-        <Dialogo
-          titulo="Confirmar entrega e encerrar o caso?"
-          rotuloConfirmar="Confirmar entrega"
-          confirmarDestrutivo
+        <DialogoConfirmarEntrega
+          caso={caso}
           ocupado={confirmarEntrega.isPending}
           erro={erro}
           onCancelar={() => setConfirmacao(null)}
@@ -679,13 +677,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               setConfirmacao(null),
             )
           }
-        >
-          <p className="text-sm text-muted-foreground">
-            {caso.maeNome}
-            {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}. Os links passam a contar como
-            confirmados e o caso é encerrado. Não há como desfazer.
-          </p>
-        </Dialogo>
+        />
       )}
 
       {confirmacao?.tipo === 'cancelamento' && (
@@ -729,6 +721,123 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         </Dialogo>
       )}
     </div>
+  )
+}
+
+interface ItemChecklistEntrega {
+  id: string
+  rotulo: string
+}
+
+/** As duas que valem para todo pacote — a fotógrafa sempre entrega por fotos
+ *  e por reels, mesmo pacotes sem venda de reels fazem o vertical curto
+ *  (seção 2 do CLAUDE.md: "reels existe em TODOS os pacotes"). */
+const CHECKLIST_ENTREGA_BASE: ItemChecklistEntrega[] = [
+  { id: 'fotos_completas', rotulo: 'Fotos completas no Google' },
+  { id: 'reels_completo', rotulo: 'Reels completo no Google' },
+]
+
+/**
+ * SÓ NO BIRTH E BIRTH+REELS (31/08/2026, a pedido do gestor).
+ *
+ * Os dois pacotes entregam pelo mesmo formato — link único de foto+vídeo,
+ * "cadeado" — e nascem sem contrato fechado (é a tentativa de venda
+ * pós-parto, seção 2 do CLAUDE.md). O "com final" é a versão que a família
+ * recebe depois de decidir se compra, com o encerramento do vídeo incluso;
+ * o sem final é o que sai primeiro, para apresentar o material.
+ *
+ * `pacoteSlug` e não `pacoteNome`: BIRTH e BIRTH+REELS são dois slugs
+ * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o
+ * NOME exigiria listar as duas grafias e reencontrar a mesma armadilha se
+ * um terceiro pacote de BIRTH nascer um dia.
+ */
+const CHECKLIST_ENTREGA_BIRTH: ItemChecklistEntrega[] = [
+  { id: 'cadeado_fv', rotulo: 'Link CADEADO F+V no Google' },
+  { id: 'cadeado_fv_final', rotulo: 'Link CADEADO F+V com final no Google' },
+]
+
+interface PropsDialogoConfirmarEntrega {
+  caso: CasoQuadro
+  ocupado: boolean
+  erro: string | null
+  onCancelar: () => void
+  onConfirmar: () => void
+}
+
+/**
+ * O checklist que HABILITA o botão, não que registra dado nenhum.
+ *
+ * O gestor pediu isto depois de reparar que "Confirmar entrega" virava um
+ * segundo clique de confirmação sem checar NADA — a pessoa podia confirmar
+ * sem ter de fato subido as fotos. As caixas aqui são a conferência final,
+ * item por item, antes do gesto que não tem volta.
+ *
+ * DE PROPÓSITO NÃO VIRA COLUNA NOVA NO BANCO. O que a RPC exige continua
+ * sendo o mesmo de sempre — pelo menos um entregável registrado
+ * (podeConfirmarEntrega, lib/acoes.ts). Este checklist é a certeza de QUEM
+ * está confirmando, não um registro que o sistema audita depois; guardar
+ * cada caixinha marcada criaria uma segunda fonte de verdade sobre o que
+ * foi entregue, competindo com os links de `entregaveis` que já são essa
+ * fonte.
+ */
+function DialogoConfirmarEntrega({
+  caso,
+  ocupado,
+  erro,
+  onCancelar,
+  onConfirmar,
+}: PropsDialogoConfirmarEntrega) {
+  const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
+  const itens = ehBirth
+    ? [...CHECKLIST_ENTREGA_BASE, ...CHECKLIST_ENTREGA_BIRTH]
+    : CHECKLIST_ENTREGA_BASE
+
+  const [conferidos, setConferidos] = useState<Set<string>>(new Set())
+
+  function alternar(id: string) {
+    setConferidos((atual) => {
+      const proximo = new Set(atual)
+      if (proximo.has(id)) proximo.delete(id)
+      else proximo.add(id)
+      return proximo
+    })
+  }
+
+  return (
+    <Dialogo
+      titulo="Confirmar entrega e encerrar o caso?"
+      rotuloConfirmar="Confirmar entrega"
+      confirmarDestrutivo
+      confirmarDesabilitado={itens.some((item) => !conferidos.has(item.id))}
+      ocupado={ocupado}
+      erro={erro}
+      onCancelar={onCancelar}
+      onConfirmar={onConfirmar}
+    >
+      <p className="text-sm text-muted-foreground">
+        {caso.maeNome}
+        {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}. Os links passam a contar como
+        confirmados e o caso é encerrado. Não há como desfazer.
+      </p>
+
+      <ul className="space-y-0.5">
+        {itens.map((item) => (
+          <li key={item.id}>
+            {/* min-h-11: a linha inteira é o alvo de toque (seção 6 do
+                CLAUDE.md), não só o quadrado de 16px do checkbox. */}
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted">
+              <input
+                type="checkbox"
+                checked={conferidos.has(item.id)}
+                onChange={() => alternar(item.id)}
+                className="size-5 flex-shrink-0 rounded border-border accent-marca"
+              />
+              {item.rotulo}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </Dialogo>
   )
 }
 

@@ -6,6 +6,7 @@ import {
   contabilizarAcao,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
+  eventoTemApenasData,
   novoResumoVazio,
   resolverMaternidadeId,
   resolverPacoteId,
@@ -126,8 +127,12 @@ Deno.test("resolverPrevisaoEm usa dateTime quando presente", () => {
   );
 });
 
-Deno.test("resolverPrevisaoEm usa date (evento de dia inteiro) quando não há dateTime", () => {
-  assertEqual(resolverPrevisaoEm({ date: "2026-03-05" }), "2026-03-05T00:00:00Z", "date sem hora");
+// SEM HORA (31/08/2026): um evento de dia inteiro (só `date`) deixou de
+// virar previsão à meia-noite. Ver a nota grande em logica.ts — meia-noite
+// não é uma hora informada, é ausência de hora escondida atrás de um valor
+// que parece dado.
+Deno.test("resolverPrevisaoEm NÃO usa date quando não há dateTime — dia marcado, hora ainda não", () => {
+  assertEqual(resolverPrevisaoEm({ date: "2026-03-05" }), null, "date sem hora vira null, não meia-noite");
 });
 
 Deno.test("resolverPrevisaoEm prefere dateTime a date quando os dois vêm preenchidos", () => {
@@ -142,6 +147,30 @@ Deno.test("resolverPrevisaoEm retorna null sem start nem date/dateTime", () => {
   assertEqual(resolverPrevisaoEm(null), null, "start null");
   assertEqual(resolverPrevisaoEm(undefined), null, "start undefined");
   assertEqual(resolverPrevisaoEm({}), null, "start sem dateTime nem date");
+});
+
+// =============================================================================
+// eventoTemApenasData — distingue "dia marcado, hora ainda não" de "evento
+// sem start nenhum" (isso sim é malformado)
+// =============================================================================
+
+Deno.test("eventoTemApenasData é true com date e sem dateTime", () => {
+  assertEqual(eventoTemApenasData({ date: "2026-03-05" }), true, "só date");
+});
+
+Deno.test("eventoTemApenasData é false quando dateTime está presente", () => {
+  assertEqual(
+    eventoTemApenasData({ dateTime: "2026-03-05T14:30:00Z", date: "2026-03-05" }),
+    false,
+    "tem dateTime, não é 'só data'",
+  );
+  assertEqual(eventoTemApenasData({ dateTime: "2026-03-05T14:30:00Z" }), false, "só dateTime");
+});
+
+Deno.test("eventoTemApenasData é false sem start nenhum", () => {
+  assertEqual(eventoTemApenasData(null), false, "start null");
+  assertEqual(eventoTemApenasData(undefined), false, "start undefined");
+  assertEqual(eventoTemApenasData({}), false, "start sem date nem dateTime");
 });
 
 
@@ -188,6 +217,8 @@ Deno.test("novoResumoVazio começa zerado", () => {
       rascunhos: 0,
       ignorados: 0,
       sem_efeito: 0,
+      sem_horario: 0,
+      deletados: 0,
       erros: [],
     },
     "resumo inicial",

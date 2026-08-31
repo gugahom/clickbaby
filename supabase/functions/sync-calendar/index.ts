@@ -17,20 +17,31 @@ import {
   contabilizarAcao,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
+  eventoTemApenasData,
   type MaternidadeResumida,
   novoResumoVazio,
   type PacoteResumido,
   resolverMaternidadeId,
   resolverPacoteId,
   resolverPrevisaoEm,
+  type ResumoSync,
 } from "./logica.ts";
 
 // -----------------------------------------------------------------------
 // Janela de leitura — não puxa histórico infinito. Constantes nomeadas,
 // fácil de ajustar sem caçar números mágicos no meio do código.
+//
+// DIAS_PARA_TRAS foi de 3 para 21 (31/08/2026). Um caso ATRASADO fica aberto
+// no Quadro por semanas de propósito (invariante 3.5 do CLAUDE.md — nunca
+// sai por passagem de data). Com a janela de 3 dias, um evento assim SAÍA da
+// consulta ao Google antes de o trabalho terminar: qualquer correção feita
+// nele depois — reagendar, pintar de cinza, apagar — parava de chegar ao
+// sync, e o caso ficava preso mostrando um estado que já não era verdade.
+// 21 dias cobre a folga real de um caso atrasado sem inflar o lote (mesma
+// agenda, ~135 casos/mês).
 // -----------------------------------------------------------------------
 
-const DIAS_PARA_TRAS = 3;
+const DIAS_PARA_TRAS = 21;
 const SEMANAS_PARA_FRENTE = 6;
 
 const ESCOPO_CALENDAR_SOMENTE_LEITURA = "https://www.googleapis.com/auth/calendar.readonly";
@@ -181,14 +192,37 @@ async function processarEvento(
     return "ignorado";
   }
 
-  const pacoteId = resolverPacoteId(resultadoParse.pacote_bruto, pacotes);
-  const maternidadeId = resolverMaternidadeId(resultadoParse.maternidade_sigla, maternidades);
   const previsaoEm = resolverPrevisaoEm(evento.start);
   const cancelado = eventoIndicaCancelamento(evento.colorId);
 
   if (!previsaoEm) {
-    throw new Error("Evento sem start.dateTime nem start.date — não dá pra derivar previsao_em.");
+    // DIA MARCADO, HORA AINDA NÃO (30/08/2026, a pedido do gestor).
+    //
+    // Um evento de dia inteiro (só `date`, sem `dateTime`) significa que a
+    // equipe já sabe o DIA mas ainda não decidiu a HORA — não é um cadastro
+    // incompleto por erro, é um cadastro incompleto DE PROPÓSITO. O Quadro
+    // ordena e destaca por horário; um card sem hora não tem o que mostrar
+    // ali, e mostrar meia-noite como se fosse hora real (o comportamento
+    // antigo) inventava um dado que ninguém informou.
+    //
+    // Por isso NENHUM caso nasce aqui: nem caso normal, nem rascunho. O
+    // evento volta a ser lido em todo disparo seguinte (está dentro da
+    // janela), e assim que alguém adicionar a hora no Calendar, o próximo
+    // ciclo do cron cria o caso normalmente.
+    //
+    // Cancelamento é a ÚNICA exceção — um card cinza sem hora ainda cancela
+    // se já existir um caso para ele (ver mais abaixo: o cancelamento nem
+    // usa previsao_em).
+    if (!cancelado) {
+      if (eventoTemApenasData(evento.start)) {
+        return "sem_horario";
+      }
+      throw new Error("Evento sem start.dateTime nem start.date — não dá pra derivar previsao_em.");
+    }
   }
+
+  const pacoteId = resolverPacoteId(resultadoParse.pacote_bruto, pacotes);
+  const maternidadeId = resolverMaternidadeId(resultadoParse.maternidade_sigla, maternidades);
 
   const { data: acao, error } = await supabase.rpc("sync_upsert_caso", {
     p_google_event_id: evento.id,
@@ -206,6 +240,64 @@ async function processarEvento(
   }
 
   return acao as string;
+}
+
+// -----------------------------------------------------------------------
+// Detecção de evento DELETADO — sem passar pelo card cinza.
+// -----------------------------------------------------------------------
+//
+// ATÉ 31/08/2026 só o card cinza cancelava (eventoIndicaCancelamento). Um
+// evento apagado direto do Calendar simplesmente para de vir na resposta da
+// API — não sobra rastro nenhum nela —, e o caso ficava aberto no Quadro
+// pra sempre, órfão do evento que o originou.
+//
+// COMO SE PROVA QUE FOI DELEÇÃO E NÃO "SÓ ESTÁ FORA DA JANELA": um evento
+// cujo `previsao_em` já registrado cai DENTRO de [timeMin, timeMax] — a
+// mesma janela que acabou de ser consultada — deveria necessariamente ter
+// vindo na resposta do Google, se ainda existisse. Se o id dele não está no
+// lote e a data dele estava dentro do alcance da consulta, não sobrou outra
+// explicação: o evento foi apagado. Fora da janela não conta — aí o
+// silêncio é falta de alcance, não deleção.
+async function cancelarEventosDeletados(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  eventos: readonly EventoGoogle[],
+  timeMin: string,
+  timeMax: string,
+  resumo: ResumoSync,
+): Promise<void> {
+  const idsNoCalendar = new Set(eventos.map((e) => e.id));
+
+  const { data: abertos, error } = await supabase
+    .from("casos")
+    .select("google_calendar_event_id")
+    .not("google_calendar_event_id", "is", null)
+    .not("status_operacional", "in", "(encerrado,cancelado)")
+    .gte("previsao_em", timeMin)
+    .lte("previsao_em", timeMax);
+
+  if (error) {
+    resumo.erros.push({
+      evento_id: "(verificação de deleção)",
+      erro: `Falha ao ler casos abertos para checar deleção: ${error.message}`,
+    });
+    return;
+  }
+
+  for (const caso of (abertos ?? []) as Array<{ google_calendar_event_id: string }>) {
+    const eventId = caso.google_calendar_event_id;
+    if (idsNoCalendar.has(eventId)) continue;
+
+    const { data: acao, error: erroCancelar } = await supabase.rpc("sync_cancelar_caso", {
+      p_google_event_id: eventId,
+    });
+
+    if (erroCancelar) {
+      resumo.erros.push({ evento_id: eventId, erro: `sync_cancelar_caso falhou: ${erroCancelar.message}` });
+      continue;
+    }
+    if (acao === "caso_cancelado") resumo.deletados++;
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -276,6 +368,8 @@ Deno.serve(async (req) => {
         );
         if (acao === "ignorado") {
           resumo.ignorados++;
+        } else if (acao === "sem_horario") {
+          resumo.sem_horario++;
         } else {
           contabilizarAcao(resumo, acao);
         }
@@ -293,6 +387,11 @@ Deno.serve(async (req) => {
         });
       }
     }
+
+    // Fecha o lote verificando quem SUMIU — ver a nota grande em
+    // cancelarEventosDeletados. Vem depois do laço principal de propósito:
+    // precisa da lista completa de ids que o Google devolveu AGORA.
+    await cancelarEventosDeletados(supabase, eventos, timeMin, timeMax, resumo);
 
     return new Response(JSON.stringify(resumo, null, 2), {
       headers: { "Content-Type": "application/json" },
@@ -344,8 +443,9 @@ Deno.serve(async (req) => {
 //    A chave vem de variavel de ambiente na hora de chamar, nunca colada
 //    num arquivo do repo.
 //
-// 6. QUEM CHAMA EM PRODUCAO: o job "sync-calendar" do pg_cron, a cada 2
-//    minutos (migration 20260828015512). O disparo sai de dentro do banco via
+// 6. QUEM CHAMA EM PRODUCAO: o job "sync-calendar" do pg_cron, a cada
+//    minuto (migration 20260828015512, intervalo revisado em
+//    20260831132545). O disparo sai de dentro do banco via
 //    pg_net, com a URL e a chave lidas do Vault -- nenhum cliente precisa
 //    delas. Ate essa migration NADA chamava esta funcao automaticamente: ela
 //    estava no ar e o intake principal do sistema era 100% manual.

@@ -214,6 +214,17 @@ await esperaNegado(
   { method: 'POST', body: JSON.stringify(RPC_SYNC) },
 )
 
+// Mesma família e mesmo risco de sync_upsert_caso (migration 20260831132545):
+// SECURITY DEFINER que roda sem usuário logado, GRANT como única barreira. Se
+// alguém alcançasse esta RPC, cancelaria qualquer caso aberto só sabendo o
+// google_calendar_event_id — que não é segredo, aparece em toda resposta do
+// Quadro.
+await esperaNegado(
+  'RPC sync_cancelar_caso',
+  `${alvo.url}/rest/v1/rpc/sync_cancelar_caso`,
+  { method: 'POST', body: JSON.stringify({ p_google_event_id: 'sonda-inexistente' }) },
+)
+
 /*
  * As duas do agendamento do sync (migration 20260828015512).
  *
