@@ -9,6 +9,7 @@ import {
   eventoTemApenasData,
   inicioDoEvento,
   novoResumoVazio,
+  previsaoParaCasoConhecido,
   resolverMaternidadeId,
   resolverPacoteId,
   resolverPrevisaoEm,
@@ -196,6 +197,40 @@ Deno.test("inicioDoEvento retorna null sem start nem date/dateTime", () => {
 
 Deno.test("inicioDoEvento retorna null para string inválida, sem lançar", () => {
   assertEqual(inicioDoEvento({ dateTime: "isso não é uma data" }), null, "não trava, devolve null");
+});
+
+// =============================================================================
+// previsaoParaCasoConhecido — o dia de um caso JÁ ABERTO sempre acompanha o
+// Calendar, com ou sem hora. Diferente de resolverPrevisaoEm (que existe
+// para o gate de INTAKE e ignora `date` de propósito).
+// =============================================================================
+
+Deno.test("previsaoParaCasoConhecido usa dateTime quando presente", () => {
+  assertEqual(
+    previsaoParaCasoConhecido({ dateTime: "2026-09-01T14:30:00-03:00" }),
+    "2026-09-01T14:30:00-03:00",
+    "dateTime tem prioridade, igual resolverPrevisaoEm",
+  );
+});
+
+// O BUG REAL: `${date}T00:00:00Z` (a conversão antiga, usada desde antes
+// desta sessão) toma meia-noite UTC, que é 21h do dia ANTERIOR em São
+// Paulo. Um evento de dia inteiro em 1/09 virava um instante que a view
+// (convertendo pra America/Sao_Paulo) lia como 31/08 — o card aparecia sob
+// o dia ERRADO. `previsaoParaCasoConhecido` usa -03:00 explícito, não Z.
+Deno.test("previsaoParaCasoConhecido usa MEIA-NOITE EM SÃO PAULO para date sem dateTime — não meia-noite UTC", () => {
+  const resultado = previsaoParaCasoConhecido({ date: "2026-09-01" });
+  assertEqual(resultado, "2026-09-01T00:00:00-03:00", "offset -03:00 explícito");
+  // Prova o efeito prático: convertido para um instante UTC, tem que cair
+  // depois de 1/09 03:00Z — se caísse antes, a view leria como 31/08.
+  const comoUtc = new Date(resultado!).toISOString();
+  assertEqual(comoUtc, "2026-09-01T03:00:00.000Z", "meia-noite SP = 03:00 UTC, não 00:00 UTC");
+});
+
+Deno.test("previsaoParaCasoConhecido retorna null só quando não há date nem dateTime", () => {
+  assertEqual(previsaoParaCasoConhecido(null), null, "start null");
+  assertEqual(previsaoParaCasoConhecido(undefined), null, "start undefined");
+  assertEqual(previsaoParaCasoConhecido({}), null, "start vazio");
 });
 
 
