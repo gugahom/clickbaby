@@ -31,6 +31,11 @@ import {
  * é o fluxo normal. Uma lista que só oferecesse "o próximo" esconderia
  * metade do que acontece de verdade.
  *
+ * SEM FASE ATÉ ALGUÉM DIZER UMA. A caixa de entrada do Trello ("VIDEOS -
+ * EDIÇÃO") saiu do fluxo: estar nesta seção já é ser um vídeo para editar, e
+ * uma pílula repetindo o nome da seção não informava nada. Enquanto ninguém
+ * escolhe, o controle é neutro e diz o que ele faz — não finge um estado.
+ *
  * Os RÓTULOS são os do Trello deles, não uma tradução: quem opera reconhece
  * "ENVIADO / FINALIZADO", não "Concluída". Ver ROTULO_FASE_VIDEO.
  */
@@ -43,13 +48,12 @@ export function FaseDoVideo({
 }) {
   const mover = useMoverVideoMaster()
   const atual = faseDoVideo(etapa.status)
-  const estilo = ESTILO_FASE[atual]
 
   return (
     <Dropdown
       alinhamento="direita"
-      rotulo={`Fase do vídeo: ${ROTULO_FASE_VIDEO[atual]}`}
-      selecionado={atual}
+      rotulo={atual ? `Fase do vídeo: ${ROTULO_FASE_VIDEO[atual]}` : 'Definir a fase do vídeo'}
+      {...(atual ? { selecionado: atual } : {})}
       desabilitado={mover.isPending}
       onEscolher={(item) => {
         onErro(null)
@@ -67,11 +71,17 @@ export function FaseDoVideo({
             // A pílula É o alvo; o min-h-11 do Dropdown já garante os 44px
             // de altura de toque em volta dela.
             'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-colors',
-            estilo,
+            atual
+              ? ESTILO_FASE[atual]
+              : // Sem fase: contorno tracejado e voz de convite, não de
+                // estado. É a mesma linguagem do "Acrescentar etapa" — a
+                // borda pontilhada diz "aqui falta algo" sem inventar um
+                // status que ninguém afirmou.
+                'border border-dashed border-border text-muted-foreground hover:border-marca hover:text-marca',
             mover.isPending && 'opacity-60',
           )}
         >
-          {ROTULO_FASE_VIDEO[atual]}
+          {atual ? ROTULO_FASE_VIDEO[atual] : 'Definir fase'}
         </span>
       }
     />
@@ -81,17 +91,12 @@ export function FaseDoVideo({
 /**
  * A cor diz em que pé está, e reusa os tokens que já significam isso na tela.
  *
- * PENDENTE EM VERMELHO pelo mesmo motivo do selo da seção: um vídeo só chega
- * aqui depois de LIBERADO, então "pendente" não é "ainda não é hora", é "o
- * prazo está correndo e ninguém pegou".
- *
  * PRONTO PARA ENTREGA usa `--pronto`, o token que o Quadro já usa para o caso
  * que terminou o trabalho e espera uma pessoa. É literalmente o mesmo estado,
  * um nível abaixo — e a cor repetida é o que faz os dois se lerem como a
  * mesma ideia.
  */
 const ESTILO_FASE: Record<FaseVideoMaster, string> = {
-  pendente: 'bg-atrasado/12 text-atrasado',
   em_andamento: 'bg-andamento/12 text-andamento-tinta',
   em_alteracao: 'bg-atencao/15 text-atencao-tinta',
   pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',
