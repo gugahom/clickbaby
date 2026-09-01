@@ -161,3 +161,78 @@ function diaSeguinte(dia: string): string {
   data.setUTCDate(data.getUTCDate() + 1)
   return data.toISOString().slice(0, 10)
 }
+
+/**
+ * Quantos cartões cabem numa coluna só antes de o Quadro precisar rolar.
+ *
+ * A conta vem da TV de 70" que o gestor quer deixar ligada na sala: a área da
+ * lista fica perto de 750px de altura útil, um cartão mede ~120px e o
+ * cabeçalho de cada dia ~60px. Dá seis cartões, e o sétimo já obriga alguém a
+ * rolar uma tela que ninguém vai tocar — ela está na parede.
+ *
+ * É um número de CALIBRAGEM, não uma regra do domínio: se a TV mudar ou o
+ * cartão encolher, muda aqui e em nenhum outro lugar.
+ */
+export const CARTOES_ATE_UMA_COLUNA = 6
+
+/**
+ * Os dias visíveis merecem duas colunas?
+ *
+ * Duas condições, e as duas importam. Precisa de mais de um DIA (não dá para
+ * dividir um bloco só) e de cartão o bastante para justificar — o gestor pediu
+ * explicitamente que a tela volte ao "normal" quando o movimento estiver
+ * baixo, e ele tem razão: dois cartões espalhados em duas colunas de meia tela
+ * leem como uma tela quebrada, não como uma tela organizada.
+ */
+export function mereceDuasColunas(blocos: BlocoDia[]): boolean {
+  if (blocos.length < 2) return false
+  const cartoes = blocos.reduce((soma, b) => soma + b.casos.length, 0)
+  return cartoes > CARTOES_ATE_UMA_COLUNA
+}
+
+/**
+ * Reparte os dias em DUAS colunas, mantendo a ordem cronológica.
+ *
+ * O CORTE É SEQUENCIAL, e essa é a decisão que importa: a coluna da esquerda
+ * fica com os primeiros dias e a da direita com os últimos, nunca intercalado.
+ * Distribuir "o próximo dia vai para a coluna mais vazia" equilibraria melhor
+ * a altura e produziria uma tela ilegível — ontem e anteontem à esquerda, hoje
+ * no meio da direita. Quem olha de longe lê uma coluna inteira e depois a
+ * outra; a ordem do tempo tem que sobreviver a isso.
+ *
+ * Entre os cortes possíveis escolhe o mais equilibrado POR CARTÃO, não por
+ * número de dias — um dia com oito casos ocupa mais tela que três dias com um
+ * caso cada. Empate cai para a esquerda mais cheia, que é como a leitura
+ * natural espera (o começo pesa mais).
+ *
+ * Devolve sempre duas listas; a segunda pode vir vazia se só houver um dia —
+ * quem chama já filtrou isso por `mereceDuasColunas`, mas a função não depende
+ * disso para não quebrar.
+ */
+export function dividirEmDuasColunas(blocos: BlocoDia[]): [BlocoDia[], BlocoDia[]] {
+  if (blocos.length < 2) return [blocos, []]
+
+  const peso = (lista: BlocoDia[]) => lista.reduce((s, b) => s + b.casos.length, 0)
+  const total = peso(blocos)
+
+  let melhorCorte = 1
+  let melhorDiferenca = Number.POSITIVE_INFINITY
+
+  // O corte vai de 1 a blocos.length - 1: as duas colunas sempre recebem ao
+  // menos um dia. Um corte em 0 ou no fim seria "não dividiu".
+  for (let corte = 1; corte < blocos.length; corte++) {
+    const esquerda = peso(blocos.slice(0, corte))
+    const diferenca = Math.abs(total - esquerda - esquerda)
+    // `<` e não `<=`: no empate fica o corte MENOR, que deixa a esquerda mais
+    // curta... e é o oposto do que se quer. Por isso o desempate explícito
+    // abaixo, comparando quem tem mais peso à esquerda.
+    if (diferenca < melhorDiferenca) {
+      melhorDiferenca = diferenca
+      melhorCorte = corte
+    } else if (diferenca === melhorDiferenca && esquerda > peso(blocos.slice(0, melhorCorte))) {
+      melhorCorte = corte
+    }
+  }
+
+  return [blocos.slice(0, melhorCorte), blocos.slice(melhorCorte)]
+}

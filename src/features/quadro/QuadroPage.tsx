@@ -11,6 +11,8 @@ import {
   DIAS_POR_PAGINA,
   agruparPorDia,
   blocosAbertos,
+  dividirEmDuasColunas,
+  mereceDuasColunas,
   semFuturo,
 } from './lib/agrupar-por-dia'
 import {
@@ -24,6 +26,7 @@ import {
 import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
+import { useTelaLarga } from './lib/useTelaLarga'
 import { DiaBloco } from './components/DiaBloco'
 import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
@@ -62,6 +65,7 @@ export function QuadroPage() {
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
+  const telaLarga = useTelaLarga()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
@@ -132,6 +136,15 @@ export function QuadroPage() {
   const mostrados = blocos.slice(0, diasVisiveis)
   const restantes = blocos.length - mostrados.length
 
+  // A decisão de duas colunas junta as duas perguntas: a tela COMPORTA (largura
+  // de TV / monitor grande) e o dia PEDE (mais cartão do que cabe numa coluna).
+  const emDuasColunas = telaLarga && mereceDuasColunas(mostrados)
+  const colunasDeDias = emDuasColunas ? dividirEmDuasColunas(mostrados) : [mostrados]
+
+  /** Posição do bloco na ordem original — as colunas embaralham o índice do
+   *  `map`, e `abertoInicialmente` fala da ordem cronológica, não da coluna. */
+  const indiceDoBloco = (bloco: (typeof mostrados)[number]) => mostrados.indexOf(bloco)
+
   const listaPorDia = (
     <>
       {blocos.length === 0 ? (
@@ -148,19 +161,56 @@ export function QuadroPage() {
         )
       ) : (
         <div className="space-y-5">
-          {mostrados.map((bloco, i) => (
-            <DiaBloco
-              // A chave carrega o estado de busca de propósito: o DiaBloco
-              // guarda "aberto" em estado próprio, e sem remontar ele ignoraria
-              // a mudança. Um resultado escondido dentro de um dia fechado é
-              // uma busca que respondeu e não mostrou.
-              key={`${bloco.dia ?? 'sem-data'}-${buscando}`}
-              bloco={bloco}
-              hoje={hoje}
-              etapasPorCaso={etapasPorCaso}
-              abertoInicialmente={buscando || i < 2}
-            />
-          ))}
+          {/*
+            DUAS COLUNAS NA TV, uma no resto (01/09/2026, a pedido do gestor).
+
+            A tela vai ficar ligada numa TV de 70" na sala, e o pedido dele foi
+            literal: "o principal é ter todos os cards à vista". Num dia cheio
+            — ontem com cinco casos abertos e hoje com oito — a lista de uma
+            coluna só passa da altura da tela, e uma tela na parede ninguém
+            rola.
+
+            O espaço para isso já existia e estava sendo desperdiçado: o cartão
+            usa perto de 40% da largura e o resto é vão. Em duas colunas o
+            conteúdo continua do mesmo tamanho e a capacidade vertical dobra.
+
+            VOLTA AO NORMAL SOZINHA quando o movimento cai — ver
+            `mereceDuasColunas`. Dois cartões espalhados em duas meias telas
+            leem como tela quebrada, não como tela organizada.
+          */}
+          <div
+            className={clsx(
+              emDuasColunas &&
+                // `items-start`: sem isto as duas colunas esticam até a altura
+                // da mais alta, e o vão da mais curta vira uma faixa clicável
+                // que não é cartão nenhum.
+                'grid grid-cols-2 items-start gap-5',
+            )}
+          >
+            {colunasDeDias.map((coluna, indiceColuna) => (
+              <div key={indiceColuna} className="space-y-5">
+                {coluna.map((bloco) => (
+                  <DiaBloco
+                    // A chave carrega o estado de busca de propósito: o
+                    // DiaBloco guarda "aberto" em estado próprio, e sem
+                    // remontar ele ignoraria a mudança. Um resultado escondido
+                    // dentro de um dia fechado é uma busca que respondeu e não
+                    // mostrou.
+                    key={`${bloco.dia ?? 'sem-data'}-${buscando}`}
+                    bloco={bloco}
+                    hoje={hoje}
+                    etapasPorCaso={etapasPorCaso}
+                    // Numa TV ninguém abre nada: tudo que está na tela precisa
+                    // já estar aberto. Fora dela, os dois primeiros dias, como
+                    // antes.
+                    abertoInicialmente={
+                      buscando || emDuasColunas || indiceDoBloco(bloco) < 2
+                    }
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
 
           {/* Ida e volta. Sem o "exibir menos", carregar mais era um caminho
               de mão única: quem abrisse 30 dias para procurar um caso ficava
