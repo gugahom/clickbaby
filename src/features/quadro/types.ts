@@ -244,19 +244,31 @@ export const ROTULO_STATUS_ETAPA: Record<StatusEtapa, string> = {
 /**
  * O FLUXO DO VÍDEO DO MASTER, na ordem em que a equipe o percorre.
  *
- * São as mesmas cinco fases do Trello que eles já usam — e os rótulos são os
- * DELES, não uma tradução minha: quem opera reconhece "ENVIADO / FINALIZADO",
- * não "Concluída". Esse reconhecimento é metade do valor de trazer o fluxo
- * para cá.
+ * QUATRO FASES, E NÃO AS CINCO DO TRELLO (01/09/2026, a pedido do gestor).
+ * A coluna "VIDEOS - EDIÇÃO" de lá é a caixa de entrada do quadro — e aqui
+ * ela não tem o que dizer: estar na seção MASTER JÁ significa "vídeo para
+ * editar". Uma fase que repete o nome da seção não informa nada, e o gestor
+ * mandou tirá-la. É o mesmo argumento que já tinha aposentado o rótulo
+ * "Reels" dentro da seção de reels.
+ *
+ * O vídeo que ainda não começou fica SEM FASE — a tela mostra um controle
+ * neutro em vez de uma pílula, e a primeira fase escolhida é a primeira
+ * afirmação de verdade sobre ele. Ver FaseDoVideo.
+ *
+ * `pendente` continua existindo no banco (é o default da coluna) e a RPC
+ * continua aceitando-o: quem decide o que a tela OFERECE é a tela, e quem
+ * decide o que é LEGAL é a RPC. Ver o comentário de mover_video_master.
+ *
+ * Os rótulos são os DELES, não uma tradução minha: quem opera reconhece
+ * "ENVIADO / FINALIZADO", não "Concluída". Esse reconhecimento é metade do
+ * valor de trazer o fluxo para cá.
  *
  * A ORDEM É O DADO. Ela diz o que vem depois, e é o que permite a tela
- * oferecer o próximo passo sem que ninguém precise lembrar a sequência. O
- * banco não guarda ordem nenhuma (é um enum), então ela mora aqui — e a RPC
- * aceita qualquer uma das cinco em qualquer sentido, porque um vídeo volta de
- * PRONTO para ALTERAÇÕES quando a família pede mudança.
+ * oferecer o próximo passo sem que ninguém precise lembrar a sequência. A RPC
+ * aceita qualquer uma em qualquer sentido, porque um vídeo volta de PRONTO
+ * para ALTERAÇÕES quando a família pede mudança.
  */
 export const FASES_VIDEO_MASTER = [
-  'pendente',
   'em_andamento',
   'em_alteracao',
   'pronto_para_entrega',
@@ -265,24 +277,29 @@ export const FASES_VIDEO_MASTER = [
 
 export type FaseVideoMaster = (typeof FASES_VIDEO_MASTER)[number]
 
-/** Os nomes como estão no Trello da equipe. Ver FASES_VIDEO_MASTER. */
+/** Os nomes como estão no Trello da equipe, menos as reticências de
+ *  "Editando…" — elas sugeriam que o rótulo estava cortado. Ver
+ *  FASES_VIDEO_MASTER. */
 export const ROTULO_FASE_VIDEO: Record<FaseVideoMaster, string> = {
-  pendente: 'Vídeos - edição',
-  em_andamento: 'Editando…',
+  em_andamento: 'Editando',
   em_alteracao: 'Alterações',
   pronto_para_entrega: 'Pronto para entrega',
   concluida: 'Enviado / finalizado',
 }
 
-/** A fase em que este vídeo está — `pausada` conta como "editando", que é
- *  onde o trabalho parou. O fluxo não tem fase de pausa (ver a RPC). */
-export function faseDoVideo(status: StatusEtapa): FaseVideoMaster {
-  if (status === 'pausada' || status === 'atribuida') {
-    return status === 'pausada' ? 'em_andamento' : 'pendente'
-  }
+/**
+ * A fase em que este vídeo está, ou `null` se ele ainda não entrou no fluxo.
+ *
+ * `pausada` conta como EDITANDO: é onde o trabalho parou, e o fluxo não tem
+ * fase de pausa (ver a RPC). `pendente` e `atribuida` são "ainda não
+ * começou" — não são fase nenhuma desde que a caixa de entrada saiu do
+ * fluxo, e devolver uma fase ali seria afirmar algo que ninguém afirmou.
+ */
+export function faseDoVideo(status: StatusEtapa): FaseVideoMaster | null {
+  if (status === 'pausada') return 'em_andamento'
   return (FASES_VIDEO_MASTER as readonly StatusEtapa[]).includes(status)
     ? (status as FaseVideoMaster)
-    : 'pendente'
+    : null
 }
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {
