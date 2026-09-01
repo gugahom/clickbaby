@@ -850,6 +850,13 @@ export type Database = {
       eh_pessoa_ativa: { Args: never; Returns: boolean }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
+      mover_video_master: {
+        Args: {
+          p_caso_etapa_id: string
+          p_fase: Database["public"]["Enums"]["status_etapa"]
+        }
+        Returns: undefined
+      }
       ordem_padrao_da_etapa: {
         Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
         Returns: number
@@ -954,6 +961,8 @@ export type Database = {
         | "concluida"
         | "dispensada"
         | "pausada"
+        | "em_alteracao"
+        | "pronto_para_entrega"
       status_operacional:
         | "agendado"
         | "em_atendimento"
@@ -1137,6 +1146,8 @@ export const Constants = {
         "concluida",
         "dispensada",
         "pausada",
+        "em_alteracao",
+        "pronto_para_entrega",
       ],
       status_operacional: [
         "agendado",

@@ -299,6 +299,12 @@ const CLASSE_PILULA: Record<StatusEtapa, string> = {
   // isso sem precisar de legenda.
   dispensada: 'border-border bg-muted/60 text-muted-foreground line-through',
   pendente: 'border-border bg-transparent text-muted-foreground',
+  // As duas fases do vídeo do MASTER. Aparecem AQUI de verdade — a fita do
+  // card mostra todas as etapas do caso, e o vídeo é uma delas mesmo com o
+  // fluxo dele morando na seção. Sem estas linhas o vídeo em alteração
+  // pareceria pendente na fita, escondendo trabalho em curso.
+  em_alteracao: 'border-atencao/30 bg-atencao/15 font-semibold text-atencao-tinta',
+  pronto_para_entrega: 'border-pronto-borda bg-pronto-fundo font-semibold text-pronto',
 }
 
 /**

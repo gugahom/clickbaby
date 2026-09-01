@@ -168,12 +168,29 @@ export function reelsAbertosDaSecao(etapas: EtapaQuadro[]): EtapaQuadro[] {
 export function videosMasterAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
   return etapas
     .filter((e) => e.tipo === 'edicao_video')
-    .filter((e) => e.status !== 'concluida' && e.status !== 'dispensada')
+    // DISPENSADA sai; CONCLUÍDA fica. É a diferença desta seção para a de
+    // reels, e ela vem do fluxo de fases (migration 20260901051232).
+    //
+    // "Enviado / finalizado" é uma FASE do vídeo, não o fim da seção: a
+    // família pode pedir alteração depois de receber, e o caminho de volta é
+    // o mesmo seletor. Um vídeo que sumisse ao chegar em ENVIADO não teria
+    // como voltar para ALTERAÇÕES — a pessoa teria que achar o caso na lista
+    // do dia e reabrir a etapa por outro caminho, para desfazer algo que no
+    // fluxo dela nem é desfazer.
+    //
+    // O cartão sai daqui quando o CASO encerra (filtro de `ehTerminal` em
+    // casosComVideoMasterAberto), que é quando o trabalho acabou de verdade.
+    // Até lá, um vídeo pronto esperando entrega é justamente o que a
+    // coordenação precisa ver.
+    .filter((e) => e.status !== 'dispensada')
     .filter(
       (e) =>
-        e.status === 'em_andamento' ||
-        e.status === 'pausada' ||
-        podeIniciar(e, etapas).habilitada,
+        e.status !== 'pendente' && e.status !== 'atribuida'
+          ? // Já saiu do backlog em algum momento — segue visível em qualquer
+            // fase, inclusive concluída.
+            true
+          : // Ainda no backlog: só aparece depois de liberado, como antes.
+            podeIniciar(e, etapas).habilitada,
     )
     .sort((a, b) => a.rodada - b.rodada)
 }
