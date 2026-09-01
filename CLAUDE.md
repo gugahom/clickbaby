@@ -104,6 +104,10 @@ entrada → nascimento ─┬→ banho → fechamento     (CAMPO)
   pacote próprio no cadastro, não uma variação do BIRTH.
 - "Vídeo de venda" vs "vídeo de contrato" é a mesma etapa no fluxo de trabalho; a diferença
   está no pacote, não vira campo separado.
+- **Três etapas existem FORA de qualquer pacote** (01/09/2026): `encontro_irmaos`,
+  `saida_uti` e `alta`. Nenhum pacote as traz; elas só entram por `adicionar_etapa`,
+  quando a família vive o momento e a equipe quer registrar o trabalho. São da trilha
+  ACOMPANHAMENTO (acontecem na maternidade) e vêm depois do álbum na ordem de leitura.
 - **EVENTO, NEWBORN e combinações ("OUTROS")** ainda não estão no seed. Estratégia definida:
   quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
   **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
@@ -197,18 +201,41 @@ transição chama uma função Postgres (`SECURITY DEFINER`) que, numa única tr
 3. carimba o timestamp com `now()`;
 4. insere a linha correspondente em `eventos`.
 
-Funções RPC previstas:
+Funções RPC que EXISTEM (01/09/2026). Toda escrita de estado passa por uma delas:
 
 ```
-iniciar_etapa(p_caso_etapa_id)
+-- ciclo de vida da etapa
+iniciar_etapa(p_caso_etapa_id)                          -- inicia ou retoma
+pausar_etapa(p_caso_etapa_id)
 concluir_etapa(p_caso_etapa_id, p_observacao)
-atribuir_etapa(p_caso_etapa_id, p_responsavel_id)
+reabrir_etapa(p_caso_etapa_id, p_motivo)                -- desfaz conclusão ou dispensa
+dispensar_etapa(p_caso_etapa_id, p_motivo)              -- "não vai acontecer"
+adicionar_etapa(p_caso_id, p_tipo)                      -- etapa fora do pacote
+agendar_etapa(p_caso_etapa_id, p_previsao_em)           -- hora do banho/fechamento
+anotar_etapa(p_caso_etapa_id, p_observacao)             -- aviso, em qualquer status
+registrar_estacao(p_caso_etapa_id, p_estacao)           -- "pc-1"
+
+-- pessoas
+atribuir_etapa(p_caso_etapa_id, p_para_pessoa_id)
 transferir_etapa(p_caso_etapa_id, p_para_pessoa_id, p_motivo)   -- handoff
-atualizar_situacao_clinica(p_caso_id, p_situacao)
+planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
+
+-- fluxo do vídeo horizontal do MASTER (4 fases na tela; ver seção 13)
+mover_video_master(p_caso_etapa_id, p_fase)
+
+-- caso
+mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
-confirmar_entrega(p_caso_id)
-cancelar_caso(p_caso_id, p_motivo)                              -- cancelamento manual
+confirmar_entrega(p_caso_id)                            -- encerra
+cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
+reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um encerrado
+
+-- só service_role (Edge Function do sync)
+sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 ```
+
+**Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` e `termo_status`
+continuam por UPDATE direto de adm — ver a dívida no fim da seção 13.
 
 RLS deve **negar** UPDATE direto do cliente nas colunas que essas funções controlam. Se a
 policy permite o update direto, a invariante não existe.
@@ -251,11 +278,10 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
 /src
   /app                 rotas e layout
   /features
-    /quadro
-    /casos
-    /fila-edicao
-    /entregaveis
-    /painel
+    /quadro          hoje é praticamente o app inteiro
+    /auth
+    -- previstas, ainda não existem: /casos /entregaveis /painel
+    -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
   /lib                 supabase client, query client, helpers
   /types               tipos gerados do banco (supabase gen types)
@@ -577,33 +603,74 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
 
 ## 13. Estado atual
 
-**Fase 0 — schema em andamento.** Migration inicial aplicada via `db push`: 12 tabelas,
-11 enums, RLS habilitado **sem policies ainda** (nega tudo por padrão). Despesas e
-financeiro já removidos do schema. Cancelamento com `motivo_cancelamento` e a constraint
-`casos_status_terminal_valido` já aplicados.
+**Fase 1 EM PRODUÇÃO.** `clickbaby.com.br/quadro` está no ar e a operação usa. Números
+reais do remoto em 01/09/2026: 180 casos, 1.139 eventos, 4 rascunhos pendentes, 3 pessoas
+cadastradas. 50 migrations aplicadas, 467 testes pgTAP, 107 testes Deno.
 
-Ordem de execução a partir daqui:
+O schema está completo e fechado: RLS com policies por papel em toda tabela, GRANTs
+mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC — o
+`authenticated` não tem UPDATE em `caso_etapas` para coluna nenhuma.
 
-1. Trigger de geração automática de `caso_etapas` a partir de `pacote_etapas`
-2. Políticas RLS por papel
-3. Funções RPC de transição, incluindo `cancelar_caso` (seção 4)
-4. Seed de cadastros com dados reais do cliente — **bloqueado até o cliente entregar a
-   lista de pacotes com escopo de etapas** (ver `docs/plano.md`, seção 11)
-5. Sync do Google Calendar (seção 7) — intake principal
-6. Frontend — Quadro primeiro, em blocos por data (ver `docs/plano.md`, seção 7)
-7. Script de importação da planilha histórica (pós-MVP)
+### O que já funciona
 
-O Quadro é a tela da demo. É a única que precisa ser excelente na fase 1.
+- **Sync do Calendar automático**, pg_cron a cada 1 minuto (o intake principal da seção 7).
+  Cria, atualiza, e cancela por card cinza OU por deleção do evento. Evento de dia inteiro
+  (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
+- **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de
+  horário chegando, realtime, auto-refresh alinhado ao cron.
+- **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`),
+  **dispensar** (não vai acontecer) e **acrescentar** fora do pacote — inclusive
+  `encontro_irmaos`, `saida_uti` e `alta`, que nenhum pacote traz de fábrica.
+- **Seções laterais**: REELS, MASTER e UTI. O **vídeo horizontal do MASTER** tem fluxo
+  próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
+  trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
+  resto continuam no card.
+- **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
+  que só o BIRTH tem) e ao menos um entregável registrado.
+- **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+
+### Dívidas abertas, em ordem de dor
+
+1. **Painel de Gestão não existe.** O router tem UMA rota (o Quadro); o item "Painel" no
+   cabeçalho da gestão é rótulo, não destino. É o que destrava (a) cadastrar as 12
+   fotógrafas e 3 vendedores sem tocar no banco — hoje só 3 pessoas existem —, e (b)
+   exibir produtividade. O dado de produtividade JÁ está sendo gravado em `eventos` desde
+   o primeiro dia; falta a tela. Criar conta de auth exige Edge Function (a service_role
+   key não pode ir ao front).
+2. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
+   de adm. Quando ganharem RPC, revogar o privilégio de coluna — não basta parar de usar.
+3. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
+   (SELECT em `casos` no remoto e não no local). Não é exploração, mas é a mesma classe de
+   divergência que já mordeu duas vezes.
+4. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
+   merge três vezes, chegando ao gestor como "está bugado". O gestor já aprovou construir
+   o workflow; falta fazer.
+5. **`storage.objects` sem policy** — com RLS ligada isso nega tudo, que é o estado certo
+   enquanto nada sobe arquivo. A primeira policy de upload vai fazer
+   `buckets_privados.test.sql` falhar de propósito. Ver issues #20 e #21.
+6. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
+   tempo de ciclo de edição vem zero. A tela da Fila foi removida a pedido do gestor; a
+   view e os testes ficaram. Entra quando a fila voltar.
+7. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
+   `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
+8. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
+   empresa, que não existe. O app vive em `/quadro`.
+9. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
+   para o caso. Se vier, tem que ser campo PRÓPRIO (`observacao_calendar`), separado da
+   observação interna — senão o sync sobrescreve o que a equipe escreveu.
+10. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
+    que sobraram esperam decisão do dono sobre cadastro e padronização de título, não
+    código. Não melhore o parser por heurística — é o "assumir quando ambíguo" que a
+    seção 7 proíbe.
+
+### Fora do escopo, mapeado
+
+Importação da planilha histórica (pós-MVP), login por PIN (seção 8, fase 1), cláusula LGPD
+no contrato (controlador × operador), conta de teste no remoto para a sonda cobrir
+`authenticated`.
 
 **Dívida fechada — UPDATE direto de `casos`:** a policy `casos_update_atendimento_confirma_entrega`
 foi derrubada (atendimento age só via RPC agora). `casos_update_adm` continua existindo, mas
 `status_operacional`, `status_entrega` e `motivo_cancelamento` perderam o privilégio de
 UPDATE por coluna para `authenticated` — nem adm consegue mudar esses três por UPDATE direto
 mais, só pelas RPCs de transição. Ver migration `20260821065740`.
-
-**Dívida nova, menor — `situacao_clinica` e `termo_status`:** continuam com UPDATE direto
-liberado para adm, não porque sejam "dado" (são estado, no sentido amplo), mas porque ainda
-não têm RPC própria (`atualizar_situacao_clinica` está prevista na seção 4 e não existe;
-`termo_status` nem RPC prevista tem). Quando ganharem RPC, o mesmo tratamento de
-`status_operacional` se aplica: revogar o privilégio de coluna, não só parar de usar o UPDATE
-direto.
