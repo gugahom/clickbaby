@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { rotularDia } from '@/lib/formato'
 import { useRegistrarEstacao } from '../api/useAcoes'
@@ -21,6 +21,18 @@ interface PropsCartaoDeEdicao {
    * distinção sem contraparte.
    */
   rotularLinha?: (etapa: EtapaQuadro) => string
+  /**
+   * O que fica na ponta direita de cada linha. O padrão é o trio play/pause/
+   * concluir; o vídeo do MASTER troca por FaseDoVideo, porque o fluxo dele
+   * tem cinco fases e não cabe em dois botões.
+   */
+  acoesDaLinha?: (etapa: EtapaQuadro) => ReactNode
+  /**
+   * O selo de estado no alto do cartão. O MASTER desliga: a linha do vídeo
+   * já carrega a fase por extenso, e um selo dizendo a mesma coisa em outras
+   * palavras logo acima seria ruído — não uma segunda informação.
+   */
+  comSelo?: boolean
   onErro: (mensagem: string | null) => void
 }
 
@@ -58,6 +70,8 @@ export function CartaoDeEdicao({
   // existir uma 3, aparecer "Rodada 3" na tela é melhor que uma linha sem
   // nome nenhum — e denuncia o rótulo que ficou faltando.
   rotularLinha = (e) => ROTULO_RODADA[e.rodada] ?? `Rodada ${e.rodada}`,
+  acoesDaLinha,
+  comSelo = true,
   onErro,
 }: PropsCartaoDeEdicao) {
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
@@ -93,14 +107,16 @@ export function CartaoDeEdicao({
               e essa é uma pergunta por CASO. Um selo por rodada responderia
               outra coisa — e a rodada já tem os próprios botões logo abaixo,
               que dizem em que estado ela está. */}
-          <span
-            className={clsx(
-              'rotulo-sobrescrito flex-shrink-0 rounded-full px-2 py-1',
-              selo.classe,
-            )}
-          >
-            {selo.rotulo}
-          </span>
+          {comSelo && (
+            <span
+              className={clsx(
+                'rotulo-sobrescrito flex-shrink-0 rounded-full px-2 py-1',
+                selo.classe,
+              )}
+            >
+              {selo.rotulo}
+            </span>
+          )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {caso.maternidadeSigla && <span>{caso.maternidadeSigla}</span>}
@@ -114,6 +130,7 @@ export function CartaoDeEdicao({
               etapa={etapa}
               etapas={etapas}
               rotulo={rotularLinha(etapa)}
+              acoes={acoesDaLinha?.(etapa)}
               onErro={onErro}
             />
           ))}
@@ -127,11 +144,13 @@ function LinhaDeRodada({
   etapa,
   etapas,
   rotulo,
+  acoes,
   onErro,
 }: {
   etapa: EtapaQuadro
   etapas: EtapaQuadro[]
   rotulo: string
+  acoes?: ReactNode
   onErro: (mensagem: string | null) => void
 }) {
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
@@ -161,7 +180,7 @@ function LinhaDeRodada({
         </div>
       </div>
 
-      <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />
+      {acoes ?? <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />}
     </li>
   )
 }
@@ -177,7 +196,14 @@ function LinhaDeRodada({
  */
 function estadoDominante(etapas: EtapaQuadro[]): StatusEtapa {
   if (etapas.some((e) => e.status === 'em_andamento')) return 'em_andamento'
+  // As duas fases do vídeo do MASTER entram ANTES de pausada/pendente, e não
+  // por capricho: sem elas, um vídeo em ALTERAÇÕES caía no `return 'pendente'`
+  // lá embaixo e o cartão ganhava o anel vermelho de "liberado e ninguém
+  // pegou" — que é mentira sobre um vídeo que alguém está mexendo agora.
+  if (etapas.some((e) => e.status === 'em_alteracao')) return 'em_alteracao'
+  if (etapas.some((e) => e.status === 'pronto_para_entrega')) return 'pronto_para_entrega'
   if (etapas.some((e) => e.status === 'pausada')) return 'pausada'
+  if (etapas.length > 0 && etapas.every((e) => e.status === 'concluida')) return 'concluida'
   return 'pendente'
 }
 
@@ -212,6 +238,17 @@ const SELO: Record<StatusEtapa, { rotulo: string; classe: string; anel: boolean 
   atribuida: { rotulo: 'Pendente', classe: 'bg-atrasado/12 text-atrasado', anel: true },
   concluida: { rotulo: 'Concluído', classe: 'bg-concluido/12 text-concluido-tinta', anel: false },
   dispensada: { rotulo: 'Dispensado', classe: 'bg-muted text-muted-foreground', anel: false },
+  // As duas fases do vídeo do MASTER. Não aparecem: a seção que as alcança
+  // é a única que desliga o selo (`comSelo`), porque a linha já mostra a
+  // fase por extenso. Ficam para o Record ser total — se um dia o selo
+  // voltar ali, ele nasce dizendo a coisa certa em vez de cair no vermelho
+  // de "ninguém pegou", que seria mentira.
+  em_alteracao: { rotulo: 'Alterações', classe: 'bg-atencao/15 text-atencao-tinta', anel: false },
+  pronto_para_entrega: {
+    rotulo: 'Pronto',
+    classe: 'bg-pronto-fundo text-pronto',
+    anel: false,
+  },
 }
 
 /** Grafia única da estação. Muda aqui, muda em todo lugar. */

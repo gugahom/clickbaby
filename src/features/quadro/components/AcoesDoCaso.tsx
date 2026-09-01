@@ -193,6 +193,22 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             const dispensa = podeDispensar(etapa, caso)
             const encerrada =
               etapa.status === 'concluida' || etapa.status === 'dispensada'
+            /*
+              O VÍDEO DO MASTER NÃO SE OPERA DAQUI (01/09/2026, a pedido do
+              gestor: "o que for foto continua no card normal, o que for vídeo
+              tem um fluxo especial").
+
+              Ele percorre cinco fases — backlog, editando, alterações, pronto,
+              enviado — e nenhuma delas cabe no par play/concluir desta lista.
+              Oferecer os botões genéricos aqui daria DOIS caminhos para o mesmo
+              trabalho, um deles capaz de pular direto de "pendente" para
+              "concluída" sem passar por nada.
+
+              A linha CONTINUA aparecendo, com a fase por extenso: o card é o
+              checklist do caso, e sumir com o vídeo esconderia o que falta
+              para encerrar. O que ela perde é só o poder de agir.
+            */
+            const noFluxoDaSecao = etapa.tipo === 'edicao_video'
 
             return (
               <li key={etapa.id} className="flex items-center gap-3 py-1.5 pr-1 pl-3">
@@ -254,7 +270,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     dispensar são gestos de um toque, feitos com uma mão num
                     corredor — e dispensar acabou de nascer, então nasce com o
                     caminho de volta em vez de esperar a primeira queixa. */}
-                {encerrada && (
+                {noFluxoDaSecao ? (
+                  <span className="flex-shrink-0 pr-2 text-[11px] font-semibold text-muted-foreground">
+                    na seção Master
+                  </span>
+                ) : encerrada ? (
                   <div className="flex flex-shrink-0 items-center">
                     <BotaoIcone
                       rotulo="Reabrir etapa"
@@ -267,7 +287,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       <IconeDesfazer className="size-[18px]" />
                     </BotaoIcone>
                   </div>
-                )}
+                ) : null}
 
                 {/*
                   DOIS BOTÕES E UM MENU — e a mudança é de mobile, medida.
@@ -293,7 +313,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   motivo (que o `title` carrega) é o que ensina a regra de
                   precedência para quem ainda não a conhece.
                 */}
-                {!encerrada && (
+                {!encerrada && !noFluxoDaSecao && (
                   <div className="flex flex-shrink-0 items-center">
                     {/* Play e pause são a MESMA alavanca em estados opostos, e
                         por isso ocupam a mesma posição: em andamento mostra

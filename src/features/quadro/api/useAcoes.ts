@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { chavesQuadro } from './useQuadro'
+import type { FaseVideoMaster } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -238,6 +239,21 @@ export function usePlanejarRendicao() {
 export function useAdicionarEtapa() {
   return useAcaoDoQuadro<{ casoId: string; tipo: EtapaTipo }>(({ casoId, tipo }) =>
     chamar('adicionar_etapa', { p_caso_id: casoId, p_tipo: tipo }),
+  )
+}
+
+/**
+ * Leva o vídeo horizontal do MASTER de uma fase à outra.
+ *
+ * Uma RPC para o fluxo inteiro, nos dois sentidos — ver a migration
+ * 20260901051232. A tela não precisa saber qual transição é qual: manda a
+ * fase de destino e o banco valida (recusa etapa que não é `edicao_video`,
+ * recusa caso terminal, e é idempotente na fase atual).
+ */
+export function useMoverVideoMaster() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseVideoMaster }>(
+    ({ casoEtapaId, fase }) =>
+      chamar('mover_video_master', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
   )
 }
 

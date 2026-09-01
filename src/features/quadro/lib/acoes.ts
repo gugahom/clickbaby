@@ -107,6 +107,13 @@ export function podeIniciar(
   if (etapa.status === 'dispensada') {
     return { habilitada: false, motivo: 'Etapa dispensada.' }
   }
+  // O vídeo do MASTER já saiu do backlog: quem manda nele é o seletor de
+  // fase da seção, não o play. Sem esta guarda `podeIniciar` devolveria OK —
+  // as duas fases novas não batiam com nenhum `if` acima e caíam direto na
+  // checagem de precedência.
+  if (etapa.status === 'em_alteracao' || etapa.status === 'pronto_para_entrega') {
+    return { habilitada: false, motivo: 'O vídeo do MASTER anda pela fase, na seção.' }
+  }
   const trava = anteriorPendente(etapa, etapas)
   if (trava) {
     return { habilitada: false, motivo: `Conclua ${ROTULO_ETAPA[trava.tipo]} antes.` }

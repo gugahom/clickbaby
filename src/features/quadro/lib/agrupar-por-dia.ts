@@ -120,20 +120,44 @@ export function blocosAbertos(blocos: BlocoDia[]): BlocoDia[] {
 }
 
 /**
- * Corta os dias FUTUROS (30/08/2026, a pedido do gestor).
+ * Corta o que está DEPOIS DE AMANHÃ (30/08/2026, revisto em 01/09/2026).
  *
- * O Quadro é "o que temos hoje", não uma prévia da agenda adiante — ver casos
- * de amanhã em diante competia por espaço com o que precisa de ação agora, e
- * "Carregar mais dias" já cobria semanas de casos que ainda nem existem de
- * verdade (o comercial pode remarcar, cancelar, trocar pacote até lá).
+ * A primeira versão cortava em HOJE. O motivo continua valendo — o Quadro é o
+ * que precisa de ação, não uma prévia da agenda inteira, e "Carregar mais
+ * dias" chegava a semanas de casos que o comercial ainda pode remarcar,
+ * cancelar ou trocar de pacote. Mas cortar em hoje foi um passo longe demais:
+ * o turno da noite acaba entrando no dia seguinte, e quem monta a escala
+ * precisa ver o que vem logo em seguida sem trocar de tela.
+ *
+ * AMANHÃ, E SÓ AMANHÃ. O gestor pediu exatamente um dia de folga, então o
+ * limite é `hoje + 1` e não um parâmetro configurável: um número que ninguém
+ * escolhe é um número que ninguém precisa manter.
  *
  * `dia` é comparável como STRING porque é 'YYYY-MM-DD' — a mesma razão pela
- * qual `hojeNoFuso()` usa esse formato.
+ * qual `hojeNoFuso()` usa esse formato. O limite, porém, NÃO pode ser feito
+ * com aritmética de string: somar 1 a "2026-08-31" tem que virar
+ * "2026-09-01", e só uma data sabe disso.
  *
  * Dia sem previsão (`dia === null`) NÃO é futuro, é ausência de dado — fica.
  * Cortar um caso sem data escondido atrás de "provavelmente é futuro" seria
  * inventar uma resposta que o dado não dá.
  */
 export function semFuturo(blocos: BlocoDia[], hoje: string): BlocoDia[] {
-  return blocos.filter((b) => b.dia === null || b.dia <= hoje)
+  const limite = diaSeguinte(hoje)
+  return blocos.filter((b) => b.dia === null || b.dia <= limite)
+}
+
+/**
+ * 'YYYY-MM-DD' + 1 dia, sem fuso nenhum no meio.
+ *
+ * `Date.UTC` de propósito: a conta é sobre o CALENDÁRIO, não sobre um
+ * instante. Construir com `new Date(ano, mes, dia)` usaria o fuso do aparelho
+ * — e nos CEL CLICK, que trocam de mão, nada garante qual é (seção 6 do
+ * CLAUDE.md). Em UTC a soma de 24h nunca cruza um limite de horário de verão.
+ */
+function diaSeguinte(dia: string): string {
+  const [ano, mes, d] = dia.split('-').map(Number)
+  const data = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, d ?? 1))
+  data.setUTCDate(data.getUTCDate() + 1)
+  return data.toISOString().slice(0, 10)
 }

@@ -31,6 +31,7 @@ import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
 import { RascunhosPainel } from './components/RascunhosPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
+import { FaseDoVideo } from './components/FaseDoVideo'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import type { CasoQuadro } from './types'
@@ -243,6 +244,12 @@ export function QuadroPage() {
       daSecao={videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])}
       // Uma rodada só: o rótulo de bloco do reels ("Parto") não se aplica.
       rotularLinha={() => 'Vídeo'}
+      // O vídeo do MASTER não anda por play/pause/concluir: ele percorre as
+      // cinco fases do fluxo que a equipe já usa no Trello. Ver FaseDoVideo.
+      acoesDaLinha={(etapa) => <FaseDoVideo etapa={etapa} onErro={setErroMaster} />}
+      // A linha já diz a fase por extenso; um selo repetindo em outras
+      // palavras logo acima seria ruído.
+      comSelo={false}
       onErro={setErroMaster}
     />
   ))
@@ -250,7 +257,7 @@ export function QuadroPage() {
   const CRITERIO_REELS =
     'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
   const CRITERIO_MASTER =
-    'Horizontal do MASTER, liberado ou em andamento. Prazo de 10 dias úteis.'
+    'Horizontal do MASTER, do backlog ao enviado. Prazo de 10 dias úteis.'
   const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
 
   const painelReels = (
@@ -282,7 +289,7 @@ export function QuadroPage() {
       titulo="Master"
       quantidade={emMaster.length}
       criterio={CRITERIO_MASTER}
-      vazio="Nenhum vídeo de MASTER aberto."
+      vazio="Nenhum vídeo de MASTER em andamento."
       erro={erroMaster}
     >
       {conteudoMaster}
@@ -528,7 +535,7 @@ export function QuadroPage() {
                   titulo="Master"
                   quantidade={emMaster.length}
                   criterio={CRITERIO_MASTER}
-                  vazio="Nenhum vídeo de MASTER aberto."
+                  vazio="Nenhum vídeo de MASTER em andamento."
                   erro={erroMaster}
                 >
                   {conteudoMaster}

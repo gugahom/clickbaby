@@ -97,6 +97,13 @@ const RPCS_TRANSICAO = {
     p_caso_id: '00000000-0000-0000-0000-000000000000',
     p_tipo: 'banho',
   },
+  // Move o vídeo do MASTER de fase. Quem alcançasse esta RPC marcaria um
+  // vídeo como enviado sem ele ter saído — e "enviado" é a fase que a
+  // coordenação usa para parar de cobrar.
+  mover_video_master: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_fase: 'concluida',
+  },
 }
 
 /** Caminho que a função encerra em 'sem_efeito' antes de tocar qualquer linha. */

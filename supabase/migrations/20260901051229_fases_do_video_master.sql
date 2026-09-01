@@ -1,0 +1,53 @@
+-- =============================================================================
+-- Duas fases novas em status_etapa, para o fluxo do VÍDEO DO MASTER.
+--
+-- O PEDIDO: o gestor mostrou o Trello que a equipe usa hoje só para o vídeo
+-- horizontal, e pediu esse fluxo dentro da seção MASTER do Quadro. São cinco
+-- fases, e elas são o que importa — a forma de tela (quadro de colunas, lista,
+-- seletor) é decisão separada, e mudou uma vez antes de a primeira linha de
+-- interface existir. O que o banco guarda é a FASE:
+--
+--   VIDEOS - EDIÇÃO       o que há para editar
+--   EDITANDO...           alguém está mexendo
+--   ALTERAÇÕES            voltou com pedido de mudança
+--   PRONTO PARA ENTREGA   edição fechada, aguardando envio
+--   ENVIADO / FINALIZADO  saiu
+--
+-- TRÊS DELAS JÁ EXISTEM: `pendente` é o backlog, `em_andamento` é o
+-- "EDITANDO...", `concluida` é o "ENVIADO / FINALIZADO". Faltavam as duas do
+-- meio — e elas são o motivo do quadro existir: hoje, entre "editando" e
+-- "concluído", o sistema não sabe dizer se o vídeo está esperando revisão da
+-- família ou esperando alguém apertar enviar.
+--
+-- POR QUE NO ENUM E NÃO NUMA COLUNA `fase_video` À PARTE
+-- Uma segunda coluna criaria DUAS respostas para "onde está este trabalho" —
+-- `status` diria uma coisa, `fase_video` outra, e as duas precisariam ser
+-- mantidas em acordo para sempre. É exatamente a duplicação que este projeto
+-- evita em toda parte (ver a nota de topo de lib/secoes.ts: "não existe
+-- status reels no banco, e inventar um significaria duas fontes de verdade").
+--
+-- O preço é que o enum ganha valores que só um tipo de etapa alcança. Isso
+-- não é novo aqui: `dispensada` passou semanas no enum sem nenhuma RPC capaz
+-- de produzi-la, e `nascimento` até hoje não pode chegar nela. Quem governa a
+-- alcançabilidade é a RPC, não o enum — e `mover_video_master` (migration
+-- seguinte) recusa qualquer etapa que não seja `edicao_video`.
+--
+-- POR QUE ISSO JÁ GATEIA O MASTER SEM CITAR O MASTER
+-- `edicao_video` só existe nos dois pacotes MASTER (seed.sql). Gatear por
+-- TIPO DE ETAPA e não por nome de pacote é o que o CLAUDE.md manda (seção 12:
+-- "não hardcode pacotes"), e é o mesmo raciocínio que a seção MASTER já usa
+-- para se povoar.
+--
+-- AS DUAS NÃO SÃO "RESOLVIDAS", e isso vem de graça: a trava de encerramento
+-- (20260827181322) recusa etapa `not in ('concluida','dispensada')`, então um
+-- caso com vídeo em alteração ou pronto-para-entrega continua sem poder
+-- encerrar. É o comportamento certo — o trabalho não acabou — e nenhuma linha
+-- precisou mudar para consegui-lo.
+--
+-- ADD VALUE não pode ser combinado com uso do valor novo na mesma transação
+-- (mesma nota das migrations 20260821030717 e 20260831133139). O uso real —
+-- a RPC e a view — fica na PRÓXIMA migration, de propósito.
+-- =============================================================================
+
+alter type public.status_etapa add value 'em_alteracao';
+alter type public.status_etapa add value 'pronto_para_entrega';

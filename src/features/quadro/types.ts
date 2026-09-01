@@ -234,6 +234,55 @@ export const ROTULO_STATUS_ETAPA: Record<StatusEtapa, string> = {
   concluida: 'Concluída',
   dispensada: 'Dispensada',
   pausada: 'Pausada',
+  // Só o vídeo do MASTER alcança estas duas (migration 20260901051229). O
+  // rótulo aqui é o genérico, usado onde a etapa aparece no meio das outras;
+  // no fluxo do vídeo elas têm nome próprio — ver ROTULO_FASE_VIDEO.
+  em_alteracao: 'Em alteração',
+  pronto_para_entrega: 'Pronto para entrega',
+}
+
+/**
+ * O FLUXO DO VÍDEO DO MASTER, na ordem em que a equipe o percorre.
+ *
+ * São as mesmas cinco fases do Trello que eles já usam — e os rótulos são os
+ * DELES, não uma tradução minha: quem opera reconhece "ENVIADO / FINALIZADO",
+ * não "Concluída". Esse reconhecimento é metade do valor de trazer o fluxo
+ * para cá.
+ *
+ * A ORDEM É O DADO. Ela diz o que vem depois, e é o que permite a tela
+ * oferecer o próximo passo sem que ninguém precise lembrar a sequência. O
+ * banco não guarda ordem nenhuma (é um enum), então ela mora aqui — e a RPC
+ * aceita qualquer uma das cinco em qualquer sentido, porque um vídeo volta de
+ * PRONTO para ALTERAÇÕES quando a família pede mudança.
+ */
+export const FASES_VIDEO_MASTER = [
+  'pendente',
+  'em_andamento',
+  'em_alteracao',
+  'pronto_para_entrega',
+  'concluida',
+] as const satisfies readonly StatusEtapa[]
+
+export type FaseVideoMaster = (typeof FASES_VIDEO_MASTER)[number]
+
+/** Os nomes como estão no Trello da equipe. Ver FASES_VIDEO_MASTER. */
+export const ROTULO_FASE_VIDEO: Record<FaseVideoMaster, string> = {
+  pendente: 'Vídeos - edição',
+  em_andamento: 'Editando…',
+  em_alteracao: 'Alterações',
+  pronto_para_entrega: 'Pronto para entrega',
+  concluida: 'Enviado / finalizado',
+}
+
+/** A fase em que este vídeo está — `pausada` conta como "editando", que é
+ *  onde o trabalho parou. O fluxo não tem fase de pausa (ver a RPC). */
+export function faseDoVideo(status: StatusEtapa): FaseVideoMaster {
+  if (status === 'pausada' || status === 'atribuida') {
+    return status === 'pausada' ? 'em_andamento' : 'pendente'
+  }
+  return (FASES_VIDEO_MASTER as readonly StatusEtapa[]).includes(status)
+    ? (status as FaseVideoMaster)
+    : 'pendente'
 }
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {
