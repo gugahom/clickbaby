@@ -22,6 +22,25 @@ export const ROTULO_FAIXA: Record<Faixa, string> = {
   reels: 'Reels',
 }
 
+/**
+ * O mesmo rótulo, abreviado, para o resumo compacto do modo TV.
+ *
+ * Medido: com "ACOMPANHAMENTO" por extenso as três faixas pedem 628px numa
+ * coluna que oferece 561, e o resumo quebra em duas linhas — 29px a mais por
+ * cartão, vezes todos os cartões da tela. "ACOMP." devolve 83px e a linha
+ * fecha.
+ *
+ * Abreviar não é encolher: o corpo continua em 11px, que é o que a TV precisa.
+ * E a leitura não sofre porque a ordem é sempre a mesma e a palavra aparece em
+ * todo cartão — depois do segundo, ninguém lê o rótulo, só conta a posição.
+ * O nome inteiro continua na fita do cartão aberto.
+ */
+export const ROTULO_FAIXA_CURTO: Record<Faixa, string> = {
+  acompanhamento: 'Acomp.',
+  edicao: 'Edição',
+  reels: 'Reels',
+}
+
 /** As três faixas de um caso, sempre nesta ordem, sempre as três. */
 export interface FaixaDeEtapas {
   faixa: Faixa

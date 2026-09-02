@@ -1,6 +1,12 @@
 import clsx from 'clsx'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
-import { ROTULO_FAIXA, etapaAtualDaFaixa, faixasDoCaso, type Faixa } from '../lib/faixas'
+import {
+  ROTULO_FAIXA,
+  ROTULO_FAIXA_CURTO,
+  etapaAtualDaFaixa,
+  faixasDoCaso,
+  type Faixa,
+} from '../lib/faixas'
 import {
   ROTULO_ETAPA,
   ROTULO_RODADA,
@@ -412,7 +418,7 @@ function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] 
           encolher tipografia aqui desfaria justamente o motivo de o modo TV
           existir. */}
       <span className={clsx('rotulo-sobrescrito', COR_FAIXA)}>
-        {ROTULO_FAIXA[faixa]}
+        {ROTULO_FAIXA_CURTO[faixa]}
       </span>
 
       {atual ? (
