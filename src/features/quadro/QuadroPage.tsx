@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { dataPorExtenso, hojeNoFuso } from '@/lib/formato'
+import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
 import { useReabrirCaso, useRetornarDaUti, type EtapaTipo } from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
@@ -13,7 +13,6 @@ import {
   blocosAbertos,
   dividirEmDuasColunas,
   semFuturo,
-  type BlocoNaColuna,
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
@@ -38,7 +37,7 @@ import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
-import type { CasoQuadro } from './types'
+import type { BlocoDia, CasoQuadro } from './types'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -152,18 +151,42 @@ export function QuadroPage() {
    * funciona (ver o cabeçalho), então esta condição não deveria falhar sozinha
    * — ela existe para a janela que ENCOLHE depois de o modo estar ligado.
    */
-  const emDuasColunas = telaLarga && modoTv
+  const [atrasados, doTurno] = dividirEmDuasColunas(mostrados, hoje)
+
+  /*
+   * DUAS COLUNAS SÓ QUANDO HÁ DUAS PERGUNTAS.
+   *
+   * Se nenhum dia ficou para trás — ou se, ao contrário, só há dias velhos na
+   * tela — não existe a divisão "o que atrasou / o que vem": existe uma lista
+   * só. Meia tela em branco ao lado dela não organiza nada, e o gestor já
+   * tinha dito isso da primeira vez, sobre o movimento baixo.
+   */
+  const emDuasColunas =
+    telaLarga && modoTv && atrasados.length > 0 && doTurno.length > 0
+
   // Fora do modo TV é uma coluna só, mas com a mesma forma — assim o JSX
   // abaixo tem um caminho, não dois.
-  const colunasDeDias: BlocoNaColuna[][] = emDuasColunas
-    ? dividirEmDuasColunas(mostrados)
-    : [mostrados.map((bloco) => ({ bloco, continuacao: false }))]
+  const colunasDeDias = emDuasColunas ? [atrasados, doTurno] : [mostrados]
 
-  /** Posição do dia na ordem cronológica — as colunas embaralham o índice do
-   *  `map`, e `abertoInicialmente` fala da ordem do tempo, não da coluna.
-   *  Compara por `dia` e não por identidade: um dia partido entre as colunas
-   *  vira dois objetos, e só um deles seria o mesmo de `mostrados`. */
-  const indiceDoDia = (dia: string | null) => mostrados.findIndex((b) => b.dia === dia)
+  /**
+   * O que nasce aberto.
+   *
+   * FORA DO MODO TV, os dois primeiros dias — como sempre foi.
+   *
+   * NO MODO TV, ontem e hoje, e mais nada. Foi o desenho do gestor: anteontem
+   * fechado com a possibilidade de abrir, ontem inteiro à mostra, hoje ao
+   * lado, amanhã fechado embaixo. Abrir tudo, que era a regra anterior,
+   * enchia a tela de dias que ninguém está olhando — os antigos porque já
+   * viraram cobrança e não trabalho do turno, amanhã porque ainda não
+   * aconteceu — e empurrava para fora justamente ontem e hoje.
+   */
+  const abrePorPadrao = (bloco: BlocoDia): boolean => {
+    if (buscando) return true
+    if (!emDuasColunas) return mostrados.indexOf(bloco) < 2
+    if (bloco.dia === null) return false
+    const atraso = diasAtras(bloco.dia, hoje)
+    return atraso === 0 || atraso === 1
+  }
 
   const listaPorDia = (
     <>
@@ -200,6 +223,10 @@ export function QuadroPage() {
             ainda é o triplo dos 784px que a lista tem de altura útil em
             1080p. Metade da altura do cartão era a fita das etapas; é dela
             que sai o resto.
+
+            A ESQUERDA É O ATRASO, A DIREITA É O TURNO — ver
+            `dividirEmDuasColunas`. Não é uma lista repartida ao meio: são
+            duas perguntas, e um dia nunca atravessa de uma para a outra.
           */}
           <div
             className={clsx(
@@ -212,29 +239,20 @@ export function QuadroPage() {
           >
             {colunasDeDias.map((coluna, indiceColuna) => (
               <div key={indiceColuna} className="space-y-5">
-                {coluna.map(({ bloco, continuacao }) => (
+                {coluna.map((bloco) => (
                   <DiaBloco
-                    // A chave carrega o estado de busca de propósito: o
-                    // DiaBloco guarda "aberto" em estado próprio, e sem
-                    // remontar ele ignoraria a mudança. Um resultado escondido
-                    // dentro de um dia fechado é uma busca que respondeu e não
-                    // mostrou.
-                    //
-                    // E carrega `continuacao` porque um dia partido entre as
-                    // colunas rende DOIS blocos com o mesmo `dia` — sem isso,
-                    // duas chaves iguais na mesma lista.
-                    key={`${bloco.dia ?? 'sem-data'}-${continuacao ? 'cont' : 'ini'}-${buscando}`}
+                    // A chave carrega o estado de busca E o modo de propósito:
+                    // o DiaBloco guarda "aberto" em estado próprio, e sem
+                    // remontar ele ignoraria a mudança dos dois. Um resultado
+                    // escondido dentro de um dia fechado é uma busca que
+                    // respondeu e não mostrou; e ligar o modo TV precisa
+                    // reaplicar quem abre e quem fecha.
+                    key={`${bloco.dia ?? 'sem-data'}-${buscando}-${emDuasColunas}`}
                     bloco={bloco}
                     hoje={hoje}
                     etapasPorCaso={etapasPorCaso}
-                    // Numa TV ninguém abre nada: tudo que está na tela precisa
-                    // já estar aberto. Fora dela, os dois primeiros dias, como
-                    // antes.
-                    abertoInicialmente={
-                      buscando || emDuasColunas || indiceDoDia(bloco.dia) < 2
-                    }
+                    abertoInicialmente={abrePorPadrao(bloco)}
                     compacto={emDuasColunas}
-                    continuacao={continuacao}
                   />
                 ))}
               </div>

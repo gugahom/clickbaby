@@ -163,115 +163,37 @@ function diaSeguinte(dia: string): string {
 }
 
 /**
- * Um dia — ou o pedaço dele — dentro de uma das colunas do modo TV.
+ * As duas colunas do modo TV: o ATRASO de um lado, o TURNO do outro.
  *
- * `continuacao` diz que este pedaço é o RESTO de um dia que começou na coluna
- * anterior. O cabeçalho usa isso para se anunciar como continuação em vez de
- * repetir o dia como se fosse outro, que é o que faria alguém contar o mesmo
- * dia duas vezes.
- */
-export interface BlocoNaColuna {
-  bloco: BlocoDia
-  continuacao: boolean
-}
-
-/**
- * Quanto vale um cabeçalho de dia em "cartões".
+ * A divisão é por DATA, e não por equilíbrio de altura. As duas versões
+ * anteriores tentaram equilibrar — primeiro cortando entre dias, depois
+ * deixando um dia partir no meio para as colunas ficarem do mesmo tamanho — e
+ * as duas erraram o alvo. O gestor foi direto: "ontem não deve transferir o
+ * restante pra outra coluna, deve se limitar a sua".
  *
- * Medido na tela: cartão compacto ~137px, cabeçalho de dia ~64px mais o
- * respiro. Meio cartão erra por pouco e evita o erro grosseiro de tratar o
- * cabeçalho como se não ocupasse nada — com três dias curtos numa coluna, isso
- * daria quase dois cartões de diferença.
- */
-const PESO_CABECALHO = 0.5
-
-/**
- * Reparte os dias em DUAS colunas, mantendo a ordem cronológica.
+ * Ele tem razão, e a razão é que as colunas não são duas metades de uma lista:
+ * são DUAS PERGUNTAS. À esquerda, o que ficou para trás e ainda cobra
+ * alguém — ontem em cima da mesa, e os dias mais antigos fechados atrás dele.
+ * À direita, o turno: hoje aberto e amanhã fechado embaixo. Quem entra na sala
+ * olha uma coluna para saber o que atrasou e a outra para saber o que vem.
  *
- * A ORDEM É SEQUENCIAL, e essa é a decisão que importa: a coluna da esquerda
- * fica com o começo e a da direita com o fim, nunca intercalado. Quem olha de
- * longe lê uma coluna inteira e depois a outra — é a leitura de jornal, e a
- * ordem do tempo tem que sobreviver a ela. Distribuir "o próximo dia vai para
- * a coluna mais vazia" equilibraria melhor e produziria ontem e anteontem à
- * esquerda com hoje no meio da direita.
+ * Equilíbrio de altura era a métrica errada porque otimizava a aparência da
+ * tela em vez do que a tela responde. E o preço já tinha aparecido: um dia
+ * partido no meio precisava se anunciar duas vezes.
  *
- * UM DIA PODE PARTIR ENTRE AS COLUNAS, e essa é a mudança de 01/09/2026. A
- * primeira versão só cortava ENTRE dias, e com três dias na tela — ontem com
- * cinco casos, hoje com oito, amanhã com três — os únicos cortes possíveis
- * eram 5|11 e 13|3. O escolhido, 5|11, deixava a coluna esquerda terminando na
- * metade da tela com novecentos pixels de vão enquanto a direita rolava duas
- * telas. Isto é literalmente a queixa que abriu o assunto: espaço
- * desperdiçado numa TV.
+ * Dia SEM DATA vai para a direita, no fim. Ele não é passado — é ausência de
+ * dado, e classificá-lo como atraso seria inventar uma resposta que o dado
+ * não dá.
  *
- * Partir o dia não custa legibilidade porque a ordem se mantém: a esquerda
- * termina no meio de hoje e a direita retoma exatamente dali, anunciada como
- * continuação. É como uma matéria que vira de coluna.
- *
- * O QUE NÃO PARTE: um dia nunca deixa o cabeçalho sozinho no pé de uma coluna.
- * O corte só acontece DEPOIS do primeiro caso do dia — cabeçalho órfão anuncia
- * um dia que não está ali.
- *
- * As contagens do bloco (`total`, `resolvidos`, `fechado`) viajam INTEIRAS
- * para os dois pedaços de propósito: elas descrevem o dia, não o pedaço. Um
- * "0 de 3 concluídos" no pedaço da direita seria a resposta a uma pergunta que
- * ninguém fez.
+ * Qualquer um dos lados pode vir vazio (um dia sem atraso nenhum, ou uma tela
+ * só com dias velhos). Quem chama decide o que fazer com isso — aqui não cabe
+ * decidir por ele.
  */
 export function dividirEmDuasColunas(
   blocos: BlocoDia[],
-): [BlocoNaColuna[], BlocoNaColuna[]] {
-  if (blocos.length === 0) return [[], []]
-
-  const total = blocos.reduce(
-    (soma, b) => soma + PESO_CABECALHO + b.casos.length,
-    0,
-  )
-  const meta = total / 2
-
-  const esquerda: BlocoNaColuna[] = []
-  const direita: BlocoNaColuna[] = []
-  let acumulado = 0
-  // Uma vez que a esquerda fechou, tudo o que vem depois é da direita — sem
-  // isto, um dia pequeno depois do corte poderia "caber" e voltar para a
-  // esquerda, quebrando a ordem de leitura.
-  let fechouEsquerda = false
-
-  for (const bloco of blocos) {
-    if (fechouEsquerda) {
-      direita.push({ bloco, continuacao: false })
-      continue
-    }
-
-    acumulado += PESO_CABECALHO
-
-    // Quantos casos deste dia ainda cabem na esquerda antes de passar da
-    // metade. `ceil` porque atravessar a metade no meio de um cartão é melhor
-    // que parar antes dela: o cartão que sobra vai para a coluna que ainda
-    // tem espaço de qualquer jeito.
-    const cabem = Math.max(0, Math.ceil(meta - acumulado))
-
-    if (cabem >= bloco.casos.length) {
-      esquerda.push({ bloco, continuacao: false })
-      acumulado += bloco.casos.length
-      continue
-    }
-
-    // O dia não cabe inteiro. Se nem um caso dele cabe, ele começa na direita
-    // — melhor que um cabeçalho sozinho no pé da esquerda.
-    if (cabem === 0) {
-      direita.push({ bloco, continuacao: false })
-      fechouEsquerda = true
-      continue
-    }
-
-    esquerda.push({ bloco: comCasos(bloco, bloco.casos.slice(0, cabem)), continuacao: false })
-    direita.push({ bloco: comCasos(bloco, bloco.casos.slice(cabem)), continuacao: true })
-    fechouEsquerda = true
-  }
-
-  return [esquerda, direita]
-}
-
-/** O mesmo dia com outra fatia de casos. Contagens intactas — ver acima. */
-function comCasos(bloco: BlocoDia, casos: CasoQuadro[]): BlocoDia {
-  return { ...bloco, casos }
+  hoje: string,
+): [BlocoDia[], BlocoDia[]] {
+  const atrasados = blocos.filter((b) => b.dia !== null && b.dia < hoje)
+  const doTurno = blocos.filter((b) => b.dia === null || b.dia >= hoje)
+  return [atrasados, doTurno]
 }
