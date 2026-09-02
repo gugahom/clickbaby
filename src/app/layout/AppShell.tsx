@@ -1,5 +1,6 @@
-import { Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import clsx from 'clsx'
+import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -43,6 +44,9 @@ export function AppShell() {
   const { pessoa, sair } = useAuth()
   const ehGestao = pessoa?.papelSistema === 'gestao'
   const telaLarga = useTelaLarga()
+  // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
+  // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
+  const noQuadro = useLocation().pathname === '/'
   const [modoTv, alternarModoTv] = useModoTv()
 
   return (
@@ -125,16 +129,24 @@ export function AppShell() {
           navegação, o interruptor, ou os dois. Para quem opera num celular,
           ela continua não existindo.
         */}
-        {(ehGestao || telaLarga) && (
+        {(ehGestao || (telaLarga && noQuadro)) && (
           <div className="flex items-center gap-1 border-t border-white/10 px-3 pb-2 md:px-5">
             {ehGestao && (
               <nav aria-label="Administração" className="flex gap-1">
-                <span
-                  aria-current="page"
-                  className="mt-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-marca-forte"
-                >
+                {/*
+                  "Painel" deixou de ser um rótulo e virou destino de verdade
+                  (02/09/2026). Ele passou semanas como um <span> pintado de
+                  aba ativa porque não havia segunda tela para ir — e a dívida
+                  #1 do CLAUDE.md descrevia exatamente isso. Com a Equipe, a
+                  barra passa a fazer o que aparentava fazer.
+
+                  `end` no Painel: sem isso o "/" casa com toda rota filha e as
+                  duas abas acendem juntas em /equipe.
+                */}
+                <ItemDeNavegacao para="/" fim>
                   Painel
-                </span>
+                </ItemDeNavegacao>
+                <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>
               </nav>
             )}
 
@@ -147,7 +159,7 @@ export function AppShell() {
               ao apertar. Se está ligado, dizem o `aria-pressed`, o
               preenchimento, e a tela inteira em duas colunas.
             */}
-            {telaLarga && (
+            {telaLarga && noQuadro && (
               <button
                 type="button"
                 onClick={alternarModoTv}
@@ -179,5 +191,32 @@ export function AppShell() {
         <Outlet />
       </main>
     </div>
+  )
+}
+
+function ItemDeNavegacao({
+  para,
+  fim = false,
+  children,
+}: {
+  para: string
+  fim?: boolean
+  children: ReactNode
+}) {
+  return (
+    <NavLink
+      to={para}
+      end={fim}
+      className={({ isActive }) =>
+        clsx(
+          'mt-2 rounded-full px-4 py-1.5 text-sm font-bold transition-colors',
+          isActive
+            ? 'bg-white text-marca-forte'
+            : 'text-white/70 hover:bg-white/10 hover:text-white',
+        )
+      }
+    >
+      {children}
+    </NavLink>
   )
 }

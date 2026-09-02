@@ -628,15 +628,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+- **Modo TV** (02/09/2026): botão na barra da gestão que reparte o Quadro em duas
+  colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
+  compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
+  `localStorage` do aparelho.
+- **Equipe** (`/quadro/equipe`), só para `gestao`. Leitura: cadastro, quem tem acesso,
+  trabalho em mãos e concluído em 30 dias.
+- **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11
+  `operador` — as fotógrafas e o ADM. O ADM entra como operador **por ora**, a pedido do
+  gestor; quando ganhar poderes próprios, muda `papel_sistema`, não o modelo.
 
 ### Dívidas abertas, em ordem de dor
 
-1. **Painel de Gestão não existe.** O router tem UMA rota (o Quadro); o item "Painel" no
-   cabeçalho da gestão é rótulo, não destino. É o que destrava (a) cadastrar as 12
-   fotógrafas e 3 vendedores sem tocar no banco — hoje só 3 pessoas existem —, e (b)
-   exibir produtividade. O dado de produtividade JÁ está sendo gravado em `eventos` desde
-   o primeiro dia; falta a tela. Criar conta de auth exige Edge Function (a service_role
-   key não pode ir ao front).
+1. **Cadastro de pessoa ainda não tem tela.** A tela de **Equipe** existe desde
+   02/09/2026 (`/quadro/equipe`, atrás de `RotaDeGestao`) e é de LEITURA: quem existe,
+   quem tem acesso, quantas etapas cada uma tem em mãos e concluiu em 30 dias. O que ela
+   ainda não faz é CRIAR conta — isso exige a `service_role`, que não pode ir ao front,
+   e portanto uma Edge Function. As 14 pessoas atuais foram criadas por script pontual.
+   Falta também o **e-mail de login na tela**: ele vive em `auth.users`, fora do alcance
+   do cliente; exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT
+   e teste próprios. E falta a tela de **produtividade** — o dado está em `eventos` desde
+   o primeiro dia, a Equipe só mostra a agregação simples de `caso_etapas`.
 2. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
    de adm. Quando ganharem RPC, revogar o privilégio de coluna — não basta parar de usar.
 3. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida

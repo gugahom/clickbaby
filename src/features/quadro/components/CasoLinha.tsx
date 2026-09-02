@@ -7,7 +7,7 @@ import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
-import { podeCancelar } from '../lib/acoes'
+import { podeCancelar, podeEditarCadastro } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
 import { useCancelarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
@@ -18,7 +18,7 @@ import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeCaneta, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
-import { Dropdown } from '@/components/ui/Dropdown'
+import { Dropdown, type ItemDropdown } from '@/components/ui/Dropdown'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
 const CorDoAlerta: Record<NivelAlerta, string> = {
@@ -84,6 +84,7 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
    */
   const papel = pessoa?.papelSistema ?? 'operador'
   const descarte = podeCancelar(caso, papel)
+  const editaCadastro = podeEditarCadastro(papel)
 
   // Todas as etapas feitas e o caso ainda aberto: é o único estado em que o
   // caso está esperando por uma PESSOA, não por trabalho. Por isso ganha peso
@@ -92,6 +93,42 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
     !caso.ehTerminal &&
     caso.etapasTotal > 0 &&
     caso.etapasConcluidas === caso.etapasTotal
+
+  const itensDoMenu: ItemDropdown[] = [
+    // Ausente, e não desabilitado: para quem opera em campo, editar o cadastro
+    // não é uma ação que "ainda não dá" — é uma ação que não é dela. Um item
+    // permanentemente cinza no menu de todo cartão seria ruído em todos eles.
+    ...(editaCadastro
+      ? [
+          {
+            id: 'editar',
+            rotulo: caso.ehRascunho ? 'Completar cadastro' : 'Editar cadastro',
+            icone: <IconeCaneta className="size-4" />,
+          },
+        ]
+      : []),
+    ...(onReabrir && caso.statusOperacional === 'encerrado'
+      ? [
+          {
+            id: 'reabrir',
+            rotulo: 'Reabrir para alteração',
+            icone: <IconeReabrir className="size-4" />,
+          },
+        ]
+      : []),
+    ...(caso.ehRascunho && !caso.ehTerminal
+      ? [
+          {
+            id: 'descartar',
+            rotulo: 'Descartar rascunho',
+            icone: <IconeX className="size-4" />,
+            destrutivo: true,
+            desabilitado: !descarte.habilitada,
+            ...(descarte.motivo ? { motivo: descarte.motivo } : {}),
+          },
+        ]
+      : []),
+  ]
 
   return (
     <div
@@ -404,60 +441,39 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         O TOM DE PENDÊNCIA no rascunho fica: ali o menu é o gesto que tira o
         caso do limbo, e precisa se distinguir do botão quieto dos demais.
       */}
-      <div className="absolute top-0.5 right-8">
-        <Dropdown
-          alinhamento="direita"
-          rotulo={`Ações de ${titulo}`}
-          onEscolher={(item) => {
-            if (item.id === 'editar') setEditando(true)
-            if (item.id === 'reabrir') onReabrir?.(caso)
-            if (item.id === 'descartar') {
-              setErroDescarte(null)
-              setDescartando(true)
+      {/* Sem item nenhum, sem menu. Para um operador num caso normal as três
+          ações somem — editar é de adm, reabrir só na aba Concluídos,
+          descartar só em rascunho — e um "⋯" que abre uma caixa vazia é pior
+          que a ausência dele. */}
+      {itensDoMenu.length > 0 && (
+        <div className="absolute top-0.5 right-8">
+          <Dropdown
+            alinhamento="direita"
+            rotulo={`Ações de ${titulo}`}
+            onEscolher={(item) => {
+              if (item.id === 'editar') setEditando(true)
+              if (item.id === 'reabrir') onReabrir?.(caso)
+              if (item.id === 'descartar') {
+                setErroDescarte(null)
+                setDescartando(true)
+              }
+            }}
+            itens={itensDoMenu}
+            gatilho={
+              <span
+                className={clsx(
+                  'inline-flex size-11 items-center justify-center rounded-full transition-colors',
+                  caso.ehRascunho
+                    ? 'border border-rascunho-borda bg-card text-rascunho'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <IconeMais className="size-4" />
+              </span>
             }
-          }}
-          itens={[
-            {
-              id: 'editar',
-              rotulo: caso.ehRascunho ? 'Completar cadastro' : 'Editar cadastro',
-              icone: <IconeCaneta className="size-4" />,
-            },
-            ...(onReabrir && caso.statusOperacional === 'encerrado'
-              ? [
-                  {
-                    id: 'reabrir',
-                    rotulo: 'Reabrir para alteração',
-                    icone: <IconeReabrir className="size-4" />,
-                  },
-                ]
-              : []),
-            ...(caso.ehRascunho && !caso.ehTerminal
-              ? [
-                  {
-                    id: 'descartar',
-                    rotulo: 'Descartar rascunho',
-                    icone: <IconeX className="size-4" />,
-                    destrutivo: true,
-                    desabilitado: !descarte.habilitada,
-                    motivo: descarte.motivo,
-                  },
-                ]
-              : []),
-          ]}
-          gatilho={
-            <span
-              className={clsx(
-                'inline-flex size-11 items-center justify-center rounded-full transition-colors',
-                caso.ehRascunho
-                  ? 'border border-rascunho-borda bg-card text-rascunho'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <IconeMais className="size-4" />
-            </span>
-          }
-        />
-      </div>
+          />
+        </div>
+      )}
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
 

@@ -17,9 +17,34 @@ import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro, type EtapaTipo } from 
  */
 const PAPEIS_ADM = ['comercial', 'coordenacao', 'financeiro', 'gestao']
 
-/** Espelha `eh_atendimento() or eh_adm()`, a guarda de confirmar_entrega e cancelar_caso. */
+/**
+ * Espelha `eh_atendimento() or eh_adm()`, a guarda de `cancelar_caso`.
+ *
+ * O NOME MENTE UM POUCO e vale explicar: encerrar um caso são DUAS portas
+ * diferentes. `confirmar_entrega` perdeu a checagem de papel na migration
+ * 20260825014102 — quem gera os links são as fotógrafas, e prender o
+ * encerramento ao atendimento fazia gargalo de um passo que ele não executa.
+ * `cancelar_caso` manteve, porque cancelar é decisão comercial sobre o
+ * contrato, não o fim natural de um trabalho. Esta função é a segunda.
+ */
 export function podeEncerrarCaso(papelSistema: string): boolean {
   return papelSistema === 'atendimento' || PAPEIS_ADM.includes(papelSistema)
+}
+
+/**
+ * Editar o cadastro do caso — mãe, bebê, pacote, maternidade.
+ *
+ * Espelha a policy `casos_update_adm`, que exige `eh_adm()`. Não é uma
+ * transição de estado (ver useEditarCaso), é dado de cadastro, e por isso vai
+ * por UPDATE direto sujeito a RLS.
+ *
+ * Precisou virar função quando as fotógrafas ganharam conta (02/09/2026): o
+ * item vivia solto no menu do cartão, sem checagem nenhuma, e um `operador`
+ * que clicasse levaria a recusa da RLS depois de preencher o formulário
+ * inteiro. Trabalho jogado fora para descobrir que a porta estava fechada.
+ */
+export function podeEditarCadastro(papelSistema: string): boolean {
+  return PAPEIS_ADM.includes(papelSistema)
 }
 
 export interface Disponibilidade {
