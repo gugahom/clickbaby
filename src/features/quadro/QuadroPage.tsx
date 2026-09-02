@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
-import { IconeMonitor } from '@/components/ui/icones'
 import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
@@ -68,7 +67,7 @@ export function QuadroPage() {
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
   const telaLarga = useTelaLarga()
-  const [modoTv, alternarModoTv] = useModoTv()
+  const [modoTv] = useModoTv()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
@@ -510,44 +509,6 @@ export function QuadroPage() {
             </BotaoAba>
           </div>
         </div>
-
-        {/*
-          O INTERRUPTOR DO MODO TV.
-
-          Só aparece onde o layout cabe (`telaLarga`, 1536px). Um botão que
-          existe e não faz nada é pior que botão nenhum: quem apertasse num
-          notebook de 1280px concluiria que a função está quebrada.
-
-          FORA DO TRILHO DAS ABAS, e de propósito. Quadro, Rascunhos e
-          Concluídos são RECORTES — trocam o que se vê. Isto troca COMO se vê,
-          e continua valendo em qualquer um dos três. Posto no mesmo trilho,
-          leria como uma quarta aba e apagaria a diferença.
-
-          O rótulo diz o destino, não o estado: "Modo TV" é o que acontece ao
-          apertar. Quem precisa saber se está ligado tem o `aria-pressed`, o
-          preenchimento e — bem mais direto — a tela inteira em duas colunas.
-        */}
-        {telaLarga && (
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={alternarModoTv}
-              aria-pressed={modoTv}
-              className={clsx(
-                'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors',
-                modoTv
-                  ? 'border-marca bg-marca text-white hover:bg-marca-forte'
-                  : 'border-border bg-card text-muted-foreground shadow-cartao hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <IconeMonitor className="size-4" />
-              Modo TV
-              <span className="text-xs font-medium opacity-70">
-                {modoTv ? 'ligado' : 'desligado'}
-              </span>
-            </button>
-          </div>
-        )}
 
         {/*
           A BUSCA É UMA SÓ, e serve a aba que estiver aberta.

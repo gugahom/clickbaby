@@ -63,6 +63,68 @@ export function DiaBloco({
   // de que dia eram.
   const ativos = bloco.casos.filter((c) => !c.ehTerminal && !c.naUti)
 
+  /*
+   * A CONTINUAÇÃO NÃO REPETE O CABEÇALHO DO DIA.
+   *
+   * Quando um dia grande parte entre as duas colunas do modo TV, a versão
+   * anterior desenhava o mesmo cabeçalho nos dois pedaços: dois "Hoje 01/09"
+   * do mesmo tamanho, cada um com seu diafragma e seu "0 de 8 concluídos",
+   * lado a lado na mesma tela. Lia como se houvesse dois dias iguais, e o
+   * gestor viu isso na primeira olhada — "ficou bom mas feio com 2 Hoje".
+   *
+   * A tira de continuação é deliberadamente MENOR e mais apagada que um
+   * cabeçalho de dia: ela não anuncia um dia, ela costura o que já estava
+   * anunciado do outro lado. Sem diafragma e sem contagem, que são a resposta
+   * do DIA inteiro e já foram dadas na coluna da esquerda — repeti-las aqui
+   * faria alguém somar duas vezes.
+   */
+  if (continuacao) {
+    return (
+      <section>
+        <h2>
+          <button
+            type="button"
+            id={idCabecalho}
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            aria-controls={idPainel}
+            className="flex w-full items-center gap-2 rounded-painel px-3 py-1.5 text-left text-muted-foreground transition-colors hover:bg-muted/60 md:px-4"
+          >
+            {/* A seta de retorno é o sinal mais curto possível de "vem da
+                coluna anterior" — e não precisa de tradução nem de leitura. */}
+            <span aria-hidden="true" className="text-base leading-none">
+              ↳
+            </span>
+            <span className="rotulo-sobrescrito">{rotulo}</span>
+            {data && (
+              <span className="text-xs font-semibold tabular-nums">{data}</span>
+            )}
+            <span className="rotulo-sobrescrito opacity-70">continua</span>
+            <Chevron
+              className={clsx(
+                'ml-auto size-4 flex-shrink-0 transition-transform',
+                aberto && 'rotate-180',
+              )}
+            />
+          </button>
+        </h2>
+
+        <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
+          <div className="mt-1.5 space-y-2">
+            {ativos.map((caso) => (
+              <CasoLinha
+                key={caso.id}
+                caso={caso}
+                etapas={etapasPorCaso.get(caso.id) ?? []}
+                compacto={compacto}
+              />
+            ))}
+          </div>
+        </Sanfona>
+      </section>
+    )
+  }
+
   return (
     <section>
       <h2>
@@ -148,13 +210,6 @@ export function DiaBloco({
               {emAtraso && (
                 <span className="rounded-full bg-atrasado px-2 py-0.5 text-[11px] font-semibold text-white">
                   {atraso === 1 ? 'há 1 dia' : `há ${atraso} dias`}
-                </span>
-              )}
-              {/* Discreta de propósito: ela desmente uma leitura errada
-                  ("começou outro dia igual"), não anuncia nada novo. */}
-              {continuacao && (
-                <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                  continuação
                 </span>
               )}
             </div>

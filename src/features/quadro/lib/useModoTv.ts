@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 /**
  * O Quadro tem DUAS apresentações, e quem escolhe é a pessoa.
@@ -23,21 +23,39 @@ import { useCallback, useState } from 'react'
  * exibição é preferência de UI daquele APARELHO, não dado de domínio. A TV
  * quer o modo TV; o celular da mesma pessoa, não. Guardar isso no banco por
  * pessoa daria a resposta errada nos dois.
+ *
+ * POR QUE UMA LOJA DE MÓDULO E NÃO `useState`
+ * O interruptor mora na faixa da marca (AppShell) e o layout que ele comanda
+ * mora no Quadro — dois componentes que não se conhecem e não têm ancestral
+ * comum além da rota. Com `useState` em cada um, apertar o botão mudaria a
+ * cópia dele e o Quadro continuaria como estava. Um Context resolveria e
+ * custaria um provedor para guardar um booleano; `useSyncExternalStore` sobre
+ * uma variável de módulo é a mesma coisa sem a cerimônia — e é o mesmo
+ * primitivo que `useTelaLarga` já usa para o matchMedia.
  */
 const CHAVE = 'clickbaby:modo-tv'
 
+let ligado = lerPreferencia()
+const ouvintes = new Set<() => void>()
+
 export function useModoTv(): readonly [boolean, () => void] {
-  const [ligado, setLigado] = useState(lerPreferencia)
+  // O terceiro argumento é o valor do servidor. Não há SSR aqui, mas ele
+  // também cobre a primeira renderização antes de qualquer inscrição.
+  const valor = useSyncExternalStore(inscrever, () => ligado, () => false)
+  return [valor, alternarModoTv] as const
+}
 
-  const alternar = useCallback(() => {
-    setLigado((atual) => {
-      const proximo = !atual
-      gravarPreferencia(proximo)
-      return proximo
-    })
-  }, [])
+export function alternarModoTv(): void {
+  ligado = !ligado
+  gravarPreferencia(ligado)
+  for (const avisar of ouvintes) avisar()
+}
 
-  return [ligado, alternar] as const
+function inscrever(aoMudar: () => void): () => void {
+  ouvintes.add(aoMudar)
+  return () => {
+    ouvintes.delete(aoMudar)
+  }
 }
 
 /**
@@ -53,9 +71,9 @@ function lerPreferencia(): boolean {
   }
 }
 
-function gravarPreferencia(ligado: boolean): void {
+function gravarPreferencia(valor: boolean): void {
   try {
-    localStorage.setItem(CHAVE, ligado ? '1' : '0')
+    localStorage.setItem(CHAVE, valor ? '1' : '0')
   } catch {
     // Aba anônima ou armazenamento bloqueado: o modo vale para esta sessão e
     // não persiste. Melhor que derrubar o clique.

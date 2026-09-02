@@ -3,9 +3,11 @@ import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { Chevron, IconeSair } from '@/components/ui/icones'
+import { Chevron, IconeMonitor, IconeSair } from '@/components/ui/icones'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
+import { useModoTv } from '@/features/quadro/lib/useModoTv'
+import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 
 const ROTULO_PAPEL: Record<string, string> = {
   operador: 'Operação',
@@ -40,6 +42,8 @@ const ROTULO_PAPEL: Record<string, string> = {
 export function AppShell() {
   const { pessoa, sair } = useAuth()
   const ehGestao = pessoa?.papelSistema === 'gestao'
+  const telaLarga = useTelaLarga()
+  const [modoTv, alternarModoTv] = useModoTv()
 
   return (
     <div className="flex h-full flex-col">
@@ -78,6 +82,53 @@ export function AppShell() {
             se procura por ele — e onde as próximas ações de conta vão caber
             sem inventar mais um canto.
           */}
+          {/*
+            O INTERRUPTOR DO MODO TV — na faixa da marca, não no corpo da
+            página.
+
+            Ele nasceu dentro do cabeçalho do Quadro e comprava uma linha
+            inteira lá, logo acima da busca: 44px permanentes numa tela cujo
+            problema declarado é altura. Aqui ele ocupa um espaço que já
+            estava vazio, ao lado do menu da conta — que é o vizinho certo,
+            porque os dois são ajustes DO APARELHO, não do que está na tela.
+
+            SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px). Um botão que existe e
+            não faz nada é pior que botão nenhum: quem apertasse num notebook
+            de 1280px concluiria que a função está quebrada.
+
+            Vale para qualquer papel, e não só para a gestão: a TV da sala fica
+            logada no que estiver à mão, e prender o interruptor a um papel
+            deixaria a tela presa no modo errado.
+
+            O rótulo diz o destino, não o estado — "Modo TV" é o que acontece
+            ao apertar. Se está ligado, dizem o `aria-pressed`, o
+            preenchimento, e a tela inteira em duas colunas.
+          */}
+          {telaLarga && (
+            <button
+              type="button"
+              onClick={alternarModoTv}
+              aria-pressed={modoTv}
+              className={clsx(
+                'ml-auto inline-flex flex-shrink-0 items-center gap-2 rounded-full py-1.5 pr-3 pl-2.5 text-sm font-semibold transition-colors',
+                modoTv
+                  ? 'bg-white text-marca-forte hover:bg-white/90'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
+              )}
+            >
+              <IconeMonitor className="size-4" />
+              Modo TV
+              <span
+                className={clsx(
+                  'text-[11px] font-medium',
+                  modoTv ? 'text-marca-forte/60' : 'text-white/55',
+                )}
+              >
+                {modoTv ? 'ligado' : 'desligado'}
+              </span>
+            </button>
+          )}
+
           {pessoa && (
             <Dropdown
               alinhamento="direita"
