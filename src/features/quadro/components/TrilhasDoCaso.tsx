@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
+import { ROTULO_FAIXA, etapaAtualDaFaixa, faixasDoCaso, type Faixa } from '../lib/faixas'
 import {
   ROTULO_ETAPA,
   ROTULO_RODADA,
@@ -26,14 +27,6 @@ interface PropsTrilhasDoCaso {
  * recusa sem explicação na tela. Por isso a faixa REELS existe aqui —
  * mostrando estado, SEM botões. Agir é na seção.
  */
-type Faixa = 'acompanhamento' | 'edicao' | 'reels'
-
-const ROTULO_FAIXA: Record<Faixa, string> = {
-  acompanhamento: 'Acompanhamento',
-  edicao: 'Edição',
-  reels: 'Reels',
-}
-
 /*
  * AS TRÊS FAIXAS NA MESMA COR.
  *
@@ -80,9 +73,7 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
 
   if (etapas.length === 0) return null
 
-  const acompanhamento = etapas.filter((e) => e.trilha === 'acompanhamento')
-  const reels = etapas.filter((e) => e.tipo === 'reels')
-  const edicao = etapas.filter((e) => e.trilha === 'edicao' && e.tipo !== 'reels')
+  const [acompanhamento, edicao, reels] = faixasDoCaso(etapas)
 
   /*
    * GRID no desktop, para as três faixas alinharem SOZINHAS.
@@ -102,12 +93,12 @@ export function TrilhasDoCaso({ etapas }: PropsTrilhasDoCaso) {
    */
   return (
     <div className="mt-3 space-y-2.5 sm:grid sm:grid-cols-[max-content_1fr] sm:gap-x-4 sm:gap-y-2.5 sm:space-y-0">
-      <Trilha faixa="acompanhamento" etapas={acompanhamento} agora={agora} />
-      <Trilha faixa="edicao" etapas={edicao} agora={agora} />
+      <Trilha faixa="acompanhamento" etapas={acompanhamento.etapas} agora={agora} />
+      <Trilha faixa="edicao" etapas={edicao.etapas} agora={agora} />
       {/* `soMarcador`: a faixa de reels informa, não convida. As duas outras
           nomeiam a etapa porque é ali que se age; aqui a ação está na seção,
           e repetir os nomes gastaria a linha sem oferecer nada. */}
-      <Trilha faixa="reels" etapas={reels} soMarcador agora={agora} />
+      <Trilha faixa="reels" etapas={reels.etapas} soMarcador agora={agora} />
     </div>
   )
 }
@@ -365,4 +356,95 @@ function Marcador({ status }: { status: StatusEtapa }) {
   }
 
   return <span className={clsx(comum, 'bg-current')} aria-hidden="true" />
+}
+
+/**
+ * O CARTÃO COMPACTO — uma linha por faixa, só o estado atual.
+ *
+ * Existe para o modo TV e para nada mais. O cartão inteiro mede 266px, dos
+ * quais 148px são a fita das três faixas com todas as etapas; num dia de treze
+ * casos isso dá quase três telas de rolagem numa tela que está pendurada na
+ * parede e que ninguém vai rolar. O pedido do gestor foi literal: "o principal
+ * é ter todos os cards à vista".
+ *
+ * O QUE SE PERDE, E POR QUE PODE SE PERDER. A fita completa mostra as sete ou
+ * oito etapas do caso; aqui aparece UMA por faixa. De longe, ler oito pílulas
+ * por cartão não acontece de qualquer forma — o olho procura "o que está
+ * rolando agora", e é exatamente essa a única etapa que sobra. O resto não
+ * sumiu: abrir o cartão devolve a fita inteira e o detalhe.
+ *
+ * O CONTADOR FICA. Ele é o que diz que existe mais coisa além da etapa
+ * mostrada — sem ele, uma faixa com "Nascimento" pareceria ter uma etapa só, e
+ * o resumo mentiria por omissão.
+ *
+ * O NOME DE QUEM ESTÁ NELA FICA. Numa sala com a TV ligada, "quem está nisso"
+ * é metade da pergunta; o relógio correndo, não — ele exige leitura de
+ * precisão que essa distância não permite, e vive no cartão aberto.
+ */
+export function ResumoDasTrilhas({ etapas }: PropsTrilhasDoCaso) {
+  if (etapas.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {faixasDoCaso(etapas).map(({ faixa, etapas: daFaixa }) =>
+        daFaixa.length === 0 ? null : (
+          <ResumoDaFaixa key={faixa} faixa={faixa} etapas={daFaixa} />
+        ),
+      )}
+    </div>
+  )
+}
+
+function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] }) {
+  const atual = etapaAtualDaFaixa(etapas)
+  const feitas = etapas.filter((e) => e.status === 'concluida').length
+  const pessoas = atual ? nomesDaEtapa(atual) : null
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      {/* O rótulo da faixa é calha, não dado: diz ONDE o estado ao lado
+          acontece, e some do olho assim que a pessoa aprende a ordem — que é
+          sempre a mesma.
+
+          MESMO CORPO do rótulo da fita completa (11px), e não menor. A altura
+          do cartão compacto vem de mostrar MENOS coisa, não de mostrar a
+          mesma coisa em corpo menor: esta tela é lida a metros de distância, e
+          encolher tipografia aqui desfaria justamente o motivo de o modo TV
+          existir. */}
+      <span className={clsx('rotulo-sobrescrito', COR_FAIXA)}>
+        {ROTULO_FAIXA[faixa]}
+      </span>
+
+      {atual ? (
+        <span
+          className={clsx(
+            'inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-sm',
+            CLASSE_PILULA[atual.status],
+          )}
+        >
+          <Marcador status={atual.status} />
+          <span className="truncate font-semibold">
+            {faixa === 'reels' ? ROTULO_RODADA[atual.rodada] : ROTULO_ETAPA[atual.tipo]}
+          </span>
+          {pessoas && (
+            <span className="max-w-[7rem] truncate rounded-full bg-current/12 px-1.5 text-xs font-semibold">
+              {pessoas}
+            </span>
+          )}
+        </span>
+      ) : (
+        // Faixa inteira resolvida. Não é uma etapa, é a ausência delas — por
+        // isso texto e não pílula de etapa: a forma diferente evita que
+        // alguém procure no card uma etapa chamada "tudo feito".
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-concluido/25 bg-concluido/10 px-2 py-0.5 text-sm font-semibold text-concluido-tinta">
+          <Marcador status="concluida" />
+          feito
+        </span>
+      )}
+
+      <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+        {feitas}/{etapas.length}
+      </span>
+    </span>
+  )
 }

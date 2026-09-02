@@ -12,6 +12,15 @@ interface PropsDiaBloco {
   hoje: string
   etapasPorCaso: Map<string, EtapaQuadro[]>
   abertoInicialmente: boolean
+  /** Modo TV: os cartões do dia vêm compactos. Ver `ResumoDasTrilhas`. */
+  compacto?: boolean
+  /**
+   * Este bloco é o RESTO de um dia que começou na coluna anterior — só
+   * acontece no modo TV, quando um dia grande parte entre as duas colunas
+   * (ver `dividirEmDuasColunas`). O cabeçalho se anuncia como continuação
+   * para ninguém contar o mesmo dia duas vezes.
+   */
+  continuacao?: boolean
 }
 
 /**
@@ -32,6 +41,8 @@ export function DiaBloco({
   hoje,
   etapasPorCaso,
   abertoInicialmente,
+  compacto = false,
+  continuacao = false,
 }: PropsDiaBloco) {
   const [aberto, setAberto] = useState(abertoInicialmente)
   const idPainel = useId()
@@ -139,6 +150,13 @@ export function DiaBloco({
                   {atraso === 1 ? 'há 1 dia' : `há ${atraso} dias`}
                 </span>
               )}
+              {/* Discreta de propósito: ela desmente uma leitura errada
+                  ("começou outro dia igual"), não anuncia nada novo. */}
+              {continuacao && (
+                <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  continuação
+                </span>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {/*
@@ -168,6 +186,7 @@ export function DiaBloco({
               key={caso.id}
               caso={caso}
               etapas={etapasPorCaso.get(caso.id) ?? []}
+              compacto={compacto}
             />
           ))}
         </div>

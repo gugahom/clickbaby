@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
+import { IconeMonitor } from '@/components/ui/icones'
 import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
@@ -12,8 +13,8 @@ import {
   agruparPorDia,
   blocosAbertos,
   dividirEmDuasColunas,
-  mereceDuasColunas,
   semFuturo,
+  type BlocoNaColuna,
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
@@ -27,6 +28,7 @@ import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
 import { useTelaLarga } from './lib/useTelaLarga'
+import { useModoTv } from './lib/useModoTv'
 import { DiaBloco } from './components/DiaBloco'
 import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
@@ -66,6 +68,7 @@ export function QuadroPage() {
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
   const telaLarga = useTelaLarga()
+  const [modoTv, alternarModoTv] = useModoTv()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
@@ -136,14 +139,32 @@ export function QuadroPage() {
   const mostrados = blocos.slice(0, diasVisiveis)
   const restantes = blocos.length - mostrados.length
 
-  // A decisão de duas colunas junta as duas perguntas: a tela COMPORTA (largura
-  // de TV / monitor grande) e o dia PEDE (mais cartão do que cabe numa coluna).
-  const emDuasColunas = telaLarga && mereceDuasColunas(mostrados)
-  const colunasDeDias = emDuasColunas ? dividirEmDuasColunas(mostrados) : [mostrados]
+  /*
+   * O MODO TV É ESCOLHIDO, NÃO ADIVINHADO (01/09/2026, a pedido do gestor).
+   *
+   * A versão anterior ligava as duas colunas sozinha a partir de sete cartões.
+   * O gestor pediu o contrário: "ficariam as 2 opções, a lista normal como
+   * temos, e essa opção de dividir o espaço entre 2 dias". Ele tem razão — a
+   * escolha não depende de quantos casos existem hoje, depende de quem está
+   * olhando. Ver `useModoTv`.
+   *
+   * `telaLarga` continua no E porque o layout precisa de largura de verdade:
+   * duas colunas de 300px não cabem um cartão. O botão só aparece onde ele
+   * funciona (ver o cabeçalho), então esta condição não deveria falhar sozinha
+   * — ela existe para a janela que ENCOLHE depois de o modo estar ligado.
+   */
+  const emDuasColunas = telaLarga && modoTv
+  // Fora do modo TV é uma coluna só, mas com a mesma forma — assim o JSX
+  // abaixo tem um caminho, não dois.
+  const colunasDeDias: BlocoNaColuna[][] = emDuasColunas
+    ? dividirEmDuasColunas(mostrados)
+    : [mostrados.map((bloco) => ({ bloco, continuacao: false }))]
 
-  /** Posição do bloco na ordem original — as colunas embaralham o índice do
-   *  `map`, e `abertoInicialmente` fala da ordem cronológica, não da coluna. */
-  const indiceDoBloco = (bloco: (typeof mostrados)[number]) => mostrados.indexOf(bloco)
+  /** Posição do dia na ordem cronológica — as colunas embaralham o índice do
+   *  `map`, e `abertoInicialmente` fala da ordem do tempo, não da coluna.
+   *  Compara por `dia` e não por identidade: um dia partido entre as colunas
+   *  vira dois objetos, e só um deles seria o mesmo de `mostrados`. */
+  const indiceDoDia = (dia: string | null) => mostrados.findIndex((b) => b.dia === dia)
 
   const listaPorDia = (
     <>
@@ -174,9 +195,12 @@ export function QuadroPage() {
             usa perto de 40% da largura e o resto é vão. Em duas colunas o
             conteúdo continua do mesmo tamanho e a capacidade vertical dobra.
 
-            VOLTA AO NORMAL SOZINHA quando o movimento cai — ver
-            `mereceDuasColunas`. Dois cartões espalhados em duas meias telas
-            leem como tela quebrada, não como tela organizada.
+            LIGA POR BOTÃO, não sozinha — ver `useModoTv` e o cabeçalho. E
+            junto com as colunas vem o cartão compacto (`ResumoDasTrilhas`):
+            só as colunas cortam o conteúdo de ~3600px para ~2200px, o que
+            ainda é o triplo dos 784px que a lista tem de altura útil em
+            1080p. Metade da altura do cartão era a fita das etapas; é dela
+            que sai o resto.
           */}
           <div
             className={clsx(
@@ -189,14 +213,18 @@ export function QuadroPage() {
           >
             {colunasDeDias.map((coluna, indiceColuna) => (
               <div key={indiceColuna} className="space-y-5">
-                {coluna.map((bloco) => (
+                {coluna.map(({ bloco, continuacao }) => (
                   <DiaBloco
                     // A chave carrega o estado de busca de propósito: o
                     // DiaBloco guarda "aberto" em estado próprio, e sem
                     // remontar ele ignoraria a mudança. Um resultado escondido
                     // dentro de um dia fechado é uma busca que respondeu e não
                     // mostrou.
-                    key={`${bloco.dia ?? 'sem-data'}-${buscando}`}
+                    //
+                    // E carrega `continuacao` porque um dia partido entre as
+                    // colunas rende DOIS blocos com o mesmo `dia` — sem isso,
+                    // duas chaves iguais na mesma lista.
+                    key={`${bloco.dia ?? 'sem-data'}-${continuacao ? 'cont' : 'ini'}-${buscando}`}
                     bloco={bloco}
                     hoje={hoje}
                     etapasPorCaso={etapasPorCaso}
@@ -204,8 +232,10 @@ export function QuadroPage() {
                     // já estar aberto. Fora dela, os dois primeiros dias, como
                     // antes.
                     abertoInicialmente={
-                      buscando || emDuasColunas || indiceDoBloco(bloco) < 2
+                      buscando || emDuasColunas || indiceDoDia(bloco.dia) < 2
                     }
+                    compacto={emDuasColunas}
+                    continuacao={continuacao}
                   />
                 ))}
               </div>
@@ -480,6 +510,44 @@ export function QuadroPage() {
             </BotaoAba>
           </div>
         </div>
+
+        {/*
+          O INTERRUPTOR DO MODO TV.
+
+          Só aparece onde o layout cabe (`telaLarga`, 1536px). Um botão que
+          existe e não faz nada é pior que botão nenhum: quem apertasse num
+          notebook de 1280px concluiria que a função está quebrada.
+
+          FORA DO TRILHO DAS ABAS, e de propósito. Quadro, Rascunhos e
+          Concluídos são RECORTES — trocam o que se vê. Isto troca COMO se vê,
+          e continua valendo em qualquer um dos três. Posto no mesmo trilho,
+          leria como uma quarta aba e apagaria a diferença.
+
+          O rótulo diz o destino, não o estado: "Modo TV" é o que acontece ao
+          apertar. Quem precisa saber se está ligado tem o `aria-pressed`, o
+          preenchimento e — bem mais direto — a tela inteira em duas colunas.
+        */}
+        {telaLarga && (
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={alternarModoTv}
+              aria-pressed={modoTv}
+              className={clsx(
+                'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors',
+                modoTv
+                  ? 'border-marca bg-marca text-white hover:bg-marca-forte'
+                  : 'border-border bg-card text-muted-foreground shadow-cartao hover:bg-muted hover:text-foreground',
+              )}
+            >
+              <IconeMonitor className="size-4" />
+              Modo TV
+              <span className="text-xs font-medium opacity-70">
+                {modoTv ? 'ligado' : 'desligado'}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/*
           A BUSCA É UMA SÓ, e serve a aba que estiver aberta.

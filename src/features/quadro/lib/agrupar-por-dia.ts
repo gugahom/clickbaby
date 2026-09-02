@@ -163,76 +163,115 @@ function diaSeguinte(dia: string): string {
 }
 
 /**
- * Quantos cartões cabem numa coluna só antes de o Quadro precisar rolar.
+ * Um dia — ou o pedaço dele — dentro de uma das colunas do modo TV.
  *
- * A conta vem da TV de 70" que o gestor quer deixar ligada na sala: a área da
- * lista fica perto de 750px de altura útil, um cartão mede ~120px e o
- * cabeçalho de cada dia ~60px. Dá seis cartões, e o sétimo já obriga alguém a
- * rolar uma tela que ninguém vai tocar — ela está na parede.
- *
- * É um número de CALIBRAGEM, não uma regra do domínio: se a TV mudar ou o
- * cartão encolher, muda aqui e em nenhum outro lugar.
+ * `continuacao` diz que este pedaço é o RESTO de um dia que começou na coluna
+ * anterior. O cabeçalho usa isso para se anunciar como continuação em vez de
+ * repetir o dia como se fosse outro, que é o que faria alguém contar o mesmo
+ * dia duas vezes.
  */
-export const CARTOES_ATE_UMA_COLUNA = 6
+export interface BlocoNaColuna {
+  bloco: BlocoDia
+  continuacao: boolean
+}
 
 /**
- * Os dias visíveis merecem duas colunas?
+ * Quanto vale um cabeçalho de dia em "cartões".
  *
- * Duas condições, e as duas importam. Precisa de mais de um DIA (não dá para
- * dividir um bloco só) e de cartão o bastante para justificar — o gestor pediu
- * explicitamente que a tela volte ao "normal" quando o movimento estiver
- * baixo, e ele tem razão: dois cartões espalhados em duas colunas de meia tela
- * leem como uma tela quebrada, não como uma tela organizada.
+ * Medido na tela: cartão compacto ~137px, cabeçalho de dia ~64px mais o
+ * respiro. Meio cartão erra por pouco e evita o erro grosseiro de tratar o
+ * cabeçalho como se não ocupasse nada — com três dias curtos numa coluna, isso
+ * daria quase dois cartões de diferença.
  */
-export function mereceDuasColunas(blocos: BlocoDia[]): boolean {
-  if (blocos.length < 2) return false
-  const cartoes = blocos.reduce((soma, b) => soma + b.casos.length, 0)
-  return cartoes > CARTOES_ATE_UMA_COLUNA
-}
+const PESO_CABECALHO = 0.5
 
 /**
  * Reparte os dias em DUAS colunas, mantendo a ordem cronológica.
  *
- * O CORTE É SEQUENCIAL, e essa é a decisão que importa: a coluna da esquerda
- * fica com os primeiros dias e a da direita com os últimos, nunca intercalado.
- * Distribuir "o próximo dia vai para a coluna mais vazia" equilibraria melhor
- * a altura e produziria uma tela ilegível — ontem e anteontem à esquerda, hoje
- * no meio da direita. Quem olha de longe lê uma coluna inteira e depois a
- * outra; a ordem do tempo tem que sobreviver a isso.
+ * A ORDEM É SEQUENCIAL, e essa é a decisão que importa: a coluna da esquerda
+ * fica com o começo e a da direita com o fim, nunca intercalado. Quem olha de
+ * longe lê uma coluna inteira e depois a outra — é a leitura de jornal, e a
+ * ordem do tempo tem que sobreviver a ela. Distribuir "o próximo dia vai para
+ * a coluna mais vazia" equilibraria melhor e produziria ontem e anteontem à
+ * esquerda com hoje no meio da direita.
  *
- * Entre os cortes possíveis escolhe o mais equilibrado POR CARTÃO, não por
- * número de dias — um dia com oito casos ocupa mais tela que três dias com um
- * caso cada. Empate cai para a esquerda mais cheia, que é como a leitura
- * natural espera (o começo pesa mais).
+ * UM DIA PODE PARTIR ENTRE AS COLUNAS, e essa é a mudança de 01/09/2026. A
+ * primeira versão só cortava ENTRE dias, e com três dias na tela — ontem com
+ * cinco casos, hoje com oito, amanhã com três — os únicos cortes possíveis
+ * eram 5|11 e 13|3. O escolhido, 5|11, deixava a coluna esquerda terminando na
+ * metade da tela com novecentos pixels de vão enquanto a direita rolava duas
+ * telas. Isto é literalmente a queixa que abriu o assunto: espaço
+ * desperdiçado numa TV.
  *
- * Devolve sempre duas listas; a segunda pode vir vazia se só houver um dia —
- * quem chama já filtrou isso por `mereceDuasColunas`, mas a função não depende
- * disso para não quebrar.
+ * Partir o dia não custa legibilidade porque a ordem se mantém: a esquerda
+ * termina no meio de hoje e a direita retoma exatamente dali, anunciada como
+ * continuação. É como uma matéria que vira de coluna.
+ *
+ * O QUE NÃO PARTE: um dia nunca deixa o cabeçalho sozinho no pé de uma coluna.
+ * O corte só acontece DEPOIS do primeiro caso do dia — cabeçalho órfão anuncia
+ * um dia que não está ali.
+ *
+ * As contagens do bloco (`total`, `resolvidos`, `fechado`) viajam INTEIRAS
+ * para os dois pedaços de propósito: elas descrevem o dia, não o pedaço. Um
+ * "0 de 3 concluídos" no pedaço da direita seria a resposta a uma pergunta que
+ * ninguém fez.
  */
-export function dividirEmDuasColunas(blocos: BlocoDia[]): [BlocoDia[], BlocoDia[]] {
-  if (blocos.length < 2) return [blocos, []]
+export function dividirEmDuasColunas(
+  blocos: BlocoDia[],
+): [BlocoNaColuna[], BlocoNaColuna[]] {
+  if (blocos.length === 0) return [[], []]
 
-  const peso = (lista: BlocoDia[]) => lista.reduce((s, b) => s + b.casos.length, 0)
-  const total = peso(blocos)
+  const total = blocos.reduce(
+    (soma, b) => soma + PESO_CABECALHO + b.casos.length,
+    0,
+  )
+  const meta = total / 2
 
-  let melhorCorte = 1
-  let melhorDiferenca = Number.POSITIVE_INFINITY
+  const esquerda: BlocoNaColuna[] = []
+  const direita: BlocoNaColuna[] = []
+  let acumulado = 0
+  // Uma vez que a esquerda fechou, tudo o que vem depois é da direita — sem
+  // isto, um dia pequeno depois do corte poderia "caber" e voltar para a
+  // esquerda, quebrando a ordem de leitura.
+  let fechouEsquerda = false
 
-  // O corte vai de 1 a blocos.length - 1: as duas colunas sempre recebem ao
-  // menos um dia. Um corte em 0 ou no fim seria "não dividiu".
-  for (let corte = 1; corte < blocos.length; corte++) {
-    const esquerda = peso(blocos.slice(0, corte))
-    const diferenca = Math.abs(total - esquerda - esquerda)
-    // `<` e não `<=`: no empate fica o corte MENOR, que deixa a esquerda mais
-    // curta... e é o oposto do que se quer. Por isso o desempate explícito
-    // abaixo, comparando quem tem mais peso à esquerda.
-    if (diferenca < melhorDiferenca) {
-      melhorDiferenca = diferenca
-      melhorCorte = corte
-    } else if (diferenca === melhorDiferenca && esquerda > peso(blocos.slice(0, melhorCorte))) {
-      melhorCorte = corte
+  for (const bloco of blocos) {
+    if (fechouEsquerda) {
+      direita.push({ bloco, continuacao: false })
+      continue
     }
+
+    acumulado += PESO_CABECALHO
+
+    // Quantos casos deste dia ainda cabem na esquerda antes de passar da
+    // metade. `ceil` porque atravessar a metade no meio de um cartão é melhor
+    // que parar antes dela: o cartão que sobra vai para a coluna que ainda
+    // tem espaço de qualquer jeito.
+    const cabem = Math.max(0, Math.ceil(meta - acumulado))
+
+    if (cabem >= bloco.casos.length) {
+      esquerda.push({ bloco, continuacao: false })
+      acumulado += bloco.casos.length
+      continue
+    }
+
+    // O dia não cabe inteiro. Se nem um caso dele cabe, ele começa na direita
+    // — melhor que um cabeçalho sozinho no pé da esquerda.
+    if (cabem === 0) {
+      direita.push({ bloco, continuacao: false })
+      fechouEsquerda = true
+      continue
+    }
+
+    esquerda.push({ bloco: comCasos(bloco, bloco.casos.slice(0, cabem)), continuacao: false })
+    direita.push({ bloco: comCasos(bloco, bloco.casos.slice(cabem)), continuacao: true })
+    fechouEsquerda = true
   }
 
-  return [blocos.slice(0, melhorCorte), blocos.slice(melhorCorte)]
+  return [esquerda, direita]
+}
+
+/** O mesmo dia com outra fatia de casos. Contagens intactas — ver acima. */
+function comCasos(bloco: BlocoDia, casos: CasoQuadro[]): BlocoDia {
+  return { ...bloco, casos }
 }
