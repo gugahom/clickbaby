@@ -254,7 +254,16 @@ export function Dropdown({
             className={clsx(
               // z-50: dentro de um <dialog> o painel precisa passar por cima do
               // conteúdo do próprio diálogo, que já tem empilhamento próprio.
-              'z-50 overflow-y-auto rounded-md border border-border bg-card shadow-cartao-alto',
+              // `text-foreground` EXPLÍCITO, e não por herança.
+              //
+              // O painel é `position: fixed`, mas continua sendo filho do
+              // gatilho no DOM — e o menu da conta vive dentro do cabeçalho da
+              // marca, que é `text-white`. O item comum não declarava cor, então
+              // herdava branco e sumia sobre o cartão branco. "Sair" aparecia
+              // porque é destrutivo e tem cor própria; enquanto o menu teve um
+              // item só, e ele era esse, o defeito não existia. Ele nasceu junto
+              // com "Editar conta" (02/09/2026).
+              'z-50 overflow-y-auto rounded-md border border-border bg-card text-foreground shadow-cartao-alto',
               // A origem acompanha o lado de onde ele nasce, senão um painel
               // que abre para cima parece cair do gatilho.
               caixaDoPainel?.paraCima ? 'origin-bottom' : 'origin-top',
@@ -287,7 +296,7 @@ export function Dropdown({
                             ? 'cursor-pointer text-atrasado hover:bg-atrasado/10'
                             : marcado
                               ? 'cursor-pointer bg-marca-suave font-semibold text-marca'
-                              : 'cursor-pointer hover:bg-muted',
+                              : 'cursor-pointer text-foreground hover:bg-muted',
                       )}
                     >
                       {item.icone && <span className="flex-shrink-0">{item.icone}</span>}

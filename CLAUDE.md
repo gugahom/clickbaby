@@ -649,12 +649,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
   compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
   `localStorage` do aparelho.
-- **Equipe** (`/quadro/equipe`), só para `gestao`. Mostra o cadastro, quem tem acesso,
-  trabalho em mãos e concluído em 30 dias — e **cadastra pessoa**, pela Edge Function
-  `admin-pessoas` (ver seção 4). Não mostra o e-mail de login: ele vive em `auth.users`,
-  fora do alcance do cliente.
-- **Conta** (`/quadro/conta`), de qualquer pessoa logada, no menu do nome. Hoje faz uma
-  coisa só e ela é a que importa: **trocar a senha**. Exige a senha atual, o que o Supabase
+- **Equipe** (`/quadro/equipe`), só para `gestao`. É uma ESCALA, não um cadastro: a
+  lista agrupa por estado ao vivo — **Paradas** (etapa pausada, ninguém tocando) primeiro,
+  depois em campo, na ilha, livres, sem acesso, inativas. Selecionar alguém abre a ficha
+  com o que ela tem em mãos (etapa + nome do caso + há quanto tempo), etapas concluídas em
+  30 dias, **tempo médio de ciclo** com o tamanho da amostra, e a divisão campo × ilha.
+  Também **cadastra pessoa**, pela Edge Function `admin-pessoas` (ver seção 4). Não mostra
+  o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
+  O ciclo desconta `pausa_acumulada` e descarta etapa concluída sem `iniciado_em` — o
+  registro retroativo de campo não vira ciclo zero, que é o furo da seção 9.
+- **Conta** (`/quadro/conta`), de qualquer pessoa logada, no menu do nome. **Troca a
+  senha** e mostra **os próprios números** — os mesmos da Equipe, pelo mesmo componente.
+  Isso é a seção 9 levada a sério: a visibilidade é compartilhada de propósito, e uma
+  métrica que a chefia enxerga e a pessoa não seria a vigilância que o acordo exclui. Exige a senha atual, o que o Supabase
   não exige — a exigência é nossa, porque os seis CEL CLICK trocam de mão com a sessão
   aberta e sem ela qualquer um trancaria o colega para fora no meio do plantão.
 - **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11

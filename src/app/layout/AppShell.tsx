@@ -137,7 +137,22 @@ export function AppShell() {
           ela continua não existindo.
         */}
         {(ehGestao || (telaLarga && noQuadro)) && (
-          <div className="flex items-center gap-1 border-t border-white/10 px-3 pb-2 md:px-5">
+          /*
+            A FAIXA GANHOU CHÃO PRÓPRIO (02/09/2026).
+            
+            Ela era transparente sobre o gradiente da marca, e no ponto em que
+            fica o gradiente já clareou — então "Painel" e "Equipe" flutuavam
+            num tom médio, sem nada dizendo que aquilo era uma barra. O gestor
+            leu como apagado, e a leitura está certa: o problema não era a cor
+            do texto, era a ausência de superfície atrás dele.
+            
+            `bg-black/25` escurece o gradiente em vez de pintar por cima. A
+            faixa continua sendo as cores da marca — só que rebaixadas —, e é
+            esse degrau de luminosidade que faz a pílula branca da aba ativa
+            saltar. Trocar por uma cor chapada teria dado o mesmo contraste e
+            cortado a marca ao meio.
+          */
+          <div className="flex items-center gap-1 border-t border-white/10 bg-black/25 px-3 py-2 md:px-5">
             {ehGestao && (
               <nav aria-label="Administração" className="flex gap-1">
                 {/*
@@ -172,7 +187,7 @@ export function AppShell() {
                 onClick={alternarModoTv}
                 aria-pressed={modoTv}
                 className={clsx(
-                  'mt-2 ml-auto inline-flex flex-shrink-0 items-center gap-2 rounded-full py-1.5 pr-3 pl-2.5 text-sm font-semibold transition-colors',
+                  'ml-auto inline-flex min-h-10 flex-shrink-0 items-center gap-2 rounded-full pr-3 pl-2.5 text-sm font-semibold transition-colors',
                   modoTv
                     ? 'bg-white text-marca-forte hover:bg-white/90'
                     : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
@@ -201,6 +216,18 @@ export function AppShell() {
   )
 }
 
+/**
+ * Uma aba da navegação da gestão.
+ *
+ * ATIVA É PÍLULA BRANCA CHEIA; inativa é só texto. O contraste entre as duas
+ * precisa ser de MATERIAL e não de tom — numa barra escura, "branco" contra
+ * "branco a 70%" some a dois metros, e esta barra vai ficar numa TV. A pílula
+ * cheia com sombra responde "você está aqui" de longe, sem ler.
+ *
+ * O alvo tem 40px de altura dentro de uma faixa que soma 44 com o respiro
+ * dela — a régua da seção 6 do CLAUDE.md aplicada onde ela vale, que é o dedo
+ * no corredor, não o mouse.
+ */
 function ItemDeNavegacao({
   para,
   fim = false,
@@ -216,10 +243,10 @@ function ItemDeNavegacao({
       end={fim}
       className={({ isActive }) =>
         clsx(
-          'mt-2 rounded-full px-4 py-1.5 text-sm font-bold transition-colors',
+          'inline-flex min-h-10 items-center rounded-full px-4 text-[0.9375rem] font-bold tracking-tight transition-colors',
           isActive
-            ? 'bg-white text-marca-forte'
-            : 'text-white/70 hover:bg-white/10 hover:text-white',
+            ? 'bg-white text-marca-forte shadow-sm'
+            : 'text-white/65 hover:bg-white/10 hover:text-white',
         )
       }
     >

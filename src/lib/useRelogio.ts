@@ -11,6 +11,11 @@ import { useEffect, useState } from 'react'
  *
  * Um minuto basta: a menor unidade que o rótulo exibe é o minuto, e só na
  * última hora.
+ *
+ * Mora em `lib/` e não numa feature porque não sabe nada de domínio — e
+ * porque a Equipe passou a precisar dele pelo mesmo motivo que o Quadro: "há
+ * 3h" precisa virar "há 4h" sozinho. Uma cópia no segundo lugar seria dois
+ * temporizadores contando a mesma coisa.
  */
 export function useRelogioDeMinuto(): Date {
   const [agora, setAgora] = useState(() => new Date())

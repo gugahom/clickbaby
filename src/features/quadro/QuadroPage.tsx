@@ -24,7 +24,7 @@ import {
 } from './lib/secoes'
 import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
-import { useRelogioDeMinuto } from './lib/useRelogio'
+import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { useTelaLarga } from './lib/useTelaLarga'
 import { useModoTv } from './lib/useModoTv'
 import { DiaBloco } from './components/DiaBloco'
