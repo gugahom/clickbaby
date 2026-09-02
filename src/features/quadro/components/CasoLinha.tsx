@@ -13,7 +13,7 @@ import { useCancelarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '../lib/useRelogio'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
-import { TrilhasDoCaso } from './TrilhasDoCaso'
+import { ResumoDasTrilhas, TrilhasDoCaso } from './TrilhasDoCaso'
 import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { Dialogo } from '@/components/ui/Dialogo'
@@ -37,9 +37,14 @@ interface PropsCasoLinha {
    * desabilitado é pior que item nenhum.
    */
   onReabrir?: ((caso: CasoQuadro) => void) | undefined
+  /**
+   * Modo TV: o cartão mostra só o estado atual de cada faixa, e o resto vem
+   * ao abrir. Ver `ResumoDasTrilhas` para a razão de existir e o que se perde.
+   */
+  compacto?: boolean
 }
 
-export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
+export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCasoLinha) {
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState(false)
   const [descartando, setDescartando] = useState(false)
@@ -150,7 +155,12 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
         aria-controls={idPainel}
-        className="relative w-full py-4 pr-[4.75rem] pl-3.5 text-left transition-colors hover:bg-marca-suave/40 md:pl-4"
+        className={clsx(
+          'relative w-full pr-[4.75rem] pl-3.5 text-left transition-colors hover:bg-marca-suave/40 md:pl-4',
+          // O ar vertical é a primeira coisa que sobra numa tela lida de
+          // longe: ele existe para o dedo, e na parede não há dedo nenhum.
+          compacto ? 'py-2.5' : 'py-4',
+        )}
       >
         <div className="flex items-stretch gap-3 md:gap-4">
           {/* Espinha do caso: a cor herdada do Calendar. Era 4px e sumia — a
@@ -326,10 +336,26 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
                 percorria as duas coisas como se fossem a mesma leitura.
                 
                 Só quando há etapas: num rascunho ele separaria o nome de nada. */}
-            {etapas.length > 0 && <div className="mt-3 border-t border-border/70" />}
+            {etapas.length > 0 && !compacto && (
+              <div className="mt-3 border-t border-border/70" />
+            )}
 
-            {/* As três trilhas. Rascunho não tem etapas — nada de "0/0". */}
-            <TrilhasDoCaso etapas={etapas} />
+            {/* As três trilhas. Rascunho não tem etapas — nada de "0/0".
+                No modo TV, só o estado atual de cada uma: a fita inteira
+                volta ao abrir o cartão. */}
+            {compacto ? (
+              // Some ao abrir: a fita inteira aparece logo abaixo, e as duas
+              // juntas diriam a mesma coisa duas vezes — a segunda contando
+              // menos que a primeira.
+              etapas.length > 0 &&
+              !aberto && (
+                <div className="mt-1.5">
+                  <ResumoDasTrilhas etapas={etapas} />
+                </div>
+              )
+            ) : (
+              <TrilhasDoCaso etapas={etapas} />
+            )}
 
             {/* No mobile o SLA não cabe na linha do título; desce para cá. */}
             {sla.rotulo && (
@@ -470,6 +496,14 @@ export function CasoLinha({ caso, etapas, onReabrir }: PropsCasoLinha) {
       <AvisosDoCaso etapas={etapas} />
 
       <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
+        {/* O que o resumo compacto deixou de fora volta AQUI, antes do
+            detalhe: sem isto, abrir um cartão no modo TV mostraria o histórico
+            e as ações sem nunca mostrar as etapas que existem. */}
+        {compacto && etapas.length > 0 && (
+          <div className="px-3.5 pb-1 md:px-4">
+            <TrilhasDoCaso etapas={etapas} />
+          </div>
+        )}
         <CasoDetalhe caso={caso} etapas={etapas} sla={sla} />
       </Sanfona>
     </div>

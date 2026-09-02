@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { dataPorExtenso, hojeNoFuso } from '@/lib/formato'
+import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
 import { useReabrirCaso, useRetornarDaUti, type EtapaTipo } from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
@@ -11,6 +11,7 @@ import {
   DIAS_POR_PAGINA,
   agruparPorDia,
   blocosAbertos,
+  dividirEmDuasColunas,
   semFuturo,
 } from './lib/agrupar-por-dia'
 import {
@@ -24,6 +25,8 @@ import {
 import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
 import { useRelogioDeMinuto } from './lib/useRelogio'
+import { useTelaLarga } from './lib/useTelaLarga'
+import { useModoTv } from './lib/useModoTv'
 import { DiaBloco } from './components/DiaBloco'
 import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
@@ -34,7 +37,7 @@ import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
-import type { CasoQuadro } from './types'
+import type { BlocoDia, CasoQuadro } from './types'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -62,6 +65,8 @@ export function QuadroPage() {
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
+  const telaLarga = useTelaLarga()
+  const [modoTv] = useModoTv()
   // Mantém o Quadro igual em todos os aparelhos — ver useRealtimeQuadro.
   const { conectado } = useRealtimeQuadro()
 
@@ -132,6 +137,57 @@ export function QuadroPage() {
   const mostrados = blocos.slice(0, diasVisiveis)
   const restantes = blocos.length - mostrados.length
 
+  /*
+   * O MODO TV É ESCOLHIDO, NÃO ADIVINHADO (01/09/2026, a pedido do gestor).
+   *
+   * A versão anterior ligava as duas colunas sozinha a partir de sete cartões.
+   * O gestor pediu o contrário: "ficariam as 2 opções, a lista normal como
+   * temos, e essa opção de dividir o espaço entre 2 dias". Ele tem razão — a
+   * escolha não depende de quantos casos existem hoje, depende de quem está
+   * olhando. Ver `useModoTv`.
+   *
+   * `telaLarga` continua no E porque o layout precisa de largura de verdade:
+   * duas colunas de 300px não cabem um cartão. O botão só aparece onde ele
+   * funciona (ver o cabeçalho), então esta condição não deveria falhar sozinha
+   * — ela existe para a janela que ENCOLHE depois de o modo estar ligado.
+   */
+  const [atrasados, doTurno] = dividirEmDuasColunas(mostrados, hoje)
+
+  /*
+   * DUAS COLUNAS SÓ QUANDO HÁ DUAS PERGUNTAS.
+   *
+   * Se nenhum dia ficou para trás — ou se, ao contrário, só há dias velhos na
+   * tela — não existe a divisão "o que atrasou / o que vem": existe uma lista
+   * só. Meia tela em branco ao lado dela não organiza nada, e o gestor já
+   * tinha dito isso da primeira vez, sobre o movimento baixo.
+   */
+  const emDuasColunas =
+    telaLarga && modoTv && atrasados.length > 0 && doTurno.length > 0
+
+  // Fora do modo TV é uma coluna só, mas com a mesma forma — assim o JSX
+  // abaixo tem um caminho, não dois.
+  const colunasDeDias = emDuasColunas ? [atrasados, doTurno] : [mostrados]
+
+  /**
+   * O que nasce aberto.
+   *
+   * FORA DO MODO TV, os dois primeiros dias — como sempre foi.
+   *
+   * NO MODO TV, ontem e hoje, e mais nada. Foi o desenho do gestor: anteontem
+   * fechado com a possibilidade de abrir, ontem inteiro à mostra, hoje ao
+   * lado, amanhã fechado embaixo. Abrir tudo, que era a regra anterior,
+   * enchia a tela de dias que ninguém está olhando — os antigos porque já
+   * viraram cobrança e não trabalho do turno, amanhã porque ainda não
+   * aconteceu — e empurrava para fora justamente ontem e hoje.
+   */
+  const abrePorPadrao = (bloco: BlocoDia): boolean => {
+    if (buscando) return true
+    if (!emDuasColunas) return mostrados.indexOf(bloco) < 2
+    if (bloco.dia === null) return false
+    const atraso = diasAtras(bloco.dia, hoje)
+    return atraso === 0 || atraso === 1
+  }
+
   const listaPorDia = (
     <>
       {blocos.length === 0 ? (
@@ -148,19 +204,60 @@ export function QuadroPage() {
         )
       ) : (
         <div className="space-y-5">
-          {mostrados.map((bloco, i) => (
-            <DiaBloco
-              // A chave carrega o estado de busca de propósito: o DiaBloco
-              // guarda "aberto" em estado próprio, e sem remontar ele ignoraria
-              // a mudança. Um resultado escondido dentro de um dia fechado é
-              // uma busca que respondeu e não mostrou.
-              key={`${bloco.dia ?? 'sem-data'}-${buscando}`}
-              bloco={bloco}
-              hoje={hoje}
-              etapasPorCaso={etapasPorCaso}
-              abertoInicialmente={buscando || i < 2}
-            />
-          ))}
+          {/*
+            DUAS COLUNAS NA TV, uma no resto (01/09/2026, a pedido do gestor).
+
+            A tela vai ficar ligada numa TV de 70" na sala, e o pedido dele foi
+            literal: "o principal é ter todos os cards à vista". Num dia cheio
+            — ontem com cinco casos abertos e hoje com oito — a lista de uma
+            coluna só passa da altura da tela, e uma tela na parede ninguém
+            rola.
+
+            O espaço para isso já existia e estava sendo desperdiçado: o cartão
+            usa perto de 40% da largura e o resto é vão. Em duas colunas o
+            conteúdo continua do mesmo tamanho e a capacidade vertical dobra.
+
+            LIGA POR BOTÃO, não sozinha — ver `useModoTv` e o cabeçalho. E
+            junto com as colunas vem o cartão compacto (`ResumoDasTrilhas`):
+            só as colunas cortam o conteúdo de ~3600px para ~2200px, o que
+            ainda é o triplo dos 784px que a lista tem de altura útil em
+            1080p. Metade da altura do cartão era a fita das etapas; é dela
+            que sai o resto.
+
+            A ESQUERDA É O ATRASO, A DIREITA É O TURNO — ver
+            `dividirEmDuasColunas`. Não é uma lista repartida ao meio: são
+            duas perguntas, e um dia nunca atravessa de uma para a outra.
+          */}
+          <div
+            className={clsx(
+              emDuasColunas &&
+                // `items-start`: sem isto as duas colunas esticam até a altura
+                // da mais alta, e o vão da mais curta vira uma faixa clicável
+                // que não é cartão nenhum.
+                'grid grid-cols-2 items-start gap-5',
+            )}
+          >
+            {colunasDeDias.map((coluna, indiceColuna) => (
+              <div key={indiceColuna} className="space-y-5">
+                {coluna.map((bloco) => (
+                  <DiaBloco
+                    // A chave carrega o estado de busca E o modo de propósito:
+                    // o DiaBloco guarda "aberto" em estado próprio, e sem
+                    // remontar ele ignoraria a mudança dos dois. Um resultado
+                    // escondido dentro de um dia fechado é uma busca que
+                    // respondeu e não mostrou; e ligar o modo TV precisa
+                    // reaplicar quem abre e quem fecha.
+                    key={`${bloco.dia ?? 'sem-data'}-${buscando}-${emDuasColunas}`}
+                    bloco={bloco}
+                    hoje={hoje}
+                    etapasPorCaso={etapasPorCaso}
+                    abertoInicialmente={abrePorPadrao(bloco)}
+                    compacto={emDuasColunas}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
 
           {/* Ida e volta. Sem o "exibir menos", carregar mais era um caminho
               de mão única: quem abrisse 30 dias para procurar um caso ficava

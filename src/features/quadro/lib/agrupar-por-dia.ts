@@ -161,3 +161,39 @@ function diaSeguinte(dia: string): string {
   data.setUTCDate(data.getUTCDate() + 1)
   return data.toISOString().slice(0, 10)
 }
+
+/**
+ * As duas colunas do modo TV: o ATRASO de um lado, o TURNO do outro.
+ *
+ * A divisão é por DATA, e não por equilíbrio de altura. As duas versões
+ * anteriores tentaram equilibrar — primeiro cortando entre dias, depois
+ * deixando um dia partir no meio para as colunas ficarem do mesmo tamanho — e
+ * as duas erraram o alvo. O gestor foi direto: "ontem não deve transferir o
+ * restante pra outra coluna, deve se limitar a sua".
+ *
+ * Ele tem razão, e a razão é que as colunas não são duas metades de uma lista:
+ * são DUAS PERGUNTAS. À esquerda, o que ficou para trás e ainda cobra
+ * alguém — ontem em cima da mesa, e os dias mais antigos fechados atrás dele.
+ * À direita, o turno: hoje aberto e amanhã fechado embaixo. Quem entra na sala
+ * olha uma coluna para saber o que atrasou e a outra para saber o que vem.
+ *
+ * Equilíbrio de altura era a métrica errada porque otimizava a aparência da
+ * tela em vez do que a tela responde. E o preço já tinha aparecido: um dia
+ * partido no meio precisava se anunciar duas vezes.
+ *
+ * Dia SEM DATA vai para a direita, no fim. Ele não é passado — é ausência de
+ * dado, e classificá-lo como atraso seria inventar uma resposta que o dado
+ * não dá.
+ *
+ * Qualquer um dos lados pode vir vazio (um dia sem atraso nenhum, ou uma tela
+ * só com dias velhos). Quem chama decide o que fazer com isso — aqui não cabe
+ * decidir por ele.
+ */
+export function dividirEmDuasColunas(
+  blocos: BlocoDia[],
+  hoje: string,
+): [BlocoDia[], BlocoDia[]] {
+  const atrasados = blocos.filter((b) => b.dia !== null && b.dia < hoje)
+  const doTurno = blocos.filter((b) => b.dia === null || b.dia >= hoje)
+  return [atrasados, doTurno]
+}

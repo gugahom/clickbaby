@@ -12,6 +12,8 @@ interface PropsDiaBloco {
   hoje: string
   etapasPorCaso: Map<string, EtapaQuadro[]>
   abertoInicialmente: boolean
+  /** Modo TV: os cartões do dia vêm compactos. Ver `ResumoDasTrilhas`. */
+  compacto?: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function DiaBloco({
   hoje,
   etapasPorCaso,
   abertoInicialmente,
+  compacto = false,
 }: PropsDiaBloco) {
   const [aberto, setAberto] = useState(abertoInicialmente)
   const idPainel = useId()
@@ -168,6 +171,7 @@ export function DiaBloco({
               key={caso.id}
               caso={caso}
               etapas={etapasPorCaso.get(caso.id) ?? []}
+              compacto={compacto}
             />
           ))}
         </div>

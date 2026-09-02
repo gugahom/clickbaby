@@ -3,9 +3,11 @@ import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { Chevron, IconeSair } from '@/components/ui/icones'
+import { Chevron, IconeMonitor, IconeSair } from '@/components/ui/icones'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
+import { useModoTv } from '@/features/quadro/lib/useModoTv'
+import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 
 const ROTULO_PAPEL: Record<string, string> = {
   operador: 'Operação',
@@ -40,6 +42,8 @@ const ROTULO_PAPEL: Record<string, string> = {
 export function AppShell() {
   const { pessoa, sair } = useAuth()
   const ehGestao = pessoa?.papelSistema === 'gestao'
+  const telaLarga = useTelaLarga()
+  const [modoTv, alternarModoTv] = useModoTv()
 
   return (
     <div className="flex h-full flex-col">
@@ -106,18 +110,68 @@ export function AppShell() {
           )}
         </div>
 
-        {ehGestao && (
-          <nav
-            aria-label="Administração"
-            className="flex gap-1 border-t border-white/10 px-3 pb-2 md:px-5"
-          >
-            <span
-              aria-current="page"
-              className="mt-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-marca-forte"
-            >
-              Painel
-            </span>
-          </nav>
+        {/*
+          A SEGUNDA FAIXA agora tem dois moradores, e por isso passou a existir
+          também sem a navegação.
+
+          Ela nasceu só para a gestão, com o item "Painel". O interruptor do
+          modo TV veio parar aqui a pedido do gestor, que apontou exatamente
+          este vão vazio à direita — e ele está certo: é a única faixa da tela
+          que existe para ajustar a TELA, não para mostrar caso nenhum.
+
+          Só que prender o interruptor à navegação da gestão o esconderia de
+          todo o resto da equipe, e a TV da sala fica logada no que estiver à
+          mão. Então a faixa passa a aparecer quando há QUALQUER COISA nela: a
+          navegação, o interruptor, ou os dois. Para quem opera num celular,
+          ela continua não existindo.
+        */}
+        {(ehGestao || telaLarga) && (
+          <div className="flex items-center gap-1 border-t border-white/10 px-3 pb-2 md:px-5">
+            {ehGestao && (
+              <nav aria-label="Administração" className="flex gap-1">
+                <span
+                  aria-current="page"
+                  className="mt-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-marca-forte"
+                >
+                  Painel
+                </span>
+              </nav>
+            )}
+
+            {/*
+              SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px). Um botão que existe
+              e não faz nada é pior que botão nenhum: quem apertasse num
+              notebook de 1280px concluiria que a função está quebrada.
+
+              O rótulo diz o destino, não o estado — "Modo TV" é o que acontece
+              ao apertar. Se está ligado, dizem o `aria-pressed`, o
+              preenchimento, e a tela inteira em duas colunas.
+            */}
+            {telaLarga && (
+              <button
+                type="button"
+                onClick={alternarModoTv}
+                aria-pressed={modoTv}
+                className={clsx(
+                  'mt-2 ml-auto inline-flex flex-shrink-0 items-center gap-2 rounded-full py-1.5 pr-3 pl-2.5 text-sm font-semibold transition-colors',
+                  modoTv
+                    ? 'bg-white text-marca-forte hover:bg-white/90'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
+                )}
+              >
+                <IconeMonitor className="size-4" />
+                Modo TV
+                <span
+                  className={clsx(
+                    'text-[11px] font-medium',
+                    modoTv ? 'text-marca-forte/60' : 'text-white/55',
+                  )}
+                >
+                  {modoTv ? 'ligado' : 'desligado'}
+                </span>
+              </button>
+            )}
+          </div>
         )}
       </header>
 
