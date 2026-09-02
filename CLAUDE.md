@@ -240,12 +240,29 @@ continuam por UPDATE direto de adm — ver a dívida no fim da seção 13.
 RLS deve **negar** UPDATE direto do cliente nas colunas que essas funções controlam. Se a
 policy permite o update direto, a invariante não existe.
 
-**A única exceção de privilégio elevado é o sync do Google Calendar** (seção 12), que roda
-como Edge Function com `service_role` para criar/atualizar casos a partir de eventos, e para
-o cancelamento automático via card cinza (`sync_cancelar_caso`, equivalente a `cancelar_caso`
-mas chamado pelo próprio sync, não por um usuário logado). Fora dessas duas ações de origem,
-todo o resto do ciclo de vida do caso passa pelas RPCs normais, sujeitas à RLS de quem está
-logado — o sync nunca edita uma etapa, nunca faz handoff, nunca confirma entrega.
+**São DUAS as exceções de privilégio elevado, e as duas são Edge Functions.**
+
+1. **`sync-calendar`** (seção 7) roda com `service_role` para criar/atualizar casos a
+   partir de eventos, e para o cancelamento automático via card cinza
+   (`sync_cancelar_caso`, equivalente a `cancelar_caso` mas chamado pelo próprio sync, não
+   por um usuário logado). Fora dessas duas ações de origem, todo o resto do ciclo de vida
+   do caso passa pelas RPCs normais, sujeitas à RLS de quem está logado — o sync nunca
+   edita uma etapa, nunca faz handoff, nunca confirma entrega.
+
+2. **`admin-pessoas`** (02/09/2026) cadastra pessoa: cria a conta no GoTrue e a linha em
+   `pessoas`, vinculadas. Criar usuário exige `service_role`, e ela não pode ir ao front
+   (seção 8). A função **verifica o chamador antes de tocar na chave**: com o JWT dele e
+   sob RLS, confere que é pessoa ativa com `papel_sistema = 'gestao'`. Só depois instancia
+   o cliente privilegiado. `verify_jwt = true` no `config.toml` é a primeira camada e
+   **não basta sozinha** — a anon key é válida e é pública.
+
+   O `service_role` recebeu `select, insert` em `pessoas` (migration `20260902210453`) e
+   nada além: sem `update`, sem `delete`. Se o insert falhar, a função apaga a conta de
+   auth que acabou de criar — sem isso sobraria um usuário órfão que loga e cai na tela de
+   "usuário sem pessoa vinculada", e o e-mail ficaria queimado para sempre.
+
+Nenhuma outra coisa no sistema usa `service_role`. Se uma terceira aparecer, ela precisa da
+mesma estrutura: checagem do chamador ANTES da chave, e GRANT do tamanho exato do trabalho.
 
 ---
 
@@ -632,45 +649,67 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
   compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
   `localStorage` do aparelho.
-- **Equipe** (`/quadro/equipe`), só para `gestao`. Leitura: cadastro, quem tem acesso,
-  trabalho em mãos e concluído em 30 dias.
+- **Equipe** (`/quadro/equipe`), só para `gestao`. Mostra o cadastro, quem tem acesso,
+  trabalho em mãos e concluído em 30 dias — e **cadastra pessoa**, pela Edge Function
+  `admin-pessoas` (ver seção 4). Não mostra o e-mail de login: ele vive em `auth.users`,
+  fora do alcance do cliente.
+- **Conta** (`/quadro/conta`), de qualquer pessoa logada, no menu do nome. Hoje faz uma
+  coisa só e ela é a que importa: **trocar a senha**. Exige a senha atual, o que o Supabase
+  não exige — a exigência é nossa, porque os seis CEL CLICK trocam de mão com a sessão
+  aberta e sem ela qualquer um trancaria o colega para fora no meio do plantão.
 - **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11
   `operador` — as fotógrafas e o ADM. O ADM entra como operador **por ora**, a pedido do
   gestor; quando ganhar poderes próprios, muda `papel_sistema`, não o modelo.
 
 ### Dívidas abertas, em ordem de dor
 
-1. **Cadastro de pessoa ainda não tem tela.** A tela de **Equipe** existe desde
-   02/09/2026 (`/quadro/equipe`, atrás de `RotaDeGestao`) e é de LEITURA: quem existe,
-   quem tem acesso, quantas etapas cada uma tem em mãos e concluiu em 30 dias. O que ela
-   ainda não faz é CRIAR conta — isso exige a `service_role`, que não pode ir ao front,
-   e portanto uma Edge Function. As 14 pessoas atuais foram criadas por script pontual.
-   Falta também o **e-mail de login na tela**: ele vive em `auth.users`, fora do alcance
-   do cliente; exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT
-   e teste próprios. E falta a tela de **produtividade** — o dado está em `eventos` desde
-   o primeiro dia, a Equipe só mostra a agregação simples de `caso_etapas`.
-2. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
+1. **Editar o próprio perfil, e a senha inicial que ninguém é obrigado a trocar.**
+   A tela de Conta troca a senha, e só. Faltam três coisas, cada uma com um motivo
+   diferente:
+   - **Nome e apelido** precisam de uma RPC `atualizar_meu_perfil`. NÃO dá para resolver
+     com uma policy de "edita a própria linha": RLS não filtra coluna — quem filtra é o
+     GRANT, que é por papel e não por policy —, então a mesma porta que deixaria alguém
+     corrigir o próprio nome a deixaria mudar o próprio `papel_sistema` para `gestao`.
+   - **Foto** precisa de coluna em `pessoas` e de policy em `storage.objects`, que hoje
+     nega tudo (dívida #5). A primeira policy de upload derruba de propósito o
+     `buckets_privados.test.sql`.
+   - **Forçar a troca no primeiro acesso** não existe no GoTrue; forjar pede uma coluna e
+     uma guarda de rota. Hoje a troca é acordo, não trava — e as onze contas nasceram com
+     a mesma senha, que circulou no grupo.
+2. **E-mail de login não aparece na Equipe.** Ele vive em `auth.users`, fora do alcance do
+   cliente. Exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT e
+   teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
+   sem avisar no dia em que um endereço fugisse do padrão.
+3. **Produtividade ainda não tem tela.** O dado está em `eventos` desde o primeiro dia; a
+   Equipe só mostra a agregação simples de `caso_etapas` (em mãos agora, concluídas em 30
+   dias), feita no cliente.
+4. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
    de adm. Quando ganharem RPC, revogar o privilégio de coluna — não basta parar de usar.
-3. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
+5. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
    (SELECT em `casos` no remoto e não no local). Não é exploração, mas é a mesma classe de
-   divergência que já mordeu duas vezes.
-4. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
+   divergência que **já mordeu três vezes** — a terceira em 02/09/2026, quando
+   `admin-pessoas` funcionou no remoto de primeira e falhou no local com
+   `permission denied for table pessoas`. A migration `20260902210453` declarou o grant que
+   faltava e o `grant_service_role_pessoas.test.sql` trava o piso e o teto, mas isso resolve
+   UMA linha: enquanto o auditor não olhar `service_role`, a próxima divergência aparece do
+   mesmo jeito — por acaso, no meio de outra tarefa.
+6. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
    merge três vezes, chegando ao gestor como "está bugado". O gestor já aprovou construir
    o workflow; falta fazer.
-5. **`storage.objects` sem policy** — com RLS ligada isso nega tudo, que é o estado certo
+7. **`storage.objects` sem policy** — com RLS ligada isso nega tudo, que é o estado certo
    enquanto nada sobe arquivo. A primeira policy de upload vai fazer
    `buckets_privados.test.sql` falhar de propósito. Ver issues #20 e #21.
-6. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
+8. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
    tempo de ciclo de edição vem zero. A tela da Fila foi removida a pedido do gestor; a
    view e os testes ficaram. Entra quando a fila voltar.
-7. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
+9. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
    `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
-8. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
+10. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
    empresa, que não existe. O app vive em `/quadro`.
-9. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
+11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
    para o caso. Se vier, tem que ser campo PRÓPRIO (`observacao_calendar`), separado da
    observação interna — senão o sync sobrescreve o que a equipe escreveu.
-10. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
+12. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
     que sobraram esperam decisão do dono sobre cadastro e padronização de título, não
     código. Não melhore o parser por heurística — é o "assumir quando ambíguo" que a
     seção 7 proíbe.

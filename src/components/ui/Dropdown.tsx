@@ -44,6 +44,12 @@ interface PropsDropdown {
   selecionado?: string | undefined
   /** Substitui o botão padrão — usado pelo chip de usuário do cabeçalho. */
   gatilho?: ReactNode
+  /**
+   * O gatilho ocupa a largura toda. Num FORMULÁRIO isto não é enfeite: um
+   * seletor mais estreito que os campos de texto acima dele lê como um botão
+   * solto no meio do formulário, não como o campo daquela pergunta.
+   */
+  larguraCheia?: boolean
   /** Para o painel não sair da tela quando o gatilho está na borda direita. */
   alinhamento?: 'esquerda' | 'direita'
   desabilitado?: boolean
@@ -77,6 +83,7 @@ export function Dropdown({
   rotulo,
   selecionado,
   gatilho,
+  larguraCheia = false,
   alinhamento = 'esquerda',
   desabilitado = false,
   className,
@@ -178,7 +185,10 @@ export function Dropdown({
           // aparência, mas o alvo de toque é responsabilidade daqui — o chip de
           // usuário, por exemplo, tem 40px de desenho e ficaria abaixo dos 44
           // da seção 6 sem esta linha.
-          className="flex min-h-11 cursor-pointer items-center disabled:cursor-not-allowed"
+          className={clsx(
+            'flex min-h-11 cursor-pointer items-center disabled:cursor-not-allowed',
+            larguraCheia && 'w-full',
+          )}
         >
           {gatilho}
         </button>

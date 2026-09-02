@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
+import { Botao } from '@/components/ui/Botao'
+import { IconeAdicionar } from '@/components/ui/icones'
+import { NovaPessoaDialogo } from './components/NovaPessoaDialogo'
 import { DIAS_DE_JANELA, useEquipe, type PessoaDaEquipe } from './api/useEquipe'
 
 /**
@@ -23,6 +27,7 @@ import { DIAS_DE_JANELA, useEquipe, type PessoaDaEquipe } from './api/useEquipe'
  */
 export function EquipePage() {
   const { data, isPending, error } = useEquipe()
+  const [cadastrando, setCadastrando] = useState(false)
 
   const pessoas = [...(data ?? [])].sort(
     (a, b) =>
@@ -38,20 +43,31 @@ export function EquipePage() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex-shrink-0 border-b border-border/70 bg-background/80 px-3 py-4 backdrop-blur-md md:px-5">
-        <p className="rotulo-sobrescrito text-acento">Gestão</p>
-        <h1 className="mt-0.5 text-lg font-extrabold tracking-tight md:text-2xl">
-          Equipe
-        </h1>
-        {!isPending && !error && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'} ·{' '}
-            {comAcesso} com acesso ·{' '}
-            {trabalhando === 0
-              ? 'ninguém com etapa em mãos agora'
-              : `${trabalhando} com etapa em mãos agora`}
-          </p>
-        )}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="rotulo-sobrescrito text-acento">Gestão</p>
+            <h1 className="mt-0.5 text-lg font-extrabold tracking-tight md:text-2xl">
+              Equipe
+            </h1>
+            {!isPending && !error && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'} ·{' '}
+                {comAcesso} com acesso ·{' '}
+                {trabalhando === 0
+                  ? 'ninguém com etapa em mãos agora'
+                  : `${trabalhando} com etapa em mãos agora`}
+              </p>
+            )}
+          </div>
+
+          <Botao onClick={() => setCadastrando(true)} className="flex-shrink-0">
+            <IconeAdicionar className="size-4" />
+            Cadastrar pessoa
+          </Botao>
+        </div>
       </header>
+
+      {cadastrando && <NovaPessoaDialogo onFechar={() => setCadastrando(false)} />}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
         {error ? (

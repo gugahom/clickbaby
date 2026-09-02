@@ -1,10 +1,10 @@
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { Chevron, IconeMonitor, IconeSair } from '@/components/ui/icones'
+import { Chevron, IconeCaneta, IconeMonitor, IconeSair } from '@/components/ui/icones'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
 import { useModoTv } from '@/features/quadro/lib/useModoTv'
@@ -47,6 +47,7 @@ export function AppShell() {
   // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
   const noQuadro = useLocation().pathname === '/'
+  const navegar = useNavigate()
   const [modoTv, alternarModoTv] = useModoTv()
 
   return (
@@ -91,9 +92,15 @@ export function AppShell() {
               alinhamento="direita"
               rotulo={`Conta de ${pessoa.nome}`}
               onEscolher={(item) => {
+                if (item.id === 'conta') void navegar('/conta')
                 if (item.id === 'sair') void sair()
               }}
+              // "Editar conta" ANTES de "Sair", e não é ordem alfabética: num
+              // aparelho compartilhado, sair é o gesto mais frequente e o mais
+              // perigoso de acertar sem querer. Ele fica por último, longe do
+              // polegar que acabou de abrir o menu.
               itens={[
+                { id: 'conta', rotulo: 'Editar conta', icone: <IconeCaneta className="size-4" /> },
                 { id: 'sair', rotulo: 'Sair da conta', icone: <IconeSair className="size-4" />, destrutivo: true },
               ]}
               gatilho={
