@@ -49,7 +49,30 @@ export function AppShell() {
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
   const noQuadro = useLocation().pathname === '/'
   const navegar = useNavigate()
+
+  /*
+   * QUEM PRECISA DA BARRA.
+   *
+   * "Painel" deixou de ser item de gestão (03/09/2026). A regra anterior só
+   * desenhava a faixa para `gestao` — e prendeu quem opera na tela de Perfil:
+   * ela não tem nada além do próprio conteúdo, então a única saída era o botão
+   * de voltar do navegador. Uma tela sem caminho de volta é um beco, e não
+   * importa que o beco seja curto.
+   *
+   * A barra aparece, então, sempre que houver PARA ONDE IR: fora do Quadro
+   * (voltar), ou para a gestão (as duas telas). Para quem opera dentro do
+   * Quadro ela não aparece — ali não há destino, e uma faixa permanente com um
+   * item só custaria 44px de altura na tela em que altura é o recurso escasso
+   * (seção 6). O botão do modo TV é a única outra coisa que a habita, e traz a
+   * faixa consigo quando cabe.
+   *
+   * Uma vez que a faixa EXISTE, porém, o "Painel" aparece sempre — inclusive
+   * quando quem a trouxe foi o botão do modo TV. Uma barra com o lado esquerdo
+   * vazio parece coisa que não carregou, e a âncora ali não custa nada.
+   */
+  const temNavegacao = ehGestao || !noQuadro
   const [modoTv, alternarModoTv] = useModoTv()
+  const temBotaoTv = telaLarga && noQuadro
   // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
   // a cada turno, é o jeito mais rápido de responder "quem está logado aqui".
   const { data: minhaFoto } = useUrlDaFoto(pessoa?.fotoPath)
@@ -140,7 +163,7 @@ export function AppShell() {
           navegação, o interruptor, ou os dois. Para quem opera num celular,
           ela continua não existindo.
         */}
-        {(ehGestao || (telaLarga && noQuadro)) && (
+        {(temNavegacao || temBotaoTv) && (
           /*
             A FAIXA GANHOU CHÃO PRÓPRIO (02/09/2026).
             
@@ -157,8 +180,7 @@ export function AppShell() {
             cortado a marca ao meio.
           */
           <div className="flex items-center gap-1 border-t border-white/10 bg-black/25 px-3 py-2 md:px-5">
-            {ehGestao && (
-              <nav aria-label="Administração" className="flex gap-1">
+            <nav aria-label="Navegação" className="flex gap-1">
                 {/*
                   "Painel" deixou de ser um rótulo e virou destino de verdade
                   (02/09/2026). Ele passou semanas como um <span> pintado de
@@ -169,12 +191,15 @@ export function AppShell() {
                   `end` no Painel: sem isso o "/" casa com toda rota filha e as
                   duas abas acendem juntas em /equipe.
                 */}
+                {/* PAINEL É DE TODO MUNDO; Equipe, só da gestão. O Painel não é
+                    tela administrativa — é a tela do trabalho, e quem opera
+                    precisa dela mais que ninguém. Só estava aqui dentro por
+                    acidente de onde a barra nasceu. */}
                 <ItemDeNavegacao para="/" fim>
                   Painel
                 </ItemDeNavegacao>
-                <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>
-              </nav>
-            )}
+                {ehGestao && <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>}
+            </nav>
 
             {/*
               SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px). Um botão que existe
@@ -185,7 +210,7 @@ export function AppShell() {
               ao apertar. Se está ligado, dizem o `aria-pressed`, o
               preenchimento, e a tela inteira em duas colunas.
             */}
-            {telaLarga && noQuadro && (
+            {temBotaoTv && (
               <button
                 type="button"
                 onClick={alternarModoTv}

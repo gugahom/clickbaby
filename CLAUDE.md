@@ -652,10 +652,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   edição"**, sem apagar. A exceção nomeia `edicao_video` e mais nada: com a edição de fotos
   aberta, encerrar continua sendo recusado.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
-- **Modo TV** (02/09/2026): botão na barra da gestão que reparte o Quadro em duas
+- **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
   compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
   `localStorage` do aparelho.
+- **Navegação**: a faixa abaixo da marca aparece quando há para onde ir — fora do Quadro
+  (voltar pelo **Painel**, que é de todo mundo) ou para a gestão (Painel + **Equipe**). Quem
+  opera dentro do Quadro não a vê: ali não há destino, e uma faixa permanente custaria 44px
+  de altura onde altura é o recurso escasso. Prender quem opera na tela de Perfil sem
+  caminho de volta foi exatamente o defeito que essa regra corrigiu (03/09/2026).
 - **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
   **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
   e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
