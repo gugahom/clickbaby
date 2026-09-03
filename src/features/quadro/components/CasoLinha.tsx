@@ -7,10 +7,11 @@ import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
-import { podeCancelar } from '../lib/acoes'
+import { podeCancelar, podeEditarCadastro } from '../lib/acoes'
+import { temVideoMasterPendente } from '../lib/secoes'
 import { mensagemDeErro } from '../lib/erros'
 import { useCancelarCaso } from '../api/useAcoes'
-import { useRelogioDeMinuto } from '../lib/useRelogio'
+import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
 import { ResumoDasTrilhas, TrilhasDoCaso } from './TrilhasDoCaso'
@@ -18,7 +19,7 @@ import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeCaneta, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
-import { Dropdown } from '@/components/ui/Dropdown'
+import { Dropdown, type ItemDropdown } from '@/components/ui/Dropdown'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
 const CorDoAlerta: Record<NivelAlerta, string> = {
@@ -84,6 +85,7 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
    */
   const papel = pessoa?.papelSistema ?? 'operador'
   const descarte = podeCancelar(caso, papel)
+  const editaCadastro = podeEditarCadastro(papel)
 
   // Todas as etapas feitas e o caso ainda aberto: é o único estado em que o
   // caso está esperando por uma PESSOA, não por trabalho. Por isso ganha peso
@@ -92,6 +94,55 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
     !caso.ehTerminal &&
     caso.etapasTotal > 0 &&
     caso.etapasConcluidas === caso.etapasTotal
+
+  /*
+   * ENTREGUE, MAS O VÍDEO CONTINUA.
+   *
+   * Só existe em Concluídos, e só no MASTER: desde 20260903153101 o caso
+   * encerra sem esperar o horizontal. Sem este selo, o caso apareceria em
+   * Concluídos idêntico a um que acabou de verdade — e a única forma de
+   * descobrir que ainda há dez dias de edição pela frente seria abrir o
+   * cartão. Foi o pedido do gestor: "em concluídos podemos deixar esse card
+   * em destaque pra saber que o vídeo ainda está pendente".
+   */
+  const videoPendente =
+    caso.statusOperacional === 'encerrado' && temVideoMasterPendente(etapas)
+
+  const itensDoMenu: ItemDropdown[] = [
+    // Ausente, e não desabilitado: para quem opera em campo, editar o cadastro
+    // não é uma ação que "ainda não dá" — é uma ação que não é dela. Um item
+    // permanentemente cinza no menu de todo cartão seria ruído em todos eles.
+    ...(editaCadastro
+      ? [
+          {
+            id: 'editar',
+            rotulo: caso.ehRascunho ? 'Completar cadastro' : 'Editar cadastro',
+            icone: <IconeCaneta className="size-4" />,
+          },
+        ]
+      : []),
+    ...(onReabrir && caso.statusOperacional === 'encerrado'
+      ? [
+          {
+            id: 'reabrir',
+            rotulo: 'Reabrir para alteração',
+            icone: <IconeReabrir className="size-4" />,
+          },
+        ]
+      : []),
+    ...(caso.ehRascunho && !caso.ehTerminal
+      ? [
+          {
+            id: 'descartar',
+            rotulo: 'Descartar rascunho',
+            icone: <IconeX className="size-4" />,
+            destrutivo: true,
+            desabilitado: !descarte.habilitada,
+            ...(descarte.motivo ? { motivo: descarte.motivo } : {}),
+          },
+        ]
+      : []),
+  ]
 
   return (
     <div
@@ -133,7 +184,12 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         alerta?.nivel === 'iminente' && 'anel-alerta-vivo',
 
         prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
-        caso.ehTerminal && 'opacity-60 shadow-none',
+        // O caso terminal apaga — menos quando o vídeo ainda corre. Ali ele
+        // não é histórico, é trabalho em andamento com a entrega já feita, e
+        // apagá-lo esconderia o único cartão de Concluídos que ainda pede
+        // alguma coisa.
+        caso.ehTerminal && !videoPendente && 'opacity-60 shadow-none',
+        videoPendente && 'border-atencao/40',
       )}
     >
       {/*
@@ -308,6 +364,15 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
                     </span>
                   )}
                   {caso.ehRascunho && <BadgeRascunho />}
+                  {videoPendente && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-bold text-atencao-tinta">
+                      <span
+                        className="size-1.5 rounded-full bg-atencao"
+                        aria-hidden="true"
+                      />
+                      Vídeo em edição
+                    </span>
+                  )}
                   {caso.ehTerminal && (
                     <span className="rotulo-sobrescrito rounded-full bg-muted px-2 py-1 text-muted-foreground">
                       {caso.statusOperacional}
@@ -404,60 +469,39 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         O TOM DE PENDÊNCIA no rascunho fica: ali o menu é o gesto que tira o
         caso do limbo, e precisa se distinguir do botão quieto dos demais.
       */}
-      <div className="absolute top-0.5 right-8">
-        <Dropdown
-          alinhamento="direita"
-          rotulo={`Ações de ${titulo}`}
-          onEscolher={(item) => {
-            if (item.id === 'editar') setEditando(true)
-            if (item.id === 'reabrir') onReabrir?.(caso)
-            if (item.id === 'descartar') {
-              setErroDescarte(null)
-              setDescartando(true)
+      {/* Sem item nenhum, sem menu. Para um operador num caso normal as três
+          ações somem — editar é de adm, reabrir só na aba Concluídos,
+          descartar só em rascunho — e um "⋯" que abre uma caixa vazia é pior
+          que a ausência dele. */}
+      {itensDoMenu.length > 0 && (
+        <div className="absolute top-0.5 right-8">
+          <Dropdown
+            alinhamento="direita"
+            rotulo={`Ações de ${titulo}`}
+            onEscolher={(item) => {
+              if (item.id === 'editar') setEditando(true)
+              if (item.id === 'reabrir') onReabrir?.(caso)
+              if (item.id === 'descartar') {
+                setErroDescarte(null)
+                setDescartando(true)
+              }
+            }}
+            itens={itensDoMenu}
+            gatilho={
+              <span
+                className={clsx(
+                  'inline-flex size-11 items-center justify-center rounded-full transition-colors',
+                  caso.ehRascunho
+                    ? 'border border-rascunho-borda bg-card text-rascunho'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <IconeMais className="size-4" />
+              </span>
             }
-          }}
-          itens={[
-            {
-              id: 'editar',
-              rotulo: caso.ehRascunho ? 'Completar cadastro' : 'Editar cadastro',
-              icone: <IconeCaneta className="size-4" />,
-            },
-            ...(onReabrir && caso.statusOperacional === 'encerrado'
-              ? [
-                  {
-                    id: 'reabrir',
-                    rotulo: 'Reabrir para alteração',
-                    icone: <IconeReabrir className="size-4" />,
-                  },
-                ]
-              : []),
-            ...(caso.ehRascunho && !caso.ehTerminal
-              ? [
-                  {
-                    id: 'descartar',
-                    rotulo: 'Descartar rascunho',
-                    icone: <IconeX className="size-4" />,
-                    destrutivo: true,
-                    desabilitado: !descarte.habilitada,
-                    motivo: descarte.motivo,
-                  },
-                ]
-              : []),
-          ]}
-          gatilho={
-            <span
-              className={clsx(
-                'inline-flex size-11 items-center justify-center rounded-full transition-colors',
-                caso.ehRascunho
-                  ? 'border border-rascunho-borda bg-card text-rascunho'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <IconeMais className="size-4" />
-            </span>
-          }
-        />
-      </div>
+          />
+        </div>
+      )}
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
 

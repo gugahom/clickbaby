@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { ContextoAuth, type EstadoAuth, type PessoaLogada } from './contexto'
@@ -29,13 +29,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data } = await supabase
         .from('pessoas')
-        .select('id, nome, papel_sistema')
+        .select('id, nome, papel_sistema, foto_path')
         .eq('auth_user_id', s.user.id)
         .maybeSingle()
 
       if (!ativo) return
       setPessoa(
-        data ? { id: data.id, nome: data.nome, papelSistema: data.papel_sistema } : null,
+        data
+          ? {
+              id: data.id,
+              nome: data.nome,
+              papelSistema: data.papel_sistema,
+              fotoPath: data.foto_path,
+            }
+          : null,
       )
       usuarioResolvido.current = s.user.id
       setCarregando(false)
@@ -79,11 +86,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /**
+   * Relê a pessoa do banco para a sessão atual.
+   *
+   * Fora do efeito de propósito: o efeito reage a mudança de SESSÃO, e trocar
+   * a foto não muda sessão nenhuma. Sem este caminho, o retrato novo só
+   * apareceria no chip do cabeçalho depois de sair e entrar.
+   */
+  const recarregarPessoa = useCallback(async () => {
+    const { data: atual } = await supabase.auth.getSession()
+    const s = atual.session
+    if (!s) return
+
+    const { data } = await supabase
+      .from('pessoas')
+      .select('id, nome, papel_sistema, foto_path')
+      .eq('auth_user_id', s.user.id)
+      .maybeSingle()
+
+    setPessoa(
+      data
+        ? {
+            id: data.id,
+            nome: data.nome,
+            papelSistema: data.papel_sistema,
+            fotoPath: data.foto_path,
+          }
+        : null,
+    )
+  }, [])
+
   const valor = useMemo<EstadoAuth>(
     () => ({
       carregando,
       session,
       pessoa,
+      recarregarPessoa,
       sair: async () => {
         const { error } = await supabase.auth.signOut()
         // Sessão órfã: o JWT ainda é válido (é stateless, dura até expirar),
@@ -95,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) await supabase.auth.signOut({ scope: 'local' })
       },
     }),
-    [carregando, session, pessoa],
+    [carregando, session, pessoa, recarregarPessoa],
   )
 
   return <ContextoAuth value={valor}>{children}</ContextoAuth>

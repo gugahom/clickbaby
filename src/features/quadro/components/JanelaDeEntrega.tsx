@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { formatarDataHora } from '@/lib/formato'
-import { useRelogioDeMinuto } from '../lib/useRelogio'
+import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import type { CasoQuadro } from '../types'
 
 interface PropsJanelaDeEntrega {

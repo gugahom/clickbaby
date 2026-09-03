@@ -410,6 +410,14 @@ enabled = true
 # forjado e a funcao fica aberta.
 verify_jwt = true
 
+[functions.admin-pessoas]
+enabled = true
+# Mesma leitura da linha acima: o gateway exige credencial valida do projeto,
+# e isso NAO basta -- a anon key e' publica. A segunda camada esta dentro da
+# funcao: ela verifica, com o JWT do chamador e sob RLS, que ele e' uma pessoa
+# ativa com papel_sistema = 'gestao', ANTES de instanciar a service_role.
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

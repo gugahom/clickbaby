@@ -1,15 +1,21 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * A partir de onde um cartão de caso ainda se lê bem com METADE da largura.
+ * A largura a partir da qual o modo TV existe.
  *
- * 1536px é o `2xl` do Tailwind, e a conta é simples: metade disso são 768px
- * por coluna, menos a barra lateral — perto de 700px, que é mais que os
- * ~640px em que o cartão já vive confortável hoje no `md`. Abaixo daqui,
- * dividir em duas colunas espremeria a fita de etapas, que é justamente o que
- * se quer ver de longe.
+ * ERA 1536px, E ESSE NÚMERO ESCONDEU O BOTÃO DA TV DO GESTOR (03/09/2026). Ele
+ * mandou um vídeo da tela sem o interruptor e concluiu que era permissão de
+ * conta; não era — o botão nunca teve trava de papel. Era isto aqui: uma TV de
+ * 1920 com o navegador em 150% de zoom reporta 1280px de viewport, e 1280 é
+ * menor que 1536. A função ficou invisível justamente no aparelho para o qual
+ * foi feita.
+ *
+ * 1280 é o ponto em que duas colunas ainda valem a pena — com a coluna lateral
+ * encolhida para 18rem no modo TV (ver QuadroPage), sobram 452px por coluna e o
+ * cartão compacto fecha em 171px. Abaixo disso o cartão passa a crescer em vez
+ * de encolher, e duas colunas viram um estorvo.
  */
-const CONSULTA = '(min-width: 1536px)'
+const CONSULTA = '(min-width: 1280px)'
 
 /**
  * A tela é larga o bastante para duas colunas de cartão?

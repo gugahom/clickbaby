@@ -240,12 +240,29 @@ continuam por UPDATE direto de adm — ver a dívida no fim da seção 13.
 RLS deve **negar** UPDATE direto do cliente nas colunas que essas funções controlam. Se a
 policy permite o update direto, a invariante não existe.
 
-**A única exceção de privilégio elevado é o sync do Google Calendar** (seção 12), que roda
-como Edge Function com `service_role` para criar/atualizar casos a partir de eventos, e para
-o cancelamento automático via card cinza (`sync_cancelar_caso`, equivalente a `cancelar_caso`
-mas chamado pelo próprio sync, não por um usuário logado). Fora dessas duas ações de origem,
-todo o resto do ciclo de vida do caso passa pelas RPCs normais, sujeitas à RLS de quem está
-logado — o sync nunca edita uma etapa, nunca faz handoff, nunca confirma entrega.
+**São DUAS as exceções de privilégio elevado, e as duas são Edge Functions.**
+
+1. **`sync-calendar`** (seção 7) roda com `service_role` para criar/atualizar casos a
+   partir de eventos, e para o cancelamento automático via card cinza
+   (`sync_cancelar_caso`, equivalente a `cancelar_caso` mas chamado pelo próprio sync, não
+   por um usuário logado). Fora dessas duas ações de origem, todo o resto do ciclo de vida
+   do caso passa pelas RPCs normais, sujeitas à RLS de quem está logado — o sync nunca
+   edita uma etapa, nunca faz handoff, nunca confirma entrega.
+
+2. **`admin-pessoas`** (02/09/2026) cadastra pessoa: cria a conta no GoTrue e a linha em
+   `pessoas`, vinculadas. Criar usuário exige `service_role`, e ela não pode ir ao front
+   (seção 8). A função **verifica o chamador antes de tocar na chave**: com o JWT dele e
+   sob RLS, confere que é pessoa ativa com `papel_sistema = 'gestao'`. Só depois instancia
+   o cliente privilegiado. `verify_jwt = true` no `config.toml` é a primeira camada e
+   **não basta sozinha** — a anon key é válida e é pública.
+
+   O `service_role` recebeu `select, insert` em `pessoas` (migration `20260902210453`) e
+   nada além: sem `update`, sem `delete`. Se o insert falhar, a função apaga a conta de
+   auth que acabou de criar — sem isso sobraria um usuário órfão que loga e cai na tela de
+   "usuário sem pessoa vinculada", e o e-mail ficaria queimado para sempre.
+
+Nenhuma outra coisa no sistema usa `service_role`. Se uma terceira aparecer, ela precisa da
+mesma estrutura: checagem do chamador ANTES da chave, e GRANT do tamanho exato do trabalho.
 
 ---
 
@@ -627,38 +644,112 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   resto continuam no card.
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
+- **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
+  `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
+  ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo
+  operado pela seção MASTER (`mover_video_master` passou a aceitar caso **encerrado** —
+  cancelado continua recusado), e em Concluídos o cartão aparece com o selo **"Vídeo em
+  edição"**, sem apagar. A exceção nomeia `edicao_video` e mais nada: com a edição de fotos
+  aberta, encerrar continua sendo recusado.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+- **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas
+  colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
+  compacto (uma etapa por trilha). A escolha fica no `localStorage` do aparelho, e o botão
+  **não tem trava de papel**: qualquer conta o vê.
+  **A partir de 1280px, não 1536** (corrigido em 03/09/2026). O limite antigo escondia o
+  botão na TV do gestor: 1920 com o navegador em 150% de zoom reporta 1280 de viewport. Só
+  baixar o número não bastava — com o painel lateral em 30rem sobravam 356px por coluna e o
+  cartão compacto ficava MAIS ALTO que a 1920. Por isso o lateral encolhe para 18rem no modo
+  TV abaixo de 1536, e volta aos 30rem acima disso.
+- **Navegação**: a faixa abaixo da marca aparece quando há para onde ir — fora do Quadro
+  (voltar pelo **Painel**, que é de todo mundo) ou para a gestão (Painel + **Equipe**). Quem
+  opera dentro do Quadro não a vê: ali não há destino, e uma faixa permanente custaria 44px
+  de altura onde altura é o recurso escasso. Prender quem opera na tela de Perfil sem
+  caminho de volta foi exatamente o defeito que essa regra corrigiu (03/09/2026).
+- **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
+  **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
+  e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
+  em mãos (etapa + nome do caso + há quanto tempo), os dados de acesso, e as ações:
+  **trocar papel**, **desativar/reativar** e **excluir**.
+  **Métricas saíram da ficha em 03/09/2026, por decisão do gestor** — concluídas na
+  janela, tempo médio de ciclo e divisão campo × ilha existiram e foram removidas porque
+  ainda não está acordado o que se mede. Elas voltam na tela de métricas, depois do acordo;
+  não as recoloque aqui.
+  **Desativar é a ação principal; excluir é a exceção.** As onze FKs para `pessoas` são
+  `on delete restrict` — quem já trabalhou sai da operação, não do cadastro. O botão de
+  excluir só aparece para quem nunca tocou em nada, e o banco recusa o resto.
+  Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
+- **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
+  perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
+  porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
+  sobre o retrato. Nome e apelido ainda não se editam: pedem a RPC `atualizar_meu_perfil`,
+  pelo mesmo motivo da foto (RLS não filtra coluna).
+- **Foto de perfil** (migration `20260903161526`): bucket privado `avatares`, arquivo na
+  pasta do próprio `auth.uid()`, caminho gravado pela RPC `definir_minha_foto` e leitura
+  por URL assinada de uma hora. A URL não é guardada em lugar nenhum — seria guardar um
+  segredo com validade. O avatar aparece no chip do cabeçalho e na Equipe. Exige a senha atual, o que o Supabase
+  não exige — a exigência é nossa, porque os seis CEL CLICK trocam de mão com a sessão
+  aberta e sem ela qualquer um trancaria o colega para fora no meio do plantão.
+- **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11
+  `operador` — as fotógrafas e o ADM. O ADM entra como operador **por ora**, a pedido do
+  gestor; quando ganhar poderes próprios, muda `papel_sistema`, não o modelo.
 
 ### Dívidas abertas, em ordem de dor
 
-1. **Painel de Gestão não existe.** O router tem UMA rota (o Quadro); o item "Painel" no
-   cabeçalho da gestão é rótulo, não destino. É o que destrava (a) cadastrar as 12
-   fotógrafas e 3 vendedores sem tocar no banco — hoje só 3 pessoas existem —, e (b)
-   exibir produtividade. O dado de produtividade JÁ está sendo gravado em `eventos` desde
-   o primeiro dia; falta a tela. Criar conta de auth exige Edge Function (a service_role
-   key não pode ir ao front).
-2. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
+1. **Editar o próprio perfil, e a senha inicial que ninguém é obrigado a trocar.**
+   A tela de Conta troca a senha, e só. Faltam três coisas, cada uma com um motivo
+   diferente:
+   - **Nome e apelido** precisam de uma RPC `atualizar_meu_perfil`. NÃO dá para resolver
+     com uma policy de "edita a própria linha": RLS não filtra coluna — quem filtra é o
+     GRANT, que é por papel e não por policy —, então a mesma porta que deixaria alguém
+     corrigir o próprio nome a deixaria mudar o próprio `papel_sistema` para `gestao`.
+   - **Foto** precisa de coluna em `pessoas` e de policy em `storage.objects`, que hoje
+     nega tudo (dívida #5). A primeira policy de upload derruba de propósito o
+     `buckets_privados.test.sql`.
+   - **Forçar a troca no primeiro acesso** não existe no GoTrue; forjar pede uma coluna e
+     uma guarda de rota. Hoje a troca é acordo, não trava — e as onze contas nasceram com
+     a mesma senha, que circulou no grupo.
+2. **E-mail de login não aparece na Equipe.** Ele vive em `auth.users`, fora do alcance do
+   cliente. Exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT e
+   teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
+   sem avisar no dia em que um endereço fugisse do padrão.
+3. **Produtividade ainda não tem tela.** O dado está em `eventos` desde o primeiro dia; a
+   Equipe só mostra a agregação simples de `caso_etapas` (em mãos agora, concluídas em 30
+   dias), feita no cliente.
+4. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
    de adm. Quando ganharem RPC, revogar o privilégio de coluna — não basta parar de usar.
-3. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
+5. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
    (SELECT em `casos` no remoto e não no local). Não é exploração, mas é a mesma classe de
-   divergência que já mordeu duas vezes.
-4. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
+   divergência que **já mordeu três vezes** — a terceira em 02/09/2026, quando
+   `admin-pessoas` funcionou no remoto de primeira e falhou no local com
+   `permission denied for table pessoas`. A migration `20260902210453` declarou o grant que
+   faltava e o `grant_service_role_pessoas.test.sql` trava o piso e o teto, mas isso resolve
+   UMA linha: enquanto o auditor não olhar `service_role`, a próxima divergência aparece do
+   mesmo jeito — por acaso, no meio de outra tarefa.
+6. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
    merge três vezes, chegando ao gestor como "está bugado". O gestor já aprovou construir
    o workflow; falta fazer.
-5. **`storage.objects` sem policy** — com RLS ligada isso nega tudo, que é o estado certo
-   enquanto nada sobe arquivo. A primeira policy de upload vai fazer
-   `buckets_privados.test.sql` falhar de propósito. Ver issues #20 e #21.
-6. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
+7. **`anon` ainda tem privilégio de tabela em `storage.objects`** (issue #20). A primeira
+   policy chegou em 03/09/2026 com a foto de perfil, e o `buckets_privados.test.sql` falhou
+   de propósito, como previsto — o que entrou no lugar nomeia as quatro policies do avatar e
+   afirma que `midias` e `comprovantes` continuam SEM policy, portanto negados.
+   O que NÃO deu para fazer: revogar de `anon` os sete privilégios que ele tem na tabela. Ela
+   pertence a `supabase_storage_admin`, e `postgres` não é membro dele — o REVOKE roda sem
+   erro e não revoga nada. Hoje quem segura o `anon` é a RLS (nenhuma policy o alcança); a
+   exceção é TRUNCATE, que RLS não filtra — privilégio latente, sem caminho conhecido de
+   exploração. Fechar exige rodar o revoke como o dono da tabela, fora do caminho de
+   migration. Ver também a issue #21 (bucket `comprovantes` órfão).
+8. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
    tempo de ciclo de edição vem zero. A tela da Fila foi removida a pedido do gestor; a
    view e os testes ficaram. Entra quando a fila voltar.
-7. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
+9. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
    `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
-8. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
+10. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
    empresa, que não existe. O app vive em `/quadro`.
-9. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
+11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
    para o caso. Se vier, tem que ser campo PRÓPRIO (`observacao_calendar`), separado da
    observação interna — senão o sync sobrescreve o que a equipe escreveu.
-10. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
+12. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
     que sobraram esperam decisão do dono sobre cadastro e padronização de título, não
     código. Não melhore o parser por heurística — é o "assumir quando ambíguo" que a
     seção 7 proíbe.

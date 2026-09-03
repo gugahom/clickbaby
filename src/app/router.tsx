@@ -1,13 +1,16 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
+import { RotaDeGestao } from './guards/RotaDeGestao'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
+import { EquipePage } from '@/features/equipe/EquipePage'
+import { PerfilPage } from '@/features/perfil/PerfilPage'
 
 /**
  * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
- * do Quadro dentro de RotaProtegida. Hoje só o Quadro existe; faltam B
- * (detalhe do caso), D (novo caso manual) e F (painel).
+ * do Quadro dentro de RotaProtegida. Hoje existem o Quadro e a Equipe;
+ * faltam B (detalhe do caso), D (novo caso manual) e F (painel).
  *
  * A Fila de edição (tela C) foi REMOVIDA a pedido do gestor — ele não a pediu
  * e ela não tinha uso na operação atual. A trava da seção 9 do CLAUDE.md
@@ -34,6 +37,15 @@ export const router = createBrowserRouter(
           element: <AppShell />,
           children: [
             { index: true, element: <QuadroPage /> },
+            // O perfil é de qualquer pessoa logada — inclusive, e sobretudo,
+            // de quem opera: é ali que a senha inicial compartilhada morre.
+            { path: 'perfil', element: <PerfilPage /> },
+            {
+              // As telas da gestão vivem atrás de RotaDeGestao. Ela é a
+              // navegação, não a segurança — ver o comentário lá.
+              element: <RotaDeGestao />,
+              children: [{ path: 'equipe', element: <EquipePage /> }],
+            },
           ],
         },
       ],

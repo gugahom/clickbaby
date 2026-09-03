@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useRelogioDeMinuto } from '../lib/useRelogio'
+import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import {
   ROTULO_FAIXA,
   ROTULO_FAIXA_CURTO,

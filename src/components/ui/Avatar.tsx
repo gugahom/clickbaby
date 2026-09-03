@@ -13,6 +13,14 @@ interface PropsAvatar {
    * responder "quem está logado aqui" num relance, e duas letras fazem isso.
    */
   fotoUrl?: string | null
+  /**
+   * Onde ele vai pousar. O avatar nasceu só para a faixa escura da marca e
+   * tinha as cores dela fixas no corpo — sobre um cartão branco, ele
+   * simplesmente sumia (branco 15% sobre branco). Não é detalhe de estilo: um
+   * componente que só funciona num fundo é um componente com um contexto
+   * escondido, e o próximo lugar que o usar vai descobrir isso do mesmo jeito.
+   */
+  tom?: 'escuro' | 'claro'
   className?: string
 }
 
@@ -25,7 +33,7 @@ function iniciais(nome: string): string {
   return (primeira + ultima).toUpperCase()
 }
 
-export function Avatar({ nome, fotoUrl, className }: PropsAvatar) {
+export function Avatar({ nome, fotoUrl, tom = 'escuro', className }: PropsAvatar) {
   const base = clsx(
     'inline-flex size-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full',
     className,
@@ -45,7 +53,10 @@ export function Avatar({ nome, fotoUrl, className }: PropsAvatar) {
     <span
       className={clsx(
         base,
-        'bg-white/15 text-xs font-semibold tracking-wide text-white ring-2 ring-white/25',
+        'text-xs font-semibold tracking-wide ring-2',
+        tom === 'escuro'
+          ? 'bg-white/15 text-white ring-white/25'
+          : 'bg-marca-suave text-marca ring-marca/15',
       )}
       // O nome completo já está escrito ao lado no desktop; no mobile some, e
       // aí o title é a única forma de descobrir quem está logado.

@@ -44,6 +44,12 @@ interface PropsDropdown {
   selecionado?: string | undefined
   /** Substitui o botão padrão — usado pelo chip de usuário do cabeçalho. */
   gatilho?: ReactNode
+  /**
+   * O gatilho ocupa a largura toda. Num FORMULÁRIO isto não é enfeite: um
+   * seletor mais estreito que os campos de texto acima dele lê como um botão
+   * solto no meio do formulário, não como o campo daquela pergunta.
+   */
+  larguraCheia?: boolean
   /** Para o painel não sair da tela quando o gatilho está na borda direita. */
   alinhamento?: 'esquerda' | 'direita'
   desabilitado?: boolean
@@ -77,6 +83,7 @@ export function Dropdown({
   rotulo,
   selecionado,
   gatilho,
+  larguraCheia = false,
   alinhamento = 'esquerda',
   desabilitado = false,
   className,
@@ -178,7 +185,10 @@ export function Dropdown({
           // aparência, mas o alvo de toque é responsabilidade daqui — o chip de
           // usuário, por exemplo, tem 40px de desenho e ficaria abaixo dos 44
           // da seção 6 sem esta linha.
-          className="flex min-h-11 cursor-pointer items-center disabled:cursor-not-allowed"
+          className={clsx(
+            'flex min-h-11 cursor-pointer items-center disabled:cursor-not-allowed',
+            larguraCheia && 'w-full',
+          )}
         >
           {gatilho}
         </button>
@@ -244,7 +254,16 @@ export function Dropdown({
             className={clsx(
               // z-50: dentro de um <dialog> o painel precisa passar por cima do
               // conteúdo do próprio diálogo, que já tem empilhamento próprio.
-              'z-50 overflow-y-auto rounded-md border border-border bg-card shadow-cartao-alto',
+              // `text-foreground` EXPLÍCITO, e não por herança.
+              //
+              // O painel é `position: fixed`, mas continua sendo filho do
+              // gatilho no DOM — e o menu da conta vive dentro do cabeçalho da
+              // marca, que é `text-white`. O item comum não declarava cor, então
+              // herdava branco e sumia sobre o cartão branco. "Sair" aparecia
+              // porque é destrutivo e tem cor própria; enquanto o menu teve um
+              // item só, e ele era esse, o defeito não existia. Ele nasceu junto
+              // com "Editar conta" (02/09/2026).
+              'z-50 overflow-y-auto rounded-md border border-border bg-card text-foreground shadow-cartao-alto',
               // A origem acompanha o lado de onde ele nasce, senão um painel
               // que abre para cima parece cair do gatilho.
               caixaDoPainel?.paraCima ? 'origin-bottom' : 'origin-top',
@@ -277,7 +296,7 @@ export function Dropdown({
                             ? 'cursor-pointer text-atrasado hover:bg-atrasado/10'
                             : marcado
                               ? 'cursor-pointer bg-marca-suave font-semibold text-marca'
-                              : 'cursor-pointer hover:bg-muted',
+                              : 'cursor-pointer text-foreground hover:bg-muted',
                       )}
                     >
                       {item.icone && <span className="flex-shrink-0">{item.icone}</span>}

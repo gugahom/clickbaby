@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { CampoTexto } from '@/components/ui/CampoTexto'
 import { useCadastros } from '../api/useCadastros'
 import { useEditarCaso } from '../api/useEditarCaso'
 import { mensagemDeErro } from '../lib/erros'
@@ -70,8 +71,8 @@ export function EditarCasoDialogo({ caso, onFechar }: PropsEditarCasoDialogo) {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Texto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} />
-          <Texto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional />
+          <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} />
+          <CampoTexto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional />
         </div>
 
         <Selecao
@@ -96,33 +97,6 @@ export function EditarCasoDialogo({ caso, onFechar }: PropsEditarCasoDialogo) {
         />
       </div>
     </Dialogo>
-  )
-}
-
-function Texto({
-  rotulo,
-  valor,
-  aoMudar,
-  opcional = false,
-}: {
-  rotulo: string
-  valor: string
-  aoMudar: (v: string) => void
-  opcional?: boolean
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {rotulo}
-        {opcional && <span className="ml-1 text-xs text-muted-foreground">(opcional)</span>}
-      </span>
-      <input
-        type="text"
-        value={valor}
-        onChange={(e) => aoMudar(e.target.value)}
-        className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background/60 px-3 text-base transition-colors focus:border-marca focus:bg-card"
-      />
-    </label>
   )
 }
 

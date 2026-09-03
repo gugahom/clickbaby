@@ -1,12 +1,14 @@
-import { Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import clsx from 'clsx'
+import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { Chevron, IconeMonitor, IconeSair } from '@/components/ui/icones'
+import { Chevron, IconeCaneta, IconeMonitor, IconeSair } from '@/components/ui/icones'
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
 import { useModoTv } from '@/features/quadro/lib/useModoTv'
+import { useUrlDaFoto } from '@/features/perfil/api/useFotoDePerfil'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 
 const ROTULO_PAPEL: Record<string, string> = {
@@ -43,7 +45,37 @@ export function AppShell() {
   const { pessoa, sair } = useAuth()
   const ehGestao = pessoa?.papelSistema === 'gestao'
   const telaLarga = useTelaLarga()
+  // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
+  // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
+  const noQuadro = useLocation().pathname === '/'
+  const navegar = useNavigate()
+
+  /*
+   * QUEM PRECISA DA BARRA.
+   *
+   * "Painel" deixou de ser item de gestão (03/09/2026). A regra anterior só
+   * desenhava a faixa para `gestao` — e prendeu quem opera na tela de Perfil:
+   * ela não tem nada além do próprio conteúdo, então a única saída era o botão
+   * de voltar do navegador. Uma tela sem caminho de volta é um beco, e não
+   * importa que o beco seja curto.
+   *
+   * A barra aparece, então, sempre que houver PARA ONDE IR: fora do Quadro
+   * (voltar), ou para a gestão (as duas telas). Para quem opera dentro do
+   * Quadro ela não aparece — ali não há destino, e uma faixa permanente com um
+   * item só custaria 44px de altura na tela em que altura é o recurso escasso
+   * (seção 6). O botão do modo TV é a única outra coisa que a habita, e traz a
+   * faixa consigo quando cabe.
+   *
+   * Uma vez que a faixa EXISTE, porém, o "Painel" aparece sempre — inclusive
+   * quando quem a trouxe foi o botão do modo TV. Uma barra com o lado esquerdo
+   * vazio parece coisa que não carregou, e a âncora ali não custa nada.
+   */
+  const temNavegacao = ehGestao || !noQuadro
   const [modoTv, alternarModoTv] = useModoTv()
+  const temBotaoTv = telaLarga && noQuadro
+  // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
+  // a cada turno, é o jeito mais rápido de responder "quem está logado aqui".
+  const { data: minhaFoto } = useUrlDaFoto(pessoa?.fotoPath)
 
   return (
     <div className="flex h-full flex-col">
@@ -87,14 +119,20 @@ export function AppShell() {
               alinhamento="direita"
               rotulo={`Conta de ${pessoa.nome}`}
               onEscolher={(item) => {
+                if (item.id === 'perfil') void navegar('/perfil')
                 if (item.id === 'sair') void sair()
               }}
+              // "Editar conta" ANTES de "Sair", e não é ordem alfabética: num
+              // aparelho compartilhado, sair é o gesto mais frequente e o mais
+              // perigoso de acertar sem querer. Ele fica por último, longe do
+              // polegar que acabou de abrir o menu.
               itens={[
+                { id: 'perfil', rotulo: 'Editar perfil', icone: <IconeCaneta className="size-4" /> },
                 { id: 'sair', rotulo: 'Sair da conta', icone: <IconeSair className="size-4" />, destrutivo: true },
               ]}
               gatilho={
                 <span className="flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-1 pr-2 pl-1 transition-colors hover:bg-white/20">
-                  <Avatar nome={pessoa.nome} />
+                  <Avatar nome={pessoa.nome} fotoUrl={minhaFoto ?? null} />
                   {/* O nome some no mobile e sobra o avatar, que já carrega as
                       iniciais e o nome completo no title. */}
                   <span className="hidden min-w-0 text-left leading-tight sm:block">
@@ -125,18 +163,43 @@ export function AppShell() {
           navegação, o interruptor, ou os dois. Para quem opera num celular,
           ela continua não existindo.
         */}
-        {(ehGestao || telaLarga) && (
-          <div className="flex items-center gap-1 border-t border-white/10 px-3 pb-2 md:px-5">
-            {ehGestao && (
-              <nav aria-label="Administração" className="flex gap-1">
-                <span
-                  aria-current="page"
-                  className="mt-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-marca-forte"
-                >
+        {(temNavegacao || temBotaoTv) && (
+          /*
+            A FAIXA GANHOU CHÃO PRÓPRIO (02/09/2026).
+            
+            Ela era transparente sobre o gradiente da marca, e no ponto em que
+            fica o gradiente já clareou — então "Painel" e "Equipe" flutuavam
+            num tom médio, sem nada dizendo que aquilo era uma barra. O gestor
+            leu como apagado, e a leitura está certa: o problema não era a cor
+            do texto, era a ausência de superfície atrás dele.
+            
+            `bg-black/25` escurece o gradiente em vez de pintar por cima. A
+            faixa continua sendo as cores da marca — só que rebaixadas —, e é
+            esse degrau de luminosidade que faz a pílula branca da aba ativa
+            saltar. Trocar por uma cor chapada teria dado o mesmo contraste e
+            cortado a marca ao meio.
+          */
+          <div className="flex items-center gap-1 border-t border-white/10 bg-black/25 px-3 py-2 md:px-5">
+            <nav aria-label="Navegação" className="flex gap-1">
+                {/*
+                  "Painel" deixou de ser um rótulo e virou destino de verdade
+                  (02/09/2026). Ele passou semanas como um <span> pintado de
+                  aba ativa porque não havia segunda tela para ir — e a dívida
+                  #1 do CLAUDE.md descrevia exatamente isso. Com a Equipe, a
+                  barra passa a fazer o que aparentava fazer.
+
+                  `end` no Painel: sem isso o "/" casa com toda rota filha e as
+                  duas abas acendem juntas em /equipe.
+                */}
+                {/* PAINEL É DE TODO MUNDO; Equipe, só da gestão. O Painel não é
+                    tela administrativa — é a tela do trabalho, e quem opera
+                    precisa dela mais que ninguém. Só estava aqui dentro por
+                    acidente de onde a barra nasceu. */}
+                <ItemDeNavegacao para="/" fim>
                   Painel
-                </span>
-              </nav>
-            )}
+                </ItemDeNavegacao>
+                {ehGestao && <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>}
+            </nav>
 
             {/*
               SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px). Um botão que existe
@@ -147,13 +210,13 @@ export function AppShell() {
               ao apertar. Se está ligado, dizem o `aria-pressed`, o
               preenchimento, e a tela inteira em duas colunas.
             */}
-            {telaLarga && (
+            {temBotaoTv && (
               <button
                 type="button"
                 onClick={alternarModoTv}
                 aria-pressed={modoTv}
                 className={clsx(
-                  'mt-2 ml-auto inline-flex flex-shrink-0 items-center gap-2 rounded-full py-1.5 pr-3 pl-2.5 text-sm font-semibold transition-colors',
+                  'ml-auto inline-flex min-h-10 flex-shrink-0 items-center gap-2 rounded-full pr-3 pl-2.5 text-sm font-semibold transition-colors',
                   modoTv
                     ? 'bg-white text-marca-forte hover:bg-white/90'
                     : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
@@ -179,5 +242,44 @@ export function AppShell() {
         <Outlet />
       </main>
     </div>
+  )
+}
+
+/**
+ * Uma aba da navegação da gestão.
+ *
+ * ATIVA É PÍLULA BRANCA CHEIA; inativa é só texto. O contraste entre as duas
+ * precisa ser de MATERIAL e não de tom — numa barra escura, "branco" contra
+ * "branco a 70%" some a dois metros, e esta barra vai ficar numa TV. A pílula
+ * cheia com sombra responde "você está aqui" de longe, sem ler.
+ *
+ * O alvo tem 40px de altura dentro de uma faixa que soma 44 com o respiro
+ * dela — a régua da seção 6 do CLAUDE.md aplicada onde ela vale, que é o dedo
+ * no corredor, não o mouse.
+ */
+function ItemDeNavegacao({
+  para,
+  fim = false,
+  children,
+}: {
+  para: string
+  fim?: boolean
+  children: ReactNode
+}) {
+  return (
+    <NavLink
+      to={para}
+      end={fim}
+      className={({ isActive }) =>
+        clsx(
+          'inline-flex min-h-10 items-center rounded-full px-4 text-[0.9375rem] font-bold tracking-tight transition-colors',
+          isActive
+            ? 'bg-white text-marca-forte shadow-sm'
+            : 'text-white/65 hover:bg-white/10 hover:text-white',
+        )
+      }
+    >
+      {children}
+    </NavLink>
   )
 }
