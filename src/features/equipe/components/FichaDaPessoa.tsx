@@ -39,7 +39,13 @@ import {
  * consegue entrar, o que ela está segurando agora, e o que eu posso fazer com
  * ela." Nenhuma das quatro precisa de acordo nenhum para ser verdade.
  */
-export function FichaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
+export function FichaDaPessoa({
+  pessoa,
+  foto,
+}: {
+  pessoa: PessoaDaEquipe
+  foto: string | null
+}) {
   const apelido = pessoa.apelidos[0]
 
   return (
@@ -47,7 +53,7 @@ export function FichaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
       <section className="overflow-hidden rounded-cartao border border-border bg-card shadow-cartao">
         <div className="superficie-cabecalho px-4 pt-4 pb-5 text-white">
           <div className="flex items-center gap-3">
-            <Avatar nome={pessoa.nome} className="size-12 text-sm" />
+            <Avatar nome={pessoa.nome} fotoUrl={foto} className="size-12 text-sm" />
             <div className="min-w-0">
               <h2 className="truncate text-xl font-extrabold tracking-tight">
                 {pessoa.nome}

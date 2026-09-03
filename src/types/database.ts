@@ -680,6 +680,7 @@ export type Database = {
           ativo: boolean
           auth_user_id: string | null
           created_at: string
+          foto_path: string | null
           id: string
           nome: string
           papel_sistema: Database["public"]["Enums"]["papel_sistema"]
@@ -691,6 +692,7 @@ export type Database = {
           ativo?: boolean
           auth_user_id?: string | null
           created_at?: string
+          foto_path?: string | null
           id?: string
           nome: string
           papel_sistema?: Database["public"]["Enums"]["papel_sistema"]
@@ -702,6 +704,7 @@ export type Database = {
           ativo?: boolean
           auth_user_id?: string | null
           created_at?: string
+          foto_path?: string | null
           id?: string
           nome?: string
           papel_sistema?: Database["public"]["Enums"]["papel_sistema"]
@@ -840,6 +843,7 @@ export type Database = {
         Returns: string
       }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
       disparar_sync_calendar: { Args: never; Returns: string }
       dispensar_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo?: string }

@@ -41,6 +41,8 @@ export interface PessoaDaEquipe {
   temAcesso: boolean
   /** Quando entrou no sistema. */
   desde: string
+  /** Caminho do avatar no bucket. Não é URL — ver `useUrlsDasFotos`. */
+  fotoPath: string | null
   /** Etapas em andamento ou pausadas agora, com ela. */
   emAndamento: number
   /** Tem carga, e toda ela está pausada. */
@@ -79,6 +81,7 @@ interface LinhaPessoa {
   ativo: boolean
   auth_user_id: string | null
   created_at: string
+  foto_path: string | null
 }
 
 interface LinhaEtapa {
@@ -120,7 +123,7 @@ function vazio(): Acumulado {
 async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
   const { data: linhas, error } = await supabase
     .from('pessoas')
-    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at')
+    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at, foto_path')
     .order('nome')
 
   if (error) throw error
@@ -184,6 +187,7 @@ async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
       ativo: p.ativo,
       temAcesso: p.auth_user_id !== null,
       desde: p.created_at,
+      fotoPath: p.foto_path,
       emAndamento: emMaos.length,
       tudoPausado: emMaos.length > 0 && emMaos.every((e) => e.pausada),
       lugarAgora: (correndo ?? emMaos[0])?.lugar ?? null,

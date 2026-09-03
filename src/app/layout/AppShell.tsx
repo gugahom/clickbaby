@@ -8,6 +8,7 @@ import { Chevron, IconeCaneta, IconeMonitor, IconeSair } from '@/components/ui/i
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
 import { useModoTv } from '@/features/quadro/lib/useModoTv'
+import { useUrlDaFoto } from '@/features/perfil/api/useFotoDePerfil'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 
 const ROTULO_PAPEL: Record<string, string> = {
@@ -49,6 +50,9 @@ export function AppShell() {
   const noQuadro = useLocation().pathname === '/'
   const navegar = useNavigate()
   const [modoTv, alternarModoTv] = useModoTv()
+  // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
+  // a cada turno, é o jeito mais rápido de responder "quem está logado aqui".
+  const { data: minhaFoto } = useUrlDaFoto(pessoa?.fotoPath)
 
   return (
     <div className="flex h-full flex-col">
@@ -105,7 +109,7 @@ export function AppShell() {
               ]}
               gatilho={
                 <span className="flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-1 pr-2 pl-1 transition-colors hover:bg-white/20">
-                  <Avatar nome={pessoa.nome} />
+                  <Avatar nome={pessoa.nome} fotoUrl={minhaFoto ?? null} />
                   {/* O nome some no mobile e sobra o avatar, que já carrega as
                       iniciais e o nome completo no title. */}
                   <span className="hidden min-w-0 text-left leading-tight sm:block">

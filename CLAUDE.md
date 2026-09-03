@@ -671,9 +671,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
-  porque os CEL CLICK trocam de mão com a sessão aberta. Nome, apelido e foto ainda não se
-  editam: os dois primeiros pedem a RPC `atualizar_meu_perfil`, a foto pede coluna e a
-  primeira policy de `storage.objects`. Exige a senha atual, o que o Supabase
+  porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
+  sobre o retrato. Nome e apelido ainda não se editam: pedem a RPC `atualizar_meu_perfil`,
+  pelo mesmo motivo da foto (RLS não filtra coluna).
+- **Foto de perfil** (migration `20260903161526`): bucket privado `avatares`, arquivo na
+  pasta do próprio `auth.uid()`, caminho gravado pela RPC `definir_minha_foto` e leitura
+  por URL assinada de uma hora. A URL não é guardada em lugar nenhum — seria guardar um
+  segredo com validade. O avatar aparece no chip do cabeçalho e na Equipe. Exige a senha atual, o que o Supabase
   não exige — a exigência é nossa, porque os seis CEL CLICK trocam de mão com a sessão
   aberta e sem ela qualquer um trancaria o colega para fora no meio do plantão.
 - **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11
@@ -715,9 +719,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 6. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
    merge três vezes, chegando ao gestor como "está bugado". O gestor já aprovou construir
    o workflow; falta fazer.
-7. **`storage.objects` sem policy** — com RLS ligada isso nega tudo, que é o estado certo
-   enquanto nada sobe arquivo. A primeira policy de upload vai fazer
-   `buckets_privados.test.sql` falhar de propósito. Ver issues #20 e #21.
+7. **`anon` ainda tem privilégio de tabela em `storage.objects`** (issue #20). A primeira
+   policy chegou em 03/09/2026 com a foto de perfil, e o `buckets_privados.test.sql` falhou
+   de propósito, como previsto — o que entrou no lugar nomeia as quatro policies do avatar e
+   afirma que `midias` e `comprovantes` continuam SEM policy, portanto negados.
+   O que NÃO deu para fazer: revogar de `anon` os sete privilégios que ele tem na tabela. Ela
+   pertence a `supabase_storage_admin`, e `postgres` não é membro dele — o REVOKE roda sem
+   erro e não revoga nada. Hoje quem segura o `anon` é a RLS (nenhuma policy o alcança); a
+   exceção é TRUNCATE, que RLS não filtra — privilégio latente, sem caminho conhecido de
+   exploração. Fechar exige rodar o revoke como o dono da tabela, fora do caminho de
+   migration. Ver também a issue #21 (bucket `comprovantes` órfão).
 8. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
    tempo de ciclo de edição vem zero. A tela da Fila foi removida a pedido do gestor; a
    view e os testes ficaram. Entra quando a fila voltar.

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Botao } from '@/components/ui/Botao'
 import { CampoTexto } from '@/components/ui/CampoTexto'
@@ -7,6 +8,7 @@ import { IconeCaneta } from '@/components/ui/icones'
 import { useAuth } from '@/features/auth/contexto'
 import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { TAMANHO_MINIMO_SENHA, useTrocarSenha } from './api/useTrocarSenha'
+import { TIPOS_ACEITOS, useEnviarFoto, useUrlDaFoto } from './api/useFotoDePerfil'
 
 /**
  * O perfil da própria pessoa.
@@ -28,15 +30,14 @@ import { TAMANHO_MINIMO_SENHA, useTrocarSenha } from './api/useTrocarSenha'
  *   por papel, não por policy —, então a mesma porta que deixaria alguém
  *   corrigir o próprio nome a deixaria mudar o próprio `papel_sistema`.
  *
- *   FOTO. Precisa da coluna em `pessoas`, de um bucket e da PRIMEIRA policy em
- *   `storage.objects` — que hoje nega tudo, e é o estado certo enquanto nada
- *   sobe arquivo (dívida #7). Essa primeira policy derruba de propósito o teste
- *   `buckets_privados.test.sql`: ele existe para forçar a leitura da regra
- *   antes de alguém abrir um bucket sem querer. É uma fatia com conversa, não
- *   um campo a mais.
+ * A FOTO JÁ FUNCIONA (migration 20260903161526). Ela trouxe a primeira policy
+ * de `storage.objects`, que até então negava tudo — o arquivo vai para o bucket
+ * privado `avatares`, na pasta do próprio `auth.uid()`, e o caminho é gravado
+ * por RPC porque RLS não filtra coluna. A URL nunca é guardada: bucket privado
+ * se lê por link assinado de validade curta (seção 10).
  */
 export function PerfilPage() {
-  const { pessoa, session } = useAuth()
+  const { pessoa, session, recarregarPessoa } = useAuth()
   const email = session?.user.email ?? ''
 
   return (
@@ -54,7 +55,12 @@ export function PerfilPage() {
         <div className="mx-auto max-w-3xl space-y-4">
           <section className="overflow-hidden rounded-cartao border border-border bg-card shadow-cartao">
             <div className="superficie-cabecalho flex items-center gap-4 px-4 py-5 text-white">
-              <RetratoComCaneta nome={pessoa?.nome ?? '?'} />
+              <RetratoComCaneta
+                nome={pessoa?.nome ?? '?'}
+                fotoPath={pessoa?.fotoPath ?? null}
+                authUserId={session?.user.id ?? ''}
+                aoTrocar={recarregarPessoa}
+              />
 
               <div className="min-w-0">
                 <p className="truncate text-xl font-extrabold tracking-tight">
@@ -83,26 +89,84 @@ export function PerfilPage() {
 }
 
 /**
- * O retrato com a canetinha — pedido do gestor, e ainda sem destino.
+ * O retrato com a canetinha.
  *
- * A canetinha está aqui e DIZ que não funciona ainda, em vez de não existir.
- * As duas opções ruins seriam: um botão que abre um seletor de arquivo e
- * depois falha na hora de subir (a policy de `storage.objects` nega tudo hoje),
- * ou nenhum sinal de que a foto está a caminho. Um alvo desabilitado com o
- * motivo no `title` é honesto: mostra onde a função vai morar e não promete o
- * que o banco ainda não aceita.
+ * A canetinha É o alvo: um `<label>` amarrado a um `<input type="file">`
+ * escondido. Sem o label, o input nativo apareceria como um botão de sistema
+ * que não tem como ser estilizado e não caberia sobre o avatar.
+ *
+ * A VALIDAÇÃO ACONTECE ANTES DE SUBIR — tipo e tamanho — e depois de novo no
+ * bucket, que tem os mesmos limites. Duas checagens porque a de cá dá a
+ * mensagem em português na hora, e a de lá é a que vale mesmo se alguém
+ * chamar o Storage por fora.
  */
-function RetratoComCaneta({ nome }: { nome: string }) {
+function RetratoComCaneta({
+  nome,
+  fotoPath,
+  authUserId,
+  aoTrocar,
+}: {
+  nome: string
+  fotoPath: string | null
+  authUserId: string
+  aoTrocar: () => Promise<void>
+}) {
+  const { data: url } = useUrlDaFoto(fotoPath)
+  const enviar = useEnviarFoto()
+  const [erro, setErro] = useState<string | null>(null)
+  const entrada = useRef<HTMLInputElement>(null)
+
+  function escolher(arquivo: File | undefined) {
+    if (!arquivo) return
+    setErro(null)
+    enviar
+      .mutateAsync({ arquivo, authUserId, anterior: fotoPath })
+      .then(() => aoTrocar())
+      .catch((e: unknown) => setErro(e instanceof Error ? e.message : String(e)))
+      .finally(() => {
+        // Sem isto, escolher o MESMO arquivo de novo depois de um erro não
+        // dispara `change` — o input guarda o valor anterior.
+        if (entrada.current) entrada.current.value = ''
+      })
+  }
+
   return (
-    <div className="relative flex-shrink-0">
-      <Avatar nome={nome} className="size-16 text-lg" />
-      <span
-        title="Foto de perfil ainda não disponível — falta a policy de upload no Storage."
-        aria-label="Trocar foto (ainda não disponível)"
-        className="absolute -right-1 -bottom-1 inline-flex size-7 cursor-not-allowed items-center justify-center rounded-full bg-white/90 text-marca-forte opacity-60 shadow-sm"
-      >
-        <IconeCaneta className="size-3.5" />
-      </span>
+    <div className="flex-shrink-0">
+      <div className="relative">
+        <Avatar nome={nome} fotoUrl={url ?? null} className="size-16 text-lg" />
+
+        <label
+          className={clsx(
+            'absolute -right-1 -bottom-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-white text-marca-forte shadow-sm transition-colors hover:bg-white/90',
+            enviar.isPending && 'cursor-wait opacity-60',
+          )}
+          title={fotoPath ? 'Trocar a foto' : 'Adicionar uma foto'}
+        >
+          <IconeCaneta className="size-4" />
+          <span className="sr-only">
+            {fotoPath ? 'Trocar a foto de perfil' : 'Adicionar foto de perfil'}
+          </span>
+          <input
+            ref={entrada}
+            type="file"
+            accept={TIPOS_ACEITOS.join(',')}
+            className="sr-only"
+            disabled={enviar.isPending}
+            onChange={(e) => escolher(e.target.files?.[0])}
+          />
+        </label>
+      </div>
+
+      {(erro || enviar.isPending) && (
+        <p
+          className={clsx(
+            'mt-2 max-w-[12rem] text-[11px]',
+            erro ? 'text-atrasado' : 'text-white/70',
+          )}
+        >
+          {erro ?? 'Enviando…'}
+        </p>
+      )}
     </div>
   )
 }

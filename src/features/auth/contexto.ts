@@ -6,7 +6,15 @@ export interface PessoaLogada {
   id: string
   nome: string
   papelSistema: string
+  /**
+   * Caminho do avatar no bucket, não URL — o bucket é privado e a URL se
+   * assina na hora (ver `useUrlDaFoto`). `null` enquanto ninguém subiu foto.
+   */
+  fotoPath: string | null
 }
+
+/** Recarrega a pessoa do banco. Depois de trocar a foto, é o que atualiza o chip. */
+export type Recarregar = () => Promise<void>
 
 export interface EstadoAuth {
   carregando: boolean
@@ -18,6 +26,12 @@ export interface EstadoAuth {
    * simplesmente vazia — o modo de falha mais confuso possível.
    */
   pessoa: PessoaLogada | null
+  /**
+   * Relê `pessoas` para a sessão atual. Existe porque a foto de perfil muda
+   * fora deste provedor e o chip do cabeçalho lê daqui — sem isto, trocar o
+   * retrato só apareceria no próximo login.
+   */
+  recarregarPessoa: Recarregar
   sair: () => Promise<void>
 }
 

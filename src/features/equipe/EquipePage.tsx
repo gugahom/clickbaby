@@ -7,6 +7,7 @@ import { useEquipe, type PessoaDaEquipe } from './api/useEquipe'
 import { NovaPessoaDialogo } from './components/NovaPessoaDialogo'
 import { FichaDaPessoa } from './components/FichaDaPessoa'
 import { COR_LUGAR, ROTULO_LUGAR, ROTULO_PAPEL, relativo } from './lib/apresentacao'
+import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
 
 /**
  * A EQUIPE É UM CADASTRO — e desta vez de propósito.
@@ -58,6 +59,11 @@ export function EquipePage() {
   const ficha = useRef<HTMLDivElement>(null)
 
   const pessoas = data ?? []
+
+  // Um pedido só para os catorze retratos. `createSignedUrls` no plural existe
+  // exatamente para isto — uma assinatura por linha seria o N+1 que aparece
+  // quando a equipe cresce.
+  const { data: fotos } = useUrlsDasFotos(pessoas.map((p) => p.fotoPath))
 
   const grupos = ORDEM_DOS_GRUPOS.map((grupo) => ({
     grupo,
@@ -162,6 +168,7 @@ export function EquipePage() {
                       <li key={p.id}>
                         <LinhaDaEquipe
                           pessoa={p}
+                          foto={(p.fotoPath && fotos?.get(p.fotoPath)) || null}
                           selecionada={selecionada?.id === p.id}
                           onEscolher={() => selecionar(p.id)}
                         />
@@ -173,7 +180,14 @@ export function EquipePage() {
             </div>
 
             <div ref={ficha} className="lg:sticky lg:top-4">
-              {selecionada && <FichaDaPessoa pessoa={selecionada} />}
+              {selecionada && (
+                <FichaDaPessoa
+                  pessoa={selecionada}
+                  foto={
+                    (selecionada.fotoPath && fotos?.get(selecionada.fotoPath)) || null
+                  }
+                />
+              )}
             </div>
           </div>
         )}
@@ -184,10 +198,12 @@ export function EquipePage() {
 
 function LinhaDaEquipe({
   pessoa,
+  foto,
   selecionada,
   onEscolher,
 }: {
   pessoa: PessoaDaEquipe
+  foto: string | null
   selecionada: boolean
   onEscolher: () => void
 }) {
@@ -211,6 +227,7 @@ function LinhaDaEquipe({
     >
       <Avatar
         nome={pessoa.nome}
+        fotoUrl={foto}
         tom="claro"
         className={clsx('size-9', selecionada && 'ring-marca/30')}
       />
