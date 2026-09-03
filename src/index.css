@@ -76,6 +76,10 @@
   --color-atrasado: var(--atrasado);
   --color-atencao: var(--atencao);
   --color-alerta-proximo: var(--alerta-proximo);
+  /* Os fundos do alerta. Mesma receita do `--pronto-fundo`: o card inteiro
+     tingido de leve, e não uma borda que só a periferia do olho pega. */
+  --color-alerta-proximo-fundo: var(--alerta-proximo-fundo);
+  --color-atrasado-fundo: var(--atrasado-fundo);
   --color-contador: var(--contador);
   /* Texto SOBRE pílula tingida — ver a nota junto dos valores. */
   --color-concluido-tinta: var(--concluido-tinta);
@@ -311,6 +315,14 @@
   /* Pronto para entrega: todas as etapas feitas, caso ainda aberto. */
   --pronto: oklch(0.48 0.15 155);
   --pronto-fundo: oklch(0.965 0.035 155);
+  /* O MESMO L e o MESMO C do --pronto-fundo, só girando a matiz. É o que faz
+     os três tons se lerem como uma família: o card pronto, o card com a hora
+     chegando e o card atrasado têm o mesmo peso de tinta, e o que muda é a
+     cor — que é a informação. Escolher cada um "no olho" produziria um
+     laranja mais forte que o verde e o alerta pareceria mais grave do que a
+     entrega, sem ninguém ter decidido isso. */
+  --alerta-proximo-fundo: oklch(0.965 0.035 45);
+  --atrasado-fundo: oklch(0.965 0.035 25);
   --pronto-borda: oklch(0.84 0.09 155);
 
   /* As cores do logo como vieram do arquivo. Existem para pintar superfície:
@@ -354,6 +366,8 @@
 
   --pronto: oklch(0.74 0.16 155);
   --pronto-fundo: oklch(0.28 0.05 155 / 40%);
+  --alerta-proximo-fundo: oklch(0.28 0.05 45 / 40%);
+  --atrasado-fundo: oklch(0.28 0.05 25 / 40%);
   --pronto-borda: oklch(0.5 0.1 155 / 45%);
 
   /* No escuro o chão não é pastel: pastel sobre escuro perde a função de
@@ -477,15 +491,15 @@
      mesma propriedade, e no Tailwind quem vence é a ordem no CSS gerado, não a
      ordem na string — o véu simplesmente não aparecia. Sobreposto, ele soma ao
      fundo que já existe em vez de substituí-lo. */
-  .anel-alerta-vivo::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: var(--cor-alerta);
-    opacity: 0.06;
-    pointer-events: none;
-  }
+  /* O VÉU DE 6% SAIU (03/09/2026).
+     
+     Ele tingia só o cartão vermelho, e de leve demais para se ver de longe. O
+     gestor pediu o cartão inteiro pintado "assim como fica verde quando está
+     pronto pra entrega" — então a tinta virou classe (`bg-atrasado-fundo` e
+     `bg-alerta-proximo-fundo`, ver CasoLinha), com o mesmo peso do verde e
+     valendo para os DOIS níveis. Manter o véu junto somaria duas camadas da
+     mesma cor e o vermelho ficaria mais escuro que o laranja por acidente de
+     implementação, não por decisão. */
 
   .anel-alerta::after {
     content: "";

@@ -7,6 +7,26 @@ import { useAuth } from './contexto'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 
 /**
+ * O domínio de todas as contas da empresa.
+ *
+ * Ele é SUFIXO FIXO no campo, não texto a digitar: quem entra escreve "ingrid"
+ * e pronto. Catorze pessoas digitando "@clickbaby.com.br" num teclado de
+ * celular, de pé num corredor, é catorze chances por turno de errar um ponto e
+ * levar "credenciais inválidas" sem entender por quê.
+ *
+ * MAS UM E-MAIL COMPLETO CONTINUA PASSANDO: se o que foi digitado já tem "@",
+ * ele vale como está. Sem essa saída, as contas de desenvolvimento
+ * (`@clickbaby.local`) ficariam inalcançáveis, e no dia em que uma pessoa
+ * entrar com endereço de outro domínio a tela não teria como aceitá-la.
+ */
+const DOMINIO = 'clickbaby.com.br'
+
+function enderecoCompleto(digitado: string): string {
+  const limpo = digitado.trim()
+  return limpo.includes('@') ? limpo : `${limpo}@${DOMINIO}`
+}
+
+/**
  * Login mínimo: email + senha (fase 0 da seção 8 do CLAUDE.md).
  *
  * O login por PIN da fase 1 depende de Edge Function com service_role e não
@@ -31,7 +51,10 @@ export function LoginPage() {
     setEnviando(true)
     setErro(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+    const { error } = await supabase.auth.signInWithPassword({
+      email: enderecoCompleto(email),
+      password: senha,
+    })
     if (error) setErro(error.message)
     setEnviando(false)
   }
@@ -59,14 +82,37 @@ export function LoginPage() {
               e o login é justamente onde ele mais serve: a senha inicial da
               equipe tem maiúscula, número e arroba, digitados num teclado de
               celular que troca de layout entre as três coisas. */}
-          <CampoTexto
-            rotulo="Email"
-            type="email"
-            required
-            autoComplete="username"
-            valor={email}
-            aoMudar={setEmail}
-          />
+          <label className="block">
+            <span className="text-sm font-medium">Email</span>
+            <div className="mt-1.5 flex items-stretch">
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                // `text` e não `email`: com o domínio fora do campo, o valor
+                // digitado não é um e-mail válido e a validação nativa recusaria
+                // o envio de "ingrid". Quem monta o endereço é
+                // `enderecoCompleto`, e quem o valida é o GoTrue.
+                type="text"
+                inputMode="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="min-h-12 min-w-0 flex-1 rounded-l-md border border-r-0 border-border bg-background/60 px-3 text-base transition-colors focus:border-marca focus:bg-card"
+              />
+              <span className="inline-flex min-h-12 flex-shrink-0 items-center rounded-r-md border border-border bg-muted px-3 text-sm text-muted-foreground">
+                @{DOMINIO}
+              </span>
+            </div>
+            {/* Só no ambiente local: é onde as contas fogem do domínio, e onde
+                alguém precisa saber que dá para escrever o endereço inteiro. */}
+            {ehAmbienteLocal && (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Com “@” no que você digitar, o endereço vale como está.
+              </span>
+            )}
+          </label>
           <CampoTexto
             rotulo="Senha"
             type="password"

@@ -108,6 +108,31 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
   const videoPendente =
     caso.statusOperacional === 'encerrado' && temVideoMasterPendente(etapas)
 
+  /*
+   * UM fundo, escolhido aqui — e não quatro classes empilhadas no clsx.
+   *
+   * A versão anterior listava `bg-card`, `bg-rascunho-fundo/50`,
+   * `bg-pronto-fundo` e os dois de alerta na mesma string, contando com a
+   * ordem do clsx para decidir. Não é assim que funciona: utilitários do
+   * Tailwind têm a MESMA especificidade, então quem vence é a ordem em que
+   * eles saem na folha de estilo, não a ordem em que se escreve. O tingido de
+   * alerta simplesmente não aparecia — `bg-card` ganhava, e o computado do
+   * cartão vermelho voltava branco.
+   *
+   * Com um `switch` a precedência fica declarada e verificável: alerta primeiro
+   * (é o que pede ação agora), depois pronto para entrega, depois rascunho, e
+   * o branco quando não há nada a dizer.
+   */
+  const fundoDoCartao = alerta?.nivel === 'iminente'
+    ? 'bg-atrasado-fundo'
+    : alerta?.nivel === 'proximo'
+      ? 'bg-alerta-proximo-fundo'
+      : prontoParaEntrega
+        ? 'bg-pronto-fundo'
+        : caso.ehRascunho
+          ? 'bg-rascunho-fundo/50'
+          : 'bg-card'
+
   const itensDoMenu: ItemDropdown[] = [
     // Ausente, e não desabilitado: para quem opera em campo, editar o cadastro
     // não é uma ação que "ainda não dá" — é uma ação que não é dela. Um item
@@ -156,8 +181,9 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         // o chão pastel aparecendo no vão, não um filete de 1px — era essa a
         // queixa de "tudo colado". A sombra sobe no hover para dar o retorno
         // de que a coisa inteira é clicável.
-        'group relative overflow-hidden rounded-cartao border border-border bg-card shadow-cartao transition-shadow hover:shadow-cartao-alto',
-        caso.ehRascunho && 'border-rascunho-borda bg-rascunho-fundo/50',
+        'group relative overflow-hidden rounded-cartao border border-border shadow-cartao transition-shadow hover:shadow-cartao-alto',
+        fundoDoCartao,
+        caso.ehRascunho && 'border-rascunho-borda',
         /*
           A BORDA É O ALERTA — e ela é alta.
           
@@ -176,14 +202,29 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
           empurrariam o conteúdo e a lista pularia a cada caso que entra ou sai
           da janela).
           
-          O fundo ganha só um véu da cor — 6% é pouco o bastante para não
-          disputar com o âmbar do rascunho e o suficiente para o cartão inteiro
-          parecer envolvido, que é o que ele pediu.
+          O FUNDO acompanha a borda desde 03/09/2026: o cartão inteiro recebe
+          a cor em tom claro, com o mesmo peso de tinta do verde de "pronto
+          para entrega" — mesma luminosidade e mesma saturação, girando só a
+          matiz. Ver os tokens `--alerta-proximo-fundo` e `--atrasado-fundo`.
         */
         alerta && 'anel-alerta',
         alerta?.nivel === 'iminente' && 'anel-alerta-vivo',
 
-        prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
+        /*
+          O CARTÃO INTEIRO TINGIDO, nos dois níveis (03/09/2026).
+          
+          O véu de 6% de antes só existia no vermelho e era fraco demais para
+          se ver da TV. O gestor pediu o mesmo tratamento do verde de "pronto
+          para entrega" — e ele tem razão de pedir a MESMA coisa: os três são
+          o mesmo tipo de sinal, "este cartão precisa de você", e dar a um
+          deles superfície e aos outros só uma borda faz o olho aprender uma
+          hierarquia que não existe.
+          
+          A precedência entre os fundos vive em `fundoDoCartao`, acima: alerta
+          ganha de tudo, porque um rascunho com hora chegando é primeiro uma
+          hora chegando.
+        */
+        prontoParaEntrega && 'border-pronto-borda',
         // O caso terminal apaga — menos quando o vídeo ainda corre. Ali ele
         // não é histórico, é trabalho em andamento com a entrega já feita, e
         // apagá-lo esconderia o único cartão de Concluídos que ainda pede
