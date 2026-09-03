@@ -14,6 +14,7 @@ GRANT ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_
 GRANT ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) TO authenticated;
 GRANT ALL ON FUNCTION public.dispensar_etapa(p_caso_etapa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.eh_adm() TO authenticated;
 GRANT ALL ON FUNCTION public.eh_atendimento() TO authenticated;
@@ -62,6 +63,7 @@ REVOKE ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) FROM 
 REVOKE ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.configurar_segredo_do_sync(p_nome text, p_valor text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.disparar_sync_calendar() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.dispensar_etapa(p_caso_etapa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.eh_adm() FROM PUBLIC;
