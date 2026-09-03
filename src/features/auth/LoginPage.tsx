@@ -4,6 +4,7 @@ import { Botao } from '@/components/ui/Botao'
 import { Logo } from '@/components/ui/Logo'
 import { ehAmbienteLocal, supabase } from '@/lib/supabase'
 import { useAuth } from './contexto'
+import { CampoTexto } from '@/components/ui/CampoTexto'
 
 /**
  * Login mínimo: email + senha (fase 0 da seção 8 do CLAUDE.md).
@@ -52,16 +53,24 @@ export function LoginPage() {
         </div>
 
         <div className="mt-7 space-y-4">
-          <Campo
+          {/* O MESMO CampoTexto do resto do app, e não um campo privado desta
+              tela. Ele tinha uma cópia local idêntica, que ficou para trás
+              quando o campo compartilhado ganhou o olhinho de revelar senha —
+              e o login é justamente onde ele mais serve: a senha inicial da
+              equipe tem maiúscula, número e arroba, digitados num teclado de
+              celular que troca de layout entre as três coisas. */}
+          <CampoTexto
             rotulo="Email"
-            tipo="email"
+            type="email"
+            required
             autoComplete="username"
             valor={email}
             aoMudar={setEmail}
           />
-          <Campo
+          <CampoTexto
             rotulo="Senha"
-            tipo="password"
+            type="password"
+            required
             autoComplete="current-password"
             valor={senha}
             aoMudar={setSenha}
@@ -82,33 +91,5 @@ export function LoginPage() {
         </div>
       </form>
     </div>
-  )
-}
-
-function Campo({
-  rotulo,
-  tipo,
-  autoComplete,
-  valor,
-  aoMudar,
-}: {
-  rotulo: string
-  tipo: 'email' | 'password'
-  autoComplete: string
-  valor: string
-  aoMudar: (v: string) => void
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium">{rotulo}</span>
-      <input
-        type={tipo}
-        required
-        autoComplete={autoComplete}
-        value={valor}
-        onChange={(e) => aoMudar(e.target.value)}
-        className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background/60 px-3 text-base transition-colors focus:border-marca focus:bg-card"
-      />
-    </label>
   )
 }

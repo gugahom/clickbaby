@@ -185,6 +185,9 @@ function diaSeguinte(dia: string): string {
  * dado, e classificá-lo como atraso seria inventar uma resposta que o dado
  * não dá.
  *
+ * QUANDO NÃO HÁ ATRASO — a equipe em dia, só hoje e amanhã na tela — o corte
+ * cai depois do primeiro dia. Ver o corpo da função.
+ *
  * Qualquer um dos lados pode vir vazio (um dia sem atraso nenhum, ou uma tela
  * só com dias velhos). Quem chama decide o que fazer com isso — aqui não cabe
  * decidir por ele.
@@ -195,5 +198,24 @@ export function dividirEmDuasColunas(
 ): [BlocoDia[], BlocoDia[]] {
   const atrasados = blocos.filter((b) => b.dia !== null && b.dia < hoje)
   const doTurno = blocos.filter((b) => b.dia === null || b.dia >= hoje)
-  return [atrasados, doTurno]
+
+  if (atrasados.length > 0 && doTurno.length > 0) return [atrasados, doTurno]
+
+  /*
+   * SEM ATRASO, O CORTE CAI DEPOIS DO PRIMEIRO DIA (03/09/2026).
+   *
+   * A divisão atraso × turno é a que responde melhor quando existe atraso — e
+   * era a única que existia, então num dia limpo (só hoje e amanhã) uma das
+   * colunas ficava vazia e a tela voltava a uma coluna só. O gestor pediu que
+   * hoje e amanhã também se dividissem: a TV não fica menos cheia porque a
+   * equipe está em dia.
+   *
+   * Depois do PRIMEIRO dia, e não no meio equilibrado: hoje é o que se olha, e
+   * ele fica inteiro à esquerda — a mesma leitura de jornal que a versão
+   * anterior já usava. Com um dia só na tela não há corte possível, e quem
+   * chama trata isso (a coluna da direita volta vazia e o modo cai para uma
+   * coluna).
+   */
+  const todos = atrasados.length > 0 ? atrasados : doTurno
+  return [todos.slice(0, 1), todos.slice(1)]
 }

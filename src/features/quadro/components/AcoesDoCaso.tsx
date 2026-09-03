@@ -208,7 +208,16 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               checklist do caso, e sumir com o vídeo esconderia o que falta
               para encerrar. O que ela perde é só o poder de agir.
             */
-            const noFluxoDaSecao = etapa.tipo === 'edicao_video'
+            /*
+             * O vídeo do MASTER só se opera pela seção — ENQUANTO ESTÁ ABERTO.
+             *
+             * Resolvido (concluído ou dispensado), ele sai da seção
+             * (`videosMasterAbertos`) e precisa recuperar o desfazer aqui: sem
+             * isto não haveria lugar nenhum para reabrir um vídeo entregue
+             * quando a família pede alteração, que é o caminho de volta que a
+             * seção guardava antes.
+             */
+            const noFluxoDaSecao = etapa.tipo === 'edicao_video' && !encerrada
 
             return (
               <li key={etapa.id} className="flex items-center gap-3 py-1.5 pr-1 pl-3">

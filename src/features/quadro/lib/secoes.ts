@@ -168,20 +168,23 @@ export function reelsAbertosDaSecao(etapas: EtapaQuadro[]): EtapaQuadro[] {
 export function videosMasterAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
   return etapas
     .filter((e) => e.tipo === 'edicao_video')
-    // DISPENSADA sai; CONCLUÍDA fica. É a diferença desta seção para a de
-    // reels, e ela vem do fluxo de fases (migration 20260901051232).
+    // RESOLVIDA SAI — concluída ou dispensada (03/09/2026).
     //
-    // "Enviado / finalizado" é uma FASE do vídeo, não o fim da seção: a
-    // família pode pedir alteração depois de receber, e o caminho de volta é
-    // o mesmo seletor. Um vídeo que sumisse ao chegar em ENVIADO não teria
-    // como voltar para ALTERAÇÕES — a pessoa teria que achar o caso na lista
-    // do dia e reabrir a etapa por outro caminho, para desfazer algo que no
-    // fluxo dela nem é desfazer.
+    // Antes a concluída FICAVA, com este argumento: "Enviado / finalizado" é
+    // uma fase, não o fim, porque a família pode pedir alteração depois de
+    // receber, e o caminho de volta era o próprio seletor. O argumento era bom
+    // e a consequência não: enquanto o caso encerrava junto com o vídeo, o
+    // filtro de `ehTerminal` limpava a seção. Quando o caso passou a encerrar
+    // SEM esperar o vídeo (20260903153101), sumiu o que tirava o cartão dali —
+    // e vídeos entregues em agosto continuavam na lista de trabalho a fazer.
     //
-    // O cartão sai daqui quando o VÍDEO conclui ou é dispensado — não quando
-    // o caso encerra. Desde 20260903153101 o caso pode encerrar antes, e a
-    // seção é justamente onde o horizontal continua sendo operado.
-    .filter((e) => e.status !== 'dispensada')
+    // O gestor viu o efeito antes da causa: "fica com o status entregue mas não
+    // tem como concluir e tirar dali".
+    //
+    // O CAMINHO DE VOLTA NÃO SE PERDEU, mudou de lugar: um vídeo resolvido
+    // volta a mostrar o botão de reabrir na linha do cartão (ver AcoesDoCaso),
+    // que é onde toda outra etapa resolvida se desfaz. Uma exceção a menos.
+    .filter((e) => e.status !== 'dispensada' && e.status !== 'concluida')
     .filter(
       (e) =>
         e.status !== 'pendente' && e.status !== 'atribuida'
