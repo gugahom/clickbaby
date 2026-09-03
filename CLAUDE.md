@@ -654,8 +654,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
-  compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
-  `localStorage` do aparelho.
+  compacto (uma etapa por trilha). A escolha fica no `localStorage` do aparelho, e o botão
+  **não tem trava de papel**: qualquer conta o vê.
+  **A partir de 1280px, não 1536** (corrigido em 03/09/2026). O limite antigo escondia o
+  botão na TV do gestor: 1920 com o navegador em 150% de zoom reporta 1280 de viewport. Só
+  baixar o número não bastava — com o painel lateral em 30rem sobravam 356px por coluna e o
+  cartão compacto ficava MAIS ALTO que a 1920. Por isso o lateral encolhe para 18rem no modo
+  TV abaixo de 1536, e volta aos 30rem acima disso.
 - **Navegação**: a faixa abaixo da marca aparece quando há para onde ir — fora do Quadro
   (voltar pelo **Painel**, que é de todo mundo) ou para a gestão (Painel + **Equipe**). Quem
   opera dentro do Quadro não a vê: ali não há destino, e uma faixa permanente custaria 44px

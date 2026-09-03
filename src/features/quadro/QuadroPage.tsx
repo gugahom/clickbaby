@@ -608,7 +608,32 @@ export function QuadroPage() {
             {/* Desktop: lista larga à esquerda; à direita, UTI e Reels dividem
                 a altura em duas linhas IGUAIS (grid-rows-2). Cada uma rola por
                 dentro, então nenhuma empurra a outra por mais casos que tenha. */}
-            <div className="hidden min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-4 lg:p-4">
+            <div
+              className={clsx(
+                'hidden min-h-0 flex-1 lg:grid lg:gap-4 lg:p-4',
+                /*
+                  A COLUNA LATERAL ENCOLHE NO MODO TV EM TELA MÉDIA.
+                  
+                  O gestor reportou que a TV dele não mostrava o botão de modo
+                  TV. Não era papel — o botão nunca teve trava de papel; era
+                  LARGURA: uma TV de 1920 com o navegador em 150% reporta
+                  1280px, e o limite estava em 1536.
+                  
+                  Baixar o limite sozinho não bastava. Com o lateral em 30rem,
+                  sobram 356px por coluna a 1280 — e aí o cartão compacto fica
+                  MAIS ALTO (231px) do que a 1920 (113px), porque tudo quebra
+                  em três linhas. Duas colunas assim são piores que uma.
+                  
+                  Com 18rem o lateral continua mostrando os cartões de reels e
+                  a coluna vai a 452px: cartão de 171px, conteúdo 20% menor.
+                  A partir de 1536 ele volta aos 30rem — a proporção validada a
+                  1920 fica exatamente como estava.
+                */
+                emDuasColunas
+                  ? 'lg:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]'
+                  : 'lg:grid-cols-[minmax(0,1fr)_30rem]',
+              )}
+            >
               {/* Sem painel branco em volta: o chão pastel precisa aparecer
                   ENTRE os cartões, senão eles voltam a ser linhas de uma
                   grade e a separação do item 5 não existe. */}
