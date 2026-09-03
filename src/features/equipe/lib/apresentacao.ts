@@ -53,8 +53,25 @@ export function relativo(iso: string): string {
   return dias === 1 ? 'ontem' : `há ${dias} dias`
 }
 
+/**
+ * O nome que cada papel tem NA TELA — e ele não é o valor do enum.
+ *
+ * `operador` aparece como "Fotógrafo(a)" desde 03/09/2026, a pedido do gestor:
+ * é como a empresa chama essas pessoas, e a seção 2 do CLAUDE.md manda usar o
+ * vocabulário da operação na tela.
+ *
+ * O VALOR NO BANCO CONTINUA `operador`, E ISSO É DELIBERADO. A invariante 3.1
+ * diz que não existe usuário do tipo "fotógrafa": as mesmas pessoas circulam
+ * entre campo e ilha, e quem define a função é a ETAPA que ela executa, não um
+ * atributo dela. O rótulo é como a casa chama quem opera; o modelo continua
+ * sem tipo de pessoa.
+ *
+ * Se um dia alguém quiser filtrar trabalho por este campo — "mostre só as
+ * fotógrafas" —, é aí que a invariante está sendo quebrada, e o lugar de
+ * quebrá-la não é aqui: é numa conversa sobre mudar o modelo.
+ */
 export const ROTULO_PAPEL: Record<string, string> = {
-  operador: 'Operação',
+  operador: 'Fotógrafo(a)',
   comercial: 'Comercial',
   coordenacao: 'Coordenação',
   atendimento: 'Atendimento',
@@ -65,8 +82,8 @@ export const ROTULO_PAPEL: Record<string, string> = {
 /**
  * Os papéis do sistema, na ordem em que fazem sentido escolher.
  *
- * Operação primeiro porque é o caso comum — das catorze pessoas cadastradas,
- * onze são operação. Gestão por último porque é a que dá mais poder, e uma
+ * Fotógrafo(a) primeiro porque é o caso comum — das catorze pessoas
+ * cadastradas, onze são. Gestão por último porque é a que dá mais poder, e uma
  * lista que começa pelo maior privilégio convida ao clique errado.
  *
  * Espelha o enum `papel_sistema`. Se um valor novo entrar no banco sem entrar
@@ -74,7 +91,7 @@ export const ROTULO_PAPEL: Record<string, string> = {
  * próprio valor em vez de esconder o que não conhece.
  */
 export const PAPEIS: { id: PapelSistema; rotulo: string }[] = [
-  { id: 'operador', rotulo: 'Operação' },
+  { id: 'operador', rotulo: 'Fotógrafo(a)' },
   { id: 'atendimento', rotulo: 'Atendimento' },
   { id: 'comercial', rotulo: 'Comercial' },
   { id: 'coordenacao', rotulo: 'Coordenação' },

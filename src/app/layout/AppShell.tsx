@@ -8,17 +8,12 @@ import { Chevron, IconeCaneta, IconeMonitor, IconeSair } from '@/components/ui/i
 import { ehAmbienteLocal } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/contexto'
 import { useModoTv } from '@/features/quadro/lib/useModoTv'
+// A tabela de rótulos é UMA. Havia uma cópia idêntica aqui, e ela ficou para
+// trás no dia em que "operador" virou "Fotógrafo(a)" — o chip do cabeçalho
+// diria "Operação" enquanto a Equipe já dizia outra coisa.
+import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { useUrlDaFoto } from '@/features/perfil/api/useFotoDePerfil'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
-
-const ROTULO_PAPEL: Record<string, string> = {
-  operador: 'Operação',
-  comercial: 'Comercial',
-  coordenacao: 'Coordenação',
-  atendimento: 'Atendimento',
-  financeiro: 'Financeiro',
-  gestao: 'Gestão',
-}
 
 /**
  * A faixa da marca — quarta versão, e a primeira que ancora a tela.

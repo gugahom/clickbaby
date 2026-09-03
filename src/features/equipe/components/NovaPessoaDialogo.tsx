@@ -13,9 +13,9 @@ import { PAPEIS } from '../lib/apresentacao'
  * parte antes do arroba e mostra o resto como sufixo — o mesmo princípio de
  * "seleção, não digitação" da seção 6, aplicado ao pedaço que não varia.
  *
- * O PAPEL PADRÃO É OPERAÇÃO, e essa é a escolha certa para o caso comum: das
- * catorze pessoas cadastradas, onze são operação. Gestão é a exceção, e
- * exceção se escolhe.
+ * O PAPEL PADRÃO É FOTÓGRAFO(A), e essa é a escolha certa para o caso comum:
+ * das catorze pessoas cadastradas, onze são. Gestão é a exceção, e exceção se
+ * escolhe.
  *
  * A SENHA NÃO APARECE AQUI. Quem a define é a Edge Function, no servidor. Se
  * este formulário a mandasse, ela viajaria no bundle e qualquer chamador
@@ -123,7 +123,8 @@ export function NovaPessoaDialogo({ onFechar }: { onFechar: () => void }) {
             />
           </div>
           <span className="mt-1 block text-xs text-muted-foreground">
-            Operação é quem trabalha nas etapas. Só gestão enxerga esta tela.
+            Fotógrafo(a) é quem trabalha nas etapas — campo e edição. Só gestão
+            enxerga esta tela.
           </span>
         </div>
       </div>

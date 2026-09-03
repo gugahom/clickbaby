@@ -160,6 +160,17 @@ edição de vídeo no mesmo mês. Toda pessoa é um **operador**; a função se 
 que ela executa. Papéis de sistema (`papel_sistema`) existem apenas para permissões
 administrativas (comercial, atendimento, financeiro, gestão, coordenacao).
 
+**O RÓTULO NA TELA É OUTRA COISA.** Desde 03/09/2026, a pedido do gestor, `operador`
+aparece como **"Fotógrafo(a)"** — é como a empresa chama essas pessoas, e a seção 2 manda
+usar o vocabulário da operação na tela. O VALOR NO BANCO continua `operador`, e a
+distinção é o que mantém esta invariante de pé: o rótulo diz quem essas pessoas são na
+empresa; o modelo continua sem tipo de pessoa, e ninguém filtra trabalho por ele. A tabela
+`ROTULO_PAPEL` (`src/features/equipe/lib/apresentacao.ts`) é o único lugar da tradução.
+
+O dia em que aparecer um pedido de "mostre só as fotógrafas" ou de barrar alguém de uma
+etapa por causa deste campo, é esta invariante que está sendo quebrada — e o lugar de
+decidir isso é uma conversa sobre mudar o modelo, não um filtro a mais.
+
 ### 3.2 Handoff nunca sobrescreve o responsável
 
 Quando uma etapa muda de mão, grave uma linha em `handoffs` e atualize
