@@ -92,7 +92,7 @@ export function AppShell() {
               alinhamento="direita"
               rotulo={`Conta de ${pessoa.nome}`}
               onEscolher={(item) => {
-                if (item.id === 'conta') void navegar('/conta')
+                if (item.id === 'perfil') void navegar('/perfil')
                 if (item.id === 'sair') void sair()
               }}
               // "Editar conta" ANTES de "Sair", e não é ordem alfabética: num
@@ -100,7 +100,7 @@ export function AppShell() {
               // perigoso de acertar sem querer. Ele fica por último, longe do
               // polegar que acabou de abrir o menu.
               itens={[
-                { id: 'conta', rotulo: 'Editar conta', icone: <IconeCaneta className="size-4" /> },
+                { id: 'perfil', rotulo: 'Editar perfil', icone: <IconeCaneta className="size-4" /> },
                 { id: 'sair', rotulo: 'Sair da conta', icone: <IconeSair className="size-4" />, destrutivo: true },
               ]}
               gatilho={

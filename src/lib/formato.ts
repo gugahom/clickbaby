@@ -113,3 +113,27 @@ export function formatarDataHora(iso: string | null): string | null {
   if (!iso) return null
   return dataHoraCurta.format(new Date(iso))
 }
+
+const dataComAno = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: FUSO,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+/**
+ * Um TIMESTAMP como data, com ano — "03/09/2026".
+ *
+ * Não confundir com `dataCurta`, que recebe um DIA ('YYYY-MM-DD') e devolve
+ * "03/09" sem ano. As duas são fáceis de trocar e a troca não dá erro: passar
+ * um timestamp para `dataCurta` produz lixo silencioso, porque ela reparte a
+ * string em hífens e o horário sobrevive no terceiro pedaço. Foi o que
+ * aconteceu com "no sistema desde" na Equipe.
+ *
+ * O ano fica porque esta função existe para datas VELHAS — entrada no sistema,
+ * cadastro —, onde "12/03" sem ano não responde nada.
+ */
+export function formatarData(iso: string | null): string | null {
+  if (!iso) return null
+  return dataComAno.format(new Date(iso))
+}

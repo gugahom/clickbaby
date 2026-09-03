@@ -1,0 +1,28 @@
+-- O `service_role` passa a poder EXCLUIR pessoa.
+--
+-- POR QUE ISTO NÃO VEIO NA 20260902210453
+-- Aquela migration concedeu `select, insert` e escreveu, com todas as letras,
+-- que `update` e `delete` ficavam de fora porque a Edge Function
+-- `admin-pessoas` só criava. Estava certo naquele dia. Hoje a função também
+-- exclui — a gestão pediu ações sobre as pessoas —, e a linha de `pessoas` tem
+-- que cair junto com a conta de auth: separar produz uma conta órfã que loga e
+-- cai em "usuário sem pessoa vinculada", com o e-mail queimado, ou uma pessoa
+-- no cadastro que ninguém consegue usar.
+--
+-- O pgTAP anterior afirmava a AUSÊNCIA do delete, e foi ele que apontou a
+-- contradição: o botão da tela devolveu `permission denied for table pessoas`
+-- na primeira tentativa. A asserção não estava errada — ela era o teto certo
+-- para o escopo de ontem. Muda o escopo, muda o teto, e a mudança fica
+-- versionada em vez de acontecer por alguém alargar um grant "para destravar".
+--
+-- `UPDATE` CONTINUA DE FORA, e continua sendo o ponto. Desativar e trocar papel
+-- são `update`, e vão por RLS com o usuário logado (policy
+-- `pessoas_escrita_adm`, `eh_adm()`) — não pela chave que ignora RLS. Só o que
+-- exige o GoTrue passa pela `service_role`.
+--
+-- O QUE PROTEGE DE VERDADE não é este grant, é a FK: as onze referências a
+-- `pessoas` são `on delete restrict`, então quem já trabalhou não pode ser
+-- apagada nem com a chave. A função traduz essa recusa para português; o banco
+-- é quem recusa.
+
+grant delete on table public.pessoas to service_role;

@@ -190,7 +190,18 @@ select ok(
 
 
 -- =============================================================================
--- 4. As fases novas NÃO são resolvidas: a trava de encerramento continua
+-- 4. O vídeo em ALTERAÇÕES NÃO segura mais o encerramento
+--
+-- ESTA ASSERÇÃO FOI INVERTIDA em 20260903153101, e a inversão é a mudança —
+-- não um teste que "passou a incomodar". Ela dizia que a fase nova não contava
+-- como resolvida e por isso travava o encerramento; era verdade e era o
+-- comportamento certo enquanto o vídeo fazia parte da entrega. O gestor pediu o
+-- contrário, com razão: o horizontal leva dez dias úteis, a família já recebeu
+-- o resto, e o cartão ficava semanas na tela por causa dele.
+--
+-- O que a trava original protegia continua protegido, e tem prova própria em
+-- video_master_nao_trava_encerramento.test.sql: com a EDIÇÃO DE FOTOS aberta,
+-- encerrar segue sendo recusado.
 -- =============================================================================
 
 -- Resolve tudo MENOS o vídeo, que fica em alteração (estado atual).
@@ -205,9 +216,9 @@ values ('dddddddd-0000-0000-0000-000000000001', 'google_photos', 'https://photos
 set local role authenticated;
 
 select ok(
-  pg_temp.levanta_erro(
+  not pg_temp.levanta_erro(
     $$ select public.confirmar_entrega('dddddddd-0000-0000-0000-000000000001') $$),
-  'D0: com o vídeo em ALTERAÇÕES o caso NÃO encerra — a fase nova não é resolvida'
+  'D0: com o vídeo em ALTERAÇÕES o caso ENCERRA — o horizontal não segura a entrega'
 );
 
 reset role;

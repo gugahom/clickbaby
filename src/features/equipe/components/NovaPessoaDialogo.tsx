@@ -3,6 +3,7 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { useCriarPessoa } from '../api/useCriarPessoa'
+import { PAPEIS } from '../lib/apresentacao'
 
 /**
  * Cadastro de pessoa — conta de acesso e linha em `pessoas`, num gesto só.
@@ -22,21 +23,13 @@ import { useCriarPessoa } from '../api/useCriarPessoa'
  */
 const DOMINIO = 'clickbaby.com.br'
 
-const PAPEIS = [
-  { id: 'operador', rotulo: 'Operação' },
-  { id: 'atendimento', rotulo: 'Atendimento' },
-  { id: 'comercial', rotulo: 'Comercial' },
-  { id: 'coordenacao', rotulo: 'Coordenação' },
-  { id: 'financeiro', rotulo: 'Financeiro' },
-  { id: 'gestao', rotulo: 'Gestão' },
-]
 
 export function NovaPessoaDialogo({ onFechar }: { onFechar: () => void }) {
   const criar = useCriarPessoa()
   const [nome, setNome] = useState('')
   const [usuario, setUsuario] = useState('')
   const [apelido, setApelido] = useState('')
-  const [papel, setPapel] = useState('operador')
+  const [papel, setPapel] = useState<string>('operador')
   const [erro, setErro] = useState<string | null>(null)
 
   // Sugere o login a partir do nome enquanto ninguém digitou o campo à mão.

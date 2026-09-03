@@ -5,7 +5,7 @@ import { RotaDeGestao } from './guards/RotaDeGestao'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
 import { EquipePage } from '@/features/equipe/EquipePage'
-import { ContaPage } from '@/features/conta/ContaPage'
+import { PerfilPage } from '@/features/perfil/PerfilPage'
 
 /**
  * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
@@ -37,9 +37,9 @@ export const router = createBrowserRouter(
           element: <AppShell />,
           children: [
             { index: true, element: <QuadroPage /> },
-            // A conta é de qualquer pessoa logada — inclusive, e sobretudo,
+            // O perfil é de qualquer pessoa logada — inclusive, e sobretudo,
             // de quem opera: é ali que a senha inicial compartilhada morre.
-            { path: 'conta', element: <ContaPage /> },
+            { path: 'perfil', element: <PerfilPage /> },
             {
               // As telas da gestão vivem atrás de RotaDeGestao. Ela é a
               // navegação, não a segurança — ver o comentário lá.

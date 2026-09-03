@@ -377,8 +377,17 @@ export function podeConfirmarEntrega(
   // apareceria habilitado e a pessoa levaria o erro cru da RPC — e o caso
   // ficaria ainda mais confuso agora que os reels saíram da fita de edição do
   // card: quem olha o Quadro não os vê ali.
+  //
+  // O VÍDEO HORIZONTAL DO MASTER É A EXCEÇÃO, desde 20260903153101: ele leva
+  // dez dias úteis, a família já recebeu fotos e reels, e segurar o cartão na
+  // tela por isso era o que o gestor pediu para acabar. Se esta linha não
+  // acompanhasse a RPC, o botão ficaria desabilitado dizendo que falta o vídeo
+  // enquanto o banco aceitaria de bom grado — a tela mentindo sobre a regra.
   const abertas = etapas.filter(
-    (e) => e.status !== 'concluida' && e.status !== 'dispensada',
+    (e) =>
+      e.tipo !== 'edicao_video' &&
+      e.status !== 'concluida' &&
+      e.status !== 'dispensada',
   )
   if (abertas.length > 0) {
     const nomes = abertas.map((e) => ROTULO_ETAPA[e.tipo]).join(', ')

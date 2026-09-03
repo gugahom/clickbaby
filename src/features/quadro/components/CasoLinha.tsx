@@ -8,6 +8,7 @@ import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { podeCancelar, podeEditarCadastro } from '../lib/acoes'
+import { temVideoMasterPendente } from '../lib/secoes'
 import { mensagemDeErro } from '../lib/erros'
 import { useCancelarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
@@ -94,6 +95,19 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
     caso.etapasTotal > 0 &&
     caso.etapasConcluidas === caso.etapasTotal
 
+  /*
+   * ENTREGUE, MAS O VÍDEO CONTINUA.
+   *
+   * Só existe em Concluídos, e só no MASTER: desde 20260903153101 o caso
+   * encerra sem esperar o horizontal. Sem este selo, o caso apareceria em
+   * Concluídos idêntico a um que acabou de verdade — e a única forma de
+   * descobrir que ainda há dez dias de edição pela frente seria abrir o
+   * cartão. Foi o pedido do gestor: "em concluídos podemos deixar esse card
+   * em destaque pra saber que o vídeo ainda está pendente".
+   */
+  const videoPendente =
+    caso.statusOperacional === 'encerrado' && temVideoMasterPendente(etapas)
+
   const itensDoMenu: ItemDropdown[] = [
     // Ausente, e não desabilitado: para quem opera em campo, editar o cadastro
     // não é uma ação que "ainda não dá" — é uma ação que não é dela. Um item
@@ -170,7 +184,12 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         alerta?.nivel === 'iminente' && 'anel-alerta-vivo',
 
         prontoParaEntrega && 'border-pronto-borda bg-pronto-fundo',
-        caso.ehTerminal && 'opacity-60 shadow-none',
+        // O caso terminal apaga — menos quando o vídeo ainda corre. Ali ele
+        // não é histórico, é trabalho em andamento com a entrega já feita, e
+        // apagá-lo esconderia o único cartão de Concluídos que ainda pede
+        // alguma coisa.
+        caso.ehTerminal && !videoPendente && 'opacity-60 shadow-none',
+        videoPendente && 'border-atencao/40',
       )}
     >
       {/*
@@ -345,6 +364,15 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
                     </span>
                   )}
                   {caso.ehRascunho && <BadgeRascunho />}
+                  {videoPendente && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-bold text-atencao-tinta">
+                      <span
+                        className="size-1.5 rounded-full bg-atencao"
+                        aria-hidden="true"
+                      />
+                      Vídeo em edição
+                    </span>
+                  )}
                   {caso.ehTerminal && (
                     <span className="rotulo-sobrescrito rounded-full bg-muted px-2 py-1 text-muted-foreground">
                       {caso.statusOperacional}

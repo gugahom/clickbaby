@@ -178,10 +178,9 @@ export function videosMasterAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
     // do dia e reabrir a etapa por outro caminho, para desfazer algo que no
     // fluxo dela nem é desfazer.
     //
-    // O cartão sai daqui quando o CASO encerra (filtro de `ehTerminal` em
-    // casosComVideoMasterAberto), que é quando o trabalho acabou de verdade.
-    // Até lá, um vídeo pronto esperando entrega é justamente o que a
-    // coordenação precisa ver.
+    // O cartão sai daqui quando o VÍDEO conclui ou é dispensado — não quando
+    // o caso encerra. Desde 20260903153101 o caso pode encerrar antes, e a
+    // seção é justamente onde o horizontal continua sendo operado.
     .filter((e) => e.status !== 'dispensada')
     .filter(
       (e) =>
@@ -195,13 +194,42 @@ export function videosMasterAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
     .sort((a, b) => a.rodada - b.rodada)
 }
 
+/**
+ * O vídeo horizontal ainda por fazer, num caso já entregue.
+ *
+ * Desde a migration 20260903153101 o MASTER encerra sem esperar o horizontal:
+ * ele leva dez dias úteis, a família já recebeu fotos e reels, e o cartão
+ * ficava semanas na lista do dia por causa dele. O trabalho continua — só
+ * mudou de casa.
+ */
+export function temVideoMasterPendente(etapas: EtapaQuadro[]): boolean {
+  return etapas.some(
+    (e) =>
+      e.tipo === 'edicao_video' &&
+      e.status !== 'concluida' &&
+      e.status !== 'dispensada',
+  )
+}
+
 export function casosComVideoMasterAberto(
   casos: CasoQuadro[],
   etapasPorCaso: Map<string, EtapaQuadro[]>,
 ): CasoQuadro[] {
   return casos
     .filter((caso) => {
-      if (caso.ehTerminal) return false
+      /*
+       * ENCERRADO CONTINUA AQUI; CANCELADO, NÃO.
+       *
+       * Esta seção filtrava todo caso terminal, e isso deixou de estar certo
+       * quando o encerramento parou de esperar o vídeo: o cartão sairia da
+       * lista do dia E daqui no mesmo instante, e o trabalho de dez dias
+       * ficaria sem lugar nenhum na tela. É o oposto do que a mudança quis.
+       *
+       * Cancelado sai, e por razão diferente: ali o contrato caiu e não há
+       * vídeo a terminar. A RPC recusa mover a fase de um caso cancelado, então
+       * mostrá-lo aqui seria oferecer botão que o banco nega.
+       */
+      if (caso.statusOperacional === 'cancelado') return false
       return videosMasterAbertos(etapasPorCaso.get(caso.id) ?? []).length > 0
     })
     .sort((a, b) => {

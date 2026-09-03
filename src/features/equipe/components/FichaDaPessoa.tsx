@@ -1,10 +1,22 @@
+import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
+import { Botao } from '@/components/ui/Botao'
+import { Dialogo } from '@/components/ui/Dialogo'
+import { Dropdown } from '@/components/ui/Dropdown'
+import { Alerta } from '@/components/ui/Alerta'
+import { IconeCheck, IconeSair, IconeX } from '@/components/ui/icones'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
-import { DIAS_DE_JANELA, type EtapaEmMaos, type PessoaDaEquipe } from '../api/useEquipe'
-import { DivisaoDeLugar, Numero } from './Metricas'
+import { formatarData } from '@/lib/formato'
+import type { EtapaEmMaos, PessoaDaEquipe } from '../api/useEquipe'
+import {
+  useDefinirAtivo,
+  useDefinirPapel,
+  useExcluirPessoa,
+} from '../api/useAcoesDaPessoa'
 import {
   COR_LUGAR,
+  PAPEIS,
   ROTULO_LUGAR,
   ROTULO_PAPEL,
   formatarDuracao,
@@ -12,19 +24,20 @@ import {
 } from '../lib/apresentacao'
 
 /**
- * A ficha de uma pessoa: quem ela é, onde está agora e o que os carimbos dizem
- * sobre o trabalho dela.
+ * A ficha de uma pessoa — o que ela É no sistema e o que dá para fazer com ela.
  *
- * A ORDEM DAS TRÊS PERGUNTAS é a ordem em que a coordenação pensa. Primeiro
- * "ela está livre?", que é a decisão de agora — quem distribui a fila precisa
- * disso antes de qualquer histórico. Depois o volume dos trinta dias. Por
- * último onde ela trabalha, que é a pergunta de escala, não de plantão.
+ * A VERSÃO ANTERIOR MOSTRAVA MÉTRICAS e foi desfeita a pedido do gestor:
+ * concluídas na janela, tempo médio de ciclo, divisão campo × ilha. A razão
+ * dele é boa e vale ficar escrita, porque a tentação de recolocá-las vai
+ * voltar: ainda não está acordado O QUE se mede. Número na tela antes do
+ * acordo não fica parado — ele começa a ser usado para decidir, e a seção 9 do
+ * CLAUDE.md é explícita de que o combinado é registro aberto com padrões
+ * conhecidos por todas, não medição que aparece pronta. As métricas voltam na
+ * tela própria, depois do acordo.
  *
- * O TEMPO DE CICLO vem acompanhado do TAMANHO DA AMOSTRA, e isso não é
- * rodapé. A seção 9 do CLAUDE.md existe porque o cliente quer evidência
- * objetiva para cobrar tempo de edição; uma média de duas etapas apresentada
- * com a mesma cara de uma média de quarenta transformaria evidência em
- * impressão. O número de amostras é o que separa as duas.
+ * O QUE SOBROU não é consolo: é cadastro e presente. "Quem é essa pessoa, ela
+ * consegue entrar, o que ela está segurando agora, e o que eu posso fazer com
+ * ela." Nenhuma das quatro precisa de acordo nenhum para ser verdade.
  */
 export function FichaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
   const apelido = pessoa.apelidos[0]
@@ -32,9 +45,6 @@ export function FichaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
   return (
     <div className="space-y-3">
       <section className="overflow-hidden rounded-cartao border border-border bg-card shadow-cartao">
-        {/* A faixa da marca no topo da ficha: ela amarra a pessoa ao produto e
-            dá âncora visual à coluna, que sem isso seria mais um cartão branco
-            ao lado de uma lista de cartões brancos. */}
         <div className="superficie-cabecalho px-4 pt-4 pb-5 text-white">
           <div className="flex items-center gap-3">
             <Avatar nome={pessoa.nome} className="size-12 text-sm" />
@@ -57,97 +67,236 @@ export function FichaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
 
       {pessoa.emMaos.length > 0 && <EmMaos etapas={pessoa.emMaos} />}
 
-      <NumerosDaJanela pessoa={pessoa} />
-
-      {/* O que a ficha AINDA não responde. Dito aqui porque a pergunta natural
-          de quem chega nesta coluna é "e o cumprimento de prazo?" — e o
-          silêncio leria como "essa pessoa não estourou nenhum". */}
-      {/* Uma linha, não um parágrafo. Ela existe para desfazer UMA leitura
-          errada — "o ciclo dela é baixo porque ela é rápida" — e some do olho
-          depois da primeira vez. Cumprimento de SLA fica de fora por enquanto
-          e dizer isso aqui seria trocar um mal-entendido por uma lista de
-          ausências. */}
-      <p className="px-1 text-xs text-muted-foreground">
-        O ciclo desconta pausas e ignora etapa concluída sem ter sido iniciada —
-        o registro retroativo de campo não vira “zero”.
-      </p>
+      <Acesso pessoa={pessoa} />
+      <Acoes pessoa={pessoa} />
     </div>
   )
 }
 
 /**
- * Os números dos últimos trinta dias — os mesmos para a gestão olhar alguém e
- * para a pessoa olhar a si mesma.
+ * O cadastro, em quatro linhas.
  *
- * Um componente só, e não dois parecidos: a seção 9 do CLAUDE.md é explícita
- * de que a fila é visível para toda a equipe, não só para a gestão, porque a
- * produtividade subiu com a presença dos sócios e visibilidade compartilhada
- * reproduz isso sem clima de fiscalização. Duas versões do mesmo número, uma
- * "de gestão" e outra "de operação", desmentiriam essa escolha na primeira vez
- * que divergissem.
+ * "Consegue entrar" é a mais importante e a menos óbvia: uma pessoa pode
+ * existir em `pessoas` sem conta de auth, e nesse estado ela não é bloqueada —
+ * simplesmente não tem como fazer login, e quem a cadastrou não descobre até
+ * alguém reclamar.
  */
-export function NumerosDaJanela({
-  pessoa,
-  titulo = `Últimos ${DIAS_DE_JANELA} dias`,
-  // A tela de Conta fala com a própria pessoa. Trocar "ela" por "você" é a
-  // diferença entre um relatório sobre alguém e a resposta a uma pergunta que
-  // ela fez sobre si — e é a única coisa que muda entre os dois usos.
-  rotuloDivisao = 'Onde ela trabalha',
-}: {
-  pessoa: PessoaDaEquipe
-  titulo?: string
-  rotuloDivisao?: string
-}) {
+function Acesso({ pessoa }: { pessoa: PessoaDaEquipe }) {
   return (
-      <section className="rounded-cartao border border-border bg-card p-4 shadow-cartao">
-        <h3 className="rotulo-sobrescrito text-acento">{titulo}</h3>
+    <section className="rounded-cartao border border-border bg-card p-4 shadow-cartao">
+      <h3 className="rotulo-sobrescrito text-acento">Acesso</h3>
 
-        <div className="mt-3 grid grid-cols-2 gap-4">
-          <Numero
-            valor={pessoa.concluidasNaJanela}
-            rotulo="etapas concluídas"
-            tom={pessoa.concluidasNaJanela === 0 ? 'apagado' : 'neutro'}
-          />
-          <Numero
-            valor={
-              pessoa.cicloMedioMin === null ? '—' : formatarDuracao(pessoa.cicloMedioMin)
-            }
-            rotulo="ciclo médio"
-            nota={
-              pessoa.cicloMedioMin === null
-                ? 'sem etapa cronometrada'
-                : `média de ${pessoa.amostraDoCiclo} ${
-                    pessoa.amostraDoCiclo === 1 ? 'etapa' : 'etapas'
-                  }`
-            }
-            tom={pessoa.cicloMedioMin === null ? 'apagado' : 'neutro'}
-          />
+      <dl className="mt-3 space-y-2 text-sm">
+        <Linha rotulo="Consegue entrar">
+          {pessoa.temAcesso ? (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-concluido-tinta">
+              <IconeCheck className="size-4" />
+              Sim
+            </span>
+          ) : (
+            <span className="font-semibold text-rascunho">Não — sem conta vinculada</span>
+          )}
+        </Linha>
+
+        <Linha rotulo="Papel">
+          <span className="font-semibold">
+            {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
+          </span>
+        </Linha>
+
+        <Linha rotulo="No sistema desde">
+          <span className="font-semibold tabular-nums">{formatarData(pessoa.desde)}</span>
+        </Linha>
+
+        <Linha rotulo="Situação">
+          <span
+            className={clsx('font-semibold', !pessoa.ativo && 'text-muted-foreground')}
+          >
+            {pessoa.ativo ? 'Ativa' : 'Inativa'}
+          </span>
+        </Linha>
+      </dl>
+
+      {/* O e-mail é a pergunta que segue naturalmente desta caixa. Dizer onde
+          ele está evita que alguém conclua que o dado se perdeu. */}
+      <p className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+        O e-mail de login vive em <code>auth.users</code>, fora do alcance do
+        aplicativo — ainda não dá para mostrar aqui.
+      </p>
+    </section>
+  )
+}
+
+function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-muted-foreground">{rotulo}</dt>
+      <dd className="text-right">{children}</dd>
+    </div>
+  )
+}
+
+/**
+ * O que a gestão pode fazer.
+ *
+ * DESATIVAR PRIMEIRO, EXCLUIR ESCONDIDO. Desativar é o gesto de todo dia —
+ * alguém saiu da equipe, alguém entrou de licença — e é reversível. Excluir só
+ * existe para quem foi cadastrada por engano e nunca trabalhou; para todo o
+ * resto o banco recusa, e recusa de propósito (ver `useExcluirPessoa`). Um
+ * botão vermelho permanente que quase sempre falha ensina a errar.
+ */
+function Acoes({ pessoa }: { pessoa: PessoaDaEquipe }) {
+  const definirAtivo = useDefinirAtivo()
+  const definirPapel = useDefinirPapel()
+  const excluir = useExcluirPessoa()
+  const [erro, setErro] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState<'desativar' | 'excluir' | null>(null)
+
+  const ocupado = definirAtivo.isPending || definirPapel.isPending || excluir.isPending
+  const podeExcluir = !pessoa.temHistorico
+
+  function executar(promessa: Promise<unknown>) {
+    setErro(null)
+    promessa.then(
+      () => setConfirmando(null),
+      (e: unknown) => setErro(e instanceof Error ? e.message : String(e)),
+    )
+  }
+
+  return (
+    <section className="rounded-cartao border border-border bg-card p-4 shadow-cartao">
+      <h3 className="rotulo-sobrescrito text-acento">Ações</h3>
+
+      {erro && !confirmando && (
+        <div className="mt-3">
+          <Alerta onFechar={() => setErro(null)}>{erro}</Alerta>
+        </div>
+      )}
+
+      <div className="mt-3 space-y-3">
+        <div>
+          <span className="text-sm text-muted-foreground">Papel no sistema</span>
+          <div className="mt-1.5">
+            <Dropdown
+              rotulo={`Papel de ${pessoa.nome}`}
+              selecionado={pessoa.papelSistema}
+              desabilitado={ocupado}
+              larguraCheia
+              onEscolher={(item) => {
+                if (item.id === pessoa.papelSistema) return
+                const papel = PAPEIS.find((x) => x.id === item.id)?.id
+                if (!papel) return
+                executar(definirPapel.mutateAsync({ pessoaId: pessoa.id, papel }))
+              }}
+              itens={PAPEIS}
+              gatilho={
+                <span className="inline-flex min-h-11 w-full items-center justify-between rounded-md border border-border bg-background/60 px-3 text-sm font-semibold">
+                  {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
+                </span>
+              }
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Só gestão enxerga esta tela. Atendimento e adm cancelam caso e editam
+            cadastro; operação, não.
+          </p>
         </div>
 
-        <div className="mt-4 border-t border-border/70 pt-4">
-          <h4 className="rotulo-sobrescrito mb-2 text-[10px] text-muted-foreground">
-            {rotuloDivisao}
-          </h4>
-          <DivisaoDeLugar
-            porLugar={pessoa.concluidasPorLugar}
-            total={pessoa.concluidasNaJanela}
-          />
+        <div className="flex flex-wrap gap-2 border-t border-border/70 pt-3">
+          {pessoa.ativo ? (
+            <Botao
+              variante="contorno"
+              disabled={ocupado}
+              onClick={() => setConfirmando('desativar')}
+            >
+              <IconeSair className="size-4" />
+              Desativar
+            </Botao>
+          ) : (
+            <Botao
+              disabled={ocupado}
+              onda
+              onClick={() =>
+                executar(definirAtivo.mutateAsync({ pessoaId: pessoa.id, ativo: true }))
+              }
+            >
+              <IconeCheck className="size-4" />
+              Reativar
+            </Botao>
+          )}
+
+          {podeExcluir && (
+            <Botao
+              variante="fantasma"
+              disabled={ocupado}
+              onClick={() => setConfirmando('excluir')}
+              className="text-atrasado hover:bg-atrasado/10"
+            >
+              <IconeX className="size-4" />
+              Excluir
+            </Botao>
+          )}
         </div>
-      </section>
+
+        <p className="text-xs text-muted-foreground">
+          {podeExcluir
+            ? 'Ela ainda não trabalhou em nenhum caso, então dá para excluir de vez — conta de acesso junto.'
+            : 'Ela já trabalhou em casos, então não pode ser excluída: o histórico de quem fez o quê não pode perder uma ponta. Desativar tira do Quadro e das listas, e mantém o nome no que ela fez.'}
+        </p>
+      </div>
+
+      {confirmando === 'desativar' && (
+        <Dialogo
+          titulo={`Desativar ${pessoa.nome}?`}
+          rotuloConfirmar={definirAtivo.isPending ? 'Desativando…' : 'Desativar'}
+          confirmarDestrutivo
+          ocupado={definirAtivo.isPending}
+          erro={erro}
+          onCancelar={() => setConfirmando(null)}
+          onConfirmar={() =>
+            executar(definirAtivo.mutateAsync({ pessoaId: pessoa.id, ativo: false }))
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Ela perde o acesso ao Quadro na hora e sai das listas de atribuição. O
+            nome dela continua em cada etapa que executou, e dá para reativar
+            depois.
+          </p>
+          {pessoa.emAndamento > 0 && (
+            <p className="mt-2 rounded-md border border-atencao/30 bg-atencao/10 px-3 py-2 text-sm text-atencao-tinta">
+              Ela está com{' '}
+              {pessoa.emAndamento === 1
+                ? '1 etapa aberta'
+                : `${pessoa.emAndamento} etapas abertas`}
+              . Elas continuam no nome dela — passe para outra pessoa antes, se o
+              trabalho precisa seguir.
+            </p>
+          )}
+        </Dialogo>
+      )}
+
+      {confirmando === 'excluir' && (
+        <Dialogo
+          titulo={`Excluir ${pessoa.nome}?`}
+          rotuloConfirmar={excluir.isPending ? 'Excluindo…' : 'Excluir de vez'}
+          confirmarDestrutivo
+          ocupado={excluir.isPending}
+          erro={erro}
+          onCancelar={() => setConfirmando(null)}
+          onConfirmar={() => executar(excluir.mutateAsync({ pessoaId: pessoa.id }))}
+        >
+          <p className="text-sm text-muted-foreground">
+            Somem o cadastro e a conta de acesso, sem desfazer. Use isto só para
+            cadastro feito por engano — para quem saiu da equipe, desativar é o
+            gesto certo.
+          </p>
+        </Dialogo>
+      )}
+    </section>
   )
 }
 
 function EstadoAgora({ pessoa }: { pessoa: PessoaDaEquipe }) {
-  if (!pessoa.temAcesso) {
-    return (
-      <Estado
-        tom="rascunho"
-        titulo="Sem acesso"
-        detalhe="Existe no cadastro, mas nenhuma conta aponta para ela — não consegue entrar."
-      />
-    )
-  }
-
   if (!pessoa.ativo) {
     return (
       <Estado
@@ -158,43 +307,39 @@ function EstadoAgora({ pessoa }: { pessoa: PessoaDaEquipe }) {
     )
   }
 
+  if (!pessoa.temAcesso) {
+    return (
+      <Estado
+        tom="rascunho"
+        titulo="Sem acesso"
+        detalhe="Existe no cadastro, mas nenhuma conta aponta para ela — não consegue entrar."
+      />
+    )
+  }
+
   if (pessoa.emAndamento === 0) {
     return (
       <Estado
         tom="livre"
-        titulo="Livre"
+        titulo="Sem etapa aberta"
         detalhe={
           pessoa.ultimaAtividade
-            ? `Nada em mãos. Última atividade ${relativo(pessoa.ultimaAtividade)}.`
-            : 'Nada em mãos, e nenhuma etapa registrada ainda.'
+            ? `Última atividade ${relativo(pessoa.ultimaAtividade)}.`
+            : 'Nenhuma etapa registrada ainda.'
         }
       />
     )
   }
 
-  // TUDO PAUSADO NÃO É TRABALHANDO. O ponto pulsando e a cor do lugar dizem
-  // "está acontecendo agora"; com a etapa parada isso é uma afirmação falsa, e
-  // é justamente a pessoa que alguém precisa procurar.
   if (pessoa.tudoPausado) {
     return (
-      <div className="flex items-start gap-3">
-        <span
-          className="mt-1.5 size-2.5 flex-shrink-0 rounded-full bg-atencao"
-          aria-hidden="true"
-        />
-        <div className="min-w-0">
-          <p className="font-extrabold tracking-tight">
-            Parada
-            <span className="ml-2 rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-bold text-atencao-tinta">
-              {pessoa.emAndamento === 1 ? '1 pausada' : `${pessoa.emAndamento} pausadas`}
-            </span>
-          </p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            O trabalho parou e ninguém retomou
-            {pessoa.ultimaAtividade && ` · mexeu ${relativo(pessoa.ultimaAtividade)}`}
-          </p>
-        </div>
-      </div>
+      <Estado
+        tom="pausada"
+        titulo="Tudo pausado"
+        detalhe={`O trabalho parou e ninguém retomou${
+          pessoa.ultimaAtividade ? ` · mexeu ${relativo(pessoa.ultimaAtividade)}` : ''
+        }.`}
+      />
     )
   }
 
@@ -204,31 +349,20 @@ function EstadoAgora({ pessoa }: { pessoa: PessoaDaEquipe }) {
     <div className="flex items-start gap-3">
       <span
         className={clsx(
-          'mt-1.5 size-2.5 flex-shrink-0 rounded-full ring-2',
+          'mt-1.5 size-2.5 flex-shrink-0 rounded-full ring-2 ring-current/20',
           lugar ? COR_LUGAR[lugar].barra : 'bg-andamento',
-          'ring-current/20 motion-safe:animate-pulse',
+          'motion-safe:animate-pulse',
         )}
         aria-hidden="true"
       />
       <div className="min-w-0">
         <p className="font-extrabold tracking-tight">
-          {pessoa.fazendoAgora}
-          {lugar && (
-            <span
-              className={clsx(
-                'ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold',
-                COR_LUGAR[lugar].fundo,
-                COR_LUGAR[lugar].texto,
-              )}
-            >
-              {ROTULO_LUGAR[lugar]}
-            </span>
-          )}
+          {lugar ? ROTULO_LUGAR[lugar] : 'Trabalhando'}
         </p>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {pessoa.emAndamento === 1
-            ? '1 etapa em mãos agora'
-            : `${pessoa.emAndamento} etapas em mãos agora`}
+            ? '1 etapa em mãos'
+            : `${pessoa.emAndamento} etapas em mãos`}
           {pessoa.ultimaAtividade && ` · mexeu ${relativo(pessoa.ultimaAtividade)}`}
         </p>
       </div>
@@ -241,7 +375,7 @@ function Estado({
   titulo,
   detalhe,
 }: {
-  tom: 'livre' | 'apagado' | 'rascunho'
+  tom: 'livre' | 'apagado' | 'rascunho' | 'pausada'
   titulo: string
   detalhe: string
 }) {
@@ -253,6 +387,7 @@ function Estado({
           tom === 'livre' && 'border-2 border-concluido',
           tom === 'apagado' && 'bg-muted-foreground/40',
           tom === 'rascunho' && 'bg-rascunho',
+          tom === 'pausada' && 'bg-atencao',
         )}
         aria-hidden="true"
       />
@@ -267,20 +402,15 @@ function Estado({
 /**
  * O que ela está segurando agora, caso a caso.
  *
- * É a única parte da ficha que não é estatística, e a mais usada: quem
- * distribui a fila não pergunta "quantas ela tem", pergunta "o que ela tem" —
- * e a resposta precisa do nome da família, não do número. "Ingrid está no
- * Nascimento da Thayane há 3h" é uma frase sobre a qual se decide alguma
- * coisa; "Ingrid: 2" não é.
- *
- * A PAUSADA é marcada. Uma etapa parada há seis horas conta igual a uma
- * correndo há dez minutos na contagem de carga, e não é a mesma coisa para
- * quem vai redistribuir.
+ * É a parte da ficha que não é medida nem cadastro: é o presente. Quem
+ * distribui a fila não pergunta "quantas ela tem", pergunta "o que ela tem" — e
+ * a resposta precisa do nome da família. "Ingrid está no Nascimento da Thayane
+ * há 3h" é uma frase sobre a qual se decide alguma coisa.
  */
 function EmMaos({ etapas }: { etapas: EtapaEmMaos[] }) {
-  // O mesmo relógio do Quadro: sem ele, "há 3h" fica congelado no instante em
-  // que a ficha abriu, e numa tela que a coordenação deixa aberta o turno
-  // inteiro isso é a diferença entre relógio e fotografia.
+  // O mesmo relógio do Quadro: sem ele, "há 3h" congela no instante em que a
+  // ficha abriu, e numa tela que a coordenação deixa aberta o turno inteiro
+  // isso é a diferença entre relógio e fotografia.
   const agora = useRelogioDeMinuto().getTime()
 
   return (
@@ -291,7 +421,9 @@ function EmMaos({ etapas }: { etapas: EtapaEmMaos[] }) {
         {etapas.map((e) => {
           const cor = e.lugar ? COR_LUGAR[e.lugar] : COR_LUGAR.campo
           const ha =
-            e.desde === null ? null : formatarDuracao((agora - new Date(e.desde).getTime()) / 60_000)
+            e.desde === null
+              ? null
+              : formatarDuracao((agora - new Date(e.desde).getTime()) / 60_000)
 
           return (
             <li key={e.id} className="flex items-baseline gap-2.5">

@@ -1,87 +1,54 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Botao } from '@/components/ui/Botao'
 import { IconeAdicionar } from '@/components/ui/icones'
-import { useEquipe, type Lugar, type PessoaDaEquipe } from './api/useEquipe'
+import { useEquipe, type PessoaDaEquipe } from './api/useEquipe'
 import { NovaPessoaDialogo } from './components/NovaPessoaDialogo'
 import { FichaDaPessoa } from './components/FichaDaPessoa'
-import { COR_LUGAR, ROTULO_PAPEL, relativo } from './lib/apresentacao'
+import { COR_LUGAR, ROTULO_LUGAR, ROTULO_PAPEL, relativo } from './lib/apresentacao'
 
 /**
- * A Equipe como ESCALA, não como cadastro.
+ * A EQUIPE É UM CADASTRO — e desta vez de propósito.
  *
- * A primeira versão desta tela era uma lista alfabética de cartões brancos
- * centralizada na página — a forma que qualquer admin de qualquer sistema tem,
- * e que não dizia nada sobre esta operação. O gestor leu como genérica, com
- * razão.
+ * A versão anterior agrupava pelo estado ao vivo (paradas, em campo, na ilha,
+ * livres) e existia para servir uma coluna de métricas, removida a pedido do
+ * gestor. Sem ela, agrupar por estado organizava a tela em torno de uma
+ * pergunta que a tela não responde mais — e "Livres" e "Paradas" saíram por
+ * pedido explícito: aquela informação vai ter outro destino.
  *
- * A pergunta que esta tela responde é a de quem distribui trabalho numa equipe
- * em escala 24/7: QUEM ESTÁ COM O QUÊ AGORA. Por isso a lista é agrupada pelo
- * estado ao vivo, e os grupos têm os nomes que a operação usa — em campo (na
- * maternidade) e na ilha (na estação de edição), que são as duas trilhas do
- * banco e os dois lugares físicos do trabalho. Alfabético é índice remissivo;
- * responde "onde está a Ingrid", que ninguém pergunta olhando uma equipe de
- * catorze.
+ * O que sobra é a divisão que a GESTÃO usa quando vem aqui, administrativa e
+ * não operacional: quem está na equipe, quem foi cadastrada e não consegue
+ * entrar, e quem saiu. As duas últimas são exceções que pedem ação; por isso
+ * ficam separadas e no fim, em vez de diluídas na lista.
  *
- * MESTRE E DETALHE, e não uma lista larga. A coluna da esquerda é a escala; a
- * da direita é a ficha de quem estiver selecionada, que é onde as métricas
- * vivem. É a mesma forma do Quadro — lista à esquerda, painel à direita —, e
- * usar a mesma forma é o que faz as duas telas parecerem o mesmo produto.
+ * O estado ao vivo não sumiu — virou um selo na linha. Continua útil ("a
+ * Ingrid está na ilha agora"), só deixou de ser o eixo.
+ *
+ * MESTRE E DETALHE, como o Quadro: lista à esquerda, ficha à direita. Usar a
+ * mesma forma é o que faz as duas telas parecerem o mesmo produto.
  */
-type Grupo = 'parada' | 'campo' | 'ilha' | 'livre' | 'sem-acesso' | 'inativa'
+type Grupo = 'equipe' | 'sem-acesso' | 'inativa'
 
-/**
- * PARADAS VEM PRIMEIRO, e isso é a tela toda numa linha.
- *
- * Uma pessoa com etapa pausada não está ocupada — o trabalho dela parou e
- * ninguém foi avisado. É o único estado desta lista que pede uma decisão
- * agora, e por isso encabeça. Quem está em campo ou na ilha está bem; quem
- * está livre também. Ordenar por "quem precisa de mim" e não por hierarquia é
- * o que separa uma escala de um organograma.
- */
-const ORDEM_DOS_GRUPOS: Grupo[] = [
-  'parada',
-  'campo',
-  'ilha',
-  'livre',
-  'sem-acesso',
-  'inativa',
-]
+const ORDEM_DOS_GRUPOS: Grupo[] = ['equipe', 'sem-acesso', 'inativa']
 
 const TITULO_DO_GRUPO: Record<Grupo, string> = {
-  parada: 'Paradas',
-  campo: 'Em campo',
-  ilha: 'Na ilha',
-  livre: 'Livres',
+  equipe: 'Equipe',
   'sem-acesso': 'Sem acesso',
   inativa: 'Inativas',
 }
 
-/**
- * A legenda ensina o vocabulário UMA vez e sai da frente.
- *
- * "Em campo" e "na ilha" são as palavras da operação, não do sistema — quem
- * chega nesta tela pela primeira vez precisa de três palavras para amarrá-las
- * ao mundo real. Depois disso ninguém as lê, e é por isso que elas são miúdas
- * e cinzas em vez de virarem subtítulo.
- */
+/** Vazia no grupo principal: "Equipe" não precisa de tradução. */
 const LEGENDA_DO_GRUPO: Record<Grupo, string> = {
-  parada: 'com etapa pausada, sem ninguém tocando',
-  campo: 'na maternidade',
-  ilha: 'na edição',
-  livre: 'sem nada em mãos',
-  'sem-acesso': 'sem conta para entrar',
+  equipe: '',
+  'sem-acesso': 'cadastradas, mas sem conta para entrar',
   inativa: 'fora da operação',
 }
 
 function grupoDe(p: PessoaDaEquipe): Grupo {
   if (!p.ativo) return 'inativa'
   if (!p.temAcesso) return 'sem-acesso'
-  if (p.tudoPausado) return 'parada'
-  if (p.lugarAgora === 'campo') return 'campo'
-  if (p.lugarAgora === 'ilha') return 'ilha'
-  return 'livre'
+  return 'equipe'
 }
 
 export function EquipePage() {
@@ -94,28 +61,22 @@ export function EquipePage() {
 
   const grupos = ORDEM_DOS_GRUPOS.map((grupo) => ({
     grupo,
-    // Dentro do grupo: quem carrega mais primeiro, depois por nome. Numa
-    // escala, "quem está mais cheia" é a informação que decide a próxima
-    // distribuição.
+    // Alfabética. Num cadastro a pergunta é "cadê a Ingrid", e ela se responde
+    // pelo nome — ordenar por carga faria a lista se reorganizar sozinha
+    // enquanto a pessoa procura.
     pessoas: pessoas
       .filter((p) => grupoDe(p) === grupo)
-      .sort(
-        (a, b) =>
-          b.emAndamento - a.emAndamento ||
-          b.concluidasNaJanela - a.concluidasNaJanela ||
-          a.nome.localeCompare(b.nome),
-      ),
+      .sort((a, b) => a.nome.localeCompare(b.nome)),
   })).filter((g) => g.pessoas.length > 0)
 
-  // Derivada, não sincronizada por efeito: a primeira da primeira coluna já
-  // vem selecionada, e um id que sumiu (pessoa desativada, lista recarregada)
-  // cai de volta nela em vez de deixar a ficha vazia.
+  // Derivada, não sincronizada por efeito: a primeira já vem selecionada, e um
+  // id que sumiu (pessoa excluída, lista recarregada) cai de volta nela em vez
+  // de deixar a ficha vazia.
   const emOrdem = grupos.flatMap((g) => g.pessoas)
-  const selecionada =
-    emOrdem.find((p) => p.id === selecionadaId) ?? emOrdem[0] ?? null
+  const selecionada = emOrdem.find((p) => p.id === selecionadaId) ?? emOrdem[0] ?? null
 
-  const emCampo = pessoas.filter((p) => grupoDe(p) === 'campo').length
-  const naIlha = pessoas.filter((p) => grupoDe(p) === 'ilha').length
+  const trabalhando = pessoas.filter((p) => p.emAndamento > 0 && !p.tudoPausado).length
+  const semAcesso = pessoas.filter((p) => p.ativo && !p.temAcesso).length
 
   function selecionar(id: string) {
     setSelecionadaId(id)
@@ -138,7 +99,20 @@ export function EquipePage() {
             {!isPending && !error && (
               <p className="mt-1 text-sm text-muted-foreground">
                 {pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'} ·{' '}
-                <ContagemAoVivo emCampo={emCampo} naIlha={naIlha} />
+                {trabalhando === 0
+                  ? 'ninguém com etapa aberta agora'
+                  : `${trabalhando} com etapa aberta agora`}
+                {semAcesso > 0 && (
+                  // Só aparece quando existe, e é o único número desta linha
+                  // que pede ação: alguém cadastrada que não consegue entrar
+                  // não vai reclamar até precisar do sistema.
+                  <>
+                    {' · '}
+                    <span className="font-semibold text-rascunho">
+                      {semAcesso} sem acesso
+                    </span>
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -176,9 +150,11 @@ export function EquipePage() {
                     <span className="text-sm font-bold tabular-nums text-muted-foreground">
                       {doGrupo.length}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {LEGENDA_DO_GRUPO[grupo]}
-                    </span>
+                    {LEGENDA_DO_GRUPO[grupo] && (
+                      <span className="text-xs text-muted-foreground">
+                        {LEGENDA_DO_GRUPO[grupo]}
+                      </span>
+                    )}
                   </h2>
 
                   <ul className="mt-2 space-y-1.5">
@@ -206,27 +182,6 @@ export function EquipePage() {
   )
 }
 
-/** "3 em campo · 2 na ilha" — ou a verdade quando não há ninguém trabalhando. */
-function ContagemAoVivo({ emCampo, naIlha }: { emCampo: number; naIlha: number }) {
-  if (emCampo === 0 && naIlha === 0) return <>ninguém com etapa aberta agora</>
-
-  return (
-    <>
-      {emCampo > 0 && (
-        <span className={COR_LUGAR.campo.texto}>
-          <strong className="font-bold tabular-nums">{emCampo}</strong> em campo
-        </span>
-      )}
-      {emCampo > 0 && naIlha > 0 && ' · '}
-      {naIlha > 0 && (
-        <span className={COR_LUGAR.ilha.texto}>
-          <strong className="font-bold tabular-nums">{naIlha}</strong> na ilha
-        </span>
-      )}
-    </>
-  )
-}
-
 function LinhaDaEquipe({
   pessoa,
   selecionada,
@@ -245,9 +200,9 @@ function LinhaDaEquipe({
       aria-current={selecionada ? 'true' : undefined}
       className={clsx(
         'flex w-full items-center gap-3 rounded-cartao border p-2.5 text-left transition-all md:p-3',
-        // A selecionada ganha a espinha da marca à esquerda — o mesmo recurso
-        // do cartão do Quadro, onde a barra colorida diz "é este". Reusar
-        // ensina uma linguagem em vez de inventar duas.
+        // A selecionada ganha anel da marca — o mesmo recurso do cartão do
+        // Quadro, onde a cor diz "é este". Reusar ensina uma linguagem em vez
+        // de inventar duas.
         selecionada
           ? 'border-marca/40 bg-card shadow-cartao-alto ring-1 ring-marca/20'
           : 'border-transparent bg-card/60 hover:border-border hover:bg-card',
@@ -263,9 +218,7 @@ function LinhaDaEquipe({
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2">
           <span className="font-bold tracking-tight">{pessoa.nome}</span>
-          {apelido && (
-            <span className="text-xs text-muted-foreground">“{apelido}”</span>
-          )}
+          {apelido && <span className="text-xs text-muted-foreground">“{apelido}”</span>}
           {pessoa.papelSistema !== 'operador' && (
             <span className="rounded-full bg-marca-suave px-1.5 py-0.5 text-[10px] font-bold text-marca">
               {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
@@ -273,61 +226,65 @@ function LinhaDaEquipe({
           )}
         </p>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {pessoa.fazendoAgora
-            ? pessoa.fazendoAgora
-            : pessoa.ultimaAtividade
-              ? `Última atividade ${relativo(pessoa.ultimaAtividade)}`
-              : 'Nenhuma etapa ainda'}
+          {pessoa.ultimaAtividade
+            ? `Última atividade ${relativo(pessoa.ultimaAtividade)}`
+            : 'Nenhuma etapa ainda'}
         </p>
       </div>
 
-      {pessoa.emAndamento > 0 ? (
-        <Carga
-          quantidade={pessoa.emAndamento}
-          lugar={pessoa.lugarAgora}
-          pausada={pessoa.tudoPausado}
-        />
-      ) : (
-        <span className="flex-shrink-0 text-xs tabular-nums text-muted-foreground">
-          {pessoa.concluidasNaJanela > 0 ? `${pessoa.concluidasNaJanela} em 30d` : '—'}
-        </span>
-      )}
+      <EstadoDaLinha pessoa={pessoa} />
     </button>
   )
 }
 
-/** Quantas etapas ela está segurando. É o número que decide a próxima entrega. */
-function Carga({
-  quantidade,
-  lugar,
-  pausada,
-}: {
-  quantidade: number
-  lugar: Lugar | null
-  pausada: boolean
-}) {
+/**
+ * O estado ao vivo, do tamanho de um selo.
+ *
+ * Ele deixou de organizar a lista e virou atributo da linha — mas continua
+ * sendo a única coisa aqui que muda sozinha durante o turno, e por isso é o
+ * único elemento colorido da linha. Quem não tem nada aberto não ganha selo:
+ * a ausência já é a resposta, e um selo "livre" em nove linhas de catorze
+ * gastaria a cor onde ela não informa.
+ */
+function EstadoDaLinha({ pessoa }: { pessoa: PessoaDaEquipe }) {
+  if (pessoa.emAndamento === 0) return null
+
+  if (pessoa.tudoPausado) {
+    return (
+      <Selo className="bg-atencao/15 text-atencao-tinta">
+        {pessoa.emAndamento} pausada{pessoa.emAndamento > 1 ? 's' : ''}
+      </Selo>
+    )
+  }
+
+  const lugar = pessoa.lugarAgora
   const cor = lugar ? COR_LUGAR[lugar] : COR_LUGAR.campo
 
   return (
+    <Selo className={clsx(cor.fundo, cor.texto)}>
+      <span className={clsx('size-1.5 rounded-full', cor.barra)} aria-hidden="true" />
+      {lugar ? ROTULO_LUGAR[lugar] : 'Aberta'}
+      {pessoa.emAndamento > 1 && (
+        <span className="tabular-nums opacity-70">{pessoa.emAndamento}</span>
+      )}
+    </Selo>
+  )
+}
+
+function Selo({ className, children }: { className?: string; children: ReactNode }) {
+  return (
     <span
       className={clsx(
-        'inline-flex size-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-extrabold tabular-nums',
-        // Parada rouba a cor do lugar: o âmbar é o mesmo da pílula de etapa
-        // pausada no Quadro, e quem já viu um card sabe o que ele quer dizer.
-        pausada ? 'bg-atencao/15 text-atencao-tinta' : clsx(cor.fundo, cor.texto),
+        'inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold',
+        className,
       )}
-      title={
-        pausada
-          ? `${quantidade} ${quantidade === 1 ? 'etapa pausada' : 'etapas pausadas'}`
-          : `${quantidade} ${quantidade === 1 ? 'etapa' : 'etapas'} em mãos`
-      }
     >
-      {quantidade}
+      {children}
     </span>
   )
 }
 
-function Aviso({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Aviso({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div className="mx-auto max-w-md rounded-cartao border border-border bg-card p-6 text-center">
       <h2 className="font-semibold">{titulo}</h2>

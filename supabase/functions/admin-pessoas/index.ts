@@ -52,6 +52,8 @@ interface Pedido {
   email?: unknown;
   apelidos?: unknown;
   papelSistema?: unknown;
+  /** Só no DELETE. */
+  pessoaId?: unknown;
 }
 
 function responder(corpo: unknown, status: number): Response {
@@ -62,8 +64,8 @@ function responder(corpo: unknown, status: number): Response {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return responder({ erro: "Use POST." }, 405);
+  if (req.method !== "POST" && req.method !== "DELETE") {
+    return responder({ erro: "Use POST para criar ou DELETE para excluir." }, 405);
   }
 
   const url = Deno.env.get("SUPABASE_URL");
@@ -90,7 +92,7 @@ Deno.serve(async (req) => {
 
   const { data: quemPede } = await comoChamador
     .from("pessoas")
-    .select("papel_sistema, ativo")
+    .select("id, papel_sistema, ativo")
     .eq("auth_user_id", usuario.user.id)
     .maybeSingle();
 
@@ -108,6 +110,65 @@ Deno.serve(async (req) => {
     corpo = await req.json();
   } catch {
     return responder({ erro: "Corpo não é JSON." }, 400);
+  }
+
+  // ---------------------------------------------------------------------
+  // EXCLUIR — a pessoa e a conta de acesso dela, juntas.
+  //
+  // As duas caem na mesma chamada porque separá-las produz os dois piores
+  // estados possíveis: uma conta órfã que loga e cai em "usuário sem pessoa
+  // vinculada" (com o e-mail queimado, porque o GoTrue recusa recriá-lo), ou
+  // uma pessoa no cadastro que ninguém consegue usar.
+  //
+  // A ORDEM IMPORTA: primeiro a linha de `pessoas`, depois a conta. Se a FK
+  // recusar — e ela recusa para quem já trabalhou, `on delete restrict` —, a
+  // conta continua de pé e nada se perdeu. Na ordem inversa, a recusa da FK
+  // deixaria a pessoa sem acesso e sem aviso.
+  // ---------------------------------------------------------------------
+  if (req.method === "DELETE") {
+    const pessoaId = typeof corpo.pessoaId === "string" ? corpo.pessoaId : "";
+    if (pessoaId === "") return responder({ erro: "Informe a pessoa." }, 400);
+
+    if (pessoaId === quemPede.id) {
+      return responder({ erro: "Você não pode excluir a própria conta." }, 400);
+    }
+
+    const comoServico = createClient(url, servico, {
+      auth: { persistSession: false },
+    });
+
+    const { data: alvo } = await comoServico
+      .from("pessoas")
+      .select("nome, auth_user_id")
+      .eq("id", pessoaId)
+      .maybeSingle();
+
+    if (!alvo) return responder({ erro: "Pessoa não encontrada." }, 404);
+
+    const { error: erroApagar } = await comoServico
+      .from("pessoas")
+      .delete()
+      .eq("id", pessoaId);
+
+    if (erroApagar) {
+      const porHistorico = (erroApagar.message ?? "").toLowerCase().includes(
+        "violates foreign key",
+      );
+      return responder(
+        {
+          erro: porHistorico
+            ? `${alvo.nome} já trabalhou em casos e não pode ser excluída — o histórico de quem fez o quê não pode perder uma ponta. Desative em vez de excluir.`
+            : `Não foi possível excluir: ${erroApagar.message}`,
+        },
+        porHistorico ? 409 : 400,
+      );
+    }
+
+    if (alvo.auth_user_id) {
+      await comoServico.auth.admin.deleteUser(alvo.auth_user_id);
+    }
+
+    return responder({ excluida: alvo.nome }, 200);
   }
 
   const nome = typeof corpo.nome === "string" ? corpo.nome.trim() : "";

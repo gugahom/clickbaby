@@ -1,4 +1,5 @@
 import type { Lugar } from '../api/useEquipe'
+import type { PapelSistema } from '../api/useAcoesDaPessoa'
 
 /**
  * Como a Equipe DIZ as coisas: rótulos, cores e formatos.
@@ -61,3 +62,22 @@ export const ROTULO_PAPEL: Record<string, string> = {
   gestao: 'Gestão',
 }
 
+/**
+ * Os papéis do sistema, na ordem em que fazem sentido escolher.
+ *
+ * Operação primeiro porque é o caso comum — das catorze pessoas cadastradas,
+ * onze são operação. Gestão por último porque é a que dá mais poder, e uma
+ * lista que começa pelo maior privilégio convida ao clique errado.
+ *
+ * Espelha o enum `papel_sistema`. Se um valor novo entrar no banco sem entrar
+ * aqui, ele aparece cru na tela — de propósito: `ROTULO_PAPEL` cai para o
+ * próprio valor em vez de esconder o que não conhece.
+ */
+export const PAPEIS: { id: PapelSistema; rotulo: string }[] = [
+  { id: 'operador', rotulo: 'Operação' },
+  { id: 'atendimento', rotulo: 'Atendimento' },
+  { id: 'comercial', rotulo: 'Comercial' },
+  { id: 'coordenacao', rotulo: 'Coordenação' },
+  { id: 'financeiro', rotulo: 'Financeiro' },
+  { id: 'gestao', rotulo: 'Gestão' },
+]

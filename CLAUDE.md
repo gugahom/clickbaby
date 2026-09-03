@@ -644,24 +644,36 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   resto continuam no card.
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
+- **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
+  `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
+  ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo
+  operado pela seção MASTER (`mover_video_master` passou a aceitar caso **encerrado** —
+  cancelado continua recusado), e em Concluídos o cartão aparece com o selo **"Vídeo em
+  edição"**, sem apagar. A exceção nomeia `edicao_video` e mais nada: com a edição de fotos
+  aberta, encerrar continua sendo recusado.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **Modo TV** (02/09/2026): botão na barra da gestão que reparte o Quadro em duas
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
   compacto (uma etapa por trilha). Só a partir de 1536px; a escolha fica no
   `localStorage` do aparelho.
-- **Equipe** (`/quadro/equipe`), só para `gestao`. É uma ESCALA, não um cadastro: a
-  lista agrupa por estado ao vivo — **Paradas** (etapa pausada, ninguém tocando) primeiro,
-  depois em campo, na ilha, livres, sem acesso, inativas. Selecionar alguém abre a ficha
-  com o que ela tem em mãos (etapa + nome do caso + há quanto tempo), etapas concluídas em
-  30 dias, **tempo médio de ciclo** com o tamanho da amostra, e a divisão campo × ilha.
-  Também **cadastra pessoa**, pela Edge Function `admin-pessoas` (ver seção 4). Não mostra
-  o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
-  O ciclo desconta `pausa_acumulada` e descarta etapa concluída sem `iniciado_em` — o
-  registro retroativo de campo não vira ciclo zero, que é o furo da seção 9.
-- **Conta** (`/quadro/conta`), de qualquer pessoa logada, no menu do nome. **Troca a
-  senha** e mostra **os próprios números** — os mesmos da Equipe, pelo mesmo componente.
-  Isso é a seção 9 levada a sério: a visibilidade é compartilhada de propósito, e uma
-  métrica que a chefia enxerga e a pessoa não seria a vigilância que o acordo exclui. Exige a senha atual, o que o Supabase
+- **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
+  **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
+  e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
+  em mãos (etapa + nome do caso + há quanto tempo), os dados de acesso, e as ações:
+  **trocar papel**, **desativar/reativar** e **excluir**.
+  **Métricas saíram da ficha em 03/09/2026, por decisão do gestor** — concluídas na
+  janela, tempo médio de ciclo e divisão campo × ilha existiram e foram removidas porque
+  ainda não está acordado o que se mede. Elas voltam na tela de métricas, depois do acordo;
+  não as recoloque aqui.
+  **Desativar é a ação principal; excluir é a exceção.** As onze FKs para `pessoas` são
+  `on delete restrict` — quem já trabalhou sai da operação, não do cadastro. O botão de
+  excluir só aparece para quem nunca tocou em nada, e o banco recusa o resto.
+  Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
+- **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
+  perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
+  porque os CEL CLICK trocam de mão com a sessão aberta. Nome, apelido e foto ainda não se
+  editam: os dois primeiros pedem a RPC `atualizar_meu_perfil`, a foto pede coluna e a
+  primeira policy de `storage.objects`. Exige a senha atual, o que o Supabase
   não exige — a exigência é nossa, porque os seis CEL CLICK trocam de mão com a sessão
   aberta e sem ela qualquer um trancaria o colega para fora no meio do plantão.
 - **14 pessoas cadastradas** (02/09/2026): 3 gestão (André, Sarah, Jeferson) e 11
