@@ -698,6 +698,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       {confirmacao?.tipo === 'entrega' && (
         <DialogoConfirmarEntrega
           caso={caso}
+          etapas={etapas}
           ocupado={confirmarEntrega.isPending}
           erro={erro}
           onCancelar={() => setConfirmacao(null)}
@@ -758,11 +759,24 @@ interface ItemChecklistEntrega {
   rotulo: string
 }
 
-/** As duas que valem para todo pacote — a fotógrafa sempre entrega por fotos
- *  e por reels, mesmo pacotes sem venda de reels fazem o vertical curto
- *  (seção 2 do CLAUDE.md: "reels existe em TODOS os pacotes"). */
+/** A única que vale para todo caso: sempre há fotos para entregar. */
 const CHECKLIST_ENTREGA_BASE: ItemChecklistEntrega[] = [
   { id: 'fotos_completas', rotulo: 'Fotos completas no Google' },
+]
+
+/**
+ * O reels, quando o caso TEM reels.
+ *
+ * Era item fixo, porque "reels existe em todos os pacotes" (seção 2 do
+ * CLAUDE.md). Deixou de valer para o MASTER em 03/09/2026, por decisão do
+ * gestor — e pedir a conferência de um reels que não existe é ensinar a marcar
+ * caixa sem olhar, que estraga a única coisa que este checklist faz.
+ *
+ * A condição olha as ETAPAS DO CASO, não o slug do pacote. É mais robusto e é o
+ * que o CLAUDE.md manda: um MASTER que vender o vertical ganha a etapa por
+ * `adicionar_etapa` e volta a ter a caixa, sem ninguém lembrar de mexer aqui.
+ */
+const CHECKLIST_ENTREGA_REELS: ItemChecklistEntrega[] = [
   { id: 'reels_completo', rotulo: 'Reels completo no Google' },
 ]
 
@@ -787,6 +801,8 @@ const CHECKLIST_ENTREGA_BIRTH: ItemChecklistEntrega[] = [
 
 interface PropsDialogoConfirmarEntrega {
   caso: CasoQuadro
+  /** Para saber se este caso tem reels — ver CHECKLIST_ENTREGA_REELS. */
+  etapas: EtapaQuadro[]
   ocupado: boolean
   erro: string | null
   onCancelar: () => void
@@ -811,15 +827,19 @@ interface PropsDialogoConfirmarEntrega {
  */
 function DialogoConfirmarEntrega({
   caso,
+  etapas,
   ocupado,
   erro,
   onCancelar,
   onConfirmar,
 }: PropsDialogoConfirmarEntrega) {
   const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
-  const itens = ehBirth
-    ? [...CHECKLIST_ENTREGA_BASE, ...CHECKLIST_ENTREGA_BIRTH]
-    : CHECKLIST_ENTREGA_BASE
+  const temReels = etapas.some((e) => e.tipo === 'reels')
+  const itens = [
+    ...CHECKLIST_ENTREGA_BASE,
+    ...(temReels ? CHECKLIST_ENTREGA_REELS : []),
+    ...(ehBirth ? CHECKLIST_ENTREGA_BIRTH : []),
+  ]
 
   const [conferidos, setConferidos] = useState<Set<string>>(new Set())
 

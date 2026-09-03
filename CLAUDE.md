@@ -73,19 +73,25 @@ atendimento de um lado, operação interna do outro. Ela não é só rótulo de 
 | BASIC REELS              | ✓       | ✓          |       |            | ✓           | ✓     |            |       | 48h           |
 | STANDARD                 | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     |            |       | 48h           |
 | BABY REELS (carro-chefe) | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     |            |       | 48h           |
-| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     | ✓          |       | 10 dias úteis |
-| MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓           | ✓     | ✓          | ✓     | 10 dias úteis |
+| MASTER                   | ✓       | ✓          | ✓     | ✓          | ✓           |       | ✓          |       | 10 dias úteis |
+| MASTER + ÁLBUM           | ✓       | ✓          | ✓     | ✓          | ✓           |       | ✓          | ✓     | 10 dias úteis |
 | BIRTH                    |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
 | BIRTH + REELS            |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
 
 **REELS e VÍDEO são etapas diferentes** (confirmado 27/08/2026, migration
-`20260827140400`). `reels` é o vertical curto e existe em TODOS os pacotes —
-mesmo os que não o vendem, a equipe faz. `edicao_video` é o HORIZONTAL, só no
-MASTER. Até essa data todo pacote usava `edicao_video` para o que na verdade
-era o reels, e `reels` estava órfão no enum.
+`20260827140400`). `reels` é o vertical curto; `edicao_video` é o HORIZONTAL, só
+nos dois MASTER. Até essa data todo pacote usava `edicao_video` para o que na
+verdade era o reels, e `reels` estava órfão no enum.
 
-**Edição de fotos existe em todos**, e é UMA etapa por caso, não uma por bloco
-de captura: as fotos do banho entram na mesma edição já em andamento.
+**Reels existe em todo pacote MENOS os dois MASTER** (revisto em 03/09/2026,
+migration `20260903193219`). Até essa data valia o contrário — "existe em todos,
+mesmo os que não o vendem, a equipe faz" —, e era verdade quando foi escrito. O
+dono da operação mudou a regra: no MASTER o vertical não é padrão, e quando for
+vendido entra por `adicionar_etapa`. Casos MASTER criados ANTES continuam com o
+reels que já tinham; a regra vale para os novos.
+
+**Edição de fotos existe em todos**, e tem uma rodada por bloco de captura — ver
+`rodada` logo abaixo.
 
 **Precedência não é linear.** CAMPO é sequencial entre si; EDIÇÃO libera quando
 o nascimento conclui — banho e fechamento não seguram a edição, e a edição não
@@ -95,6 +101,23 @@ segura eles:
 entrada → nascimento ─┬→ banho → fechamento     (CAMPO)
                       └→ foto · reels · vídeo   (EDIÇÃO)
 ```
+
+**RODADAS DE EDIÇÃO.** Foto e reels são refeitos a cada bloco de captura, e a
+coluna `caso_etapas.rodada` diz qual é. O número identifica o BLOCO, não a ordem
+de chegada — um caso sem rodada 2 pula direto para a 3, e o rótulo continua
+certo:
+
+| rodada | material | nasce quando |
+| ------ | -------- | ------------ |
+| 1 | parto | com o caso (libera quando o nascimento conclui) |
+| 2 | banho + fechamento ("B+F") | o fechamento conclui |
+| 3 | encontro de irmãos | o encontro de irmãos conclui — só reels |
+
+A rodada 3 entrou em 03/09/2026 (`20260903193219`), a pedido do gestor: um caso
+teve o reels concluído e depois a família viveu o encontro, e não havia onde
+registrar o material novo. Reabrir a rodada do parto misturaria dois trabalhos
+no mesmo carimbo de tempo — e o tempo de ciclo da seção 9 sairia errado nos dois.
+Só reels, não foto: foi o que ele pediu.
 
 - **Entrada existe em todos menos BIRTH e BIRTH + REELS.**
 - **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a

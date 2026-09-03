@@ -204,6 +204,11 @@ export const ROTULO_RODADA: Record<number, string> = {
   // (seção 2 do CLAUDE.md). Quando o fechamento se descolar do banho, o aviso
   // da etapa cobre a exceção — não é caso de mudar o rótulo.
   2: 'B+F',
+  // A rodada do encontro de irmãos (migration 20260903193219). É SEMPRE a 3,
+  // mesmo num caso que nunca teve a 2 — o número diz QUAL bloco de captura,
+  // não a ordem em que apareceram. Se ele deslizasse conforme o caso, este
+  // rótulo mentiria em metade deles.
+  3: 'Irmãos',
 }
 
 
