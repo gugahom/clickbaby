@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import clsx from 'clsx'
 import { Dropdown } from '@/components/ui/Dropdown'
-import { useMoverVideoMaster } from '../api/useAcoes'
+import { Dialogo } from '@/components/ui/Dialogo'
+import { IconeDispensar } from '@/components/ui/icones'
+import { useDispensarEtapa, useMoverVideoMaster } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
 import {
   FASES_VIDEO_MASTER,
@@ -38,7 +41,16 @@ import {
  *
  * Os RÓTULOS são os do Trello deles, não uma tradução: quem opera reconhece
  * "ENVIADO / FINALIZADO", não "Concluída". Ver ROTULO_FASE_VIDEO.
+ *
+ * DISPENSAR NÃO É UMA FASE, e por isso vem separado no fim da lista, em
+ * vermelho. Ele existe porque a seção é o ÚNICO lugar onde o vídeo se opera, e
+ * havia um estado sem saída: um `edicao_video` que não deveria existir — quatro
+ * deles ficaram em pacotes que não vendem vídeo, resíduo da janela em que o
+ * checklist antigo ainda os gerava (27–31/08/2026) — aparecia na seção e não
+ * podia ser tirado de lá por ninguém. "Não vai acontecer" é exatamente o que
+ * `dispensar_etapa` diz, e ele conta como resolvido na trava de encerramento.
  */
+const DISPENSAR = 'dispensar'
 export function FaseDoVideo({
   etapa,
   onErro,
@@ -47,9 +59,12 @@ export function FaseDoVideo({
   onErro: (mensagem: string | null) => void
 }) {
   const mover = useMoverVideoMaster()
+  const dispensar = useDispensarEtapa()
+  const [dispensando, setDispensando] = useState(false)
   const atual = faseDoVideo(etapa.status)
 
   return (
+    <>
     <Dropdown
       alinhamento="direita"
       rotulo={atual ? `Fase do vídeo: ${ROTULO_FASE_VIDEO[atual]}` : 'Definir a fase do vídeo'}
@@ -57,14 +72,26 @@ export function FaseDoVideo({
       desabilitado={mover.isPending}
       onEscolher={(item) => {
         onErro(null)
+        if (item.id === DISPENSAR) {
+          setDispensando(true)
+          return
+        }
         mover
           .mutateAsync({ casoEtapaId: etapa.id, fase: item.id as FaseVideoMaster })
           .catch((e) => onErro(mensagemDeErro(e)))
       }}
-      itens={FASES_VIDEO_MASTER.map((fase) => ({
-        id: fase,
-        rotulo: ROTULO_FASE_VIDEO[fase],
-      }))}
+      itens={[
+        ...FASES_VIDEO_MASTER.map((fase) => ({
+          id: fase,
+          rotulo: ROTULO_FASE_VIDEO[fase],
+        })),
+        {
+          id: DISPENSAR,
+          rotulo: 'Este caso não tem vídeo',
+          icone: <IconeDispensar className="size-4" />,
+          destrutivo: true,
+        },
+      ]}
       gatilho={
         <span
           className={clsx(
@@ -85,6 +112,35 @@ export function FaseDoVideo({
         </span>
       }
     />
+
+    {dispensando && (
+      <Dialogo
+        titulo="Este caso não tem vídeo?"
+        rotuloConfirmar={dispensar.isPending ? 'Dispensando…' : 'Dispensar o vídeo'}
+        confirmarDestrutivo
+        ocupado={dispensar.isPending}
+        onCancelar={() => setDispensando(false)}
+        onConfirmar={() => {
+          onErro(null)
+          dispensar
+            .mutateAsync({
+              casoEtapaId: etapa.id,
+              motivo: 'Pacote não vende o vídeo horizontal — etapa criada por engano.',
+            })
+            .then(
+              () => setDispensando(false),
+              (e) => onErro(mensagemDeErro(e)),
+            )
+        }}
+      >
+        <p className="text-sm text-muted-foreground">
+          A etapa sai desta seção e conta como resolvida — o caso deixa de
+          esperar por ela para encerrar. Use quando o vídeo não faz parte do
+          pacote; se ele só ainda não começou, deixe em “Editando”.
+        </p>
+      </Dialogo>
+    )}
+    </>
   )
 }
 

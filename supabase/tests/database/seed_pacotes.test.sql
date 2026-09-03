@@ -85,13 +85,16 @@ select is(
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed master'),
-  array['entrada', 'nascimento', 'banho', 'fechamento', 'edicao_foto', 'reels', 'edicao_video']::public.etapa_tipo[],
-  'MASTER: o único com edicao_video — o horizontal, além do reels que todos têm'
+  array['entrada', 'nascimento', 'banho', 'fechamento', 'edicao_foto', 'edicao_video']::public.etapa_tipo[],
+  -- SEM REELS desde 20260903193219. O gestor tirou o vertical do padrão do
+  -- MASTER; quando ele for vendido, entra por `adicionar_etapa`. Esta asserção
+  -- dizia "além do reels que todos têm" e era verdade até aquele dia.
+  'MASTER: campo completo, foto e o horizontal — sem reels de fábrica'
 );
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed master-album'),
-  array['entrada', 'nascimento', 'banho', 'fechamento', 'edicao_foto', 'reels', 'edicao_video', 'album']::public.etapa_tipo[],
+  array['entrada', 'nascimento', 'banho', 'fechamento', 'edicao_foto', 'edicao_video', 'album']::public.etapa_tipo[],
   'MASTER + ÁLBUM: tudo do MASTER mais o álbum'
 );
 

@@ -369,3 +369,48 @@ export function IconeAdicionar({ className }: PropsIcone) {
     </svg>
   )
 }
+
+/** Olho aberto — "mostrar a senha". */
+export function IconeOlho({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+/**
+ * Olho riscado — "esconder a senha".
+ *
+ * O RISCO É UMA LINHA SÓ por cima do mesmo olho, e não um desenho diferente:
+ * o par precisa se ler como o mesmo objeto em dois estados. Dois ícones sem
+ * parentesco fariam a pessoa reler o botão a cada troca.
+ */
+export function IconeOlhoFechado({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="m3 3 18 18" />
+    </svg>
+  )
+}

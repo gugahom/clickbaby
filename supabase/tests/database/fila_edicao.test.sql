@@ -98,12 +98,13 @@ select ok(
 );
 
 -- Uma linha por TAREFA, não por caso (migration 20260827140400): o BABY REELS
--- tem foto e reels; o MASTER tem foto, reels e o horizontal. Cinco trabalhos.
+-- tem foto e reels; o MASTER tem foto e o horizontal — perdeu o reels de
+-- fábrica em 20260903193219. Quatro trabalhos.
 select is(
   (select count(*)::int from public.fila_edicao
     where caso_id in ('ffffffff-0000-0000-0000-000000000001',
                       'ffffffff-0000-0000-0000-000000000002')),
-  5,
+  4,
   'a fila lista TAREFAS de edição abertas, não casos'
 );
 
@@ -261,13 +262,15 @@ select is(
   'e o status da etapa acompanha'
 );
 
--- A prova de que a atribuição é POR TAREFA: o mesmo caso tem foto e reels sem
--- responsável, e só o horizontal ficou com a Editora Fila.
+-- A prova de que a atribuição é POR TAREFA: no mesmo caso a foto continua sem
+-- responsável, e só o horizontal ficou com a Editora Fila. Eram duas tarefas
+-- soltas até o MASTER perder o reels de fábrica (20260903193219); a prova não
+-- depende do número, depende de sobrar alguma.
 select is(
   (select count(*)::int from public.fila_edicao
     where caso_id = 'ffffffff-0000-0000-0000-000000000002' and responsavel_id is null),
-  2,
-  'atribuir o vídeo não atribuiu a foto nem o reels — cada tarefa tem seu dono'
+  1,
+  'atribuir o vídeo não atribuiu a foto — cada tarefa tem seu dono'
 );
 
 

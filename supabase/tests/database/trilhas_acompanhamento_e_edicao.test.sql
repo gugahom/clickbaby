@@ -70,8 +70,8 @@ select is(
 select is(
   (select array_agg(tipo::text order by ordem) from public.caso_etapas
     where caso_id = 'aaaa1111-0000-0000-0000-000000000001' and trilha = 'edicao'),
-  array['edicao_foto', 'reels', 'edicao_video', 'album'],
-  'EDIÇÃO é o que acontece na ilha — e o MASTER + ÁLBUM tem as quatro'
+  array['edicao_foto', 'edicao_video', 'album'],
+  'EDIÇÃO é o que acontece na ilha — e o MASTER + ÁLBUM tem três das quatro (sem reels)'
 );
 
 select is(
@@ -134,13 +134,22 @@ select is(
   'NENHUM pacote fora do MASTER tem edicao_video — o horizontal é só dele'
 );
 
+-- REELS EM TODO PACOTE MENOS O MASTER (20260903193219).
+--
+-- A asserção dizia "TODO pacote tem reels — mesmo os que não o vendem, a equipe
+-- faz", e era o fato confirmado em 27/08/2026. O gestor mudou a regra para os
+-- dois MASTER em 03/09/2026: lá o vertical deixou de ser padrão e passa a
+-- entrar por `adicionar_etapa` quando for vendido.
+--
+-- Continua sendo uma asserção FECHADA, e não "quase todos": os dois MASTER são
+-- nomeados. Um pacote novo que nascesse sem reels por descuido ainda falha aqui.
 select is(
-  (select count(*)::int from public.pacotes p
+  (select array_agg(p.slug order by p.slug) from public.pacotes p
     where not exists (
       select 1 from public.pacote_etapas pe
       where pe.pacote_id = p.id and pe.etapa_tipo = 'reels')),
-  0,
-  'TODO pacote tem reels — mesmo os que não o vendem, a equipe faz'
+  array['master', 'master-album'],
+  'só os dois MASTER ficam sem reels de fábrica; todos os outros têm'
 );
 
 select is(

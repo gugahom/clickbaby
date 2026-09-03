@@ -109,7 +109,6 @@ with etapas(slug, etapa_tipo) as (
     ('master', 'banho'::public.etapa_tipo),
     ('master', 'fechamento'::public.etapa_tipo),
     ('master', 'edicao_foto'::public.etapa_tipo),
-    ('master', 'reels'::public.etapa_tipo),
     ('master', 'edicao_video'::public.etapa_tipo),
 
     ('master-album', 'entrada'::public.etapa_tipo),
@@ -117,7 +116,6 @@ with etapas(slug, etapa_tipo) as (
     ('master-album', 'banho'::public.etapa_tipo),
     ('master-album', 'fechamento'::public.etapa_tipo),
     ('master-album', 'edicao_foto'::public.etapa_tipo),
-    ('master-album', 'reels'::public.etapa_tipo),
     ('master-album', 'edicao_video'::public.etapa_tipo),
     ('master-album', 'album'::public.etapa_tipo),
 
