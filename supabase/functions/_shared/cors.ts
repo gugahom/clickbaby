@@ -62,24 +62,38 @@ export function cabecalhosCors(origem: string | null): Record<string, string> {
   return base;
 }
 
+/** O piso: o que o supabase-js sempre manda. */
+const CABECALHOS_BASE = "authorization, apikey, content-type, x-client-info";
+
 /**
  * Responde ao preflight, se for um. Devolve `null` quando o pedido é de
  * verdade e deve seguir para a função.
  *
- * `apikey` e `x-client-info` estão na lista porque o supabase-js os manda
- * sozinho; omitir qualquer um faz o navegador reprovar o preflight que a
- * função acabou de aprovar.
+ * ELE DEVOLVE O QUE FOI PEDIDO, e não uma lista fixa. A lista fixa foi a
+ * primeira versão disto e é uma armadilha da mesma família do bug que este
+ * arquivo conserta: o supabase-js manda cabeçalhos que MUDAM com a versão e com
+ * a configuração (`x-supabase-api-version`, `traceparent` quando o tracing
+ * está ligado), e basta um deles ficar de fora para o navegador reprovar o
+ * preflight que a função acabou de aprovar — de novo com a mesma mensagem
+ * inútil, "Failed to send a request to the Edge Function".
+ *
+ * Devolver o pedido não afrouxa nada que importe: quem decide se a chamada vale
+ * é a ORIGEM (acima) e o JWT (dentro da função). O navegador só pergunta "posso
+ * mandar estes cabeçalhos?"; a resposta não dá acesso a nada por si só.
  */
 export function responderPreflight(req: Request): Response | null {
   if (req.method !== "OPTIONS") return null;
+
+  const pedidos = req.headers.get("Access-Control-Request-Headers");
 
   return new Response(null, {
     status: 204,
     headers: {
       ...cabecalhosCors(req.headers.get("Origin")),
       "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers":
-        "authorization, apikey, content-type, x-client-info",
+      "Access-Control-Allow-Headers": pedidos && pedidos.trim() !== ""
+        ? pedidos
+        : CABECALHOS_BASE,
       "Access-Control-Max-Age": "86400",
     },
   });

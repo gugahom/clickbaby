@@ -19,7 +19,11 @@
 // passar — assim não existe caminho em que a chave privilegiada é usada com o
 // pedido de alguém que não devia estar aqui.
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+// VERSÃO TRAVADA, e não `@2`. Com o intervalo aberto, cada deploy resolve a
+// versão do dia — o local e a produção rodam bibliotecas diferentes sem ninguém
+// pedir, e um comportamento interno que muda entre versões vira um bug que só
+// existe em produção. É a mesma versão que o front usa (package.json).
+import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 import { cabecalhosCors, responderPreflight } from "../_shared/cors.ts";
 
 /**
@@ -101,9 +105,34 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  const { data: usuario } = await comoChamador.auth.getUser();
-  if (!usuario?.user) {
-    return responder({ erro: "Sessão inválida." }, 401);
+  // O TOKEN VAI EXPLÍCITO. `getUser()` sem argumento procura a sessão guardada
+  // pelo próprio cliente — e aqui não há nenhuma (`persistSession: false`), então
+  // ele depende de a biblioteca cair no header `Authorization` que passamos em
+  // `global`. Esse fallback é interno, não documentado, e muda entre versões:
+  // com `npm:...@2` solto, era a diferença entre 201 no local e 401 em produção.
+  // `getUser(token)` é a forma que a documentação de Edge Functions usa e não
+  // depende de nada disso.
+  const token = autorizacao.replace(/^Bearer\s+/i, "").trim();
+  if (token === "") {
+    return responder({ erro: "Faltou a credencial da sessão no pedido." }, 401);
+  }
+
+  const { data: usuario, error: erroSessao } = await comoChamador.auth.getUser(
+    token,
+  );
+  if (erroSessao || !usuario?.user) {
+    // A mensagem do GoTrue vai junto de propósito: "JWT expired" e "invalid
+    // claim" pedem coisas diferentes de quem está na frente da tela, e sem ela
+    // todo 401 vira o mesmo "Sessão inválida" que não deixa ninguém agir. Não há
+    // dado pessoal aqui, e quem lê já tinha um token deste projeto na mão.
+    return responder(
+      {
+        erro: erroSessao
+          ? `Sessão inválida: ${erroSessao.message}. Saia e entre de novo.`
+          : "Sessão inválida. Saia e entre de novo.",
+      },
+      401,
+    );
   }
 
   const { data: quemPede } = await comoChamador

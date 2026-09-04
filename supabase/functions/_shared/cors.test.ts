@@ -21,9 +21,16 @@ function assertEqual(recebido: unknown, esperado: unknown, msg: string) {
   }
 }
 
-function pedido(metodo: string, origem: string | null): Request {
+function pedido(
+  metodo: string,
+  origem: string | null,
+  pedeCabecalhos?: string,
+): Request {
   const headers = new Headers();
   if (origem !== null) headers.set("Origin", origem);
+  if (pedeCabecalhos) {
+    headers.set("Access-Control-Request-Headers", pedeCabecalhos);
+  }
   return new Request("https://exemplo.test/functions/v1/admin-pessoas", {
     method: metodo,
     headers,
@@ -44,7 +51,21 @@ Deno.test("OPTIONS de produção volta 204 liberando a origem — era o 405 que 
   assertEqual(r.headers.get("Access-Control-Allow-Origin"), PROD, "origem liberada");
 });
 
-Deno.test("o preflight libera os cabeçalhos que o supabase-js manda sozinho", () => {
+Deno.test("o preflight devolve os cabeçalhos PEDIDOS — a lista fixa era armadilha", () => {
+  // O supabase-js manda cabeçalhos que mudam com a versão e com a configuração.
+  // Com lista fixa, um deles de fora derruba o preflight e o erro volta a ser o
+  // mesmo "Failed to send a request", que não diz o que aconteceu.
+  const pedidos = "authorization, apikey, content-type, x-supabase-api-version, traceparent";
+  const r = responderPreflight(pedido("OPTIONS", PROD, pedidos));
+
+  assertEqual(
+    r?.headers.get("Access-Control-Allow-Headers"),
+    pedidos,
+    "o preflight tem que devolver o que foi pedido",
+  );
+});
+
+Deno.test("sem lista pedida, cai no piso do que o supabase-js sempre manda", () => {
   const r = responderPreflight(pedido("OPTIONS", PROD));
   const permitidos = (r?.headers.get("Access-Control-Allow-Headers") ?? "")
     .toLowerCase();

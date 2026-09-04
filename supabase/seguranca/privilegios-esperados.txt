@@ -70,6 +70,7 @@ REVOKE ALL ON FUNCTION public.eh_adm() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.eh_atendimento() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.eh_pessoa_ativa() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_caso_etapas() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.gerar_reels_do_encontro_de_irmaos() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_segunda_rodada_de_edicao() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) FROM PUBLIC;

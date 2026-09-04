@@ -784,6 +784,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    `supabase/functions/_shared/cors.test.ts`; conferir em produção é um
    `curl -i -X OPTIONS` com `Origin` — sem `Access-Control-Allow-Origin` na resposta, o
    navegador barra.
+   **E o import da biblioteca nas Edge Functions vai com VERSÃO TRAVADA.** Com
+   `npm:@supabase/supabase-js@2`, cada deploy resolve a versão do dia, enquanto o
+   `functions serve` usa o que tem em cache: local e produção rodam bibliotecas
+   diferentes sem ninguém pedir. Foi o que sobrou depois do CORS — o cadastro passou a
+   devolver 401 só em produção, com o mesmo código que dava 201 no local. Junto com o pin,
+   `auth.getUser()` passou a receber o token EXPLÍCITO: a forma sem argumento procura uma
+   sessão guardada que não existe (`persistSession: false`) e depende de um fallback
+   interno da biblioteca para o header `Authorization` — exatamente o tipo de coisa que
+   muda entre versões.
 7. **`anon` ainda tem privilégio de tabela em `storage.objects`** (issue #20). A primeira
    policy chegou em 03/09/2026 com a foto de perfil, e o `buckets_privados.test.sql` falhou
    de propósito, como previsto — o que entrou no lugar nomeia as quatro policies do avatar e

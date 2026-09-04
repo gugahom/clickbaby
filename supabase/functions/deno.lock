@@ -1,7 +1,8 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@supabase/supabase-js@2": "2.112.3"
+    "npm:@supabase/supabase-js@2": "2.112.3",
+    "npm:@supabase/supabase-js@2.112.3": "2.112.3"
   },
   "npm": {
     "@supabase/auth-js@2.112.3": {
