@@ -120,6 +120,17 @@ no mesmo carimbo de tempo — e o tempo de ciclo da seção 9 sairia errado nos 
 Só reels, não foto: foi o que ele pediu.
 
 - **Entrada existe em todos menos BIRTH e BIRTH + REELS.**
+- **Fechamento é de fábrica só nos quatro pacotes de acompanhamento completo** — STANDARD,
+  BABY REELS, MASTER e MASTER + ÁLBUM. Na família BASIC e nos dois BIRTH ele é OPCIONAL:
+  quando acontece, entra por `adicionar_etapa`, como qualquer etapa fora do pacote. A
+  família BASIC nunca o teve; os dois BIRTH tiveram entre 27/08 e 04/09/2026 (migrations
+  `20260827190426` e `20260904143000`). A regra de 27/08 era verdadeira quando foi
+  escrita — "há fechamento e ele não estava sendo registrado" —, e uma semana de operação
+  mostrou que ali ele é exceção. Etapa que quase sempre precisa ser dispensada é ruído no
+  checklist, não registro.
+  Consequência que vale dizer em voz alta: fechamento é o gatilho da rodada 2 de edição,
+  então um BIRTH volta a não ter segunda rodada de fábrica. Quem acrescentar o fechamento
+  pela tela e concluí-lo continua ganhando a rodada 2 — a trigger não mudou.
 - **BIRTH** é feito sem contrato fechado, para apresentar aos pais pós-parto e tentar a
   venda. SLA de 24h (janela curta) faz sua edição subir na fila — ver seção 9.
 - **BIRTH + REELS** é comercialmente distinto do BIRTH (a tentativa de venda já sai com o
@@ -760,9 +771,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    faltava e o `grant_service_role_pessoas.test.sql` trava o piso e o teto, mas isso resolve
    UMA linha: enquanto o auditor não olhar `service_role`, a próxima divergência aparece do
    mesmo jeito — por acaso, no meio de outra tarefa.
-6. **Sem workflow de CI para `db push`.** O `db push` é manual e já ficou para trás de um
-   merge três vezes, chegando ao gestor como "está bugado". O gestor já aprovou construir
-   o workflow; falta fazer.
+6. **Sem workflow de CI para `db push` — nem para `functions deploy`.** O `db push` é
+   manual e já ficou para trás de um merge três vezes, chegando ao gestor como "está
+   bugado". O gestor já aprovou construir o workflow; falta fazer.
+   **O deploy de Edge Function tem o mesmo buraco, e é PIOR de enxergar.** Em 04/09/2026 a
+   `admin-pessoas` estava publicada e ATIVA, e mesmo assim o cadastro pela tela nunca
+   funcionou em produção: faltava CORS. O `supabase functions serve` responde ao preflight
+   por conta própria, então o botão funcionava no local — e o supabase-js traduz preflight
+   barrado, função fora do ar e sinal caído para a mesma frase, "Failed to send a request
+   to the Edge Function". **Lição para a próxima função chamada pelo front: "passou no
+   local" não é evidência nenhuma sobre CORS.** O que trava isso agora é
+   `supabase/functions/_shared/cors.test.ts`; conferir em produção é um
+   `curl -i -X OPTIONS` com `Origin` — sem `Access-Control-Allow-Origin` na resposta, o
+   navegador barra.
 7. **`anon` ainda tem privilégio de tabela em `storage.objects`** (issue #20). A primeira
    policy chegou em 03/09/2026 com a foto de perfil, e o `buckets_privados.test.sql` falhou
    de propósito, como previsto — o que entrou no lugar nomeia as quatro policies do avatar e

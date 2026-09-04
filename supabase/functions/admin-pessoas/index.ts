@@ -20,6 +20,7 @@
 // pedido de alguém que não devia estar aqui.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { cabecalhosCors, responderPreflight } from "../_shared/cors.ts";
 
 /**
  * Senha de primeiro acesso, combinada com o gestor.
@@ -56,14 +57,29 @@ interface Pedido {
   pessoaId?: unknown;
 }
 
-function responder(corpo: unknown, status: number): Response {
-  return new Response(JSON.stringify(corpo), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+/**
+ * Fabrica o `responder` DESTE pedido, já com os cabeçalhos de CORS dentro.
+ *
+ * É uma fábrica e não uma função solta porque os cabeçalhos dependem da origem
+ * de quem chamou, e porque TODA resposta precisa deles — inclusive as de erro.
+ * Uma 409 sem CORS chega ao front como falha de rede, e a mensagem em português
+ * que esta função escreveu se perde antes de alguém ler.
+ */
+function criarResponder(req: Request) {
+  const cors = cabecalhosCors(req.headers.get("Origin"));
+  return (corpo: unknown, status: number): Response =>
+    new Response(JSON.stringify(corpo), { status, headers: cors });
 }
 
 Deno.serve(async (req) => {
+  // ANTES DE QUALQUER COISA: o navegador manda um OPTIONS de preflight antes do
+  // POST, e ele não carrega corpo nem sessão. Caindo na checagem de método logo
+  // abaixo, volta 405 sem CORS — e o POST de verdade nunca chega a sair.
+  const preflight = responderPreflight(req);
+  if (preflight) return preflight;
+
+  const responder = criarResponder(req);
+
   if (req.method !== "POST" && req.method !== "DELETE") {
     return responder({ erro: "Use POST para criar ou DELETE para excluir." }, 405);
   }

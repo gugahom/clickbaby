@@ -117,8 +117,11 @@ select is(
 select is(
   (select array_agg(ordem order by ordem) from public.caso_etapas
     where caso_id = 'aaaa1111-0000-0000-0000-000000000002'),
-  array[2, 4, 5, 6],
-  'BIRTH: nascimento(2), fechamento(4), edicao_foto(5), reels(6) — sem entrada nem banho'
+  array[2, 5, 6],
+  -- O buraco cresceu em 04/09/2026: o fechamento saiu do padrão do BIRTH
+  -- (20260904143000), então some o 4 junto com o 1 e o 3. É exatamente o que
+  -- esta seção testa — a ordem é do TIPO, e não se renumera para tapar o vão.
+  'BIRTH: nascimento(2), edicao_foto(5), reels(6) — sem entrada, banho ou fechamento'
 );
 
 
