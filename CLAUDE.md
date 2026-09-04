@@ -253,6 +253,7 @@ Funções RPC que EXISTEM (01/09/2026). Toda escrita de estado passa por uma del
 iniciar_etapa(p_caso_etapa_id)                          -- inicia ou retoma
 pausar_etapa(p_caso_etapa_id)
 concluir_etapa(p_caso_etapa_id, p_observacao)
+concluir_etapa_com_entregaveis(p_caso_etapa_id, p_entregaveis, p_observacao)
 reabrir_etapa(p_caso_etapa_id, p_motivo)                -- desfaz conclusão ou dispensa
 dispensar_etapa(p_caso_etapa_id, p_motivo)              -- "não vai acontecer"
 adicionar_etapa(p_caso_id, p_tipo)                      -- etapa fora do pacote
@@ -526,14 +527,13 @@ Implicações para a implementação:
 
 - O tempo de ciclo sai de `concluido_em − iniciado_em`, ambos carimbados pelo servidor
   (invariante 3.4).
-- **Pendência de design — fila de edição:** `concluir_etapa` (RPC genérica, item 3 da
-  seção 13) permite concluir uma etapa que nunca foi iniciada — carimba `iniciado_em` no
-  mesmo instante de `concluido_em`, ciclo zero. Isso é correto para o caso geral (campo
-  admite registro retroativo). Mas **na fila de edição especificamente**, "iniciar" antes de
-  "concluir" precisa ser obrigatório — sem essa trava, o tempo de ciclo de edição vem
-  sempre zero e a métrica de produtividade da seção 9 fura por completo. Ainda não
-  implementado; entra quando a fila de edição for construída (é validação de tela/fluxo,
-  não da RPC genérica de conclusão).
+- **Iniciar antes de concluir é OBRIGATÓRIO na pós-produção**, e a trava está no banco
+  (`concluir_etapa`, migration `20260825051226`): `edicao_foto`, `edicao_video`, `reels` e
+  `album` sem `iniciado_em` são recusadas. Sem isso o tempo de ciclo da edição viria sempre
+  zero e a medição desta seção não mediria nada.
+  As etapas de CAMPO continuam aceitando registro retroativo — carimbam início e conclusão
+  no mesmo instante —, e isso é deliberado: quem fotografa um parto nem sempre pode tocar
+  no aparelho na hora.
 - **SLA de entrega é a régua principal.** Cada pacote tem `prazo_entrega` (intervalo) OU
   `prazo_dias_uteis` (inteiro), nunca os dois. O
   vencimento de um caso é derivado: `concluido_em` da etapa de nascimento + `prazo_entrega`.
@@ -687,6 +687,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
   trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
   resto continuam no card.
+- **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
+  não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
+  depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
+  sem o link** — é trava, não lembrete.
+  Quem pede o quê: **edição de fotos em TODOS os pacotes** pede o *Link de Google*, e nos
+  dois BIRTH pede também o *Link CADEADO*; **o reels do BASIC e do STANDARD** pede o *Link
+  de CADEADO do reels*. BABY REELS, BASIC + REELS e BASIC REELS ficaram de fora — foi o
+  pedido ao pé da letra, e a lista está em `lib/links-da-conclusao.ts` justamente para que
+  a pergunta "por que não pediu no BABY REELS?" tenha resposta num lugar só.
+  A trava vale nos **dois** caminhos de conclusão: o botão do card e o da seção lateral
+  (`AcoesDaEtapa`), que é onde a equipe de edição de fato trabalha. Uma regra que valesse
+  só num deles não seria regra.
+  Isto custa toques, contra a seção 6 — e a conta fecha porque a edição não acontece no
+  corredor: é feita sentada, numa estação, onde colar um link é barato. Nenhuma etapa de
+  CAMPO passa por aí.
+  A REGRA COMERCIAL VIVE NA TELA, como a do checklist de encerramento. A RPC
+  `concluir_etapa_com_entregaveis` garante só o que é dela: link e conclusão na MESMA
+  transação (meio caminho produziria link órfão, ou a etapa concluída sem link — os dois
+  estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
+  idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
+  o mesmo álbum, e o campo já vem preenchido com ele.
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
@@ -803,9 +824,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    exceção é TRUNCATE, que RLS não filtra — privilégio latente, sem caminho conhecido de
    exploração. Fechar exige rodar o revoke como o dono da tabela, fora do caminho de
    migration. Ver também a issue #21 (bucket `comprovantes` órfão).
-8. **Fila de edição: a trava "iniciar antes de concluir" não existe** (seção 9). Sem ela o
-   tempo de ciclo de edição vem zero. A tela da Fila foi removida a pedido do gestor; a
-   view e os testes ficaram. Entra quando a fila voltar.
+8. **Fila de edição: a TELA não existe.** A view e os testes ficaram quando o gestor pediu
+   para tirá-la. (A trava "iniciar antes de concluir", que esta dívida dizia faltar, existe
+   desde a migration `20260825051226` e está DENTRO de `concluir_etapa`: etapa de
+   pós-produção sem `iniciado_em` é recusada pelo banco. O texto antigo desta dívida e o da
+   seção 9 descreviam o mundo de antes dela.)
 9. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
    `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
 10. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da

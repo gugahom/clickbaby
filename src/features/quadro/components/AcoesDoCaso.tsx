@@ -20,6 +20,8 @@ import {
   IconeMais,
   IconeAdicionar,
 } from '@/components/ui/icones'
+import { linksExigidosNaConclusao } from '../lib/links-da-conclusao'
+import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
@@ -29,6 +31,7 @@ import {
   useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
+  useConcluirEtapaComEntregaveis,
   useConfirmarEntrega,
   useIniciarEtapa,
   useMoverParaUti,
@@ -111,11 +114,13 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
   const [anotarDe, setAnotarDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
+  const [linksDe, setLinksDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
   const atribuir = useAtribuirEtapa()
   const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
+  const concluirComLinks = useConcluirEtapaComEntregaveis()
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
   const planejarRendicao = usePlanejarRendicao()
@@ -134,6 +139,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
     concluir.isPending ||
+    concluirComLinks.isPending ||
     transferir.isPending ||
     confirmarEntrega.isPending ||
     adicionarEtapa.isPending ||
@@ -354,13 +360,26 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     )}
 
                     <BotaoIcone
-                      rotulo="Concluir etapa"
+                      /* O rótulo muda quando há link a pedir: o toque abre um
+                         diálogo em vez de concluir na hora, e prometer
+                         "Concluir etapa" para um clique que abre formulário é
+                         mentir sobre o que o botão faz. */
+                      rotulo={
+                        linksExigidosNaConclusao(etapa, caso).length > 0
+                          ? 'Concluir etapa com o link'
+                          : 'Concluir etapa'
+                      }
                       tom="positivo"
                       disabled={ocupado || !conclusao.habilitada}
                       motivo={conclusao.motivo}
-                      onClick={() =>
-                        executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
-                      }
+                      onClick={() => {
+                        setErro(null)
+                        if (linksExigidosNaConclusao(etapa, caso).length > 0) {
+                          setLinksDe(etapa)
+                        } else {
+                          executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
+                        }
+                      }}
                     >
                       <IconeCheck className="size-[18px]" />
                     </BotaoIcone>
@@ -370,7 +389,17 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       rotulo={`Mais ações de ${ROTULO_ETAPA[etapa.tipo]}`}
                       onEscolher={(item) => {
                         setErro(null)
-                        if (item.id === 'observacao') setObservacaoDe(etapa)
+                        /* Os dois caminhos de conclusão passam pela mesma
+                           trava. Deixar este de fora seria deixar aberta, no
+                           menu, a porta que o botão principal fechou — e o
+                           diálogo de link já tem campo de observação. */
+                        if (item.id === 'observacao') {
+                          if (linksExigidosNaConclusao(etapa, caso).length > 0) {
+                            setLinksDe(etapa)
+                          } else {
+                            setObservacaoDe(etapa)
+                          }
+                        }
                         if (item.id === 'atribuir') setAtribuirDe(etapa)
                         if (item.id === 'handoff') setHandoffDe(etapa)
                         if (item.id === 'rendicao') setRendicaoDe(etapa)
@@ -594,6 +623,27 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           Encerram o caso — sem desfazer.
         </span>
       </div>
+
+      {linksDe && (
+        <DialogoConcluirComLinks
+          caso={caso}
+          etapa={linksDe}
+          exigidos={linksExigidosNaConclusao(linksDe, caso)}
+          ocupado={concluirComLinks.isPending}
+          erro={erro}
+          onCancelar={() => setLinksDe(null)}
+          onConfirmar={(entregaveis, observacao) =>
+            executar(
+              concluirComLinks.mutateAsync({
+                casoEtapaId: linksDe.id,
+                entregaveis,
+                ...(observacao === '' ? {} : { observacao }),
+              }),
+              () => setLinksDe(null),
+            )
+          }
+        />
+      )}
 
       {observacaoDe && (
         <DialogoObservacao

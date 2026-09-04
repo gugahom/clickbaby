@@ -838,6 +838,14 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_observacao?: string }
         Returns: undefined
       }
+      concluir_etapa_com_entregaveis: {
+        Args: {
+          p_caso_etapa_id: string
+          p_entregaveis: Json
+          p_observacao?: string
+        }
+        Returns: undefined
+      }
       configurar_segredo_do_sync: {
         Args: { p_nome: string; p_valor: string }
         Returns: string

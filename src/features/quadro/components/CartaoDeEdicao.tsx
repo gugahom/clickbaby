@@ -127,6 +127,7 @@ export function CartaoDeEdicao({
           {daSecao.map((etapa) => (
             <LinhaDeRodada
               key={etapa.id}
+              caso={caso}
               etapa={etapa}
               etapas={etapas}
               rotulo={rotularLinha(etapa)}
@@ -141,12 +142,14 @@ export function CartaoDeEdicao({
 }
 
 function LinhaDeRodada({
+  caso,
   etapa,
   etapas,
   rotulo,
   acoes,
   onErro,
 }: {
+  caso: CasoQuadro
   etapa: EtapaQuadro
   etapas: EtapaQuadro[]
   rotulo: string
@@ -180,7 +183,9 @@ function LinhaDeRodada({
         </div>
       </div>
 
-      {acoes ?? <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />}
+      {acoes ?? (
+        <AcoesDaEtapa caso={caso} etapa={etapa} etapas={etapas} onErro={onErro} />
+      )}
     </li>
   )
 }
