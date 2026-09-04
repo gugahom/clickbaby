@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { chavesEquipe } from './useEquipe'
+import { mensagemDaFuncao } from './erro-da-funcao'
 
 export interface NovaPessoa {
   nome: string
@@ -31,11 +32,10 @@ export function useCriarPessoa() {
       })
 
       if (error) {
-        // O corpo da resposta traz a mensagem em português que a função
-        // escreveu ("Já existe uma conta com…"). Sem isto o usuário lê
+        // A mensagem em português vem do corpo da resposta, ou — quando o
+        // pedido nem sai — da tradução do erro de rede. Sem isto o usuário lê
         // "Edge Function returned a non-2xx status code", que não diz nada.
-        const detalhe = await extrairErro(error)
-        throw new Error(detalhe ?? error.message)
+        throw new Error((await mensagemDaFuncao(error)) ?? error.message)
       }
 
       return data as { pessoa: { id: string; nome: string }; email: string }
@@ -44,16 +44,4 @@ export function useCriarPessoa() {
       void qc.invalidateQueries({ queryKey: chavesEquipe.todos })
     },
   })
-}
-
-/** A mensagem que a função devolveu, se der para lê-la. */
-async function extrairErro(error: unknown): Promise<string | null> {
-  const contexto = (error as { context?: unknown }).context
-  if (!(contexto instanceof Response)) return null
-  try {
-    const corpo = (await contexto.json()) as { erro?: unknown }
-    return typeof corpo.erro === 'string' ? corpo.erro : null
-  } catch {
-    return null
-  }
 }

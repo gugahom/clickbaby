@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { chavesEquipe } from './useEquipe'
+import { mensagemDaFuncao } from './erro-da-funcao'
 import { chavesQuadro } from '@/features/quadro/api/useQuadro'
 import type { Database } from '@/types/database'
 
@@ -92,16 +93,4 @@ export function useExcluirPessoa() {
     },
     onSuccess: () => invalidar(qc),
   })
-}
-
-/** A mensagem em português que a função devolveu, se der para lê-la. */
-export async function mensagemDaFuncao(error: unknown): Promise<string | null> {
-  const contexto = (error as { context?: unknown }).context
-  if (!(contexto instanceof Response)) return null
-  try {
-    const corpo = (await contexto.json()) as { erro?: unknown }
-    return typeof corpo.erro === 'string' ? corpo.erro : null
-  } catch {
-    return null
-  }
 }

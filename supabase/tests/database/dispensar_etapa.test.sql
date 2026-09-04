@@ -1,9 +1,15 @@
 -- pgTAP: dispensar_etapa e o desfazer dela (migration 20260828211156).
 --
 -- Dispensar é o que destrava um caso preso num checklist que a realidade não
--- cumpriu — o BIRTH sem fechamento. Como conta como resolvida na trava de
--- encerramento, um erro aqui deixa encerrar um caso com trabalho de verdade em
--- aberto, que é justamente o que a 20260827181322 foi feita para impedir.
+-- cumpriu — o fechamento que não aconteceu. Como conta como resolvida na trava
+-- de encerramento, um erro aqui deixa encerrar um caso com trabalho de verdade
+-- em aberto, que é justamente o que a 20260827181322 foi feita para impedir.
+--
+-- A FIXTURE ERA UM BIRTH + REELS até 04/09/2026, quando o fechamento saiu do
+-- padrão dos dois BIRTH (20260904143000) e o caso deixou de nascer com a etapa
+-- que este teste dispensa. Virou BABY REELS, que tem acompanhamento completo —
+-- e o exemplo continua sendo real: o fechamento é marcado e às vezes a família
+-- vai embora antes.
 
 begin;
 select plan(14);
@@ -18,7 +24,7 @@ from auth.users u where u.email = 'operador.dispensa@clickbaby.test';
 insert into public.maternidades (nome, sigla) values ('Maternidade Dispensa', 'DISP');
 
 insert into public.casos (mae_nome, pacote_id, maternidade_id)
-select 'Mãe Dispensa', (select id from public.pacotes where slug = 'birth-reels'),
+select 'Mãe Dispensa', (select id from public.pacotes where slug = 'baby-reels'),
        (select id from public.maternidades where sigla = 'DISP');
 
 create function pg_temp.como(p_email text) returns void language plpgsql as $$
@@ -63,7 +69,7 @@ select throws_ok(
 
 select lives_ok(
   format($$ select public.dispensar_etapa(%L::uuid, 'nao houve fechamento') $$, pg_temp.etapa('fechamento')),
-  'B0: fechamento de um BIRTH+REELS é dispensado'
+  'B0: fechamento de um BABY REELS é dispensado'
 );
 
 select is(pg_temp.status('fechamento'), 'dispensada', 'B1: a etapa fica dispensada');
@@ -146,7 +152,7 @@ select is(
 -- =============================================================================
 
 insert into public.casos (mae_nome, pacote_id, maternidade_id)
-select 'Mãe Desfaz', (select id from public.pacotes where slug = 'birth-reels'),
+select 'Mãe Desfaz', (select id from public.pacotes where slug = 'baby-reels'),
        (select id from public.maternidades where sigla = 'DISP');
 
 select pg_temp.como('operador.dispensa@clickbaby.test');

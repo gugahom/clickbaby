@@ -8,7 +8,7 @@
 -- faz: reset aplica migrations, depois seed, depois os testes).
 
 begin;
-select plan(14);
+select plan(15);
 
 insert into public.maternidades (nome, sigla)
 values ('Maternidade Seed Test', 'SEEDTEST');
@@ -100,14 +100,33 @@ select is(
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth'),
-  array['nascimento', 'fechamento', 'edicao_foto', 'reels']::public.etapa_tipo[],
-  'BIRTH: sem entrada nem banho (venda no pós-parto), mas COM fechamento, foto e reels'
+  array['nascimento', 'edicao_foto', 'reels']::public.etapa_tipo[],
+  -- SEM FECHAMENTO desde 20260904143000. Ele entrou em 27/08 e saiu em 04/09:
+  -- na prática é exceção no BIRTH, e etapa que quase sempre precisa ser
+  -- dispensada é ruído no checklist. Entra por `adicionar_etapa` quando
+  -- acontecer. Esta asserção dizia "COM fechamento" e era verdade até lá.
+  'BIRTH: só nascimento e as edições — sem entrada, banho ou fechamento de fábrica'
 );
 
 select is(
   (select array_agg(ce.tipo order by ce.ordem) from public.caso_etapas ce join public.casos c on c.id = ce.caso_id where c.mae_nome = 'Mãe Seed birth-reels'),
-  array['nascimento', 'fechamento', 'edicao_foto', 'reels']::public.etapa_tipo[],
+  array['nascimento', 'edicao_foto', 'reels']::public.etapa_tipo[],
   'BIRTH + REELS: idênticas ao BIRTH — pacote comercialmente distinto, mesmo trabalho'
+);
+
+-- A REGRA, num lugar em que ela tem nome.
+--
+-- As asserções acima trancam a lista de cada pacote e já cobrem isto de
+-- passagem; esta existe para que a regra do gestor (04/09/2026) seja
+-- ENCONTRÁVEL. Quem for reintroduzir o fechamento no BASIC ou no BIRTH lê a
+-- frase, não precisa deduzi-la comparando cinco arrays.
+select is(
+  (select array_agg(distinct p.slug order by p.slug)
+     from public.pacote_etapas pe
+     join public.pacotes p on p.id = pe.pacote_id
+    where pe.etapa_tipo = 'fechamento'),
+  array['baby-reels', 'master', 'master-album', 'standard'],
+  'fechamento é de fábrica só nos 4 pacotes com acompanhamento completo — no BASIC e no BIRTH ele é opcional'
 );
 
 select * from finish();
