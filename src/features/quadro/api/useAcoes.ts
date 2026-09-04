@@ -72,6 +72,32 @@ export function useConcluirEtapa() {
 }
 
 /**
+ * Conclui a etapa REGISTRANDO os links de entrega no mesmo gesto.
+ *
+ * Pedido do gestor em 04/09/2026: quem acaba de editar tem o link na mão; quem
+ * encerra o caso dias depois, muitas vezes não tem. Quais links cada pacote
+ * exige está em `lib/links-da-conclusao.ts`.
+ *
+ * UMA CHAMADA SÓ, e não `registrar_entregavel` seguido de `concluir_etapa`: as
+ * duas coisas precisam acontecer juntas ou nenhuma. Metade do caminho produz
+ * link órfão em etapa aberta, ou — pior — a etapa de edição concluída sem link,
+ * que é exatamente o estado que a regra veio impedir.
+ */
+export function useConcluirEtapaComEntregaveis() {
+  return useAcaoDoQuadro<{
+    casoEtapaId: string
+    entregaveis: { tipo: TipoEntregavel; url: string }[]
+    observacao?: string
+  }>(({ casoEtapaId, entregaveis, observacao }) =>
+    chamar('concluir_etapa_com_entregaveis', {
+      p_caso_etapa_id: casoEtapaId,
+      p_entregaveis: entregaveis,
+      p_observacao: observacao ?? null,
+    }),
+  )
+}
+
+/**
  * Designa responsável a uma etapa que ainda não começou. Distinta de
  * transferir: ali houve passagem de trabalho e vira linha em `handoffs`; aqui
  * nada foi passado porque nada começou.
