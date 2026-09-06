@@ -84,8 +84,11 @@ export function AppShell() {
   // tem etapa em andamento (derivado do trabalho). Os dois juntos dão a
   // bolinha — ver features/presenca/lib/estados.ts.
   const { outros, declarado, definir } = usePresenca()
-  const { data: ocupadas } = useAtividadeDaEquipe()
-  const meuEstado = estadoVisivel(declarado, ocupadas?.has(pessoa?.id ?? '') ?? false)
+  const { data: atividade } = useAtividadeDaEquipe()
+  const meuEstado = estadoVisivel(
+    declarado,
+    atividade?.ocupadas.has(pessoa?.id ?? '') ?? false,
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -132,7 +135,7 @@ export function AppShell() {
             {/* Quem mais está no Quadro agora — a mesma vizinhança dos
                 colaboradores de uma planilha compartilhada, que foi a
                 referência do gestor. */}
-            <EquipePresente outros={outros} ocupadas={ocupadas ?? new Set()} />
+            <EquipePresente outros={outros} atividade={atividade} />
 
             {pessoa && (
             <Dropdown

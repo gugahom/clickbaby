@@ -48,8 +48,31 @@ function guardarEscolha(estado: EstadoDeclarado) {
   }
 }
 
+export interface AtividadeDaEquipe {
+  /** Quem tem etapa em andamento agora. */
+  ocupadas: Set<string>
+  /** Quando cada pessoa tocou trabalho pela última vez (ISO). */
+  ultimaAtividade: Map<string, string>
+}
+
 /**
- * QUEM TEM TRABALHO EM ANDAMENTO — a metade automática do estado.
+ * O QUE O TRABALHO CONTA SOBRE CADA PESSOA — a metade automática do estado.
+ *
+ * Duas coisas saem da mesma consulta:
+ *   - quem está OCUPADA (tem etapa em andamento);
+ *   - quando cada uma PEGOU TRABALHO pela última vez, que é o que responde
+ *     "está disponível, mas parada há quanto tempo?".
+ *
+ * "PEGAR TRABALHO" É O MAIOR ENTRE `iniciado_em` E `concluido_em`, e não só o
+ * início: quem concluiu uma etapa há dez minutos estava trabalhando até ali.
+ * É a mesma definição que a ficha da Equipe usa para "última atividade" — duas
+ * definições dariam dois números para a mesma pergunta em duas telas.
+ *
+ * A JANELA É DE 24 HORAS, mais as etapas em andamento de qualquer idade. Sem
+ * corte, esta consulta puxaria toda `caso_etapas` com responsável — milhares de
+ * linhas — no cabeçalho de todas as telas. Quem não aparece na janela é quem
+ * não pega trabalho há mais de um dia, e para essa a resposta ("mais de 24h")
+ * não precisa de precisão.
  *
  * A chave começa com `chavesQuadro.todos` de propósito: toda ação do Quadro já
  * invalida essa família, e o Realtime do Quadro também. Sem isso, dar play numa
@@ -60,15 +83,35 @@ export function useAtividadeDaEquipe() {
   return useQuery({
     queryKey: [...chavesQuadro.todos, 'atividade'],
     staleTime: 30 * 1000,
-    queryFn: async (): Promise<Set<string>> => {
+    queryFn: async (): Promise<AtividadeDaEquipe> => {
+      const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
       const { data, error } = await supabase
         .from('caso_etapas')
-        .select('responsavel_id')
-        .eq('status', 'em_andamento')
+        .select('responsavel_id, status, iniciado_em, concluido_em')
         .not('responsavel_id', 'is', null)
+        .or(
+          `status.eq.em_andamento,iniciado_em.gte.${desde},concluido_em.gte.${desde}`,
+        )
 
       if (error) throw error
-      return new Set((data ?? []).map((l) => l.responsavel_id).filter((id): id is string => id !== null))
+
+      const ocupadas = new Set<string>()
+      const ultimaAtividade = new Map<string, string>()
+
+      for (const linha of data ?? []) {
+        const id = linha.responsavel_id
+        if (!id) continue
+        if (linha.status === 'em_andamento') ocupadas.add(id)
+
+        for (const quando of [linha.iniciado_em, linha.concluido_em]) {
+          if (!quando) continue
+          const atual = ultimaAtividade.get(id)
+          if (atual === undefined || quando > atual) ultimaAtividade.set(id, quando)
+        }
+      }
+
+      return { ocupadas, ultimaAtividade }
     },
   })
 }

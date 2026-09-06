@@ -799,6 +799,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   coisa. "Ocupada" não está no menu de propósito: escolhê-la seria poder mentir sobre o
   trabalho. **Ausente ganha de Ocupada** — quem começou uma edição e foi almoçar sem pausar
   não pode aparecer como se estivesse lá.
+  **"SEM PEGAR TRABALHO HÁ 3h"** é a métrica que o gestor queria de verdade — não horas
+  online, mas quem está disponível e parada. Ela é DERIVADA, sem nada novo no banco: o
+  tempo desde a última vez que a pessoa iniciou ou concluiu uma etapa (a mesma definição de
+  "última atividade" da ficha da Equipe, para as duas telas não darem números diferentes).
+  Aparece a partir de uma hora (`MINUTOS_ATE_MARCAR_PARADA`), e a bolinha fica VAZADA —
+  mesma cor, porque ela continua disponível; o que muda é o preenchimento, que é a diferença
+  entre "de mãos livres" e "de mãos livres há tempo demais".
+  O que isso mede, com todas as letras: tempo sem TOCAR no sistema. Quem está dirigindo para
+  a maternidade não tocou em nada e está trabalhando — por isso a marca serve para a
+  coordenação olhar e perguntar, e não vira número guardado.
   **Nada é gravado** (ver seção 9). A escolha manual fica no `localStorage`, que é
   preferência de UI e não dado de domínio.
 - **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas

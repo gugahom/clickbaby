@@ -48,6 +48,21 @@ export const ROTULO_ESTADO: Record<EstadoVisivel, string> = {
  * presença faria a mesma cor significar duas coisas diferentes em duas partes
  * do Quadro.
  */
+/**
+ * A MESMA COR, como ANEL — e escrita por extenso, não derivada de COR_ESTADO
+ * com um `.replace('bg-','ring-')`.
+ *
+ * O Tailwind só gera a classe que ENXERGA escrita no código. A versão derivada
+ * compilava, passava no lint e no build, e produzia `ring-pronto` — uma classe
+ * que não existe no CSS: a bolinha vazada saía transparente, ou seja, a marca
+ * de "parada" simplesmente não aparecia. Só o CSS construído acusa isso.
+ */
+export const COR_ANEL_ESTADO: Record<EstadoVisivel, string> = {
+  disponivel: 'ring-pronto',
+  ocupada: 'ring-logo-azul',
+  ausente: 'ring-atencao',
+}
+
 export const COR_ESTADO: Record<EstadoVisivel, string> = {
   disponivel: 'bg-pronto',
   // AZUL DO LOGO, e não `--marca`. A marca é o azul-marinho escuro, feito para
@@ -75,4 +90,31 @@ export function estadoVisivel(
 ): EstadoVisivel {
   if (declarado === 'ausente') return 'ausente'
   return temTrabalhoEmAndamento ? 'ocupada' : 'disponivel'
+}
+
+/**
+ * A PARTIR DE QUANTO TEMPO "disponível" vira "disponível e parada".
+ *
+ * Uma hora, e o número é discutível de propósito — está aqui, sozinho, para
+ * ser discutido. O que ele não pode ser é curto: numa operação em que um parto
+ * dura horas e a pessoa fica com o celular no bolso, marcar alguém aos quinze
+ * minutos transformaria o cabeçalho num campo de bandeirinhas que todo mundo
+ * aprende a ignorar.
+ *
+ * O QUE ISTO MEDE, com todas as letras: tempo desde a última vez que a pessoa
+ * INICIOU OU CONCLUIU uma etapa no sistema. Não é tempo ocioso de verdade —
+ * quem está dirigindo para a maternidade não tocou em nada e está trabalhando.
+ * É por isso que a marca fica no cabeçalho, para a coordenação olhar e
+ * perguntar, e não vira número guardado em lugar nenhum.
+ */
+export const MINUTOS_ATE_MARCAR_PARADA = 60
+
+/** Há quantas HORAS a pessoa não pega trabalho. `null` = não dá para saber. */
+export function horasParada(
+  ultimaAtividade: string | undefined,
+  agora: Date = new Date(),
+): number | null {
+  if (!ultimaAtividade) return null
+  const ms = agora.getTime() - new Date(ultimaAtividade).getTime()
+  return ms < 0 ? 0 : ms / (1000 * 60 * 60)
 }

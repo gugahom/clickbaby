@@ -1,14 +1,57 @@
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
-import { ROTULO_ESTADO, estadoVisivel } from '../lib/estados'
+import { formatarDuracao } from '@/lib/formato'
+import {
+  MINUTOS_ATE_MARCAR_PARADA,
+  ROTULO_ESTADO,
+  estadoVisivel,
+  horasParada,
+} from '../lib/estados'
 import { BolinhaDeStatus } from './BolinhaDeStatus'
-import type { PessoaPresente } from '../api/usePresenca'
+import type { AtividadeDaEquipe, PessoaPresente } from '../api/usePresenca'
 
 interface PropsEquipePresente {
   outros: PessoaPresente[]
-  /** Ids de quem tem etapa em andamento — a metade automática do estado. */
-  ocupadas: Set<string>
+  /** O que o trabalho conta: quem está ocupada e quando cada uma pegou algo. */
+  atividade: AtividadeDaEquipe | undefined
+}
+
+/**
+ * "Disponível", "Ocupada", "Disponível · parada há 3h".
+ *
+ * A frase de parada só aparece para quem está DISPONÍVEL: em quem está ocupada
+ * ela seria falsa, e em quem se marcou ausente seria uma cobrança por um tempo
+ * que a pessoa já avisou que não ia trabalhar.
+ */
+function descrever(
+  p: PessoaPresente,
+  atividade: AtividadeDaEquipe | undefined,
+): { estado: ReturnType<typeof estadoVisivel>; texto: string; parada: boolean } {
+  const estado = estadoVisivel(p.declarado, atividade?.ocupadas.has(p.pessoaId) ?? false)
+  if (estado !== 'disponivel') {
+    return { estado, texto: ROTULO_ESTADO[estado], parada: false }
+  }
+
+  const horas = horasParada(atividade?.ultimaAtividade.get(p.pessoaId))
+  if (horas === null) {
+    // Ninguém achou trabalho dela na janela de 24h. Não é "parada há 24h" —
+    // é "não pegou nada hoje", que é uma frase diferente e mais honesta.
+    return {
+      estado,
+      texto: `${ROTULO_ESTADO[estado]} · sem pegar trabalho hoje`,
+      parada: true,
+    }
+  }
+
+  const parada = horas * 60 >= MINUTOS_ATE_MARCAR_PARADA
+  return {
+    estado,
+    texto: parada
+      ? `${ROTULO_ESTADO[estado]} · sem pegar trabalho há ${formatarDuracao(horas)}`
+      : ROTULO_ESTADO[estado],
+    parada,
+  }
 }
 
 /**
@@ -32,7 +75,7 @@ interface PropsEquipePresente {
  * nenhuma cor chapada acompanha os dois extremos dele. Um escurecimento
  * translúcido separa a bolinha do retrato em qualquer ponto da faixa.
  */
-export function EquipePresente({ outros, ocupadas }: PropsEquipePresente) {
+export function EquipePresente({ outros, atividade }: PropsEquipePresente) {
   const { data: fotos } = useUrlsDasFotos(outros.map((p) => p.fotoPath))
 
   if (outros.length === 0) return null
@@ -48,19 +91,16 @@ export function EquipePresente({ outros, ocupadas }: PropsEquipePresente) {
       // "avatar, avatar, avatar" não diz nada.
       role="group"
       aria-label={`Na tela agora: ${outros
-        .map(
-          (p) =>
-            `${p.nome} (${ROTULO_ESTADO[estadoVisivel(p.declarado, ocupadas.has(p.pessoaId))]})`,
-        )
+        .map((p) => `${p.nome} (${descrever(p, atividade).texto})`)
         .join(', ')}`}
     >
       {visiveis.map((p, i) => {
-        const estado = estadoVisivel(p.declarado, ocupadas.has(p.pessoaId))
+        const { estado, texto, parada } = descrever(p, atividade)
         return (
           <span
             key={p.pessoaId}
             className={clsx('relative', i > 0 && '-ml-2')}
-            title={`${p.nome} · ${ROTULO_ESTADO[estado]}`}
+            title={`${p.nome} · ${texto}`}
           >
             <Avatar
               nome={p.nome}
@@ -69,7 +109,8 @@ export function EquipePresente({ outros, ocupadas }: PropsEquipePresente) {
             />
             <BolinhaDeStatus
               estado={estado}
-              className="absolute right-0 bottom-0 ring-2 ring-black/40"
+              vazada={parada}
+              className="absolute right-0 bottom-0 outline-2 outline-black/40"
             />
           </span>
         )
