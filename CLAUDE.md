@@ -93,14 +93,28 @@ reels que já tinham; a regra vale para os novos.
 **Edição de fotos existe em todos**, e tem uma rodada por bloco de captura — ver
 `rodada` logo abaixo.
 
-**Precedência não é linear.** CAMPO é sequencial entre si; EDIÇÃO libera quando
-o nascimento conclui — banho e fechamento não seguram a edição, e a edição não
-segura eles:
+**Precedência não é linear.** EDIÇÃO libera quando o nascimento conclui —
+banho e fechamento não seguram a edição, e a edição não segura eles. E, desde
+06/09/2026, **o banho não segura o fechamento**:
 
 ```
-entrada → nascimento ─┬→ banho → fechamento     (CAMPO)
-                      └→ foto · reels · vídeo   (EDIÇÃO)
+                      ┌→ banho                   (CAMPO)
+entrada → nascimento ─┼→ fechamento              (CAMPO)
+                      └→ foto · reels · vídeo    (EDIÇÃO)
 ```
+
+Os dois de campo ficam habilitados ao mesmo tempo, a pedido do gestor: na
+maternidade eles acontecem quase juntos e nem sempre nessa ordem — a família
+chama para a foto de despedida com o banho ainda rolando, e a fotógrafa não
+pode ficar esperando um botão liberar. A ORDEM DE LEITURA no card não mudou (o
+banho continua vindo antes), e o fechamento continua sendo o gatilho da rodada
+2 de edição. Concluir o fechamento com o banho aberto cria a rodada "B+F" antes
+de o banho existir, e isso é aceitável pelo mesmo motivo de sempre: a rodada é
+do BLOCO de captura, não da lista exata de etapas concluídas.
+
+Isto é regra de TELA, como toda a precedência deste projeto: `iniciar_etapa` e
+`concluir_etapa` aceitam qualquer ordem de propósito, porque campo admite
+registro retroativo (seção 9).
 
 **RODADAS DE EDIÇÃO.** Foto e reels são refeitos a cada bloco de captura, e a
 coluna `caso_etapas.rodada` diz qual é. O número identifica o BLOCO, não a ordem
@@ -702,7 +716,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
 - **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de
   horário chegando, realtime, auto-refresh alinhado ao cron.
-- **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`),
+- **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,
+  anotável tanto nas seções laterais quanto na lista de etapas do card — a edição de
+  FOTOS não tem seção, então lá era o único lugar possível, e até 06/09/2026 o campo
+  aparecia sem ser editável),
   **dispensar** (não vai acontecer) e **acrescentar** fora do pacote — inclusive
   `encontro_irmaos`, `saida_uti` e `alta`, que nenhum pacote traz de fábrica.
 - **Seções laterais**: REELS, MASTER e UTI. O **vídeo horizontal do MASTER** tem fluxo

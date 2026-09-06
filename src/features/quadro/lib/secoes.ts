@@ -114,6 +114,29 @@ export function casosComVideoAberto(
       return reelsAberto(etapasPorCaso.get(caso.id) ?? []) !== null
     })
     .sort((a, b) => {
+      /*
+       * PAUSADO PRIMEIRO (06/09/2026, pedido do gestor).
+       *
+       * Um reels pausado é trabalho que alguém começou e largou no meio: tem
+       * arquivo aberto, contexto na cabeça de alguém, e nada acontecendo. Ele
+       * é o que mais rende ser retomado, e por vencimento afundava no meio da
+       * lista — um caso pausado de 48h fica atrás de um recém-chegado de 24h,
+       * mesmo sendo o único em que basta apertar play.
+       *
+       * Só o PAUSADO sobe. "Em andamento" já tem alguém nele; subir os dois
+       * seria empurrar para baixo justamente o que ainda não começou e é o que
+       * a fila existe para distribuir.
+       */
+      const pausado = (c: CasoQuadro) =>
+        (etapasPorCaso.get(c.id) ?? []).some(
+          (e) => e.tipo === 'reels' && e.status === 'pausada',
+        )
+          ? 0
+          : 1
+
+      const porEstado = pausado(a) - pausado(b)
+      if (porEstado !== 0) return porEstado
+
       if (a.venceEm === b.venceEm) return 0
       if (a.venceEm === null) return 1
       if (b.venceEm === null) return -1

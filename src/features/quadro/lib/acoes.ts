@@ -117,11 +117,38 @@ function anteriorPendente(
   }
 
   const anteriores = etapas
-    .filter((e) => e.trilha === 'acompanhamento' && e.ordem < etapa.ordem)
+    .filter(
+      (e) =>
+        e.trilha === 'acompanhamento' &&
+        e.ordem < etapa.ordem &&
+        !NAO_SEGURA.has(e.tipo),
+    )
     .sort((a, b) => b.ordem - a.ordem)
 
   return anteriores.find((e) => !resolvida(e)) ?? null
 }
+
+/**
+ * Etapas de acompanhamento que NÃO seguram as seguintes.
+ *
+ * O BANHO entrou aqui em 06/09/2026, a pedido do gestor: dá para começar o
+ * fechamento sem o banho ter terminado. Na maternidade os dois acontecem quase
+ * juntos e nem sempre nessa ordem — a família pode chamar para a foto de
+ * despedida enquanto o banho ainda está rolando, e a fotógrafa não pode ficar
+ * esperando um botão liberar.
+ *
+ * O QUE ISTO NÃO É: uma mudança do modelo. A ordem continua a mesma (o banho
+ * segue antes do fechamento na leitura do card), o banho continua esperando o
+ * nascimento, e o fechamento continua esperando o nascimento. O que muda é que
+ * os dois ficam habilitados ao mesmo tempo, que foi exatamente o pedido.
+ *
+ * Consequência que vale dizer: o fechamento continua sendo o gatilho da rodada
+ * 2 de edição. Concluir o fechamento com o banho ainda aberto cria a rodada
+ * "B+F" antes de o banho existir — e isso é aceitável porque a rodada é do
+ * BLOCO de captura, não da lista exata de etapas concluídas (ver a nota de
+ * `rodada` na seção 2 do CLAUDE.md).
+ */
+const NAO_SEGURA = new Set<EtapaTipo>(['banho'])
 
 export function podeIniciar(
   etapa: EtapaQuadro,
