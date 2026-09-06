@@ -716,7 +716,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
 - **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de
   horário chegando, realtime, auto-refresh alinhado ao cron.
-- **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`),
+- **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,
+  anotável tanto nas seções laterais quanto na lista de etapas do card — a edição de
+  FOTOS não tem seção, então lá era o único lugar possível, e até 06/09/2026 o campo
+  aparecia sem ser editável),
   **dispensar** (não vai acontecer) e **acrescentar** fora do pacote — inclusive
   `encontro_irmaos`, `saida_uti` e `alta`, que nenhum pacote traz de fábrica.
 - **Seções laterais**: REELS, MASTER e UTI. O **vídeo horizontal do MASTER** tem fluxo

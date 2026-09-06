@@ -23,6 +23,7 @@ import {
 import { linksExigidosNaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
+import { CampoEstacao } from './CampoEstacao'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
@@ -270,10 +271,29 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         rende para {etapa.proximoResponsavelNome}
                       </span>
                     )}
-                    {etapa.estacao && (
-                      <span className="rounded bg-muted px-1 py-0.5 font-mono">
-                        {etapa.estacao}
-                      </span>
+                    {/* O PC, EDITÁVEL AQUI TAMBÉM (06/09/2026, pedido do gestor).
+
+                        Antes esta linha só EXIBIA a estação, e quem a escrevia
+                        era a seção lateral — que existe para reels e para o
+                        vídeo do MASTER. A edição de FOTOS não tem seção
+                        nenhuma, então o campo estava visível e inalcançável
+                        justamente onde mais se usa: as duas rodadas de foto,
+                        parto e B+F.
+
+                        Vale para a trilha de EDIÇÃO inteira, e não só para a
+                        foto: "em que PC isto está sendo editado" é a mesma
+                        pergunta para foto, reels, vídeo e álbum. Restringir à
+                        foto pediria uma exceção que não é regra — seria só o
+                        rastro de por onde o pedido entrou. Nas etapas de CAMPO
+                        ele não aparece: não há PC num corredor de maternidade. */}
+                    {etapa.trilha === 'edicao' ? (
+                      <CampoEstacao etapa={etapa} onErro={setErro} />
+                    ) : (
+                      etapa.estacao && (
+                        <span className="rounded bg-muted px-1 py-0.5 font-mono">
+                          {etapa.estacao}
+                        </span>
+                      )
                     )}
                     {etapa.concluidoEm && (
                       <span>· {formatarDataHora(etapa.concluidoEm)}</span>
