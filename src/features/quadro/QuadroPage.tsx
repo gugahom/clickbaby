@@ -33,6 +33,9 @@ import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
 import { RascunhosPainel } from './components/RascunhosPainel'
+import { EntregasPainel } from './components/EntregasPainel'
+import { podeEncerrarCaso } from './lib/acoes'
+import { useAuth } from '@/features/auth/contexto'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { CampoBusca } from './components/CampoBusca'
@@ -45,12 +48,18 @@ import type { EtapaQuadro } from './types'
  * pergunta "o que temos hoje" e a pergunta "quem está na UTI" são olhadas ao
  * mesmo tempo — inclusive na TV da sala de edição.
  */
-type Aba = 'lista' | 'uti' | 'reels' | 'master' | 'concluidos' | 'rascunhos'
+type Aba = 'lista' | 'uti' | 'reels' | 'master' | 'concluidos' | 'rascunhos' | 'entregas'
 
 /** Mapa vazio estável: `new Map()` inline nasce sem tipo e vira `any` nos usos. */
 const SEM_ETAPAS: Map<string, EtapaQuadro[]> = new Map()
 
 export function QuadroPage() {
+  // Quem pode CONFIRMAR entrega decide se a aba Entregas existe para esta
+  // pessoa. A trava de verdade está na RPC (20260906151515); aqui só se evita
+  // oferecer uma aba onde nada pode ser feito.
+  const { pessoa } = useAuth()
+  const papel = pessoa?.papelSistema ?? 'operador'
+
   const [aba, setAba] = useState<Aba>('lista')
   const [diasVisiveis, setDiasVisiveis] = useState(DIAS_INICIAIS)
   const { data, isPending, error } = useQuadro()
@@ -75,6 +84,7 @@ export function QuadroPage() {
   const {
     blocos,
     rascunhos,
+    entregas,
     naUti,
     emReels,
     emMaster,
@@ -104,6 +114,23 @@ export function QuadroPage() {
     return {
       blocos: abertos,
       rascunhos: casos.filter((c) => c.ehRascunho && !c.ehTerminal && !c.naUti),
+      /*
+       * ENVIADOS e ainda abertos, na ordem em que foram enviados.
+       *
+       * Ordem de envio e não de prazo: prazo é a régua do Quadro, onde o
+       * trabalho ainda acontece. Aqui o trabalho acabou, e quem espera há mais
+       * tempo é quem tem que ser atendido primeiro.
+       *
+       * O caso continua APARECENDO no Quadro também. A invariante 3.5 diz que
+       * um dia só sai da tela quando todos os casos dele estão encerrados ou
+       * cancelados — sumir daqui faria um dia parecer resolvido sem ninguém ter
+       * entregado nada.
+       */
+      entregas: casos
+        .filter((c) => c.liberadoParaEntregaEm !== null && !c.ehTerminal)
+        .sort((a, b) =>
+          (a.liberadoParaEntregaEm ?? '').localeCompare(b.liberadoParaEntregaEm ?? ''),
+        ),
       naUti: casosNaUti(casos),
       emReels: casosComVideoAberto(casos, etapas),
       emMaster: casosComVideoMasterAberto(casos, etapas),
@@ -506,6 +533,19 @@ export function QuadroPage() {
             <BotaoAba ativa={aba === 'lista'} onClick={() => setAba('lista')}>
               Quadro
             </BotaoAba>
+            {/* ENTREGAS fica entre Quadro e Rascunhos porque é o passo
+                seguinte do trabalho, e some para quem não pode agir nela: só
+                ADM e gestão confirmam entrega (20260906151515). Uma aba visível
+                e inútil ensina a ignorar abas. */}
+            {podeEncerrarCaso(papel) && (
+              <BotaoAba
+                ativa={aba === 'entregas'}
+                onClick={() => setAba('entregas')}
+                contagem={entregas.length}
+              >
+                Entregas
+              </BotaoAba>
+            )}
             {/* Rascunhos é MODO de trabalho, não vizinhança: alguém entra,
                 padroniza dez cadastros e sai. Por isso aba, e não mais a tira
                 amarela que ocupava o topo da lista do dia. O contador em
@@ -575,6 +615,11 @@ export function QuadroPage() {
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
           </BotaoAba>
+          {podeEncerrarCaso(papel) && (
+            <BotaoAba ativa={aba === 'entregas'} onClick={() => setAba('entregas')}>
+              Entregas ({entregas.length})
+            </BotaoAba>
+          )}
           <BotaoAba
             ativa={aba === 'rascunhos'}
             onClick={() => setAba('rascunhos')}
@@ -599,6 +644,14 @@ export function QuadroPage() {
           </p>
         ) : aba === 'concluidos' ? (
           <div className="min-h-0 flex-1 overflow-y-auto">{listaConcluidos}</div>
+        ) : aba === 'entregas' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <EntregasPainel
+              entregas={entregas}
+              etapasPorCaso={etapasPorCaso}
+              hoje={hoje}
+            />
+          </div>
         ) : aba === 'rascunhos' ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <RascunhosPainel rascunhos={rascunhos} hoje={hoje} />

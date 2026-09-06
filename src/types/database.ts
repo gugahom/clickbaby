@@ -174,6 +174,8 @@ export type Database = {
           criado_por: string | null
           google_calendar_event_id: string | null
           id: string
+          liberado_para_entrega_em: string | null
+          liberado_para_entrega_por: string | null
           mae_nome: string
           maternidade_id: string | null
           motivo_cancelamento: string | null
@@ -196,6 +198,8 @@ export type Database = {
           criado_por?: string | null
           google_calendar_event_id?: string | null
           id?: string
+          liberado_para_entrega_em?: string | null
+          liberado_para_entrega_por?: string | null
           mae_nome: string
           maternidade_id?: string | null
           motivo_cancelamento?: string | null
@@ -218,6 +222,8 @@ export type Database = {
           criado_por?: string | null
           google_calendar_event_id?: string | null
           id?: string
+          liberado_para_entrega_em?: string | null
+          liberado_para_entrega_por?: string | null
           mae_nome?: string
           maternidade_id?: string | null
           motivo_cancelamento?: string | null
@@ -237,6 +243,13 @@ export type Database = {
           {
             foreignKeyName: "casos_criado_por_fkey"
             columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casos_liberado_para_entrega_por_fkey"
+            columns: ["liberado_para_entrega_por"]
             isOneToOne: false
             referencedRelation: "pessoas"
             referencedColumns: ["id"]
@@ -763,6 +776,8 @@ export type Database = {
           falta_maternidade: boolean | null
           falta_pacote: boolean | null
           id: string | null
+          liberado_para_entrega_em: string | null
+          liberado_para_entrega_por_nome: string | null
           mae_nome: string | null
           maternidade_id: string | null
           maternidade_nome: string | null
@@ -861,6 +876,7 @@ export type Database = {
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
       mover_video_master: {
         Args: {

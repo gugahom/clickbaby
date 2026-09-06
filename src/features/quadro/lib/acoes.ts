@@ -20,12 +20,16 @@ const PAPEIS_ADM = ['comercial', 'coordenacao', 'financeiro', 'gestao']
 /**
  * Espelha `eh_atendimento() or eh_adm()`, a guarda de `cancelar_caso`.
  *
- * O NOME MENTE UM POUCO e vale explicar: encerrar um caso são DUAS portas
- * diferentes. `confirmar_entrega` perdeu a checagem de papel na migration
- * 20260825014102 — quem gera os links são as fotógrafas, e prender o
- * encerramento ao atendimento fazia gargalo de um passo que ele não executa.
- * `cancelar_caso` manteve, porque cancelar é decisão comercial sobre o
- * contrato, não o fim natural de um trabalho. Esta função é a segunda.
+ * VALE PARA AS DUAS PORTAS DE NOVO. `confirmar_entrega` tinha perdido a
+ * checagem em 20260825014102 — quem gerava os links eram as fotógrafas, e
+ * prender o encerramento ao atendimento fazia gargalo de um passo que ele não
+ * executava. Ela VOLTOU em 20260906151515: desde que o link é pedido na
+ * conclusão da edição (20260904190000), quem confirma não precisa mais ser quem
+ * editou, e a entrega virou trabalho do ADM na aba Entregas.
+ *
+ * ATENÇÃO ao que `PAPEIS_ADM` contém: ele NÃO inclui `atendimento`, exatamente
+ * como o `eh_adm()` do banco. Por isso o `||` — sem ele, a pessoa que de fato
+ * faz a entrega ficaria de fora.
  */
 export function podeEncerrarCaso(papelSistema: string): boolean {
   return papelSistema === 'atendimento' || PAPEIS_ADM.includes(papelSistema)
@@ -365,7 +369,15 @@ export function podeConfirmarEntrega(
   caso: CasoQuadro,
   temEntregavel: boolean,
   etapas: EtapaQuadro[] = [],
+  papelSistema = '',
 ): Disponibilidade {
+  // A checagem de papel voltou em 20260906151515. Fica ANTES das outras porque
+  // é a que explica por que a pessoa não vê o botão em caso nenhum — dizer
+  // "falta o link" a quem não podia confirmar de qualquer jeito manda arrumar
+  // a coisa errada.
+  if (papelSistema !== '' && !podeEncerrarCaso(papelSistema)) {
+    return { habilitada: false, motivo: 'Só o ADM e a gestão confirmam entrega.' }
+  }
   if (caso.ehTerminal) {
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
   }
@@ -400,6 +412,50 @@ export function podeConfirmarEntrega(
   if (!temEntregavel) {
     return { habilitada: false, motivo: 'Registre ao menos um link antes.' }
   }
+  return OK
+}
+
+/**
+ * ENVIAR o caso para a aba Entregas.
+ *
+ * Espelha `liberar_para_entrega` (20260906151515), que por sua vez repete as
+ * travas de `confirmar_entrega`. A repetição é deliberada: liberar um caso que
+ * a confirmação vai recusar empurra o erro para a mesa de quem não pode
+ * consertá-lo. Quem editou vê "falta o link" e resolve; o ADM veria o mesmo
+ * texto sobre um caso que não é dele.
+ *
+ * Não pede papel: qualquer pessoa ativa envia. Quem CONFIRMA é que é o ADM.
+ */
+export function podeLiberarParaEntrega(
+  caso: CasoQuadro,
+  temEntregavel: boolean,
+  etapas: EtapaQuadro[] = [],
+): Disponibilidade {
+  if (caso.ehTerminal) {
+    return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  }
+  if (caso.liberadoParaEntregaEm !== null) {
+    return { habilitada: false, motivo: 'Já está em Entregas.' }
+  }
+
+  // Mesma exceção do vídeo horizontal do MASTER (20260903153101): ele leva dez
+  // dias úteis e tem fluxo próprio na seção. Sem isto, nenhum MASTER chegaria à
+  // aba antes de duas semanas.
+  const abertas = etapas.filter(
+    (e) =>
+      e.tipo !== 'edicao_video' &&
+      e.status !== 'concluida' &&
+      e.status !== 'dispensada',
+  )
+  if (abertas.length > 0) {
+    const nomes = abertas.map((e) => ROTULO_ETAPA[e.tipo]).join(', ')
+    return { habilitada: false, motivo: `Falta concluir ou dispensar: ${nomes}.` }
+  }
+
+  if (!temEntregavel) {
+    return { habilitada: false, motivo: 'Registre ao menos um link antes de enviar.' }
+  }
+
   return OK
 }
 

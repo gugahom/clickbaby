@@ -32,7 +32,7 @@ import {
   useCancelarCaso,
   useConcluirEtapa,
   useConcluirEtapaComEntregaveis,
-  useConfirmarEntrega,
+  useLiberarParaEntrega,
   useIniciarEtapa,
   useMoverParaUti,
   usePausarEtapa,
@@ -46,7 +46,7 @@ import {
   podeAtribuir,
   podeCancelar,
   podeConcluir,
-  podeConfirmarEntrega,
+  podeLiberarParaEntrega,
   podeIniciar,
   podeMoverParaUti,
   podePausar,
@@ -76,7 +76,11 @@ interface PropsAcoes {
   etapas: EtapaQuadro[]
 }
 
-type Confirmacao = { tipo: 'entrega' } | { tipo: 'cancelamento' } | null
+/**
+ * Só o cancelamento sobrou aqui. Confirmar entrega saiu do card em 06/09/2026:
+ * virou trabalho do ADM, na aba Entregas.
+ */
+type Confirmacao = { tipo: 'cancelamento' } | null
 
 /**
  * Etapas do caso: estado e ação na MESMA linha.
@@ -128,7 +132,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const reabrir = useReabrirEtapa()
   const dispensar = useDispensarEtapa()
   const transferir = useTransferirEtapa()
-  const confirmarEntrega = useConfirmarEntrega()
+  const liberar = useLiberarParaEntrega()
   const cancelar = useCancelarCaso()
   const adicionarEtapa = useAdicionarEtapa()
 
@@ -141,7 +145,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     concluir.isPending ||
     concluirComLinks.isPending ||
     transferir.isPending ||
-    confirmarEntrega.isPending ||
+    liberar.isPending ||
     adicionarEtapa.isPending ||
     cancelar.isPending
 
@@ -158,7 +162,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const { data: entregaveis } = useEntregaveis(caso.id, true)
   const temEntregavel = (entregaveis ?? []).length > 0
 
-  const entrega = podeConfirmarEntrega(caso, temEntregavel, etapas)
+  const envio = podeLiberarParaEntrega(caso, temEntregavel, etapas)
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
@@ -576,33 +580,39 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-        {/* Confirmar entrega não olha mais papel (migration 20260825014102):
-            quem gera os links são as fotógrafas. Cancelar continua restrito —
-            cancelar é decisão comercial sobre o contrato, não o fim natural do
-            trabalho. */}
-        {/* O ÚNICO botão com gradiente da tela.
-        
-            Ele era `destrutivo` — vermelho, a mesma cor de cancelar caso, que
-            fica dois centímetros ao lado. Confirmar entrega é o oposto de
-            cancelar: é o fim BOM do trabalho. Vestir os dois de vermelho pedia
-            para a pessoa ler o rótulo para saber qual era qual, num gesto que
-            não se desfaz.
-        
-            Agora ele usa o rosa da marca em gradiente, e cancelar volta a ser
-            um botão quieto de contorno. A cor mais forte da tela fica com a
-            ação que a fotógrafa procura quando o trabalho acabou. */}
-        <Botao
-          onClick={() => {
-            setErro(null)
-            setConfirmacao({ tipo: 'entrega' })
-          }}
-          disabled={ocupado || !entrega.habilitada}
-          title={entrega.motivo}
-          className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
-        >
-          <IconeCheck className="size-4" />
-          Confirmar entrega
-        </Botao>
+        {/* O FIM DO TRABALHO AQUI É ENVIAR, NÃO CONFIRMAR (06/09/2026).
+
+            Quem termina a edição não entrega mais: manda o caso para a aba
+            Entregas, onde o ADM confere e confirma. O botão continua sendo o
+            único com gradiente da tela — a cor mais forte fica com a ação que
+            a fotógrafa procura quando o trabalho acabou —, só mudou o que ela
+            faz. Cancelar segue um botão quieto de contorno ao lado: é o oposto
+            deste, e vestir os dois de cor forte obrigaria a ler o rótulo para
+            saber qual era qual. */}
+        {caso.liberadoParaEntregaEm !== null ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-pronto-fundo px-3 py-1.5 text-sm font-semibold text-pronto">
+            <IconeCheck className="size-4" />
+            Em Entregas
+            {caso.liberadoParaEntregaPorNome && (
+              <span className="font-normal">
+                · enviado por {caso.liberadoParaEntregaPorNome.split(' ')[0]}
+              </span>
+            )}
+          </span>
+        ) : (
+          <Botao
+            onClick={() => {
+              setErro(null)
+              executar(liberar.mutateAsync({ casoId: caso.id }))
+            }}
+            disabled={ocupado || !envio.habilitada}
+            title={envio.motivo}
+            className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
+          >
+            <IconeCheck className="size-4" />
+            Enviar para Entregas
+          </Botao>
+        )}
 
         {mostraAcoesDeCaso && (
           <Botao
@@ -745,21 +755,6 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         />
       )}
 
-      {confirmacao?.tipo === 'entrega' && (
-        <DialogoConfirmarEntrega
-          caso={caso}
-          etapas={etapas}
-          ocupado={confirmarEntrega.isPending}
-          erro={erro}
-          onCancelar={() => setConfirmacao(null)}
-          onConfirmar={() =>
-            executar(confirmarEntrega.mutateAsync({ casoId: caso.id }), () =>
-              setConfirmacao(null),
-            )
-          }
-        />
-      )}
-
       {confirmacao?.tipo === 'cancelamento' && (
         <Dialogo
           titulo="Cancelar este caso?"
@@ -801,142 +796,6 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         </Dialogo>
       )}
     </div>
-  )
-}
-
-interface ItemChecklistEntrega {
-  id: string
-  rotulo: string
-}
-
-/** A única que vale para todo caso: sempre há fotos para entregar. */
-const CHECKLIST_ENTREGA_BASE: ItemChecklistEntrega[] = [
-  { id: 'fotos_completas', rotulo: 'Fotos completas no Google' },
-]
-
-/**
- * O reels, quando o caso TEM reels.
- *
- * Era item fixo, porque "reels existe em todos os pacotes" (seção 2 do
- * CLAUDE.md). Deixou de valer para o MASTER em 03/09/2026, por decisão do
- * gestor — e pedir a conferência de um reels que não existe é ensinar a marcar
- * caixa sem olhar, que estraga a única coisa que este checklist faz.
- *
- * A condição olha as ETAPAS DO CASO, não o slug do pacote. É mais robusto e é o
- * que o CLAUDE.md manda: um MASTER que vender o vertical ganha a etapa por
- * `adicionar_etapa` e volta a ter a caixa, sem ninguém lembrar de mexer aqui.
- */
-const CHECKLIST_ENTREGA_REELS: ItemChecklistEntrega[] = [
-  { id: 'reels_completo', rotulo: 'Reels completo no Google' },
-]
-
-/**
- * SÓ NO BIRTH E BIRTH+REELS (31/08/2026, a pedido do gestor).
- *
- * Os dois pacotes entregam pelo mesmo formato — link único de foto+vídeo,
- * "cadeado" — e nascem sem contrato fechado (é a tentativa de venda
- * pós-parto, seção 2 do CLAUDE.md). O "com final" é a versão que a família
- * recebe depois de decidir se compra, com o encerramento do vídeo incluso;
- * o sem final é o que sai primeiro, para apresentar o material.
- *
- * `pacoteSlug` e não `pacoteNome`: BIRTH e BIRTH+REELS são dois slugs
- * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o
- * NOME exigiria listar as duas grafias e reencontrar a mesma armadilha se
- * um terceiro pacote de BIRTH nascer um dia.
- */
-const CHECKLIST_ENTREGA_BIRTH: ItemChecklistEntrega[] = [
-  { id: 'cadeado_fv', rotulo: 'Link CADEADO F+V no Google' },
-  { id: 'cadeado_fv_final', rotulo: 'Link CADEADO F+V com final no Google' },
-]
-
-interface PropsDialogoConfirmarEntrega {
-  caso: CasoQuadro
-  /** Para saber se este caso tem reels — ver CHECKLIST_ENTREGA_REELS. */
-  etapas: EtapaQuadro[]
-  ocupado: boolean
-  erro: string | null
-  onCancelar: () => void
-  onConfirmar: () => void
-}
-
-/**
- * O checklist que HABILITA o botão, não que registra dado nenhum.
- *
- * O gestor pediu isto depois de reparar que "Confirmar entrega" virava um
- * segundo clique de confirmação sem checar NADA — a pessoa podia confirmar
- * sem ter de fato subido as fotos. As caixas aqui são a conferência final,
- * item por item, antes do gesto que não tem volta.
- *
- * DE PROPÓSITO NÃO VIRA COLUNA NOVA NO BANCO. O que a RPC exige continua
- * sendo o mesmo de sempre — pelo menos um entregável registrado
- * (podeConfirmarEntrega, lib/acoes.ts). Este checklist é a certeza de QUEM
- * está confirmando, não um registro que o sistema audita depois; guardar
- * cada caixinha marcada criaria uma segunda fonte de verdade sobre o que
- * foi entregue, competindo com os links de `entregaveis` que já são essa
- * fonte.
- */
-function DialogoConfirmarEntrega({
-  caso,
-  etapas,
-  ocupado,
-  erro,
-  onCancelar,
-  onConfirmar,
-}: PropsDialogoConfirmarEntrega) {
-  const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
-  const temReels = etapas.some((e) => e.tipo === 'reels')
-  const itens = [
-    ...CHECKLIST_ENTREGA_BASE,
-    ...(temReels ? CHECKLIST_ENTREGA_REELS : []),
-    ...(ehBirth ? CHECKLIST_ENTREGA_BIRTH : []),
-  ]
-
-  const [conferidos, setConferidos] = useState<Set<string>>(new Set())
-
-  function alternar(id: string) {
-    setConferidos((atual) => {
-      const proximo = new Set(atual)
-      if (proximo.has(id)) proximo.delete(id)
-      else proximo.add(id)
-      return proximo
-    })
-  }
-
-  return (
-    <Dialogo
-      titulo="Confirmar entrega e encerrar o caso?"
-      rotuloConfirmar="Confirmar entrega"
-      confirmarDestrutivo
-      confirmarDesabilitado={itens.some((item) => !conferidos.has(item.id))}
-      ocupado={ocupado}
-      erro={erro}
-      onCancelar={onCancelar}
-      onConfirmar={onConfirmar}
-    >
-      <p className="text-sm text-muted-foreground">
-        {caso.maeNome}
-        {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}. Os links passam a contar como
-        confirmados e o caso é encerrado. Não há como desfazer.
-      </p>
-
-      <ul className="space-y-0.5">
-        {itens.map((item) => (
-          <li key={item.id}>
-            {/* min-h-11: a linha inteira é o alvo de toque (seção 6 do
-                CLAUDE.md), não só o quadrado de 16px do checkbox. */}
-            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted">
-              <input
-                type="checkbox"
-                checked={conferidos.has(item.id)}
-                onChange={() => alternar(item.id)}
-                className="size-5 flex-shrink-0 rounded border-border accent-marca"
-              />
-              {item.rotulo}
-            </label>
-          </li>
-        ))}
-      </ul>
-    </Dialogo>
   )
 }
 

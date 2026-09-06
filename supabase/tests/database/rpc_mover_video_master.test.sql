@@ -47,6 +47,14 @@ insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
 select 'Editora Master', u.id, 'operador', true
 from auth.users u where u.email = 'editora.master@clickbaby.test';
 
+-- Confirmar entrega exige atendimento ou adm desde a 20260906151515.
+insert into auth.users (id, email, aud, role, created_at, updated_at)
+values (gen_random_uuid(), 'atendimento.master@clickbaby.test', 'authenticated', 'authenticated', now(), now());
+
+insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
+select 'Atendimento Master', u.id, 'atendimento', true
+from auth.users u where u.email = 'atendimento.master@clickbaby.test';
+
 insert into public.casos (id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em)
 values (
   'dddddddd-0000-0000-0000-000000000001',
@@ -213,6 +221,7 @@ update public.caso_etapas
 insert into public.entregaveis (caso_id, tipo, url)
 values ('dddddddd-0000-0000-0000-000000000001', 'google_photos', 'https://photos.google.com/master');
 
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Master'), true);
 set local role authenticated;
 
 select ok(

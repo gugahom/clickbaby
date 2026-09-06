@@ -59,6 +59,17 @@ export interface CasoQuadro {
    * `venceEm`: a revisão ganha o prazo do pacote contado da reabertura.
    */
   reabertoEm: string | null
+  /**
+   * Quando o caso foi ENVIADO para a aba Entregas. Nulo = ainda no fluxo do
+   * Quadro.
+   *
+   * Não confundir com "pronto": pronto é derivado das etapas e o sistema
+   * calcula sozinho; isto é o gesto de uma pessoa dizendo que pode entregar.
+   * Um caso pode estar pronto há dois dias e não ter sido enviado.
+   */
+  liberadoParaEntregaEm: string | null
+  /** Quem enviou. A resposta para "quem disse que estava pronto?". */
+  liberadoParaEntregaPorNome: string | null
 }
 
 /**
@@ -159,6 +170,8 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     etapasConcluidas: linha.etapas_concluidas ?? 0,
     updatedAt: linha.updated_at,
     reabertoEm: linha.reaberto_em,
+    liberadoParaEntregaEm: linha.liberado_para_entrega_em,
+    liberadoParaEntregaPorNome: linha.liberado_para_entrega_por_nome,
   }
 }
 

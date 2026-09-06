@@ -98,6 +98,21 @@ export function useConcluirEtapaComEntregaveis() {
 }
 
 /**
+ * ENVIA o caso pronto para a aba Entregas.
+ *
+ * Chamável por qualquer pessoa ativa, e é o ponto do desenho: quem acabou de
+ * editar é quem sabe que acabou. Quem CONFIRMA a entrega depois é outra
+ * pessoa — atendimento ou adm —, e essa parte é a RPC `confirmar_entrega`.
+ *
+ * Idempotente do lado do banco: dois toques não reescrevem quem enviou.
+ */
+export function useLiberarParaEntrega() {
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('liberar_para_entrega', { p_caso_id: casoId }),
+  )
+}
+
+/**
  * Designa responsável a uma etapa que ainda não começou. Distinta de
  * transferir: ali houve passagem de trabalho e vira linha em `handoffs`; aqui
  * nada foi passado porque nada começou.

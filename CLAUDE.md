@@ -211,11 +211,25 @@ aparelho.
 entregável registrado**. Não existe encerramento por prazo nem por omissão: alguém tem que
 fazer o gesto, e o gesto fica gravado em `eventos` e em `entregaveis.confirmado_por`.
 
-**Qualquer pessoa ativa confirma a entrega** (migration `20260825014102`). A restrição a
-atendimento/adm caiu quando se descobriu que quem gera os links são as fotógrafas — o
-portão continua existindo, mudou quem tem a chave. `cancelar_caso` **continua** restrita a
-atendimento/adm: cancelar é decisão comercial sobre o contrato, não o fim natural de um
-trabalho.
+**A ENTREGA É DE DUAS PESSOAS** (migration `20260906151515`). Quem termina o trabalho
+**envia** o caso para a aba Entregas (`liberar_para_entrega`, aberta a qualquer pessoa
+ativa — quem acabou de editar é quem sabe que acabou); quem **confirma** ali é
+atendimento ou adm, e mais ninguém.
+
+Isso restaura a checagem de papel que a `20260825014102` tinha derrubado, e a ida e volta
+tem explicação. Em 25/08 a restrição saiu porque quem gerava os links eram as fotógrafas,
+e prender o encerramento ao atendimento fazia gargalo de um passo que ele não executava.
+Esse motivo acabou em 04/09 (`20260904190000`): o link passou a ser pedido na conclusão da
+edição, então quando o caso chega ao fim os links já estão nele, e quem confirma não
+precisa mais ser quem editou.
+
+**Atenção a uma armadilha ao mexer nisso:** `eh_adm()` **não** inclui `atendimento` (ele é
+comercial, coordenacao, financeiro, gestao). Escrever a checagem só com ele deixaria de
+fora justamente a pessoa que faz a entrega. O par correto é `eh_atendimento() or eh_adm()`,
+o mesmo que `cancelar_caso` usa — e é o que "atendimento ou adm" significa neste projeto.
+
+`cancelar_caso` **continua** restrita ao mesmo par: cancelar é decisão comercial sobre o
+contrato, não o fim natural de um trabalho.
 
 `status_operacional = cancelado` exige `motivo_cancelamento` preenchido e não vazio — seja
 porque o sync detectou o card cinza no Calendar (preenche um texto padrão automaticamente),
@@ -272,7 +286,8 @@ mover_video_master(p_caso_etapa_id, p_fase)
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
-confirmar_entrega(p_caso_id)                            -- encerra
+liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
+confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
 cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
 reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um encerrado
 
@@ -708,6 +723,17 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
   idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
   o mesmo álbum, e o campo já vem preenchido com ele.
+- **A aba ENTREGAS** (06/09/2026), entre Quadro e Rascunhos. O card verde deixou de
+  oferecer "Confirmar entrega" a qualquer um: quem termina o trabalho aperta **"Enviar para
+  Entregas"**, e o ADM confere os links e confirma lá. É a separação que a operação já
+  fazia — a fotografia é de uma pessoa, a entrega à família é de outra.
+  **A aba não aparece** para quem não é atendimento/adm, e isso é conveniência, não
+  segurança: a trava está em `confirmar_entrega` (ver invariante 3.5).
+  O caso enviado **continua aparecendo no Quadro**, com o selo "Em Entregas" e o nome de
+  quem enviou. Sumir de lá faria um dia parecer resolvido sem ninguém ter entregado nada, e
+  a regra de visibilidade do Quadro é justamente a oposta.
+  A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
+  o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
