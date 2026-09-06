@@ -3,12 +3,11 @@ import clsx from 'clsx'
 interface PropsAvatar {
   nome: string
   /**
-   * Terreno preparado para a foto de perfil. Ainda não existe fonte: `pessoas`
-   * não tem coluna de avatar e o Storage do projeto é privado (seção 10 do
-   * CLAUDE.md), então a foto vai precisar de bucket próprio e signed URL de
-   * curta duração — não é só acrescentar um `<img src>`.
+   * A foto de perfil, já assinada. Ela EXISTE desde 03/09/2026 (bucket privado
+   * `avatares`, coluna `pessoas.foto_path`, URL assinada de uma hora) — este
+   * comentário dizia o contrário e ficou para trás.
    *
-   * Enquanto isso, as iniciais. Elas não são placeholder de rascunho: num
+   * Sem foto, as iniciais. Elas não são placeholder de rascunho: num
    * aparelho compartilhado que troca de mão a cada turno, o que importa é
    * responder "quem está logado aqui" num relance, e duas letras fazem isso.
    */

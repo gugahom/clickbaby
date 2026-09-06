@@ -588,6 +588,13 @@ Implicações para a implementação:
 (fora do escopo) e o cliente já confirmou que não falta máquina — o gargalo é tempo de
 trabalho, não fila por hardware. O tempo de ciclo e o cumprimento de SLA cobrem a cobrança.
 
+**PRESENÇA NÃO É MEDIÇÃO** (06/09/2026). O cabeçalho mostra quem está com a tela aberta
+agora, com bolinha de estado, e NADA disso é gravado: vive no canal de Presence do Realtime
+enquanto a aba existe. A tentação de somar esse tempo vai aparecer — ela apareceu no
+próprio pedido que criou a funcionalidade — e a resposta é o parágrafo abaixo. Aba aberta
+não é trabalho: o Quadro numa TV "trabalharia" 24h, e quem fotografa um parto com o celular
+no bolso "não trabalharia" nenhuma. A régua continua sendo etapa iniciada e concluída.
+
 **O sistema não calcula jornada, hora extra nem espelho de ponto.** A empresa já tem controle
 de ponto digital e ele continua sendo a fonte de verdade. Atividade fora da janela de escala
 gera alerta operacional (um parto estourou o turno), nunca apontamento disciplinar automático.
@@ -781,6 +788,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   edição"**, sem apagar. A exceção nomeia `edicao_video` e mais nada: com a edição de fotos
   aberta, encerrar continua sendo recusado.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+- **Presença no cabeçalho** (06/09/2026): quem está com a tela aberta aparece ao lado do
+  chip de conta, com bolinha de estado — a referência do gestor foi a planilha compartilhada
+  do Sheets. Teto de quatro avatares e "+N" no resto; some no mobile, onde a faixa não cabe.
+  **DOIS EIXOS, e é o que desembaraça o pedido.** A pessoa DECLARA disponibilidade no menu
+  da própria foto (só **Disponível** e **Ausente** — decisão do gestor; "Não perturbar" e
+  "Invisível" resolvem problemas de chat, não de escala), e a ATIVIDADE é derivada: quem tem
+  etapa em andamento aparece como **Ocupada** sozinha, sem tocar em nada. É assim que "o
+  status muda conforme ela mexe nos cards" sem inventar um segundo lugar para dizer a mesma
+  coisa. "Ocupada" não está no menu de propósito: escolhê-la seria poder mentir sobre o
+  trabalho. **Ausente ganha de Ocupada** — quem começou uma edição e foi almoçar sem pausar
+  não pode aparecer como se estivesse lá.
+  **Nada é gravado** (ver seção 9). A escolha manual fica no `localStorage`, que é
+  preferência de UI e não dado de domínio.
 - **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas
   colunas — atraso à esquerda, turno à direita, nenhum dia atravessando — com cartão
   compacto (uma etapa por trilha). A escolha fica no `localStorage` do aparelho, e o botão

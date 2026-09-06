@@ -13,6 +13,14 @@ import { useModoTv } from '@/features/quadro/lib/useModoTv'
 // diria "Operação" enquanto a Equipe já dizia outra coisa.
 import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { useUrlDaFoto } from '@/features/perfil/api/useFotoDePerfil'
+import { usePresenca, useAtividadeDaEquipe } from '@/features/presenca/api/usePresenca'
+import { EquipePresente } from '@/features/presenca/components/EquipePresente'
+import { BolinhaDeStatus } from '@/features/presenca/components/BolinhaDeStatus'
+import {
+  ROTULO_ESTADO,
+  estadoVisivel,
+  type EstadoDeclarado,
+} from '@/features/presenca/lib/estados'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 
 /**
@@ -72,6 +80,13 @@ export function AppShell() {
   // a cada turno, é o jeito mais rápido de responder "quem está logado aqui".
   const { data: minhaFoto } = useUrlDaFoto(pessoa?.fotoPath)
 
+  // Presença: quem está aqui agora (canal do Realtime, nada gravado) e quem
+  // tem etapa em andamento (derivado do trabalho). Os dois juntos dão a
+  // bolinha — ver features/presenca/lib/estados.ts.
+  const { outros, declarado, definir } = usePresenca()
+  const { data: ocupadas } = useAtividadeDaEquipe()
+  const meuEstado = estadoVisivel(declarado, ocupadas?.has(pessoa?.id ?? '') ?? false)
+
   return (
     <div className="flex h-full flex-col">
       <header className="superficie-cabecalho flex-shrink-0 text-white">
@@ -109,25 +124,67 @@ export function AppShell() {
             se procura por ele — e onde as próximas ações de conta vão caber
             sem inventar mais um canto.
           */}
-          {pessoa && (
+          {/* Presença e conta andam JUNTAS, num grupo só. Soltas, o
+              justify-between do cabeçalho jogaria a fileira de avatares para o
+              meio da faixa, longe do chip — e ali ela lê como outra coisa, não
+              como "quem está comigo nesta tela". */}
+          <div className="flex flex-shrink-0 items-center gap-3">
+            {/* Quem mais está no Quadro agora — a mesma vizinhança dos
+                colaboradores de uma planilha compartilhada, que foi a
+                referência do gestor. */}
+            <EquipePresente outros={outros} ocupadas={ocupadas ?? new Set()} />
+
+            {pessoa && (
             <Dropdown
               alinhamento="direita"
               rotulo={`Conta de ${pessoa.nome}`}
               onEscolher={(item) => {
+                if (item.id === 'disponivel' || item.id === 'ausente') {
+                  definir(item.id as EstadoDeclarado)
+                }
                 if (item.id === 'perfil') void navegar('/perfil')
                 if (item.id === 'sair') void sair()
               }}
+              selecionado={declarado}
               // "Editar conta" ANTES de "Sair", e não é ordem alfabética: num
               // aparelho compartilhado, sair é o gesto mais frequente e o mais
               // perigoso de acertar sem querer. Ele fica por último, longe do
               // polegar que acabou de abrir o menu.
               itens={[
+                /* O ESTADO VEM PRIMEIRO, e não é ordem arbitrária: é o item
+                   que se troca várias vezes por turno, enquanto "editar
+                   perfil" se usa uma vez na vida. O menu do Discord que o
+                   gestor mandou faz o mesmo — o estado no topo, a conta
+                   embaixo.
+
+                   Dois estados só, por decisão dele. "Ocupada" NÃO entra aqui
+                   porque não se escolhe: ela nasce de ter etapa em andamento,
+                   e oferecê-la como opção deixaria a pessoa mentir sobre o
+                   trabalho — que é exatamente o que a medição não pode. */
+                {
+                  id: 'disponivel',
+                  rotulo: ROTULO_ESTADO.disponivel,
+                  icone: <BolinhaDeStatus estado="disponivel" />,
+                },
+                {
+                  id: 'ausente',
+                  rotulo: ROTULO_ESTADO.ausente,
+                  icone: <BolinhaDeStatus estado="ausente" />,
+                },
                 { id: 'perfil', rotulo: 'Editar perfil', icone: <IconeCaneta className="size-4" /> },
                 { id: 'sair', rotulo: 'Sair da conta', icone: <IconeSair className="size-4" />, destrutivo: true },
               ]}
               gatilho={
                 <span className="flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-1 pr-2 pl-1 transition-colors hover:bg-white/20">
-                  <Avatar nome={pessoa.nome} fotoUrl={minhaFoto ?? null} />
+                  {/* A bolinha no próprio retrato: sem ela, a pessoa escolhe
+                      "ausente" no menu e não tem como saber que pegou. */}
+                  <span className="relative flex-shrink-0">
+                    <Avatar nome={pessoa.nome} fotoUrl={minhaFoto ?? null} />
+                    <BolinhaDeStatus
+                      estado={meuEstado}
+                      className="absolute right-0 bottom-0 ring-2 ring-black/40"
+                    />
+                  </span>
                   {/* O nome some no mobile e sobra o avatar, que já carrega as
                       iniciais e o nome completo no title. */}
                   <span className="hidden min-w-0 text-left leading-tight sm:block">
@@ -140,7 +197,8 @@ export function AppShell() {
                 </span>
               }
             />
-          )}
+            )}
+          </div>
         </div>
 
         {/*
