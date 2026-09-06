@@ -315,10 +315,18 @@ const CLASSE_PILULA: Record<StatusEtapa, string> = {
  * pausada. Concluída não mostra quem fez: isso é histórico, e vive no detalhe.
  */
 function nomesDaEtapa(etapa: EtapaQuadro): string | null {
-  const trabalhando =
-    etapa.status === 'atribuida' ||
-    etapa.status === 'em_andamento' ||
-    etapa.status === 'pausada'
+  /*
+   * PAUSADO ganha a palavra, não o nome (06/09/2026, pedido do gestor).
+   *
+   * Numa pílula âmbar, o nome respondia "de quem é" quando a pergunta que a
+   * cor levanta é "o que houve". Quem varre o Quadro de longe precisa achar o
+   * trabalho parado; o nome está a um toque de distância, na linha da etapa
+   * dentro do card, e a seção REELS já chamava esse estado assim — agora as
+   * duas telas dizem a mesma palavra para o mesmo estado.
+   */
+  if (etapa.status === 'pausada') return 'Pausado'
+
+  const trabalhando = etapa.status === 'atribuida' || etapa.status === 'em_andamento'
 
   if (!trabalhando || !etapa.responsavelNome) return null
 
