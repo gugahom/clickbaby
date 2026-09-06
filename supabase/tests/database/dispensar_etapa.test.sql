@@ -21,6 +21,16 @@ insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
 select 'Operador Dispensa', u.id, 'operador', true
 from auth.users u where u.email = 'operador.dispensa@clickbaby.test';
 
+-- Uma segunda pessoa, com papel de quem entrega: desde a 20260906151515,
+-- confirmar_entrega exige atendimento ou adm. O operador continua fazendo todo
+-- o resto deste arquivo.
+insert into auth.users (id, email, aud, role, created_at, updated_at)
+values (gen_random_uuid(), 'adm.dispensa@clickbaby.test', 'authenticated', 'authenticated', now(), now());
+
+insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
+select 'Atendimento Dispensa', u.id, 'atendimento', true
+from auth.users u where u.email = 'adm.dispensa@clickbaby.test';
+
 insert into public.maternidades (nome, sigla) values ('Maternidade Dispensa', 'DISP');
 
 insert into public.casos (mae_nome, pacote_id, maternidade_id)
@@ -132,6 +142,12 @@ select lives_ok(
        'google_photos', 'https://photos.google.com/share/teste') $$,
   'C1: entregável registrado'
 );
+
+-- Troca de gente: quem registrou o link foi a operadora, quem encerra é o
+-- atendimento. `reset role` antes porque pg_temp.como lê auth.users, e
+-- `authenticated` não a enxerga.
+reset role;
+select pg_temp.como('adm.dispensa@clickbaby.test');
 
 select lives_ok(
   $$ select public.confirmar_entrega((select id from public.casos where mae_nome = 'Mãe Dispensa')) $$,

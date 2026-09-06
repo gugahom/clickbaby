@@ -211,11 +211,25 @@ aparelho.
 entregável registrado**. Não existe encerramento por prazo nem por omissão: alguém tem que
 fazer o gesto, e o gesto fica gravado em `eventos` e em `entregaveis.confirmado_por`.
 
-**Qualquer pessoa ativa confirma a entrega** (migration `20260825014102`). A restrição a
-atendimento/adm caiu quando se descobriu que quem gera os links são as fotógrafas — o
-portão continua existindo, mudou quem tem a chave. `cancelar_caso` **continua** restrita a
-atendimento/adm: cancelar é decisão comercial sobre o contrato, não o fim natural de um
-trabalho.
+**A ENTREGA É DE DUAS PESSOAS** (migration `20260906151515`). Quem termina o trabalho
+**envia** o caso para a aba Entregáveis (`liberar_para_entrega`, aberta a qualquer pessoa
+ativa — quem acabou de editar é quem sabe que acabou); quem **confirma** ali é
+atendimento ou adm, e mais ninguém.
+
+Isso restaura a checagem de papel que a `20260825014102` tinha derrubado, e a ida e volta
+tem explicação. Em 25/08 a restrição saiu porque quem gerava os links eram as fotógrafas,
+e prender o encerramento ao atendimento fazia gargalo de um passo que ele não executava.
+Esse motivo acabou em 04/09 (`20260904190000`): o link passou a ser pedido na conclusão da
+edição, então quando o caso chega ao fim os links já estão nele, e quem confirma não
+precisa mais ser quem editou.
+
+**Atenção a uma armadilha ao mexer nisso:** `eh_adm()` **não** inclui `atendimento` (ele é
+comercial, coordenacao, financeiro, gestao). Escrever a checagem só com ele deixaria de
+fora justamente a pessoa que faz a entrega. O par correto é `eh_atendimento() or eh_adm()`,
+o mesmo que `cancelar_caso` usa — e é o que "atendimento ou adm" significa neste projeto.
+
+`cancelar_caso` **continua** restrita ao mesmo par: cancelar é decisão comercial sobre o
+contrato, não o fim natural de um trabalho.
 
 `status_operacional = cancelado` exige `motivo_cancelamento` preenchido e não vazio — seja
 porque o sync detectou o card cinza no Calendar (preenche um texto padrão automaticamente),
@@ -226,8 +240,15 @@ Constraint de banco (`casos_status_terminal_valido`) já aplica essa regra — n
 como validação de aplicação que pode divergir da constraint.
 
 **Regra de visibilidade do Quadro:** um dia só sai da tela quando **todos** os casos daquele
-dia estão em `encerrado` OU `cancelado`. Nunca por passagem de data. Um caso atrasado mantém
-o bloco do dia visível, mesmo que trave semanas.
+dia estão em `encerrado`, `cancelado` ou **enviados para Entregáveis**. Nunca por passagem
+de data. Um caso atrasado mantém o bloco do dia visível, mesmo que trave semanas.
+
+A terceira saída entrou em 06/09/2026, a pedido do gestor, e é uma exceção com limite
+claro: o caso enviado **não sumiu**, mudou de lista — está na aba Entregáveis, visível para
+a equipe inteira. A regra existe para trabalho parado não sair de vista, e um caso enviado
+não é trabalho parado: é trabalho terminado esperando outra pessoa. Sem essa saída o Quadro
+do dia continuaria mostrando cartões que ninguém mais vai tocar, e o "x de y concluídos"
+passaria a medir a entrega do ADM em vez do trabalho do turno.
 
 O módulo financeiro (`despesas`, `status_financeiro`) foi removido do escopo. Não recrie essas
 tabelas/colunas sem instrução explícita.
@@ -272,7 +293,8 @@ mover_video_master(p_caso_etapa_id, p_fase)
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
-confirmar_entrega(p_caso_id)                            -- encerra
+liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
+confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
 cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
 reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um encerrado
 
@@ -708,6 +730,30 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
   idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
   o mesmo álbum, e o campo já vem preenchido com ele.
+- **A aba ENTREGÁVEIS** (06/09/2026), entre Quadro e Rascunhos. O card verde deixou de
+  oferecer "Confirmar entrega" a qualquer um: quem termina o trabalho aperta **"Enviar para
+  Entregáveis"**, o caso SAI DO QUADRO, e o ADM confere os links e confirma lá. É a
+  separação que a operação já fazia — a fotografia é de uma pessoa, a entrega à família é de
+  outra.
+  **A LISTA É DE TODO MUNDO; a confirmação é do ADM e da gestão.** Quem enviou precisa poder
+  ver se já foi entregue, ainda mais com o caso fora do Quadro — esconder a aba deixaria a
+  fotógrafa sem lugar nenhum para olhar. Quem não confirma vê "aguardando o ADM" no lugar do
+  botão, e não um botão cinza: uma fileira de botões desabilitados ensina a ignorar o que
+  está desabilitado. A trava de verdade está em `confirmar_entrega` (ver invariante 3.5).
+  **A MESMA CONFERÊNCIA acontece nos DOIS momentos** — o checklist de "fotos completas",
+  "reels completo" e os cadeados do BIRTH aparece ao enviar e ao confirmar. É deliberado:
+  quem edita marca o que produziu, quem entrega marca o que viu, e duas pessoas sobre a
+  mesma lista pegam o que uma sozinha deixaria passar.
+  A pílula da aba ganha o **anel verde girando** quando há fila — o mesmo recurso do vídeo
+  parado na seção REELS (`.anel-alerta`), ali em vermelho porque é prazo correndo, aqui em
+  verde porque é trabalho pronto esperando alguém. Sem fila ele some; se girasse sempre não
+  chamaria ninguém.
+  A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
+  o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
+  **O nome na tela é "Entregáveis" e no código é `entregas`** — decisão do gestor sobre a
+  tela, e o código não segue porque `Entregaveis.tsx` já é o componente da lista de LINKS do
+  caso. Mesmo arranjo de `operador`/"Fotógrafo(a)" (invariante 3.1): o rótulo é do
+  vocabulário da operação, o identificador é do código.
 - **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
   que só o BIRTH tem) e ao menos um entregável registrado.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration

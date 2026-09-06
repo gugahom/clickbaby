@@ -21,6 +21,15 @@ insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
 select 'Editora Video Master', u.id, 'operador', true
   from auth.users u where u.email = 'video.master.encerra@clickbaby.test';
 
+-- Confirmar entrega exige atendimento ou adm desde a 20260906151515. A editora
+-- continua registrando os links; quem encerra é outra pessoa.
+insert into auth.users (id, email, aud, role, created_at, updated_at)
+values (gen_random_uuid(), 'atendimento.video.master@clickbaby.test', 'authenticated', 'authenticated', now(), now());
+
+insert into public.pessoas (nome, auth_user_id, papel_sistema, ativo)
+select 'Atendimento Video Master', u.id, 'atendimento', true
+  from auth.users u where u.email = 'atendimento.video.master@clickbaby.test';
+
 insert into public.maternidades (nome, sigla)
 values ('Maternidade Video Master', 'VIDMTEST');
 
@@ -110,6 +119,12 @@ select public.registrar_entregavel(
 -- =============================================================================
 -- A. O caso encerra com o vídeo aberto.
 -- =============================================================================
+
+select set_config(
+  'request.jwt.claim.sub',
+  (select auth_user_id::text from public.pessoas where nome = 'Atendimento Video Master'),
+  true
+);
 
 select lives_ok(
   format('select public.confirmar_entrega(%L::uuid)',

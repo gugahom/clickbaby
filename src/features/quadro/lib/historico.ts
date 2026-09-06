@@ -108,6 +108,13 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         ...(tipoLink ? { detalhe: tipoLink.replace(/_/g, ' ') } : {}),
       }
     }
+    case 'caso_liberado_para_entrega':
+      return {
+        ...base,
+        acao: 'Enviou o caso para Entregáveis',
+        tom: 'marco',
+      }
+
     case 'entrega_confirmada':
       return { ...base, acao: 'Confirmou a entrega e encerrou o caso', tom: 'marco' }
 

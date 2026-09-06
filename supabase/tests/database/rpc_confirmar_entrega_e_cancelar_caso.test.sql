@@ -130,18 +130,32 @@ select public.registrar_entregavel(
   'https://exemplo.invalido/operador-confirma'
 );
 
-select lives_ok(
+-- A RESTRIÇÃO DE PAPEL VOLTOU em 20260906151515. Esta asserção dizia o
+-- contrário e estava certa entre 25/08 e 06/09: naquele intervalo quem gerava
+-- os links era a fotógrafa, e prender o encerramento ao atendimento fazia
+-- gargalo de um passo que ele não executava. Desde que o link passou a ser
+-- pedido na conclusão da edição (20260904190000), quem confirma não precisa
+-- mais ser quem editou — e a entrega virou trabalho do ADM, na aba Entregas.
+select throws_ok(
   format(
     $$ select public.confirmar_entrega('%s'::uuid) $$,
     (select id from public.casos where mae_nome = 'Mãe Confirma SemLink')
   ),
-  'CE5: operador CONFIRMA entrega — a restrição de papel caiu (20260825014102)'
+  'P0001',
+  'Só atendimento ou adm podem confirmar entrega.',
+  'CE5: operador NÃO confirma entrega — o gesto é de quem entrega, não de quem editou'
+);
+
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Teste Terminal'), true);
+
+select public.confirmar_entrega(
+  (select id from public.casos where mae_nome = 'Mãe Confirma SemLink')
 );
 
 select is(
   (select status_operacional from public.casos where mae_nome = 'Mãe Confirma SemLink'),
   'encerrado'::public.status_operacional,
-  'CE5b: e o caso encerrou pelo gesto do operador'
+  'CE5b: e encerra pelo gesto do atendimento'
 );
 
 -- B2: a trava que SOBROU — sem entregável nenhum, ninguém encerra.
