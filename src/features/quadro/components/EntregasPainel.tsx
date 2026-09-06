@@ -19,18 +19,20 @@ interface PropsEntregasPainel {
 }
 
 /**
- * A aba ENTREGAS — onde o caso pronto vira caso entregue.
+ * A aba ENTREGÁVEIS — onde o caso pronto vira caso entregue.
  *
  * O QUE MUDOU E POR QUÊ (pedido do gestor, 06/09/2026)
  * Antes, quem terminava a edição clicava "Confirmar entrega" no próprio card e
  * o caso encerrava. Isso juntava duas coisas que a operação faz separadas: o
  * trabalho de foto/vídeo, que é da fotógrafa, e a ENTREGA à família, que é do
- * ADM. Agora quem termina ENVIA para cá, e quem entrega confirma aqui.
+ * ADM. Agora quem termina ENVIA para cá — e o caso sai do Quadro — e quem
+ * entrega confirma aqui.
  *
- * ACESSO RESTRITO, e não só de fachada: a aba nem aparece para quem não é ADM
- * ou gestão, e `confirmar_entrega` voltou a exigir esse papel no banco desde a
- * migration 20260906151515. Esconder o botão não é permissão — a trava de
- * verdade está na RPC, e esta tela só evita oferecer o que seria negado.
+ * A LISTA É DE TODO MUNDO; a CONFIRMAÇÃO é do ADM e da gestão. Quem enviou
+ * precisa poder ver se já foi entregue, ainda mais agora que o caso sumiu do
+ * Quadro — esconder a aba deixaria a fotógrafa sem nenhum lugar para olhar. O
+ * que é restrito é o botão, e a trava de verdade está em `confirmar_entrega`
+ * (migration 20260906151515): esconder botão não é permissão.
  *
  * A LISTA É POR ORDEM DE ENVIO, não por prazo. Prazo é a régua do Quadro, onde
  * o trabalho ainda está acontecendo; aqui o trabalho acabou e o que importa é
@@ -44,28 +46,15 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
   const [confirmando, setConfirmando] = useState<CasoQuadro | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
-  // Cinto e suspensório. A aba não é oferecida a quem não pode, mas o estado da
-  // aba vive no componente pai e um dia alguém pode chegar aqui por outro
-  // caminho — um link, um atalho, um bug de estado.
-  if (!podeEncerrarCaso(papel)) {
-    return (
-      <div className="mx-auto max-w-lg p-8 text-center">
-        <h2 className="font-semibold">Entregas é do ADM e da gestão</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Quem termina a edição envia o caso para cá; a confirmação da entrega é
-          feita por quem entrega.
-        </p>
-      </div>
-    )
-  }
+  const confirma = podeEncerrarCaso(papel)
 
   if (entregas.length === 0) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
         <h2 className="font-semibold">Nenhum caso esperando entrega</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Assim que uma fotógrafa terminar o trabalho e enviar o caso, ele
-          aparece aqui com os links para conferir.
+          Assim que alguém terminar o trabalho e enviar o caso, ele sai do
+          Quadro e aparece aqui com os links para conferir.
         </p>
       </div>
     )
@@ -74,8 +63,9 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
   return (
     <div className="p-3 md:p-4">
       <p className="mb-3 text-sm text-muted-foreground">
-        Casos com o trabalho concluído, enviados por quem editou. Confira os
-        links e confirme a entrega — o caso encerra e não há como desfazer.
+        {confirma
+          ? 'Casos com o trabalho concluído, enviados por quem editou. Confira os links e confirme a entrega — o caso encerra e não há como desfazer.'
+          : 'Casos com o trabalho concluído, esperando a entrega à família. Quem confirma é o ADM ou a gestão.'}
       </p>
 
       {erro && (
@@ -128,18 +118,27 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
                   )}
                 </div>
 
-                <Botao
-                  onClick={() => {
-                    setErro(null)
-                    setConfirmando(caso)
-                  }}
-                  disabled={confirmar.isPending || !entrega.habilitada}
-                  title={entrega.motivo}
-                  className="superficie-acento flex-shrink-0 border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
-                >
-                  <IconeCheck className="size-4" />
-                  Confirmar entrega
-                </Botao>
+                {confirma ? (
+                  <Botao
+                    onClick={() => {
+                      setErro(null)
+                      setConfirmando(caso)
+                    }}
+                    disabled={confirmar.isPending || !entrega.habilitada}
+                    title={entrega.motivo}
+                    className="superficie-acento flex-shrink-0 border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
+                  >
+                    <IconeCheck className="size-4" />
+                    Confirmar entrega
+                  </Botao>
+                ) : (
+                  // Sem botão, e não com botão cinza: uma fileira de botões
+                  // desabilitados ensina a ignorar o que está desabilitado, e
+                  // esta pessoa não tem o que fazer aqui além de acompanhar.
+                  <span className="flex-shrink-0 text-xs font-medium text-muted-foreground">
+                    aguardando o ADM
+                  </span>
+                )}
               </div>
 
               {/* Os links ficam à vista, e é o motivo de a tela existir: quem
@@ -157,6 +156,7 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
       {confirmando && (
         <DialogoConfirmarEntrega
           caso={confirmando}
+          modo="confirmacao"
           etapas={etapasPorCaso.get(confirmando.id) ?? []}
           ocupado={confirmar.isPending}
           erro={erro}

@@ -49,6 +49,13 @@ const CHECKLIST_ENTREGA_BIRTH: ItemChecklistEntrega[] = [
 
 interface PropsDialogoConfirmarEntrega {
   caso: CasoQuadro
+  /**
+   * ENVIO é quem terminou o trabalho dizendo "pode entregar"; CONFIRMACAO é o
+   * ADM dizendo "entreguei". A conferência é a MESMA lista nos dois — e é o
+   * ponto: quem edita marca o que produziu, quem entrega marca o que viu. Duas
+   * pessoas olhando a mesma lista pegam o que uma sozinha deixaria passar.
+   */
+  modo: 'envio' | 'confirmacao'
   /** Para saber se este caso tem reels — ver CHECKLIST_ENTREGA_REELS. */
   etapas: EtapaQuadro[]
   ocupado: boolean
@@ -75,6 +82,7 @@ interface PropsDialogoConfirmarEntrega {
  */
 export function DialogoConfirmarEntrega({
   caso,
+  modo,
   etapas,
   ocupado,
   erro,
@@ -102,9 +110,13 @@ export function DialogoConfirmarEntrega({
 
   return (
     <Dialogo
-      titulo="Confirmar entrega e encerrar o caso?"
-      rotuloConfirmar="Confirmar entrega"
-      confirmarDestrutivo
+      titulo={
+        modo === 'envio'
+          ? 'Enviar para Entregáveis?'
+          : 'Confirmar entrega e encerrar o caso?'
+      }
+      rotuloConfirmar={modo === 'envio' ? 'Enviar' : 'Confirmar entrega'}
+      confirmarDestrutivo={modo === 'confirmacao'}
       confirmarDesabilitado={itens.some((item) => !conferidos.has(item.id))}
       ocupado={ocupado}
       erro={erro}
@@ -113,8 +125,10 @@ export function DialogoConfirmarEntrega({
     >
       <p className="text-sm text-muted-foreground">
         {caso.maeNome}
-        {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}. Os links passam a contar como
-        confirmados e o caso é encerrado. Não há como desfazer.
+        {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}.{' '}
+        {modo === 'envio'
+          ? 'O caso sai do Quadro e vai para Entregáveis, onde o ADM confere e entrega.'
+          : 'Os links passam a contar como confirmados e o caso é encerrado. Não há como desfazer.'}
       </p>
 
       <ul className="space-y-0.5">

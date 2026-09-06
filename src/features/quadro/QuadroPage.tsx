@@ -34,8 +34,6 @@ import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
 import { RascunhosPainel } from './components/RascunhosPainel'
 import { EntregasPainel } from './components/EntregasPainel'
-import { podeEncerrarCaso } from './lib/acoes'
-import { useAuth } from '@/features/auth/contexto'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { CampoBusca } from './components/CampoBusca'
@@ -54,11 +52,6 @@ type Aba = 'lista' | 'uti' | 'reels' | 'master' | 'concluidos' | 'rascunhos' | '
 const SEM_ETAPAS: Map<string, EtapaQuadro[]> = new Map()
 
 export function QuadroPage() {
-  // Quem pode CONFIRMAR entrega decide se a aba Entregas existe para esta
-  // pessoa. A trava de verdade está na RPC (20260906151515); aqui só se evita
-  // oferecer uma aba onde nada pode ser feito.
-  const { pessoa } = useAuth()
-  const papel = pessoa?.papelSistema ?? 'operador'
 
   const [aba, setAba] = useState<Aba>('lista')
   const [diasVisiveis, setDiasVisiveis] = useState(DIAS_INICIAIS)
@@ -101,12 +94,28 @@ export function QuadroPage() {
     // vez que alguem mexesse em uma só.
     const casos = filtrarCasos(todos, busca)
 
+    /*
+     * O QUADRO PERDE O QUE JÁ FOI ENVIADO (06/09/2026, pedido do gestor).
+     *
+     * Isto abre uma exceção na regra de visibilidade da invariante 3.5 — "um
+     * dia só sai da tela quando todos os casos dele estão encerrados ou
+     * cancelados". A regra existia para que trabalho parado não sumisse de
+     * vista; um caso enviado não é trabalho parado, é trabalho terminado
+     * esperando OUTRA pessoa. E ele não sai de vista: está na aba
+     * Entregáveis, que desde 06/09 é visível para a equipe inteira.
+     *
+     * O que se perderia sem essa condição: o Quadro do dia continuaria
+     * mostrando cartões que ninguém mais vai tocar, e "0 de 4 concluídos"
+     * mediria a entrega do ADM em vez do trabalho do turno.
+     */
+    const noQuadro = casos.filter((c) => c.liberadoParaEntregaEm === null)
+
     // A urgência entra POR CIMA da ordem por hora, não no lugar dela: quem não
     // está em alerta mantém a posição cronológica. Ver ordenarPorUrgencia.
     //
     // SEM FUTURO (30/08/2026, a pedido do gestor): o Quadro corta em `hoje`.
     // Ver a nota de `semFuturo` em agrupar-por-dia.ts.
-    const abertos = semFuturo(blocosAbertos(agruparPorDia(casos)), hoje).map((bloco) => ({
+    const abertos = semFuturo(blocosAbertos(agruparPorDia(noQuadro)), hoje).map((bloco) => ({
       ...bloco,
       casos: ordenarPorUrgencia(bloco.casos, etapas, agora),
     }))
@@ -121,10 +130,8 @@ export function QuadroPage() {
        * trabalho ainda acontece. Aqui o trabalho acabou, e quem espera há mais
        * tempo é quem tem que ser atendido primeiro.
        *
-       * O caso continua APARECENDO no Quadro também. A invariante 3.5 diz que
-       * um dia só sai da tela quando todos os casos dele estão encerrados ou
-       * cancelados — sumir daqui faria um dia parecer resolvido sem ninguém ter
-       * entregado nada.
+       * Estes casos SAEM do Quadro (ver `noQuadro` acima): daqui em diante o
+       * caso é assunto de quem entrega, não do turno.
        */
       entregas: casos
         .filter((c) => c.liberadoParaEntregaEm !== null && !c.ehTerminal)
@@ -533,19 +540,24 @@ export function QuadroPage() {
             <BotaoAba ativa={aba === 'lista'} onClick={() => setAba('lista')}>
               Quadro
             </BotaoAba>
-            {/* ENTREGAS fica entre Quadro e Rascunhos porque é o passo
-                seguinte do trabalho, e some para quem não pode agir nela: só
-                ADM e gestão confirmam entrega (20260906151515). Uma aba visível
-                e inútil ensina a ignorar abas. */}
-            {podeEncerrarCaso(papel) && (
-              <BotaoAba
-                ativa={aba === 'entregas'}
-                onClick={() => setAba('entregas')}
-                contagem={entregas.length}
-              >
-                Entregas
-              </BotaoAba>
-            )}
+            {/* ENTREGÁVEIS fica entre Quadro e Rascunhos porque é o passo
+                seguinte do trabalho, e é visível para TODA A EQUIPE: quem
+                enviou quer saber se já foi entregue, e o caso sumiu do Quadro.
+                Só a CONFIRMAÇÃO é do ADM e da gestão — o botão lá dentro, não
+                a aba.
+
+                O anel verde girando é o mesmo recurso do vídeo parado na seção
+                REELS (`.anel-alerta` em index.css), e vale pela mesma razão:
+                tem gente esperando uma pessoa, não trabalho. Ele só aparece com
+                fila — se girasse sempre, não chamaria ninguém. */}
+            <BotaoAba
+              ativa={aba === 'entregas'}
+              onClick={() => setAba('entregas')}
+              contagem={entregas.length}
+              anel={entregas.length > 0}
+            >
+              Entregáveis
+            </BotaoAba>
             {/* Rascunhos é MODO de trabalho, não vizinhança: alguém entra,
                 padroniza dez cadastros e sai. Por isso aba, e não mais a tira
                 amarela que ocupava o topo da lista do dia. O contador em
@@ -615,11 +627,13 @@ export function QuadroPage() {
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
           </BotaoAba>
-          {podeEncerrarCaso(papel) && (
-            <BotaoAba ativa={aba === 'entregas'} onClick={() => setAba('entregas')}>
-              Entregas ({entregas.length})
-            </BotaoAba>
-          )}
+          <BotaoAba
+            ativa={aba === 'entregas'}
+            onClick={() => setAba('entregas')}
+            anel={entregas.length > 0}
+          >
+            Entregáveis ({entregas.length})
+          </BotaoAba>
           <BotaoAba
             ativa={aba === 'rascunhos'}
             onClick={() => setAba('rascunhos')}
@@ -763,6 +777,7 @@ function BotaoAba({
   onClick,
   contagem,
   tom = 'marca',
+  anel = false,
   children,
 }: {
   ativa: boolean
@@ -770,6 +785,12 @@ function BotaoAba({
   /** Quando presente, vira selo em vez de "(n)" no meio do texto. */
   contagem?: number
   tom?: 'marca' | 'rascunho'
+  /**
+   * O anel verde que corre em volta da pílula. Mesmo recurso do cartão de
+   * vídeo parado na seção REELS — ali em vermelho, aqui em verde: lá é prazo
+   * correndo, aqui é trabalho pronto esperando alguém.
+   */
+  anel?: boolean
   children: React.ReactNode
 }) {
   /*
@@ -791,7 +812,12 @@ function BotaoAba({
         ativa
           ? 'bg-marca font-bold text-white'
           : 'font-medium text-muted-foreground hover:bg-marca-suave hover:text-marca',
+        // `relative` é o que o ::after do anel precisa para se ancorar.
+        anel && 'relative anel-alerta anel-alerta-vivo',
       )}
+      {...(anel
+        ? { style: { '--cor-alerta': 'var(--pronto)' } as React.CSSProperties }
+        : {})}
     >
       {children}
       {contagem !== undefined && contagem > 0 && (

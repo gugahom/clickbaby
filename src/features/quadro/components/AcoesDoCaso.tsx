@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/icones'
 import { linksExigidosNaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
+import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
@@ -80,7 +81,7 @@ interface PropsAcoes {
  * Só o cancelamento sobrou aqui. Confirmar entrega saiu do card em 06/09/2026:
  * virou trabalho do ADM, na aba Entregas.
  */
-type Confirmacao = { tipo: 'cancelamento' } | null
+type Confirmacao = { tipo: 'envio' } | { tipo: 'cancelamento' } | null
 
 /**
  * Etapas do caso: estado e ação na MESMA linha.
@@ -583,7 +584,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         {/* O FIM DO TRABALHO AQUI É ENVIAR, NÃO CONFIRMAR (06/09/2026).
 
             Quem termina a edição não entrega mais: manda o caso para a aba
-            Entregas, onde o ADM confere e confirma. O botão continua sendo o
+            Entregáveis, onde o ADM confere e confirma. O botão continua sendo o
             único com gradiente da tela — a cor mais forte fica com a ação que
             a fotógrafa procura quando o trabalho acabou —, só mudou o que ela
             faz. Cancelar segue um botão quieto de contorno ao lado: é o oposto
@@ -592,7 +593,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         {caso.liberadoParaEntregaEm !== null ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-pronto-fundo px-3 py-1.5 text-sm font-semibold text-pronto">
             <IconeCheck className="size-4" />
-            Em Entregas
+            Em Entregáveis
             {caso.liberadoParaEntregaPorNome && (
               <span className="font-normal">
                 · enviado por {caso.liberadoParaEntregaPorNome.split(' ')[0]}
@@ -603,14 +604,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           <Botao
             onClick={() => {
               setErro(null)
-              executar(liberar.mutateAsync({ casoId: caso.id }))
+              setConfirmacao({ tipo: 'envio' })
             }}
             disabled={ocupado || !envio.habilitada}
             title={envio.motivo}
             className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
           >
             <IconeCheck className="size-4" />
-            Enviar para Entregas
+            Enviar para Entregáveis
           </Botao>
         )}
 
@@ -750,6 +751,22 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                 ...(motivo ? { motivo } : {}),
               }),
               () => setHandoffDe(null),
+            )
+          }
+        />
+      )}
+
+      {confirmacao?.tipo === 'envio' && (
+        <DialogoConfirmarEntrega
+          caso={caso}
+          modo="envio"
+          etapas={etapas}
+          ocupado={liberar.isPending}
+          erro={erro}
+          onCancelar={() => setConfirmacao(null)}
+          onConfirmar={() =>
+            executar(liberar.mutateAsync({ casoId: caso.id }), () =>
+              setConfirmacao(null),
             )
           }
         />

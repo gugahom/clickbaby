@@ -25,7 +25,7 @@ const PAPEIS_ADM = ['comercial', 'coordenacao', 'financeiro', 'gestao']
  * prender o encerramento ao atendimento fazia gargalo de um passo que ele não
  * executava. Ela VOLTOU em 20260906151515: desde que o link é pedido na
  * conclusão da edição (20260904190000), quem confirma não precisa mais ser quem
- * editou, e a entrega virou trabalho do ADM na aba Entregas.
+ * editou, e a entrega virou trabalho do ADM na aba Entregáveis.
  *
  * ATENÇÃO ao que `PAPEIS_ADM` contém: ele NÃO inclui `atendimento`, exatamente
  * como o `eh_adm()` do banco. Por isso o `||` — sem ele, a pessoa que de fato
@@ -416,7 +416,7 @@ export function podeConfirmarEntrega(
 }
 
 /**
- * ENVIAR o caso para a aba Entregas.
+ * ENVIAR o caso para a aba Entregáveis.
  *
  * Espelha `liberar_para_entrega` (20260906151515), que por sua vez repete as
  * travas de `confirmar_entrega`. A repetição é deliberada: liberar um caso que
@@ -435,7 +435,7 @@ export function podeLiberarParaEntrega(
     return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
   }
   if (caso.liberadoParaEntregaEm !== null) {
-    return { habilitada: false, motivo: 'Já está em Entregas.' }
+    return { habilitada: false, motivo: 'Já está em Entregáveis.' }
   }
 
   // Mesma exceção do vídeo horizontal do MASTER (20260903153101): ele leva dez
