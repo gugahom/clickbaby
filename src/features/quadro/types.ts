@@ -210,6 +210,32 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
  * senta na estação de edição. Os nomes vêm do que gerou o material —
  * nascimento de um lado, banho e fechamento do outro.
  */
+/**
+ * O RÓTULO DA RODADA, que NÃO é só o número.
+ *
+ * A tabela abaixo diz "3 = Irmãos", e isso vale para o REELS: a rodada 3 dele
+ * nasce da trigger do encontro de irmãos (migration 20260903193219), e é a
+ * única coisa no sistema que a cria.
+ *
+ * PARA AS OUTRAS ETAPAS, rodada 3 significa outra coisa: `reabrir_caso`
+ * (20260828135838) numera a revisão com `max(rodada) + 1`, então uma edição de
+ * fotos reaberta depois do parto e do B+F vira rodada 3 — e a tabela a chamava
+ * de "Irmãos", que é falso. O mesmo vale para qualquer rodada 4 ou acima,
+ * inclusive no reels: acima da 3 só existe revisão.
+ *
+ * ISTO FICOU VISÍVEL EM 07/09/2026, quando o Quadro voltou a enxergar as
+ * rodadas altas — elas eram cortadas pelo teto de mil linhas do PostgREST e
+ * ninguém via o rótulo errado porque ninguém via a pílula.
+ *
+ * A regra é derivada das migrations, não de uma coluna: se um dia outra trigger
+ * criar rodada por conta própria, é AQUI que ela precisa aparecer.
+ */
+export function rotuloDaRodada(tipo: EtapaTipo, rodada: number): string {
+  if (rodada <= 2) return ROTULO_RODADA[rodada] ?? `Rodada ${rodada}`
+  if (rodada === 3 && tipo === 'reels') return ROTULO_RODADA[3] ?? 'Irmãos'
+  return 'Revisão'
+}
+
 export const ROTULO_RODADA: Record<number, string> = {
   1: 'Parto',
   // "B+F" e não "Banho": é como a equipe chama o bloco banho + fechamento no

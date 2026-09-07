@@ -66,7 +66,7 @@ import { Entregaveis } from './Entregaveis'
 import { useEntregaveis } from '../api/useAcoes'
 import {
   ROTULO_ETAPA,
-  ROTULO_RODADA,
+  rotuloDaRodada,
   ROTULO_STATUS_ETAPA,
   type CasoQuadro,
   type EtapaQuadro,
@@ -250,7 +250,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         haveria como saber em qual se está clicando. */}
                     {etapas.some((o) => o.tipo === etapa.tipo && o.rodada !== etapa.rodada) && (
                       <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
-                        {ROTULO_RODADA[etapa.rodada]}
+                        {rotuloDaRodada(etapa.tipo, etapa.rodada)}
                       </span>
                     )}
                   </div>

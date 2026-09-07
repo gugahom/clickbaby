@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import clsx from 'clsx'
 import { rotularDia } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
-import { ROTULO_RODADA, type CasoQuadro, type EtapaQuadro, type StatusEtapa } from '../types'
+import { rotuloDaRodada, type CasoQuadro, type EtapaQuadro, type StatusEtapa } from '../types'
 import { AcoesDaEtapa } from './AcoesDaEtapa'
 import { CampoEstacao } from './CampoEstacao'
 
@@ -67,7 +67,7 @@ export function CartaoDeEdicao({
   // O fallback não deveria disparar: só existem as rodadas 1 e 2. Se um dia
   // existir uma 3, aparecer "Rodada 3" na tela é melhor que uma linha sem
   // nome nenhum — e denuncia o rótulo que ficou faltando.
-  rotularLinha = (e) => ROTULO_RODADA[e.rodada] ?? `Rodada ${e.rodada}`,
+  rotularLinha = (e) => rotuloDaRodada(e.tipo, e.rodada),
   acoesDaLinha,
   comSelo = true,
   onErro,

@@ -9,7 +9,7 @@ import {
 } from '../lib/faixas'
 import {
   ROTULO_ETAPA,
-  ROTULO_RODADA,
+  rotuloDaRodada,
   type EtapaQuadro,
   type StatusEtapa,
 } from '../types'
@@ -218,7 +218,7 @@ function Etapa({
   agora: Date
 }) {
   const pessoas = nomesDaEtapa(etapa)
-  const bloco = comRodada || soMarcador ? ROTULO_RODADA[etapa.rodada] : null
+  const bloco = comRodada || soMarcador ? rotuloDaRodada(etapa.tipo, etapa.rodada) : null
   const decorrido = tempoDecorrido(etapa, agora)
 
   return (
@@ -438,7 +438,9 @@ function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] 
         >
           <Marcador status={atual.status} />
           <span className="truncate font-semibold">
-            {faixa === 'reels' ? ROTULO_RODADA[atual.rodada] : ROTULO_ETAPA[atual.tipo]}
+            {faixa === 'reels'
+              ? rotuloDaRodada(atual.tipo, atual.rodada)
+              : ROTULO_ETAPA[atual.tipo]}
           </span>
           {pessoas && (
             <span className="max-w-[7rem] truncate rounded-full bg-current/12 px-1.5 text-xs font-semibold">

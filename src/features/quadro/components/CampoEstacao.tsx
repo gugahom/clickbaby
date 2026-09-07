@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { IconeMonitor } from '@/components/ui/icones'
 import { useRegistrarEstacao } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
-import { ROTULO_RODADA, type EtapaQuadro } from '../types'
+import { rotuloDaRodada, type EtapaQuadro } from '../types'
 
 /** Grafia única da estação. Muda aqui, muda em todo lugar. */
 const PREFIXO = 'pc-'
@@ -71,7 +71,7 @@ export function CampoEstacao({
   }
 
   const rotulo = `PC em que a edição está sendo feita${
-    etapa.rodada > 1 ? ` (${ROTULO_RODADA[etapa.rodada]})` : ''
+    etapa.rodada > 1 ? ` (${rotuloDaRodada(etapa.tipo, etapa.rodada)})` : ''
   }`
 
   if (!aberto) {

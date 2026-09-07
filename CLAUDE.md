@@ -127,6 +127,14 @@ certo:
 | 2 | banho + fechamento ("B+F") | o fechamento conclui |
 | 3 | encontro de irmãos | o encontro de irmãos conclui — só reels |
 
+**O NÚMERO NÃO BASTA PARA O RÓTULO.** A tabela acima vale para o que as TRIGGERS criam;
+`reabrir_caso` numera a revisão com `max(rodada) + 1`, então uma edição de fotos reaberta
+depois do parto e do B+F também cai na rodada 3 — e não tem nada a ver com o encontro de
+irmãos. A regra que a tela usa (`rotuloDaRodada`, em `features/quadro/types.ts`): rodada 3
+é "Irmãos" só no `reels`, que é a única que a trigger cria; nas outras etapas, e em
+qualquer rodada 4 ou acima, é "Revisão". Ficou visível em 07/09/2026, quando o Quadro
+voltou a enxergar as rodadas altas.
+
 A rodada 3 entrou em 03/09/2026 (`20260903193219`), a pedido do gestor: um caso
 teve o reels concluído e depois a família viveu o encontro, e não havia onde
 registrar o material novo. Reabrir a rodada do parto misturaria dois trabalhos
@@ -466,6 +474,18 @@ Rode as duas **depois de todo `db push` que toque schema**.
 
 - TypeScript estrito. Sem `any`. Tipos do banco gerados via `supabase gen types typescript`.
 - TanStack Query para todo acesso a dados. Sem `useEffect` + `fetch` manual.
+- **Consulta que pode passar de MIL LINHAS precisa paginar.** O PostgREST recusa devolver
+  mais que `db-max-rows` (mil, no Supabase) e **não erra**: manda as mil primeiras e cala.
+  Em 07/09/2026 `caso_etapas` passou de mil (1009) e o Quadro parou de enxergar as nove
+  últimas NA ORDEM DA CONSULTA — que ordena por `rodada`, então sumiram justamente as
+  rodadas altas: as revisões de `reabrir_caso` e o encontro de irmãos. O sintoma foi um
+  caso que a tela mostrava completo e que o banco recusava enviar para Entregáveis. É a
+  pior classe de bug deste projeto: tela e banco discordando, sem erro em lugar nenhum.
+  O helper é `buscarTudo` em `features/quadro/api/useQuadro.ts`, e ele cobra a página
+  contra o `count` do servidor — não contra o tamanho da página. "Veio menos do que pedi,
+  então acabou" é falso quando o teto do servidor é menor que a página: aí toda página vem
+  curta e o laço para na primeira, truncando de novo com cara de sucesso.
+  `casos` está em 192 e cresce ~135/mês: chega ao teto em poucos meses, e já pagina.
 - Mutações que representam transição de estado chamam RPC, nunca `.update()` direto.
 - Realtime via canais do Supabase no Quadro e na Fila.
 - Mobile-first. O layout desktop é a adaptação, não o contrário.
