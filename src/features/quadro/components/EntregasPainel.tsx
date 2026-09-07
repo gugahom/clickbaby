@@ -4,7 +4,9 @@ import { Alerta } from '@/components/ui/Alerta'
 import { IconeCheck } from '@/components/ui/icones'
 import { formatarDataHora, rotularDia } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
-import { useConfirmarEntrega } from '../api/useAcoes'
+import { Dialogo } from '@/components/ui/Dialogo'
+import { IconeDesfazer } from '@/components/ui/icones'
+import { useConfirmarEntrega, useDevolverParaOQuadro, useEntregaveis } from '../api/useAcoes'
 import { podeConfirmarEntrega, podeEncerrarCaso } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
@@ -16,6 +18,161 @@ interface PropsEntregasPainel {
   entregas: CasoQuadro[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   hoje: string
+}
+
+/**
+ * UMA LINHA DA LISTA.
+ *
+ * É componente próprio porque precisa PERGUNTAR quantos links o caso tem, e
+ * isso é um hook — que não se chama dentro de um `map`.
+ *
+ * ANTES ELE DEDUZIA. A versão anterior passava `temEntregavel = true` sem
+ * consultar, com um comentário explicando que a dedução era segura: `liberar_
+ * para_entrega` recusa caso sem link, e link não se apagava. A segunda metade
+ * dessa frase deixou de ser verdade em 07/09/2026, quando apagar link virou uma
+ * ação da tela — e a dedução passaria a acender o botão de confirmar num caso
+ * sem link nenhum, para o banco recusar depois. A consulta não custa nada:
+ * `useEntregaveis` já é chamado logo abaixo, pelo próprio bloco de links, e o
+ * TanStack Query serve as duas com uma requisição só.
+ */
+function LinhaDeEntrega({
+  caso,
+  etapas,
+  hoje,
+  papel,
+  confirma,
+  onErro,
+  onConfirmar,
+}: {
+  caso: CasoQuadro
+  etapas: EtapaQuadro[]
+  hoje: string
+  papel: string
+  confirma: boolean
+  onErro: (mensagem: string | null) => void
+  onConfirmar: () => void
+}) {
+  const { data: links } = useEntregaveis(caso.id, true)
+  const devolver = useDevolverParaOQuadro()
+  const [devolvendo, setDevolvendo] = useState(false)
+  const [motivo, setMotivo] = useState('')
+
+  const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+  const entrega = podeConfirmarEntrega(caso, (links ?? []).length > 0, etapas, papel)
+
+  return (
+    <li className="rounded-cartao border border-pronto-borda bg-pronto-fundo px-3 py-3 shadow-cartao md:px-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate font-semibold">{titulo}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>{caso.dia ? rotularDia(caso.dia, hoje) : 'sem data'}</span>
+            {caso.pacoteNome && (
+              <span className="font-medium text-foreground">{caso.pacoteNome}</span>
+            )}
+            {caso.maternidadeSigla && (
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
+                {caso.maternidadeSigla}
+              </span>
+            )}
+          </div>
+          {caso.liberadoParaEntregaEm && (
+            // Quem enviou e quando: é o que responde "posso cobrar de alguém se
+            // o link estiver errado?".
+            <p className="mt-1 text-xs text-muted-foreground">
+              Enviado por {caso.liberadoParaEntregaPorNome ?? 'alguém'} em{' '}
+              {formatarDataHora(caso.liberadoParaEntregaEm)}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          {confirma ? (
+            <>
+              {/* DEVOLVER fica ao lado de confirmar porque são as duas saídas da
+                  mesma conferência: "está bom" e "não está bom". Botão quieto de
+                  contorno — é o caminho menos frequente, e o gesto forte da tela
+                  continua sendo o que fecha o caso. */}
+              <Botao
+                variante="fantasma"
+                onClick={() => {
+                  onErro(null)
+                  setMotivo('')
+                  setDevolvendo(true)
+                }}
+                disabled={devolver.isPending}
+              >
+                <IconeDesfazer className="size-4" />
+                Devolver ao Quadro
+              </Botao>
+
+              <Botao
+                onClick={onConfirmar}
+                disabled={!entrega.habilitada}
+                title={entrega.motivo}
+                className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
+              >
+                <IconeCheck className="size-4" />
+                Confirmar entrega
+              </Botao>
+            </>
+          ) : (
+            // Sem botão, e não com botão cinza: uma fileira de botões
+            // desabilitados ensina a ignorar o que está desabilitado, e esta
+            // pessoa não tem o que fazer aqui além de acompanhar.
+            <span className="text-xs font-medium text-muted-foreground">
+              aguardando o ADM
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Os links ficam à vista, e é o motivo de a tela existir: quem entrega
+          precisa ABRIR o álbum e conferir antes de dizer que entregou.
+          Escondê-los atrás de um clique tornaria a conferência opcional. */}
+      <div className="mt-3 border-t border-pronto-borda pt-3">
+        <Entregaveis caso={caso} aberto />
+      </div>
+
+      {devolvendo && (
+        <Dialogo
+          titulo="Devolver o caso ao Quadro?"
+          rotuloConfirmar="Devolver"
+          confirmarDesabilitado={motivo.trim() === ''}
+          ocupado={devolver.isPending}
+          erro={null}
+          onCancelar={() => setDevolvendo(false)}
+          onConfirmar={() => {
+            onErro(null)
+            devolver
+              .mutateAsync({ casoId: caso.id, motivo: motivo.trim() })
+              .then(() => setDevolvendo(false))
+              .catch((e) => {
+                setDevolvendo(false)
+                onErro(mensagemDeErro(e))
+              })
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo} volta para a lista do dia dele. As etapas continuam
+            concluídas — o que voltou foi a entrega. Se o material em si estiver
+            errado, reabra a etapa no card.
+          </p>
+          <label className="block">
+            <span className="text-sm font-medium">Por quê?</span>
+            <textarea
+              autoFocus
+              rows={2}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="ex.: link do álbum de outra família"
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base"
+            />
+          </label>
+        </Dialogo>
+      )}
+    </li>
+  )
 }
 
 /**
@@ -75,82 +232,21 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
       )}
 
       <ul className="space-y-2">
-        {entregas.map((caso) => {
-          const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
-          const etapas = etapasPorCaso.get(caso.id) ?? []
-
-          /*
-           * `temEntregavel` é TRUE sem consultar, e isso é uma dedução segura,
-           * não uma preguiça: `liberar_para_entrega` recusa caso sem link, e
-           * link não se apaga (não existe RPC de exclusão). Todo caso que
-           * chegou nesta lista tem pelo menos um. Buscar de novo, um por
-           * cartão, seria uma consulta por linha para reconfirmar o que a
-           * porta de entrada já garantiu.
-           */
-          const entrega = podeConfirmarEntrega(caso, true, etapas, papel)
-
-          return (
-            <li
-              key={caso.id}
-              className="rounded-cartao border border-pronto-borda bg-pronto-fundo px-3 py-3 shadow-cartao md:px-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">{titulo}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                    <span>{caso.dia ? rotularDia(caso.dia, hoje) : 'sem data'}</span>
-                    {caso.pacoteNome && (
-                      <span className="font-medium text-foreground">{caso.pacoteNome}</span>
-                    )}
-                    {caso.maternidadeSigla && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
-                        {caso.maternidadeSigla}
-                      </span>
-                    )}
-                  </div>
-                  {caso.liberadoParaEntregaEm && (
-                    // Quem enviou e quando: é o que responde "posso cobrar de
-                    // alguém se o link estiver errado?".
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Enviado por {caso.liberadoParaEntregaPorNome ?? 'alguém'} em{' '}
-                      {formatarDataHora(caso.liberadoParaEntregaEm)}
-                    </p>
-                  )}
-                </div>
-
-                {confirma ? (
-                  <Botao
-                    onClick={() => {
-                      setErro(null)
-                      setConfirmando(caso)
-                    }}
-                    disabled={confirmar.isPending || !entrega.habilitada}
-                    title={entrega.motivo}
-                    className="superficie-acento flex-shrink-0 border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
-                  >
-                    <IconeCheck className="size-4" />
-                    Confirmar entrega
-                  </Botao>
-                ) : (
-                  // Sem botão, e não com botão cinza: uma fileira de botões
-                  // desabilitados ensina a ignorar o que está desabilitado, e
-                  // esta pessoa não tem o que fazer aqui além de acompanhar.
-                  <span className="flex-shrink-0 text-xs font-medium text-muted-foreground">
-                    aguardando o ADM
-                  </span>
-                )}
-              </div>
-
-              {/* Os links ficam à vista, e é o motivo de a tela existir: quem
-                  entrega precisa ABRIR o álbum e conferir antes de dizer que
-                  entregou. Escondê-los atrás de um clique tornaria a conferência
-                  opcional na prática. */}
-              <div className="mt-3 border-t border-pronto-borda pt-3">
-                <Entregaveis caso={caso} aberto />
-              </div>
-            </li>
-          )
-        })}
+        {entregas.map((caso) => (
+          <LinhaDeEntrega
+            key={caso.id}
+            caso={caso}
+            etapas={etapasPorCaso.get(caso.id) ?? []}
+            hoje={hoje}
+            papel={papel}
+            confirma={confirma}
+            onErro={setErro}
+            onConfirmar={() => {
+              setErro(null)
+              setConfirmando(caso)
+            }}
+          />
+        ))}
       </ul>
 
       {confirmando && (

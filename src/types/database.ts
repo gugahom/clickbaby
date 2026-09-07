@@ -867,6 +867,10 @@ export type Database = {
       }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
+      devolver_para_o_quadro: {
+        Args: { p_caso_id: string; p_motivo: string }
+        Returns: undefined
+      }
       disparar_sync_calendar: { Args: never; Returns: string }
       dispensar_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
@@ -916,6 +920,10 @@ export type Database = {
       }
       registrar_estacao: {
         Args: { p_caso_etapa_id: string; p_estacao: string }
+        Returns: undefined
+      }
+      remover_entregavel: {
+        Args: { p_entregavel_id: string; p_motivo?: string }
         Returns: undefined
       }
       retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }

@@ -307,6 +307,8 @@ mover_video_master(p_caso_etapa_id, p_fase)
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
+remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
+devolver_para_o_quadro(p_caso_id, p_motivo)             -- tira de Entregáveis; atendimento/adm
 liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
 confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
 cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
@@ -774,6 +776,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   chamaria ninguém.
   A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
   o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
+  **O LINK TEM AÇÕES** (07/09/2026): copiar e apagar, na própria linha. O caso que
+  motivou é a Morgana abrindo o álbum e sendo a família errada. Copiar existe porque o
+  link é para ser MANDADO — selecionar uma URL truncada com o dedo, num link clicável,
+  abre a galeria em vez de copiar. Apagar só vale enquanto o link não foi confirmado:
+  depois disso ele faz parte de uma entrega fechada, e o caminho é `reabrir_caso` — sem
+  essa guarda um caso encerrado poderia ficar sem entregável, estado que a invariante 3.5
+  proíbe.
+  **APAGAR O LINK NÃO DEVOLVE O CASO.** São duas falhas diferentes: link errado com
+  trabalho certo pede só um link novo; material errado pede `reabrir_etapa`. Quem julga
+  que o trabalho tem de voltar aperta **"Devolver ao Quadro"**, com motivo obrigatório, e
+  isso é do mesmo par de papéis que confirma — as duas são as saídas da mesma conferência.
+  Devolver NÃO reabre etapa nenhuma: o trabalho continua concluído, o que voltou foi a
+  entrega.
   **O nome na tela é "Entregáveis" e no código é `entregas`** — decisão do gestor sobre a
   tela, e o código não segue porque `Entregaveis.tsx` já é o componente da lista de LINKS do
   caso. Mesmo arranjo de `operador`/"Fotógrafo(a)" (invariante 3.1): o rótulo é do

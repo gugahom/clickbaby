@@ -98,6 +98,38 @@ export function useConcluirEtapaComEntregaveis() {
 }
 
 /**
+ * APAGA um link de entrega.
+ *
+ * Qualquer pessoa ativa pode chamar — quem colou o link errado é quem percebe
+ * primeiro, e chamar o ADM para desfazer um engano de digitação criaria fila
+ * para um gesto de dois segundos. Link JÁ CONFIRMADO o banco recusa: ele faz
+ * parte de uma entrega fechada.
+ */
+export function useRemoverEntregavel() {
+  return useAcaoDoQuadro<{ entregavelId: string; motivo?: string }>(
+    ({ entregavelId, motivo }) =>
+      chamar('remover_entregavel', {
+        p_entregavel_id: entregavelId,
+        ...(motivo === undefined ? {} : { p_motivo: motivo }),
+      }),
+  )
+}
+
+/**
+ * DEVOLVE o caso de Entregáveis para o Quadro, com motivo.
+ *
+ * É o avesso de `confirmar_entrega` e pede o mesmo papel: as duas são as duas
+ * saídas da mesma conferência — "está bom, entreguei" e "não está bom, refaça".
+ * Não mexe nas etapas; o trabalho continua concluído, o que voltou foi a
+ * entrega.
+ */
+export function useDevolverParaOQuadro() {
+  return useAcaoDoQuadro<{ casoId: string; motivo: string }>(({ casoId, motivo }) =>
+    chamar('devolver_para_o_quadro', { p_caso_id: casoId, p_motivo: motivo }),
+  )
+}
+
+/**
  * ENVIA o caso pronto para a aba Entregas.
  *
  * Chamável por qualquer pessoa ativa, e é o ponto do desenho: quem acabou de

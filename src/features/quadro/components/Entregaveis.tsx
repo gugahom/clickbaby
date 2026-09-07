@@ -1,11 +1,15 @@
 import { useState } from 'react'
+import { BotaoIcone } from '@/components/ui/BotaoIcone'
+import { IconeCopiar, IconeLixeira } from '@/components/ui/icones'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { Alerta } from '@/components/ui/Alerta'
 import { formatarDataHora } from '@/lib/formato'
 import {
   useEntregaveis,
   useRegistrarEntregavel,
+  useRemoverEntregavel,
   type EntregavelResumo,
   type TipoEntregavel,
 } from '../api/useAcoes'
@@ -65,6 +69,15 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
 
   return (
     <div className="space-y-2">
+      {/* O ERRO PRECISA DE LUGAR FORA DO DIÁLOGO.
+
+          Ele só aparecia dentro do "Adicionar link" — e as duas ações novas
+          falham com o diálogo JÁ FECHADO: copiar (quando o navegador nega a
+          área de transferência) e apagar (quando o banco recusa). Sem esta
+          linha, as duas falhavam em silêncio, que é a pior forma de falhar:
+          a pessoa acha que copiou e manda nada para a família. */}
+      {erro && <Alerta onFechar={() => setErro(null)}>{erro}</Alerta>}
+
       {isPending ? (
         <p className="text-xs text-muted-foreground">Carregando links…</p>
       ) : (links ?? []).length === 0 ? (
@@ -74,7 +87,12 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
       ) : (
         <ul className="space-y-1">
           {(links ?? []).map((link) => (
-            <LinhaEntregavel key={link.id} link={link} />
+            <LinhaEntregavel
+              key={link.id}
+              link={link}
+              onErro={setErro}
+              onMudou={onMudou}
+            />
           ))}
         </ul>
       )}
@@ -137,7 +155,48 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
   )
 }
 
-function LinhaEntregavel({ link }: { link: EntregavelResumo }) {
+/**
+ * COPIAR E APAGAR, na própria linha (07/09/2026, pedido do gestor).
+ *
+ * O caso que motivou: a Morgana abre o álbum e é a família errada. Antes, o
+ * link entrava e não saía — a lista só crescia, e o errado ficava ali ao lado
+ * do certo esperando alguém clicar no errado.
+ *
+ * COPIAR existe porque o link é para ser MANDADO. Ele vai por WhatsApp para a
+ * família, e selecionar uma URL truncada com o dedo, num link que é clicável,
+ * é o tipo de gesto que abre a galeria sem querer em vez de copiar.
+ *
+ * APAGAR SÓ O QUE NÃO FOI CONFIRMADO. Depois da confirmação o link faz parte de
+ * uma entrega fechada, e o banco recusa (`remover_entregavel`); esconder o botão
+ * ali é a tela concordando com a regra em vez de oferecer o que seria negado.
+ */
+function LinhaEntregavel({
+  link,
+  onErro,
+  onMudou,
+}: {
+  link: EntregavelResumo
+  onErro: (mensagem: string | null) => void
+  onMudou?: (() => void) | undefined
+}) {
+  const remover = useRemoverEntregavel()
+  const [copiado, setCopiado] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setCopiado(true)
+      // Volta ao normal sozinho: um "copiado!" permanente vira parte do desenho
+      // e deixa de dizer que ACABOU de acontecer.
+      window.setTimeout(() => setCopiado(false), 1800)
+    } catch {
+      // Contexto sem permissão de área de transferência (http, permissão
+      // negada). O link continua clicável e selecionável — não é um beco.
+      onErro('Não deu para copiar. Selecione o link e copie à mão.')
+    }
+  }
+
   return (
     <li className="flex flex-wrap items-center gap-2 rounded bg-background/60 px-2 py-2 text-sm">
       <span className="font-medium">{ROTULO_TIPO[link.tipo]}</span>
@@ -157,6 +216,62 @@ function LinhaEntregavel({ link }: { link: EntregavelResumo }) {
         </span>
       ) : (
         <span className="text-xs text-muted-foreground">aguardando confirmação</span>
+      )}
+
+      <div className="flex flex-shrink-0 items-center">
+        <BotaoIcone
+          rotulo={copiado ? 'Link copiado' : 'Copiar link'}
+          tom={copiado ? 'positivo' : 'neutro'}
+          onClick={() => void copiar()}
+        >
+          <IconeCopiar className="size-4" />
+        </BotaoIcone>
+
+        {/* Sem botão quando já confirmado: o banco recusa, e oferecer o que
+            seria negado ensina a desconfiar dos botões. */}
+        {!link.confirmado_em && (
+          <BotaoIcone
+            rotulo="Apagar link"
+            tom="pendencia"
+            disabled={remover.isPending}
+            onClick={() => setConfirmando(true)}
+          >
+            <IconeLixeira className="size-4" />
+          </BotaoIcone>
+        )}
+      </div>
+
+      {confirmando && (
+        <Dialogo
+          titulo="Apagar este link?"
+          rotuloConfirmar="Apagar link"
+          confirmarDestrutivo
+          ocupado={remover.isPending}
+          erro={null}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={() => {
+            onErro(null)
+            remover
+              .mutateAsync({ entregavelId: link.id })
+              .then(() => {
+                setConfirmando(false)
+                onMudou?.()
+              })
+              .catch((e) => {
+                setConfirmando(false)
+                onErro(mensagemDeErro(e))
+              })
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {ROTULO_TIPO[link.tipo]} — <span className="break-all">{link.url}</span>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            O link sai da lista do caso. A galeria continua onde está: o sistema
+            guarda o endereço, não o conteúdo. Quem precisar de um novo, cola no
+            lugar.
+          </p>
+        </Dialogo>
       )}
     </li>
   )

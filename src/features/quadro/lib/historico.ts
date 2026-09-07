@@ -108,6 +108,31 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         ...(tipoLink ? { detalhe: tipoLink.replace(/_/g, ' ') } : {}),
       }
     }
+    case 'entregavel_removido': {
+      const motivo = texto(evento.payload, 'motivo')
+      const tipoLink = texto(evento.payload, 'tipo')
+      return {
+        ...base,
+        acao: 'Apagou um link de entrega',
+        tom: 'alerta',
+        ...(motivo
+          ? { detalhe: `${tipoLink ? `${tipoLink.replace(/_/g, ' ')} · ` : ''}${motivo}` }
+          : tipoLink
+            ? { detalhe: tipoLink.replace(/_/g, ' ') }
+            : {}),
+      }
+    }
+
+    case 'caso_devolvido_ao_quadro': {
+      const motivo = texto(evento.payload, 'motivo')
+      return {
+        ...base,
+        acao: 'Devolveu o caso ao Quadro',
+        tom: 'alerta',
+        ...(motivo ? { detalhe: motivo } : {}),
+      }
+    }
+
     case 'caso_liberado_para_entrega':
       return {
         ...base,
