@@ -65,6 +65,22 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
     case 'etapas_geradas':
       return { ...base, acao: 'Etapas geradas pelo pacote', tom: 'sistema' }
 
+    case 'etapas_do_pacote_trocado': {
+      // O pacote mudou e o checklist acompanhou. O NÚMERO importa aqui: é o que
+      // explica por que apareceram cartões de trabalho que ninguém pediu.
+      const quantas = Number(
+        (evento.payload as Record<string, unknown> | null)?.['quantidade'] ?? 0,
+      )
+      return {
+        ...base,
+        acao: 'Pacote trocado — o checklist ganhou etapas',
+        tom: 'sistema',
+        ...(quantas > 0
+          ? { detalhe: quantas === 1 ? '1 etapa nova' : quantas + ' etapas novas' }
+          : {}),
+      }
+    }
+
     case 'etapa_iniciada':
       return { ...base, acao: `Iniciou ${etapa ?? 'a etapa'}`, tom: 'normal' }
     case 'etapa_pausada':

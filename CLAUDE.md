@@ -160,6 +160,17 @@ Só reels, não foto: foi o que ele pediu.
   pacote próprio no cadastro, não uma variação do BIRTH.
 - "Vídeo de venda" vs "vídeo de contrato" é a mesma etapa no fluxo de trabalho; a diferença
   está no pacote, não vira campo separado.
+- **TROCAR O PACOTE traz as etapas que faltam** (07/09/2026, migration
+  `20260907100016`). Um caso que vira de BASIC para BABY REELS ganha banho e fechamento na
+  hora. Antes não ganhava nada: `gerar_caso_etapas` só roda no INSERT e na confirmação de
+  rascunho (`pacote_id` saindo de NULL), e ainda tem a guarda de "nunca regenerar num caso
+  que já tem etapa" — o card ficava com o checklist do pacote velho.
+  **SÓ ACRESCENTA, nunca remove.** Etapa que o pacote novo não prevê continua: pode ter
+  trabalho feito (um BABY REELS que vira BASIC não desfaz o banho que aconteceu), e
+  `eventos` referencia `caso_etapas` com `on delete restrict`, então a remoção nem passaria.
+  O que sobra do pacote antigo se resolve com "dispensar".
+  A checagem é por TIPO, em qualquer rodada: um caso com edição de fotos nas rodadas 1 e 2
+  não ganha uma terceira porque o pacote novo também prevê edição de fotos.
 - **Três etapas existem FORA de qualquer pacote** (01/09/2026): `encontro_irmaos`,
   `saida_uti` e `alta`. Nenhum pacote as traz; elas só entram por `adicionar_etapa`,
   quando a família vive o momento e a equipe quer registrar o trabalho. São da trilha
