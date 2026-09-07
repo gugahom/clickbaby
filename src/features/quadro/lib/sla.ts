@@ -1,3 +1,4 @@
+import { formatarDuracao } from '@/lib/formato'
 import type { CasoQuadro } from '../types'
 
 /**
@@ -88,12 +89,6 @@ export const CLASSE_URGENCIA: Record<Urgencia, string> = {
   tranquilo: 'text-muted-foreground',
   sem_prazo: 'text-muted-foreground',
   pausado: 'text-andamento',
-}
-
-function formatarDuracao(horas: number): string {
-  if (horas < 1) return `${Math.round(horas * 60)}min`
-  if (horas < 48) return `${Math.round(horas)}h`
-  return `${Math.round(horas / 24)}d`
 }
 
 function formatarPrazo(horas: number): string {

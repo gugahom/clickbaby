@@ -137,3 +137,17 @@ export function formatarData(iso: string | null): string | null {
   if (!iso) return null
   return dataComAno.format(new Date(iso))
 }
+
+/**
+ * "40min", "3h", "2d" — duração em linguagem de corredor.
+ *
+ * Vivia dentro de `quadro/lib/sla.ts`. Saiu quando a presença passou a
+ * responder "há quanto tempo sem pegar trabalho": duas cópias da mesma régua
+ * mostrariam "2h" numa tela e "120min" na outra na primeira vez que alguém
+ * mexesse numa só.
+ */
+export function formatarDuracao(horas: number): string {
+  if (horas < 1) return `${Math.round(horas * 60)}min`
+  if (horas < 48) return `${Math.round(horas)}h`
+  return `${Math.round(horas / 24)}d`
+}
