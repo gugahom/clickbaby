@@ -855,6 +855,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   O que isso mede, com todas as letras: tempo sem TOCAR no sistema. Quem está dirigindo para
   a maternidade não tocou em nada e está trabalhando — por isso a marca serve para a
   coordenação olhar e perguntar, e não vira número guardado.
+  **O HOVER ABRE UM CARTÃO** (07/09/2026): retrato, nome, papel, estado e a frase de
+  atividade — que muda com o estado, porque o mesmo carimbo responde três perguntas
+  diferentes ("Trabalhando há 25min", "Sem pegar trabalho há 3h", "Fora do posto"). Era um
+  `title` do navegador: lento, sem retrato e sem cor. Abre no FOCO também, não só no hover —
+  a fileira é navegável por teclado.
+  A **linha divisória** que separa a fileira do chip de conta é borda do próprio
+  `EquipePresente`, e não um `divide-x` no cabeçalho: assim ela some junto com a fileira no
+  mobile e quando não há mais ninguém: no pai, sobraria uma linha sem nada de um lado.
   **Nada é gravado** (ver seção 9). A escolha manual fica no `localStorage`, que é
   preferência de UI e não dado de domínio.
 - **Modo TV** (02/09/2026): botão na barra de navegação que reparte o Quadro em duas

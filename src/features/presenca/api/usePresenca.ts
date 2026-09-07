@@ -28,6 +28,8 @@ export interface PessoaPresente {
   pessoaId: string
   nome: string
   fotoPath: string | null
+  /** `papel_sistema`. Vem pelo canal porque o cartão de hover mostra quem é. */
+  papel: string
   declarado: EstadoDeclarado
 }
 
@@ -124,6 +126,7 @@ export function usePresenca() {
   const pessoaId = pessoa?.id ?? null
   const nome = pessoa?.nome ?? ''
   const fotoPath = pessoa?.fotoPath ?? null
+  const papel = pessoa?.papelSistema ?? 'operador'
 
   useEffect(() => {
     if (!pessoaId) return
@@ -152,7 +155,7 @@ export function usePresenca() {
       .on('presence', { event: 'sync' }, sincronizar)
       .subscribe((status) => {
         if (status !== 'SUBSCRIBED') return
-        void canal.track({ pessoaId, nome, fotoPath, declarado: lerEscolha() })
+        void canal.track({ pessoaId, nome, fotoPath, papel, declarado: lerEscolha() })
       })
 
     return () => {
@@ -162,15 +165,15 @@ export function usePresenca() {
     // não pode derrubar e recriar o canal — quem olha veria a pessoa sumir e
     // voltar. A troca é publicada pelo efeito abaixo, no canal que já existe.
 
-  }, [pessoaId, nome, fotoPath])
+  }, [pessoaId, nome, fotoPath, papel])
 
   // A publicação da troca, no canal vivo.
   useEffect(() => {
     if (!pessoaId) return
     const canal = supabase.getChannels().find((c) => c.topic === `realtime:${CANAL}`)
     if (!canal) return
-    void canal.track({ pessoaId, nome, fotoPath, declarado })
-  }, [declarado, pessoaId, nome, fotoPath])
+    void canal.track({ pessoaId, nome, fotoPath, papel, declarado })
+  }, [declarado, pessoaId, nome, fotoPath, papel])
 
   const definir = useCallback((estado: EstadoDeclarado) => {
     guardarEscolha(estado)

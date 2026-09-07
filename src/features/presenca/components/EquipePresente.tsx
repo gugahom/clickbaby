@@ -9,6 +9,7 @@ import {
   horasParada,
 } from '../lib/estados'
 import { BolinhaDeStatus } from './BolinhaDeStatus'
+import { CartaoDePresenca } from './CartaoDePresenca'
 import type { AtividadeDaEquipe, PessoaPresente } from '../api/usePresenca'
 
 interface PropsEquipePresente {
@@ -74,6 +75,14 @@ function descrever(
  * O ANEL É PRETO A 40%, e não um token de cor: o fundo aqui é um gradiente, e
  * nenhuma cor chapada acompanha os dois extremos dele. Um escurecimento
  * translúcido separa a bolinha do retrato em qualquer ponto da faixa.
+ *
+ * O HOVER ABRE UM CARTÃO (07/09/2026, pedido do gestor) com quem é a pessoa e
+ * há quanto tempo ela não pega trabalho. Era um `title` do navegador: lento,
+ * sem retrato e sem cor. Ver CartaoDePresenca.
+ *
+ * A LINHA DIVISÓRIA é a borda DESTE componente, e não um `divide-x` no
+ * cabeçalho: aqui ela desaparece junto com a fileira — no mobile e quando não
+ * há mais ninguém conectado. No pai, sobraria uma linha sem nada de um lado.
  */
 export function EquipePresente({ outros, atividade }: PropsEquipePresente) {
   const { data: fotos } = useUrlsDasFotos(outros.map((p) => p.fotoPath))
@@ -86,7 +95,7 @@ export function EquipePresente({ outros, atividade }: PropsEquipePresente) {
 
   return (
     <div
-      className="hidden items-center md:flex"
+      className="hidden items-center border-r border-white/20 pr-3 md:flex"
       // Uma lista para quem enxerga, uma frase para quem ouve: ler
       // "avatar, avatar, avatar" não diz nada.
       role="group"
@@ -96,21 +105,35 @@ export function EquipePresente({ outros, atividade }: PropsEquipePresente) {
     >
       {visiveis.map((p, i) => {
         const { estado, texto, parada } = descrever(p, atividade)
+        const foto = (p.fotoPath ? fotos?.get(p.fotoPath) : null) ?? null
         return (
+          /*
+           * `group` + `tabIndex` é o que abre o cartão: no hover para quem usa
+           * mouse, no foco para quem anda de Tab. O `aria-label` repete o que o
+           * cartão diz, porque o cartão é decoração para leitor de tela — o que
+           * ele lê é o rótulo, não a caixa.
+           */
           <span
             key={p.pessoaId}
-            className={clsx('relative', i > 0 && '-ml-2')}
-            title={`${p.nome} · ${texto}`}
+            className={clsx(
+              'group relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+              i > 0 && '-ml-2',
+            )}
+            tabIndex={0}
+            role="img"
+            aria-label={`${p.nome} · ${texto}`}
           >
-            <Avatar
-              nome={p.nome}
-              fotoUrl={(p.fotoPath ? fotos?.get(p.fotoPath) : null) ?? null}
-              className="size-7"
-            />
+            <Avatar nome={p.nome} fotoUrl={foto} className="size-7" />
             <BolinhaDeStatus
               estado={estado}
               vazada={parada}
               className="absolute right-0 bottom-0 outline-2 outline-black/40"
+            />
+            <CartaoDePresenca
+              pessoa={p}
+              estado={estado}
+              fotoUrl={foto}
+              ultimaAtividade={atividade?.ultimaAtividade.get(p.pessoaId)}
             />
           </span>
         )
