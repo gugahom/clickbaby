@@ -497,6 +497,18 @@ Rode as duas **depois de todo `db push` que toque schema**.
   então acabou" é falso quando o teto do servidor é menor que a página: aí toda página vem
   curta e o laço para na primeira, truncando de novo com cara de sucesso.
   `casos` está em 192 e cresce ~135/mês: chega ao teto em poucos meses, e já pagina.
+- **E toda consulta paginada precisa de ORDENAÇÃO TOTAL.** Paginar destapou o defeito
+  seguinte, no dia seguinte: `LIMIT/OFFSET` só devolve cada linha uma vez quando não há
+  EMPATE na ordenação. `rodada, ordem` empata às centenas — todo `fechamento` do sistema
+  é (1, 4) —, e quando o corte de página cai dentro de um grupo empatado o Postgres pode
+  escolher membros diferentes a cada consulta. Medido no remoto em 08/09/2026: 1028 linhas
+  chegaram, 1000 distintas; 28 vieram duas vezes e outras 28 não vieram nenhuma. O sintoma
+  foi um card com "Fechamento" repetido na fita e 5/5 numa trilha de quatro etapas — e o
+  caro não é o que aparece duas vezes, é o que não aparece. A correção é acrescentar `id`
+  como ÚLTIMO critério de `order` em toda consulta com `.range()`: ele é único, desempata
+  sempre, e só decide entre linhas que já eram indistinguíveis na tela. A deduplicação
+  dentro de `buscarTudo` é cinto de segurança e não devolve a linha perdida — o servidor
+  nunca a mandou.
 - Mutações que representam transição de estado chamam RPC, nunca `.update()` direto.
 - Realtime via canais do Supabase no Quadro e na Fila.
 - Mobile-first. O layout desktop é a adaptação, não o contrário.

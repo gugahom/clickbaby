@@ -54,29 +54,72 @@ export const chavesQuadro = {
  * toda página chega curta e o laço para na primeira — truncando de novo, do
  * mesmo jeito e com a mesma cara de sucesso. O total dito pelo servidor é a
  * única resposta que não depende de adivinhar o teto dele.
+ *
+ * -------------------------------------------------------------------------
+ * E TODA CONSULTA PAGINADA PRECISA DE ORDENAÇÃO TOTAL (08/09/2026).
+ *
+ * Paginar consertou o truncamento e destapou o defeito seguinte, que é da
+ * mesma família e ainda mais silencioso. `LIMIT/OFFSET` só devolve cada linha
+ * uma vez se a ordenação for TOTAL — se não houver empate. `rodada, ordem`
+ * empata às centenas: todo `fechamento` do sistema é (1, 4). Quando o corte
+ * de 500 cai no meio de um grupo empatado, o Postgres é livre para escolher
+ * membros diferentes do grupo em cada consulta, e escolhe: medido no remoto,
+ * 1028 linhas chegaram, 1000 eram distintas. VINTE E OITO vieram duas vezes —
+ * e outras VINTE E OITO não vieram nenhuma.
+ *
+ * O SINTOMA foi um card com "Fechamento" duas vezes na fita e 5/5 numa trilha
+ * de quatro etapas. O card estava certo: a lista tinha mesmo a linha repetida.
+ * O caro não é o que aparece duas vezes — é o que não aparece, que é a mesma
+ * discordância entre tela e banco de ontem, com outra causa.
+ *
+ * A CORREÇÃO é acrescentar `id` como último critério de ordenação. Ele é
+ * único, então desempata sempre e a ordem passa a ser a mesma em toda
+ * consulta. Não muda o que se vê: o `id` só decide entre linhas que já eram
+ * indistinguíveis para a tela.
+ *
+ * A DEDUPLICAÇÃO aqui embaixo é cinto de segurança, não a correção. Ela impede
+ * que uma consulta futura sem desempate repita linha no React; não devolve a
+ * linha que ficou faltando, e nada consegue devolver — o servidor nunca a
+ * mandou.
  */
 const PAGINA = 500
 
-async function buscarTudo<T>(
+// `id: string | null` porque `quadro_casos` é uma VIEW, e coluna de view nasce
+// anulável nos tipos gerados mesmo vindo de uma PK. Linha sem `id` não dá para
+// deduplicar; ela passa direto, e `normalizarCaso` já lida com esse caso.
+async function buscarTudo<T extends { id: string | null }>(
   consulta: (
     de: number,
     ate: number,
   ) => PromiseLike<{ data: T[] | null; error: unknown; count: number | null }>,
 ): Promise<T[]> {
   const tudo: T[] = []
+  const vistos = new Set<string>()
+  let recebidas = 0
 
   for (let de = 0; ; de += PAGINA) {
     const { data, error, count } = await consulta(de, de + PAGINA - 1)
     if (error) throw error
 
     const pagina = data ?? []
-    tudo.push(...pagina)
+    recebidas += pagina.length
+
+    for (const linha of pagina) {
+      if (linha.id !== null) {
+        if (vistos.has(linha.id)) continue
+        vistos.add(linha.id)
+      }
+      tudo.push(linha)
+    }
 
     // Página vazia encerra sempre — é a saída que impede laço infinito se o
     // servidor devolver um `count` maior do que ele consegue paginar.
     if (pagina.length === 0) return tudo
     if (count === null) return tudo
-    if (tudo.length >= count) return tudo
+    // Conta o que CHEGOU, não o que sobrou depois de deduplicar. Se um dia
+    // voltar a vir repetido, `tudo` nunca alcançaria `count` e o laço só
+    // pararia na página vazia — pedindo faixas além do fim a cada carga.
+    if (recebidas >= count) return tudo
   }
 }
 
@@ -86,6 +129,10 @@ async function carregarQuadro(): Promise<DadosQuadro> {
       .from('quadro_casos')
       .select('*', { count: 'exact' })
       .order('previsao_em', { ascending: true })
+      // O desempate. Dois casos marcados para a mesma hora — que é o normal
+      // numa agenda de maternidade — empatam aqui, e empate quebra a
+      // paginação. Ver o bloco sobre ordenação total, acima.
+      .order('id', { ascending: true })
       .range(de, ate),
   )
 
@@ -117,6 +164,10 @@ async function carregarQuadro(): Promise<DadosQuadro> {
       // sumia sempre a rodada mais alta — a revisão e o encontro de irmãos.
       .order('rodada', { ascending: true })
       .order('ordem', { ascending: true })
+      // E `id` fecha a ordenação. Sem ele, (rodada 1, ordem 4) é o mesmo par
+      // para TODO fechamento do sistema, e o corte de página no meio desse
+      // grupo repetia umas linhas e perdia outras. Ver o bloco acima.
+      .order('id', { ascending: true })
       .range(de, ate),
   )
 
