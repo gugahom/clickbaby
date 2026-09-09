@@ -763,7 +763,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 
 ### O que já funciona
 
-- **Sync do Calendar automático**, pg_cron a cada 1 minuto (o intake principal da seção 7).
+- **Sync do Calendar automático**, pg_cron a cada **25 segundos** (o intake principal da
+  seção 7). Foi 2min, depois 1min (`20260831132545`), e desde 09/09/2026 são 25s
+  (`20260909134858`) — a espera entre marcar o parto na agenda e ver o card no Quadro é, no
+  pior caso, o intervalo inteiro do cron.
+  **`'25 seconds'` não é expressão cron de cinco campos**: é a forma de INTERVALO que o
+  pg_cron aceita desde a 1.5 (o local e o remoto rodam 1.6.4), e é o que permite descer de
+  um minuto. Num Postgres com pg_cron anterior a migration falha no push, que é o certo —
+  melhor recusar do que agendar outra coisa. `sync_agendado.test.sql` trava o valor.
+  **O job não se atropela:** `disparar_sync_calendar` usa `net.http_post` do pg_net, devolve
+  um id de requisição na hora e termina em milissegundos. Quem pode se sobrepor são as
+  execuções da Edge Function (timeout de 30s, maior que o intervalo), e isso é aceitável
+  porque as duas escritas do sync são idempotentes — `sync_upsert_caso` casa por
+  `google_calendar_event_id` e `sync_cancelar_caso` devolve `sem_efeito` em caso terminal.
+  **O `refetchInterval` do Quadro NÃO acompanha** e está em 2 minutos de propósito: quem
+  traz o card novo à tela é o Realtime (escuta INSERT em `casos`), não o refetch — que é a
+  rede de segurança para quando o canal cai. Persegui-lo multiplicaria o tráfego do Quadro
+  inteiro para cobrir mais depressa uma falha rara.
   Cria, atualiza, e cancela por card cinza OU por deleção do evento. Evento de dia inteiro
   (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
 - **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de

@@ -187,18 +187,22 @@ export function useQuadro() {
     queryKey: chavesQuadro.lista(),
     queryFn: carregarQuadro,
     /*
-     * DOIS MINUTOS — o mesmo passo do cron do sync.
+     * DOIS MINUTOS, e DE PROPÓSITO fora do passo do cron do sync.
      *
-     * O Realtime cobre o que a EQUIPE faz: ação de alguém no banco chega aqui
-     * na hora. Ele não cobre o que chega de FORA — um card criado no Google
-     * Calendar entra pelo job do pg_cron a cada 2 minutos (migration
-     * 20260828015512), e aí só aparecia na próxima vez que alguém recarregasse
-     * a página. Numa TV que fica ligada o dia inteiro, "alguém recarregar"
-     * nunca acontece.
+     * Este número já foi "o mesmo passo do cron", quando o sync rodava de dois
+     * em dois minutos. Não é mais: o cron desceu para um minuto em 31/08 e para
+     * 25 SEGUNDOS em 09/09, e este intervalo ficou onde está.
      *
-     * Alinhado com o cron de propósito: buscar mais rápido que a fonte muda só
-     * gasta requisição, e mais devagar deixaria o caso novo esperando por uma
-     * janela que não é a do sync.
+     * O motivo é que este refetch NÃO é o caminho pelo qual um card novo chega
+     * à tela. Quem faz isso é o Realtime, que escuta INSERT em `casos` e
+     * recarrega no instante em que o sync escreve — inclusive numa TV que
+     * ninguém recarrega o dia inteiro. Este laço é a REDE DE SEGURANÇA para
+     * quando o canal cai sem avisar.
+     *
+     * Persegui-lo até os 25s multiplicaria por cinco o tráfego do Quadro
+     * inteiro — 194 casos e 1.030 etapas, em páginas de 500 — para cobrir mais
+     * depressa uma falha que é rara. O intervalo certo aqui é o da falha, não o
+     * da fonte.
      *
      * `refetchIntervalInBackground` fica FALSO (o padrão): aba escondida não
      * precisa ser buscada, e ao voltar o TanStack refaz a busca sozinho.
