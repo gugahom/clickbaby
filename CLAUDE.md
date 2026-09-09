@@ -815,6 +815,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `concluir_etapa_com_entregaveis` garante só o que é dela: link e conclusão na MESMA
   transação (meio caminho produziria link órfão, ou a etapa concluída sem link — os dois
   estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
+  **NA SEGUNDA RODADA O DIÁLOGO PARA DE PEDIR LINK** (09/09/2026, pedido do gestor). A
+  rodada 2 da edição de fotos entrega o MESMO álbum da rodada 1 — a família recebe um
+  endereço só, e as fotos do banho e do fechamento sobem dentro dele. O campo já vinha
+  preenchido com esse link desde 04/09, e não bastava: a tela continuava sendo um rótulo
+  ("Link de Google") em cima de uma caixa de texto, que é a cara de "cole aqui um link
+  novo". Quem chegava na segunda rodada parava para pensar se devia criar outro álbum, e
+  alguns criaram. Agora, quando o caso JÁ TEM link daquele tipo, o campo dá lugar a um bloco
+  que diz o que fazer — *adicione as fotos finais no link abaixo* — com o endereço à vista,
+  clicável e com botão de copiar. **Não é campo, é instrução.**
+  **Com saída:** "Usar outro link" troca o bloco pelo campo vazio, porque existe o caso
+  legítimo de a segunda rodada ir para outro lugar. Ela fica discreta de propósito — o
+  caminho comum é reaproveitar, e um botão do mesmo peso convidaria a criar álbum novo, que
+  é o que o bloco veio evitar.
+  O diálogo **não mostra campo nenhum enquanto os links do caso não chegam**. Hoje ele abre
+  com o card aberto, onde a consulta já está no cache; se um dia abrir de um lugar frio, o
+  primeiro quadro seria justamente a caixa vazia pedindo link — e ela sumiria sozinha um
+  instante depois, cedo demais para desconfiar e tarde demais para desfazer o álbum criado.
+  Link
   idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
   o mesmo álbum, e o campo já vem preenchido com ele.
 - **A aba ENTREGÁVEIS** (06/09/2026), entre Quadro e Rascunhos. O card verde deixou de
