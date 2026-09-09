@@ -778,15 +778,33 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
   trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
   resto continuam no card.
+  **O cartão da seção mostra o PACOTE** (09/09/2026, pedido do gestor), na mesma pílula
+  `bg-marca-suave` da linha do Quadro. Ele decide o que aquele reels é — formato do
+  vertical, se há cadeado a produzir, qual o prazo —, e sem ele quem edita tinha que voltar
+  ao Quadro e abrir o card para descobrir de que pacote era a rodada que já estava em mãos.
+  A seção existe justamente para não precisar voltar. Vale para a MASTER também, que
+  compartilha o cartão (`CartaoDeEdicao`), e ali distingue MASTER de MASTER + ÁLBUM.
 - **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
   não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
   depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
   sem o link** — é trava, não lembrete.
-  Quem pede o quê: **edição de fotos em TODOS os pacotes** pede o *Link de Google*, e nos
-  dois BIRTH pede também o *Link CADEADO*; **o reels do BASIC e do STANDARD** pede o *Link
-  de CADEADO do reels*. BABY REELS, BASIC + REELS e BASIC REELS ficaram de fora — foi o
-  pedido ao pé da letra, e a lista está em `lib/links-da-conclusao.ts` justamente para que
-  a pergunta "por que não pediu no BABY REELS?" tenha resposta num lugar só.
+  Quem pede o quê: **só a edição de FOTOS**, em todos os pacotes, pede o *Link de Google* —
+  e nos dois BIRTH pede também o *Link CADEADO*. A lista está em
+  `lib/links-da-conclusao.ts`.
+  **O REELS NÃO PEDE MAIS NADA** (09/09/2026, pedido do gestor). Entre 04/09 e 09/09 o
+  reels do BASIC e do STANDARD exigia o *Link de CADEADO do reels*; uma semana de operação
+  mostrou que ali a trava estava no lugar errado. O cadeado do reels nem sempre existe na
+  hora em que a edição termina, e a etapa ficava presa justamente na lista de trabalho
+  parado — a seção REELS, onde pendente é vermelho e o cartão gira.
+  **A diferença para a edição de fotos, que continua exigindo:** lá o link nasce junto com
+  o trabalho, quem terminou acabou de subir o álbum e tem a URL na mão. No reels não é
+  assim, e transformar em trava o que é sequência de outra pessoa dá o pior dos dois
+  mundos: nem o link aparece, nem a etapa fecha. O registro não se perdeu — entra pelo
+  "Adicionar link" da lista de entregáveis do card, e é conferido de novo na aba
+  Entregáveis, que é onde o cadeado é olhado de qualquer forma. O que saiu foi a cobrança
+  antecipada.
+  Se um dia voltar, volta como LISTA de slugs (eram `basic` e `standard`, nomeados pelo
+  gestor) e nunca como dedução do tipo "todo pacote com reels" — essa regra ele não deu.
   A trava vale nos **dois** caminhos de conclusão: o botão do card e o da seção lateral
   (`AcoesDaEtapa`), que é onde a equipe de edição de fato trabalha. Uma regra que valesse
   só num deles não seria regra.
