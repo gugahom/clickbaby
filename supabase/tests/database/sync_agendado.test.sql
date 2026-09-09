@@ -29,12 +29,18 @@ select is(
   'A0: existe exatamente um job chamado sync-calendar'
 );
 
--- 2 minutos -> 1 minuto (migration 20260831132545, a pedido do gestor): uma
--- falha isolada do sync não fica dois minutos sem tentar de novo.
+-- 2 minutos -> 1 minuto (20260831132545) -> 25 SEGUNDOS (20260909134858), a
+-- pedido do gestor: a espera entre marcar o parto na agenda e ver o card no
+-- Quadro é, no pior caso, o intervalo inteiro do cron.
+--
+-- '25 seconds' não é uma expressão cron de cinco campos — é a forma de
+-- INTERVALO que o pg_cron aceita desde a 1.5, e é o que permite descer de um
+-- minuto. Este teste também é a guarda dessa versão: num Postgres com pg_cron
+-- anterior a migration nem aplica.
 select is(
   (select schedule from cron.job where jobname = 'sync-calendar'),
-  '* * * * *',
-  'A1: roda a cada minuto'
+  '25 seconds',
+  'A1: roda a cada 25 segundos'
 );
 
 select is(
