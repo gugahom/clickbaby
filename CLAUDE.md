@@ -924,6 +924,26 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   cancelado continua recusado), e em Concluídos o cartão aparece com o selo **"Vídeo em
   edição"**, sem apagar. A exceção nomeia `edicao_video` e mais nada: com a edição de fotos
   aberta, encerrar continua sendo recusado.
+- **A faixa de avisos abre** (09/09/2026, pedido do gestor). As observações das etapas
+  ABERTAS aparecem numa faixa de UMA LINHA no pé do card — com dois avisos ela virava um
+  bloco e competia com o card em vez de acompanhá-lo. O preço era o texto cortado, e o
+  motivo de uma reabertura não cabe numa linha: cortado no meio ele deixa de ser instrução
+  e vira enfeite.
+  O texto completo já existia em dois lugares e nenhum servia: o `title` do navegador **não
+  existe no celular**, que é metade da operação, e o card expandido obriga a abrir o caso e
+  procurar a etapa certa. Agora um toque na faixa abre um diálogo com todos os avisos por
+  extenso, com `whitespace-pre-line` — a quebra de linha que a pessoa digitou é parte do que
+  ela quis dizer.
+  A faixa é um `<button>`, não um `div` com `onClick`: acionável por teclado é o que separa
+  um controle de um enfeite que só funciona no mouse. Ela mora FORA do `<button>` do
+  cabeçalho do card, então abrir o aviso **não expande o caso junto** — conferido na tela.
+  O ícone de olho fica fora do `truncate`, num item que não encolhe: dentro dele seria a
+  primeira coisa a sumir, justamente quando o texto é comprido.
+  O nome da etapa ganha a rodada da segunda em diante (`Reels · Revisão`), porque o aviso
+  mais comprido do sistema é o motivo de uma reabertura e ali dizer só "Reels" esconde o que
+  distingue o trabalho novo do que já foi entregue.
+  **`Dialogo` ganhou `soFechar`** para isso: um diálogo que só MOSTRA não tem o que
+  cancelar, e "Cancelar" ao lado de "Fechar" oferece duas portas para a mesma saída.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **Presença no cabeçalho** (06/09/2026): quem está com a tela aberta aparece ao lado do
   chip de conta, com bolinha de estado — a referência do gestor foi a planilha compartilhada
