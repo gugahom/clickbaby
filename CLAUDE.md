@@ -778,15 +778,33 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
   trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
   resto continuam no card.
+  **O cartão da seção mostra o PACOTE** (09/09/2026, pedido do gestor), na mesma pílula
+  `bg-marca-suave` da linha do Quadro. Ele decide o que aquele reels é — formato do
+  vertical, se há cadeado a produzir, qual o prazo —, e sem ele quem edita tinha que voltar
+  ao Quadro e abrir o card para descobrir de que pacote era a rodada que já estava em mãos.
+  A seção existe justamente para não precisar voltar. Vale para a MASTER também, que
+  compartilha o cartão (`CartaoDeEdicao`), e ali distingue MASTER de MASTER + ÁLBUM.
 - **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
   não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
   depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
   sem o link** — é trava, não lembrete.
-  Quem pede o quê: **edição de fotos em TODOS os pacotes** pede o *Link de Google*, e nos
-  dois BIRTH pede também o *Link CADEADO*; **o reels do BASIC e do STANDARD** pede o *Link
-  de CADEADO do reels*. BABY REELS, BASIC + REELS e BASIC REELS ficaram de fora — foi o
-  pedido ao pé da letra, e a lista está em `lib/links-da-conclusao.ts` justamente para que
-  a pergunta "por que não pediu no BABY REELS?" tenha resposta num lugar só.
+  Quem pede o quê: **só a edição de FOTOS**, em todos os pacotes, pede o *Link de Google* —
+  e nos dois BIRTH pede também o *Link CADEADO*. A lista está em
+  `lib/links-da-conclusao.ts`.
+  **O REELS NÃO PEDE MAIS NADA** (09/09/2026, pedido do gestor). Entre 04/09 e 09/09 o
+  reels do BASIC e do STANDARD exigia o *Link de CADEADO do reels*; uma semana de operação
+  mostrou que ali a trava estava no lugar errado. O cadeado do reels nem sempre existe na
+  hora em que a edição termina, e a etapa ficava presa justamente na lista de trabalho
+  parado — a seção REELS, onde pendente é vermelho e o cartão gira.
+  **A diferença para a edição de fotos, que continua exigindo:** lá o link nasce junto com
+  o trabalho, quem terminou acabou de subir o álbum e tem a URL na mão. No reels não é
+  assim, e transformar em trava o que é sequência de outra pessoa dá o pior dos dois
+  mundos: nem o link aparece, nem a etapa fecha. O registro não se perdeu — entra pelo
+  "Adicionar link" da lista de entregáveis do card, e é conferido de novo na aba
+  Entregáveis, que é onde o cadeado é olhado de qualquer forma. O que saiu foi a cobrança
+  antecipada.
+  Se um dia voltar, volta como LISTA de slugs (eram `basic` e `standard`, nomeados pelo
+  gestor) e nunca como dedução do tipo "todo pacote com reels" — essa regra ele não deu.
   A trava vale nos **dois** caminhos de conclusão: o botão do card e o da seção lateral
   (`AcoesDaEtapa`), que é onde a equipe de edição de fato trabalha. Uma regra que valesse
   só num deles não seria regra.
@@ -797,6 +815,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `concluir_etapa_com_entregaveis` garante só o que é dela: link e conclusão na MESMA
   transação (meio caminho produziria link órfão, ou a etapa concluída sem link — os dois
   estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
+  **NA SEGUNDA RODADA O DIÁLOGO PARA DE PEDIR LINK** (09/09/2026, pedido do gestor). A
+  rodada 2 da edição de fotos entrega o MESMO álbum da rodada 1 — a família recebe um
+  endereço só, e as fotos do banho e do fechamento sobem dentro dele. O campo já vinha
+  preenchido com esse link desde 04/09, e não bastava: a tela continuava sendo um rótulo
+  ("Link de Google") em cima de uma caixa de texto, que é a cara de "cole aqui um link
+  novo". Quem chegava na segunda rodada parava para pensar se devia criar outro álbum, e
+  alguns criaram. Agora, quando o caso JÁ TEM link daquele tipo, o campo dá lugar a um bloco
+  que diz o que fazer — *adicione as fotos finais no link abaixo* — com o endereço à vista,
+  clicável e com botão de copiar. **Não é campo, é instrução.**
+  **Com saída:** "Usar outro link" troca o bloco pelo campo vazio, porque existe o caso
+  legítimo de a segunda rodada ir para outro lugar. Ela fica discreta de propósito — o
+  caminho comum é reaproveitar, e um botão do mesmo peso convidaria a criar álbum novo, que
+  é o que o bloco veio evitar.
+  O diálogo **não mostra campo nenhum enquanto os links do caso não chegam**. Hoje ele abre
+  com o card aberto, onde a consulta já está no cache; se um dia abrir de um lugar frio, o
+  primeiro quadro seria justamente a caixa vazia pedindo link — e ela sumiria sozinha um
+  instante depois, cedo demais para desconfiar e tarde demais para desfazer o álbum criado.
+  Link
   idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
   o mesmo álbum, e o campo já vem preenchido com ele.
 - **A aba ENTREGÁVEIS** (06/09/2026), entre Quadro e Rascunhos. O card verde deixou de

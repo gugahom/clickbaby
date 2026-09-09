@@ -15,19 +15,31 @@ export interface LinkExigido {
   dica?: string
 }
 
-/**
- * OS PACOTES QUE PEDEM O CADEADO DO REELS.
+/*
+ * O REELS NÃO EXIGE MAIS NADA (09/09/2026, pedido do gestor).
  *
- * Regra do gestor em 04/09/2026, e ela é uma LISTA e não uma dedução: ele
- * nomeou BASIC e STANDARD. BABY REELS, BASIC + REELS e BASIC REELS também têm
- * reels e ficaram DE FORA de propósito — foi o que ele pediu, ao pé da letra.
+ * Entre 04/09 e hoje, concluir o reels do BASIC e do STANDARD abria o diálogo
+ * pedindo o "Link de CADEADO do reels", e não fechava sem ele. Uma semana de
+ * operação mostrou que ali a trava estava no lugar errado: o cadeado do reels
+ * nem sempre existe na hora em que a edição termina, e a etapa ficava presa
+ * numa lista que é justamente a lista de trabalho parado — a seção REELS, onde
+ * pendente é vermelho e o cartão gira.
  *
- * Isso é deliberadamente frágil no lugar certo: se um dia a pergunta for "por
- * que não pediu o cadeado no BABY REELS?", a resposta está aqui, e a correção é
- * acrescentar um slug. A alternativa — deduzir "todo pacote com reels" — teria
- * inventado uma regra que ele não deu.
+ * A DIFERENÇA PARA A EDIÇÃO DE FOTOS, que continua exigindo: lá o link nasce
+ * junto com o trabalho — quem terminou de editar acabou de subir o álbum e tem
+ * a URL na mão. Aqui não é assim, e transformar em trava o que é sequência de
+ * outra pessoa produz o pior dos dois mundos: nem o link aparece, nem a etapa
+ * fecha.
+ *
+ * ONDE O LINK ENTRA AGORA: pelo "Adicionar link" na lista de entregáveis do
+ * card, e de novo na conferência da aba Entregáveis — que é onde o cadeado é
+ * conferido de qualquer forma, pela pessoa que faz a entrega. O que se perdeu
+ * foi a cobrança antecipada, não o registro.
+ *
+ * Se um dia isto voltar, volta como LISTA de slugs (era `basic` e `standard`,
+ * nomeados pelo gestor) e não como dedução do tipo "todo pacote com reels" —
+ * essa regra ele nunca deu.
  */
-const PACOTES_COM_CADEADO_DO_REELS = new Set(['basic', 'standard'])
 
 /** BIRTH e BIRTH + REELS: dois slugs, o mesmo produto. */
 function ehBirth(caso: CasoQuadro): boolean {
@@ -37,9 +49,8 @@ function ehBirth(caso: CasoQuadro): boolean {
 /**
  * O QUE A CONCLUSÃO DESTA ETAPA EXIGE, em links.
  *
- * Lista vazia = a etapa conclui com um toque, como sempre. É o caso da imensa
- * maioria: campo, vídeo do MASTER, álbum, e o reels de todo pacote que não está
- * na lista acima.
+ * Lista vazia = a etapa conclui com um toque, como sempre. É o caso de tudo
+ * menos a edição de FOTOS: campo, reels, vídeo do MASTER e álbum.
  *
  * POR QUE A REGRA VIVE NA TELA E NÃO NO BANCO. "Quais links o BASIC exige" é
  * regra comercial, do mesmo tipo do checklist de encerramento, que também é de
@@ -69,13 +80,6 @@ export function linksExigidosNaConclusao(
       : [google]
   }
 
-  if (
-    etapa.tipo === 'reels' &&
-    caso.pacoteSlug !== null &&
-    PACOTES_COM_CADEADO_DO_REELS.has(caso.pacoteSlug)
-  ) {
-    return [{ tipo: 'cadeado', rotulo: 'Link de CADEADO do reels' }]
-  }
-
+  // O reels conclui com um toque, em todo pacote. Ver o bloco no alto.
   return []
 }

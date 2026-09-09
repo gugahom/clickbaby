@@ -116,7 +116,27 @@ export function CartaoDeEdicao({
             </span>
           )}
         </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+        {/* O PACOTE, primeiro da linha e na pílula da marca (09/09/2026,
+            pedido do gestor).
+
+            Ele decide o que o reels é: o formato do vertical, se há cadeado a
+            produzir, qual o prazo. Quem edita precisava abrir o card no Quadro
+            para descobrir de que pacote era a rodada que tem em mãos — e a
+            seção existe justamente para não ter que voltar ao Quadro.
+
+            MESMA PÍLULA da linha do Quadro (`bg-marca-suave`), de propósito:
+            lá o pacote também é identidade e não estado, e a mesma informação
+            com duas formas em duas telas obriga a reaprender a ler.
+
+            Vale para a seção MASTER também, que compartilha este cartão — e
+            ali distingue MASTER de MASTER + ÁLBUM, que são justamente os dois
+            pacotes cujo trabalho de edição difere. */}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {caso.pacoteNome && (
+            <span className="rounded-full bg-marca-suave px-2 py-0.5 text-[11px] font-bold text-marca">
+              {caso.pacoteNome}
+            </span>
+          )}
           {caso.maternidadeSigla && <span>{caso.maternidadeSigla}</span>}
           <span>· {caso.dia ? rotularDia(caso.dia, hoje) : 'sem data'}</span>
         </div>
