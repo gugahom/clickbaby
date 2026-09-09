@@ -15,6 +15,15 @@ interface PropsDialogo {
    * invisível atrás do backdrop — a pessoa só veria "não aconteceu nada".
    */
   erro?: string | null
+  /**
+   * Diálogo de LEITURA: esconde o "Cancelar" e deixa só o botão principal.
+   *
+   * Existe porque um diálogo que só MOSTRA alguma coisa não tem o que
+   * cancelar — "Cancelar" ao lado de "Fechar" oferece duas portas para a mesma
+   * saída e faz a pessoa parar para escolher entre elas. `onConfirmar` continua
+   * sendo quem fecha; o que muda é a moldura, não o contrato.
+   */
+  soFechar?: boolean
   onConfirmar: () => void
   onCancelar: () => void
 }
@@ -39,6 +48,7 @@ export function Dialogo({
   confirmarDesabilitado = false,
   ocupado = false,
   erro = null,
+  soFechar = false,
   onConfirmar,
   onCancelar,
 }: PropsDialogo) {
@@ -76,9 +86,11 @@ export function Dialogo({
         {erro && <Alerta>{erro}</Alerta>}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Botao variante="fantasma" onClick={onCancelar} disabled={ocupado}>
-            Cancelar
-          </Botao>
+          {!soFechar && (
+            <Botao variante="fantasma" onClick={onCancelar} disabled={ocupado}>
+              Cancelar
+            </Botao>
+          )}
           <Botao
             variante={confirmarDestrutivo ? 'destrutivo' : 'primario'}
             onClick={onConfirmar}
