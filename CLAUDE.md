@@ -794,6 +794,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
   trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
   resto continuam no card.
+  **A seção MASTER tem a fase E o relógio** (09/09/2026, pedido do gestor). Até aqui só
+  havia o seletor de fase, e a regra escrita era "o vídeo não anda por play/pause/concluir".
+  Ela media bem o TRAJETO do vídeo e não media nada do TEMPO dentro dele: um vídeo de dez
+  dias úteis ficava "Editando" a semana inteira, incluindo os dias em que ninguém sentou
+  nele — e tempo de edição de vídeo é justamente o que a empresa quer cobrar (seção 9).
+  As duas coisas não brigam porque respondem a perguntas diferentes: a fase é ONDE o vídeo
+  está no fluxo, o relógio é QUANTO se trabalhou. O banco já as tratava juntas —
+  `mover_video_master` sempre carimbou `iniciado_em`, `pausa_acumulada` e `pausado_em`, e
+  `faseDoVideo` sempre leu `pausada` como "Editando". Faltava a porta na tela.
+  Em ALTERAÇÕES e em PRONTO o play fica desabilitado dizendo que ali quem manda é a fase —
+  a guarda já existia em `podeIniciar` e continua certa: nesses dois estados o vídeo não
+  está sendo editado, está esperando alguém de fora.
   **O cartão da seção mostra o PACOTE** (09/09/2026, pedido do gestor), na mesma pílula
   `bg-marca-suave` da linha do Quadro. Ele decide o que aquele reels é — formato do
   vertical, se há cadeado a produzir, qual o prazo —, e sem ele quem edita tinha que voltar
@@ -884,6 +896,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   isso é do mesmo par de papéis que confirma — as duas são as saídas da mesma conferência.
   Devolver NÃO reabre etapa nenhuma: o trabalho continua concluído, o que voltou foi a
   entrega.
+  **REABRIR UM CASO TAMBÉM TIRA ELE DAQUI** (09/09/2026, migration `20260909145223`).
+  `reabrir_caso` é de 28/08 e as colunas `liberado_para_entrega_em/_por` chegaram em 06/09 —
+  a função nunca soube que elas existiam, e um caso encerrado sempre passou por esta aba.
+  Resultado: toda reabertura entre 06/09 e 09/09 deixou o caso num limbo — **fora do
+  Quadro**, que lista só `liberado_para_entrega_em is null`, e **dentro de Entregáveis**,
+  cobrando do ADM a entrega de um trabalho que acabou de voltar a fazer. A editora recebia
+  a rodada nova só na seção lateral, **sem o card e portanto sem o motivo da reabertura**,
+  que `reabrir_caso` grava na observação da etapa e que `AvisosDoCaso` mostraria.
+  Quatro casos ficaram presos assim. O backfill da migration limpa só os que têm
+  `liberado_para_entrega_em < reaberto_em`: **dois dos quatro foram reabertos, refeitos e
+  reenviados de propósito**, e limpar os quatro os arrancaria da fila do ADM. A ordem dos
+  carimbos é o que separa resíduo de envio novo.
+  **A lição maior:** quando uma coluna nova entra, quem ESCREVE nela é fácil de achar; quem
+  deveria LIMPÁ-LA não. `devolver_para_o_quadro` nasceu depois da aba e já limpava — a
+  função que existia desde antes foi a que ficou para trás.
   **O nome na tela é "Entregáveis" e no código é `entregas`** — decisão do gestor sobre a
   tela, e o código não segue porque `Entregaveis.tsx` já é o componente da lista de LINKS do
   caso. Mesmo arranjo de `operador`/"Fotógrafo(a)" (invariante 3.1): o rótulo é do

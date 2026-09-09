@@ -36,6 +36,7 @@ import { RascunhosPainel } from './components/RascunhosPainel'
 import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
+import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import type { BlocoDia, CasoQuadro } from './types'
@@ -375,9 +376,39 @@ export function QuadroPage() {
       daSecao={videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])}
       // Uma rodada só: o rótulo de bloco do reels ("Parto") não se aplica.
       rotularLinha={() => 'Vídeo'}
-      // O vídeo do MASTER não anda por play/pause/concluir: ele percorre as
-      // cinco fases do fluxo que a equipe já usa no Trello. Ver FaseDoVideo.
-      acoesDaLinha={(etapa) => <FaseDoVideo etapa={etapa} onErro={setErroMaster} />}
+      /*
+       * A FASE E O RELÓGIO, LADO A LADO (09/09/2026, pedido do gestor).
+       *
+       * Até aqui a seção MASTER só tinha o seletor de fase, e a decisão estava
+       * escrita como "o vídeo não anda por play/pause/concluir". Ela media
+       * bem o TRAJETO do vídeo — Editando, Alterações, Pronto, Enviado — e não
+       * media nada do TEMPO dentro dele: um vídeo de dez dias úteis ficava
+       * "Editando" a semana inteira, incluindo os dias em que ninguém sentou
+       * nele. Sem pausa não há como dizer onde o tempo foi, e tempo de edição
+       * de vídeo é justamente o que a empresa quer cobrar (seção 9).
+       *
+       * As duas coisas não brigam porque respondem a perguntas diferentes — a
+       * fase é ONDE o vídeo está no fluxo, o relógio é QUANTO se trabalhou —,
+       * e o banco já as tratava juntas: `mover_video_master` sempre carimbou
+       * `iniciado_em`, `pausa_acumulada` e `pausado_em`, e `faseDoVideo`
+       * sempre leu `pausada` como "Editando". Faltava a porta na tela.
+       *
+       * As GUARDAS de `AcoesDaEtapa` continuam valendo sem mudança: em
+       * ALTERAÇÕES e em PRONTO o play aparece desabilitado dizendo que ali
+       * quem manda é a fase. É o certo — nesses dois estados o vídeo não está
+       * sendo editado, está esperando alguém de fora.
+       */
+      acoesDaLinha={(etapa) => (
+        <>
+          <FaseDoVideo etapa={etapa} onErro={setErroMaster} />
+          <AcoesDaEtapa
+            caso={caso}
+            etapa={etapa}
+            etapas={etapasPorCaso.get(caso.id) ?? []}
+            onErro={setErroMaster}
+          />
+        </>
+      )}
       // A linha já diz a fase por extenso; um selo repetindo em outras
       // palavras logo acima seria ruído.
       comSelo={false}

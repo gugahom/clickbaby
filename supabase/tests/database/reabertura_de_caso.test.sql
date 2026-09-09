@@ -6,7 +6,7 @@
 -- na tela — aparece numa métrica de prazo que passa a mentir.
 
 begin;
-select plan(21);
+select plan(23);
 
 
 -- =============================================================================
@@ -34,6 +34,15 @@ select 'Mãe Em Andamento', (select id from public.pacotes where slug = 'basic')
 insert into public.casos (mae_nome, pacote_id, maternidade_id, status_operacional, motivo_cancelamento)
 select 'Mãe Cancelada', (select id from public.pacotes where slug = 'basic'),
        (select id from public.maternidades where sigla = 'REABRE'), 'cancelado', 'desistiu';
+
+-- O CASO ENTREGUE PASSOU PELA ABA ENTREGÁVEIS, porque todo caso encerrado
+-- passou: liberar é o passo anterior a confirmar (invariante 3.5). Sem estes
+-- dois carimbos na fixture, o teste C7 abaixo passaria por acidente — ele
+-- estaria conferindo que null continua null.
+update public.casos
+   set liberado_para_entrega_em  = now() - interval '2 days',
+       liberado_para_entrega_por = (select id from public.pessoas where nome = 'Operador Reabre')
+ where mae_nome = 'Mãe Entregue';
 
 -- O nascimento do caso entregue concluiu há muito tempo. É o que faz o teste
 -- do SLA valer alguma coisa: sem reabertura o vencimento já passou faz dias.
@@ -146,6 +155,27 @@ select is(
 select ok(
   (select reaberto_em is not null from public.casos where mae_nome = 'Mãe Entregue'),
   'C3: reaberto_em carimbado pelo servidor'
+);
+
+-- C3b e C3c: o caso VOLTA AO QUADRO (09/09/2026, migration 20260909145223).
+--
+-- Sem esta limpeza o caso reaberto ficava num limbo entre duas telas: fora do
+-- Quadro, que só lista `liberado_para_entrega_em is null`, e dentro de
+-- Entregáveis, que lista o que foi enviado e ainda não é terminal. A editora
+-- via a rodada nova só na seção lateral — sem o card, e portanto sem o motivo
+-- que o C6 logo abaixo afirma estar gravado na etapa.
+--
+-- Aconteceu quatro vezes em produção entre 06/09 e 09/09, e passou despercebido
+-- porque a rodada nova APARECIA: o trabalho estava visível, só que sem a
+-- instrução do que fazer nele.
+select ok(
+  (select liberado_para_entrega_em is null from public.casos where mae_nome = 'Mãe Entregue'),
+  'C3b: a liberação para entrega é desfeita — o caso volta ao Quadro'
+);
+
+select ok(
+  (select liberado_para_entrega_por is null from public.casos where mae_nome = 'Mãe Entregue'),
+  'C3c: e quem liberou também sai, porque aquela entrega não vale mais'
 );
 
 select is(
