@@ -95,6 +95,12 @@ function anteriorPendente(
   etapa: EtapaQuadro,
   etapas: EtapaQuadro[],
 ): EtapaQuadro | null {
+  // Etapa sem pré-requisito nenhum sai antes de qualquer conta de ordem ou de
+  // gatilho. A checagem vem aqui no topo, e não dentro do ramo de
+  // acompanhamento, porque "esta etapa não espera nada" é uma afirmação sobre
+  // a ETAPA — não sobre a trilha em que ela por acaso está hoje.
+  if (SEM_PRE_REQUISITO.has(etapa.tipo)) return null
+
   if (etapa.trilha === 'edicao') {
     /*
      * De que material esta edição trata decide o que ela espera.
@@ -149,6 +155,32 @@ function anteriorPendente(
  * `rodada` na seção 2 do CLAUDE.md).
  */
 const NAO_SEGURA = new Set<EtapaTipo>(['banho'])
+
+/**
+ * Etapas que não esperam NADA — iniciam e concluem no minuto em que entram.
+ *
+ * É o eixo oposto do `NAO_SEGURA` acima, e vale dizer em voz alta porque os
+ * dois nomes se parecem: aquele diz "esta etapa não segura as seguintes", este
+ * diz "esta etapa não é segurada por nenhuma anterior".
+ *
+ * O ENCONTRO DE IRMÃOS entrou aqui em 09/09/2026, a pedido do gestor. Ele é uma
+ * das três etapas que NENHUM pacote traz (seção 2 do CLAUDE.md): só existe
+ * porque alguém apertou "acrescentar etapa" — e apertou justamente porque a
+ * família viveu o momento e há trabalho a registrar. A precedência por `ordem`
+ * o punha em 9, depois de entrada, nascimento e fechamento, então ele nascia
+ * bloqueado por etapas que podem nem ter sido registradas ainda.
+ *
+ * Bloquear o registro de uma coisa que JÁ ACONTECEU é o contrário do que a
+ * trava de precedência existe para fazer. Ela existe para impedir o caminho
+ * fácil de aprovar tudo de cima para baixo sem o trabalho acontecer; aqui o
+ * gesto de acrescentar a etapa já é a afirmação de que aconteceu.
+ *
+ * `saida_uti` e `alta` são da mesma família e continuam FORA desta lista — o
+ * pedido nomeou uma etapa, e as outras duas nunca deram problema. Se derem, a
+ * correção é acrescentar o slug aqui, e não deduzir "toda etapa fora de pacote"
+ * — essa regra ninguém deu.
+ */
+const SEM_PRE_REQUISITO = new Set<EtapaTipo>(['encontro_irmaos'])
 
 export function podeIniciar(
   etapa: EtapaQuadro,

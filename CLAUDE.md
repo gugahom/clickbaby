@@ -175,6 +175,19 @@ Só reels, não foto: foi o que ele pediu.
   `saida_uti` e `alta`. Nenhum pacote as traz; elas só entram por `adicionar_etapa`,
   quando a família vive o momento e a equipe quer registrar o trabalho. São da trilha
   ACOMPANHAMENTO (acontecem na maternidade) e vêm depois do álbum na ordem de leitura.
+  **O ENCONTRO DE IRMÃOS NÃO ESPERA NADA** (09/09/2026, pedido do gestor). Ele tem `ordem`
+  9, então a precedência por trilha o punha atrás de entrada, nascimento e fechamento — e
+  ele nascia bloqueado por etapas que podem nem ter sido registradas ainda. Bloquear o
+  registro de uma coisa que **já aconteceu** é o contrário do que a trava existe para fazer:
+  ela impede aprovar tudo de cima para baixo sem o trabalho acontecer, e aqui o gesto de
+  ACRESCENTAR a etapa já é a afirmação de que aconteceu. Acrescentou, inicia e conclui.
+  A lista é `SEM_PRE_REQUISITO` em `lib/acoes.ts`, e ela é o eixo OPOSTO do `NAO_SEGURA`
+  que está logo acima dela — os nomes se parecem e as regras não: `NAO_SEGURA` é "esta etapa
+  não segura as seguintes" (o banho), `SEM_PRE_REQUISITO` é "esta etapa não é segurada por
+  nenhuma anterior".
+  `saida_uti` e `alta` continuam FORA da lista: o pedido nomeou uma etapa. Se derem o mesmo
+  problema, a correção é acrescentar o slug — nunca deduzir "toda etapa fora de pacote",
+  que é uma regra que ninguém deu.
 - **EVENTO, NEWBORN e combinações ("OUTROS")** ainda não estão no seed. Estratégia definida:
   quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
   **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
