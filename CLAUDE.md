@@ -285,6 +285,11 @@ ter passado por entrega.
 Constraint de banco (`casos_status_terminal_valido`) já aplica essa regra — não a duplique
 como validação de aplicação que pode divergir da constraint.
 
+**DUAS ETAPAS NÃO SEGURAM O ENCERRAMENTO:** `edicao_video` (desde 20260903153101) e
+`album` (desde 20260910150425). As duas têm fluxo próprio numa seção lateral, levam semanas,
+e sobrevivem à entrega das fotos. Toda outra etapa continua tendo que estar concluída ou
+dispensada, e o caso continua exigindo ao menos um entregável.
+
 **Regra de visibilidade do Quadro:** um dia só sai da tela quando **todos** os casos daquele
 dia estão em `encerrado`, `cancelado` ou **enviados para Entregáveis**. Nunca por passagem
 de data. Um caso atrasado mantém o bloco do dia visível, mesmo que trave semanas.
@@ -335,6 +340,9 @@ planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 
 -- fluxo do vídeo horizontal do MASTER (4 fases na tela; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
+
+-- esteira do fotolivro (10 fases; ver seção 13)
+mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
 
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
@@ -825,6 +833,48 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   ao Quadro e abrir o card para descobrir de que pacote era a rodada que já estava em mãos.
   A seção existe justamente para não precisar voltar. Vale para a MASTER também, que
   compartilha o cartão (`CartaoDeEdicao`), e ali distingue MASTER de MASTER + ÁLBUM.
+- **A seção FOTO/LIVRO** (10/09/2026, pedido do gestor, migration `20260910150425`). O
+  fotolivro ganhou o mesmo arranjo do vídeo do MASTER — cartão na coluna lateral, seletor de
+  fase, play/pause do lado — a partir do segundo quadro do Trello da equipe.
+  **A FASE MORA NUMA COLUNA PRÓPRIA (`caso_etapas.fase_album`), e não em `status_etapa`.**
+  Isto contraria a 20260901051229, que argumentou o contrário para o vídeo — e o argumento
+  estava certo LÁ: as cinco fases do vídeo SÃO o status ("Editando" é `em_andamento`).
+  No fotolivro não se repete: das dez fases, UMA é trabalho acontecendo ("Realizando
+  diagramação"); as outras nove são o produto ESPERANDO — pagamento, aprovação do cliente,
+  gráfica, entrega. Um status de etapa chamado `enviado_grafica` não descreve trabalho
+  nenhum, e cairia nas quatro tabelas exaustivas de `StatusEtapa` da tela com uma linha sem
+  significado para as outras dez etapas do sistema.
+  **As duas nunca discordam porque nunca são escritas separadamente:** `mover_album` escreve
+  fase E status na mesma transação — `diagramando` vira `em_andamento`, `entregue` vira
+  `concluida`, e toda fase de espera vira **`pausada`**. Pausada e não `pendente`: o relógio
+  de ciclo já desconta pausa, e é isso que faz o tempo medir DIAGRAMAÇÃO em vez de
+  calendário. A objeção de "duas colunas para manter em acordo" só vale com dois caminhos de
+  escrita; aqui existe um.
+  **A coluna "ESTÁ NA UTI" do Trello NÃO virou fase** (decisão do gestor): UTI já é estado do
+  CASO aqui — `uti_desde` pausa o SLA, tira o card do bloco do dia e tem seção própria.
+  Repetir como fase criaria duas fontes que podem discordar.
+  **"Aguardando pagamento" e "Aguardando diagramação" são DUAS fases**, e a distinção é de
+  dono: a primeira espera o CLIENTE, a segunda espera a EQUIPE. Juntá-las apagaria de quem é
+  a bola, que é o que a coordenação usa para saber de quem cobrar.
+  **A seção gateia por TIPO DE ETAPA, não por pacote** (seção 12): `album` é de fábrica só no
+  MASTER + ÁLBUM, mas entra em qualquer caso por `adicionar_etapa` — o Trello deles já mostra
+  um BIRTH + REELS no meio dos MASTER.
+  **Ordena pela ESTEIRA, não por prazo.** O prazo do pacote é do parto: ele venceu há semanas
+  quando o álbum ainda está na gráfica, e ordenar por ele deixaria a lista inteira vermelha
+  sem dizer nada. Fotolivro sem fase declarada vai para o TOPO — é o único que corre risco de
+  ser esquecido de verdade.
+  **A cor da fase diz DE QUEM É A BOLA**, não o quanto falta: âmbar quando é da equipe,
+  neutra quando espera gente de fora, azul/verde no que anda. Um degradê de progresso seria
+  bonito e inútil — a pergunta é "o que depende de mim".
+- **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
+  É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
+  `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.
+  Mesmo motivo do vídeo, com um agravante: a maior parte da esteira do fotolivro é espera por
+  gente de fora, trabalho que a equipe **não pode acelerar nem terminar**. Segurar o
+  encerramento nisso prenderia o card na lista do dia por um mês. O evento de
+  `entrega_confirmada` ganhou `fotolivro_pendente` ao lado de `video_master_pendente`, pela
+  mesma razão de sempre: sem isso, daqui a um ano ninguém reconstrói por que um caso
+  encerrado tinha etapa aberta.
 - **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
   não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
   depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha

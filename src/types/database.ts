@@ -43,6 +43,7 @@ export type Database = {
           concluido_em: string | null
           created_at: string
           estacao: string | null
+          fase_album: Database["public"]["Enums"]["fase_album"] | null
           id: string
           iniciado_em: string | null
           observacao: string | null
@@ -67,6 +68,7 @@ export type Database = {
           concluido_em?: string | null
           created_at?: string
           estacao?: string | null
+          fase_album?: Database["public"]["Enums"]["fase_album"] | null
           id?: string
           iniciado_em?: string | null
           observacao?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           concluido_em?: string | null
           created_at?: string
           estacao?: string | null
+          fase_album?: Database["public"]["Enums"]["fase_album"] | null
           id?: string
           iniciado_em?: string | null
           observacao?: string | null
@@ -881,6 +884,13 @@ export type Database = {
       eh_pessoa_ativa: { Args: never; Returns: boolean }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      mover_album: {
+        Args: {
+          p_caso_etapa_id: string
+          p_fase: Database["public"]["Enums"]["fase_album"]
+        }
+        Returns: undefined
+      }
       mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
       mover_video_master: {
         Args: {
@@ -974,6 +984,17 @@ export type Database = {
         | "encontro_irmaos"
         | "saida_uti"
         | "alta"
+      fase_album:
+        | "aguardando_pagamento"
+        | "aguardando_diagramacao"
+        | "diagramando"
+        | "enviar_para_aprovacao"
+        | "aguardando_aprovacao"
+        | "pedido_de_alteracoes"
+        | "aprovado"
+        | "enviado_grafica"
+        | "pronto_para_entrega"
+        | "entregue"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -1156,6 +1177,18 @@ export const Constants = {
         "encontro_irmaos",
         "saida_uti",
         "alta",
+      ],
+      fase_album: [
+        "aguardando_pagamento",
+        "aguardando_diagramacao",
+        "diagramando",
+        "enviar_para_aprovacao",
+        "aguardando_aprovacao",
+        "pedido_de_alteracoes",
+        "aprovado",
+        "enviado_grafica",
+        "pronto_para_entrega",
+        "entregue",
       ],
       papel_sistema: [
         "operador",

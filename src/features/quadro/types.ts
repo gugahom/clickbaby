@@ -111,6 +111,16 @@ export interface EtapaQuadro {
   /** Janela de pausa aberta. O tempo aqui não conta como trabalho. */
   pausadoEm: string | null
   /**
+   * Onde o FOTOLIVRO está na esteira de produção. Nulo em toda etapa que não
+   * seja `album`, e nulo no álbum até alguém declarar a primeira fase.
+   *
+   * É ORTOGONAL ao `status` acima, e essa é a diferença para o vídeo do MASTER:
+   * lá a fase É o status (ver `faseDoVideo`), aqui são duas perguntas — a fase
+   * diz onde o produto está, o status diz se alguém trabalha nele agora. Quem
+   * mantém as duas em acordo é a RPC `mover_album`, que escreve as duas juntas.
+   */
+  faseAlbum: FaseAlbum | null
+  /**
    * Hora combinada para ESTA etapa — banho e fechamento, marcados com a
    * família depois do parto. Data PLANEJADA, a única que a invariante 3.4
    * permite vir do cliente. É o que alimenta o alerta de aproximação.
@@ -195,6 +205,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     iniciadoEm: linha.iniciado_em,
     concluidoEm: linha.concluido_em,
     pausadoEm: linha.pausado_em,
+    faseAlbum: linha.fase_album,
     previsaoEm: linha.previsao_em,
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
@@ -345,6 +356,99 @@ export function faseDoVideo(status: StatusEtapa): FaseVideoMaster | null {
     ? (status as FaseVideoMaster)
     : null
 }
+
+/**
+ * A ESTEIRA DO FOTOLIVRO — as dez fases, na ordem em que o produto anda.
+ *
+ * Vieram do quadro "FOTO LIVRO" do Trello da equipe, e a ORDEM importa: ela é
+ * a ordem da lista no seletor, e ler as fases fora de ordem esconde de quem
+ * está esperando a bola. Duas colunas do Trello não viraram fase:
+ *
+ *   "ESTÁ NA UTI"  já é estado do CASO aqui (`uti_desde` pausa o SLA e tem
+ *                  seção própria). Repetir como fase criaria duas fontes que
+ *                  podem discordar.
+ *
+ * A distinção entre as DUAS PRIMEIRAS é de dono: "aguardando pagamento" espera
+ * o CLIENTE, "aguardando diagramação" espera a EQUIPE. Juntá-las numa fase só
+ * apagaria justamente a informação que a coordenação usa para saber de quem
+ * cobrar.
+ */
+export const FASES_ALBUM = [
+  'aguardando_pagamento',
+  'aguardando_diagramacao',
+  'diagramando',
+  'enviar_para_aprovacao',
+  'aguardando_aprovacao',
+  'pedido_de_alteracoes',
+  'aprovado',
+  'enviado_grafica',
+  'pronto_para_entrega',
+  'entregue',
+] as const
+
+export type FaseAlbum = (typeof FASES_ALBUM)[number]
+
+/**
+ * Os nomes como estão no Trello deles, não uma tradução nossa.
+ *
+ * "Pago e enviado para a gráfica" é a única que se afasta do original, que diz
+ * "TICCOLOR". A gráfica é fornecedor: o dia em que trocarem de fornecedor, o
+ * rótulo continua certo e ninguém precisa de migration para descobrir isso.
+ */
+export const ROTULO_FASE_ALBUM: Record<FaseAlbum, string> = {
+  aguardando_pagamento: 'Aguardando pagamento e fotos',
+  aguardando_diagramacao: 'Aguardando diagramação',
+  diagramando: 'Realizando diagramação',
+  enviar_para_aprovacao: 'Enviar para aprovação',
+  aguardando_aprovacao: 'Aguardando aprovação do cliente',
+  pedido_de_alteracoes: 'Pedido de alterações',
+  aprovado: 'Aprovado pelo cliente',
+  enviado_grafica: 'Pago e enviado para a gráfica',
+  pronto_para_entrega: 'Pronto para entrega',
+  entregue: 'Entregue / finalizado',
+}
+
+/**
+ * A cor da fase, e ela diz DE QUEM É A BOLA — não o quanto falta.
+ *
+ * Um degradê de "começou" a "terminou" seria bonito e inútil: a pergunta de
+ * quem varre esta seção não é "quanto falta", é "o que depende de mim". Então
+ * as fases se agrupam em três famílias:
+ *
+ *   NOSSA      âmbar   a equipe tem que fazer alguma coisa agora
+ *   DE FORA    neutra  esperando cliente ou gráfica — não adianta cobrar
+ *   ANDANDO    azul/verde  trabalho em curso, e o fim
+ *
+ * `pronto_para_entrega` usa `--pronto`, o mesmo token do caso que terminou o
+ * trabalho e espera uma pessoa. É literalmente o mesmo estado um nível abaixo,
+ * e a cor repetida é o que faz os dois se lerem como a mesma ideia — o mesmo
+ * raciocínio de ESTILO_FASE no vídeo do MASTER.
+ */
+export const ESTILO_FASE_ALBUM: Record<FaseAlbum, string> = {
+  aguardando_pagamento: 'bg-muted text-muted-foreground',
+  aguardando_diagramacao: 'bg-atencao/15 text-atencao-tinta',
+  diagramando: 'bg-andamento/12 text-andamento-tinta',
+  enviar_para_aprovacao: 'bg-atencao/15 text-atencao-tinta',
+  aguardando_aprovacao: 'bg-muted text-muted-foreground',
+  pedido_de_alteracoes: 'bg-atrasado/12 text-atrasado',
+  aprovado: 'bg-andamento/12 text-andamento-tinta',
+  enviado_grafica: 'bg-muted text-muted-foreground',
+  pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+  entregue: 'bg-concluido/12 text-concluido-tinta',
+}
+
+/**
+ * As fases em que a bola está com ALGUÉM DE FORA.
+ *
+ * A seção usa isto para não gritar: um fotolivro esperando a gráfica imprimir
+ * não é trabalho parado por culpa de ninguém, e marcá-lo de vermelho ensinaria
+ * a equipe a ignorar o vermelho. Ver o anel do cartão em CartaoDeEdicao.
+ */
+export const FASES_DE_ESPERA_EXTERNA = new Set<FaseAlbum>([
+  'aguardando_pagamento',
+  'aguardando_aprovacao',
+  'enviado_grafica',
+])
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {
   aguardando: 'Aguardando',
