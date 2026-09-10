@@ -448,9 +448,11 @@ export function QuadroPage() {
       hoje={hoje}
       etapas={etapasPorCaso.get(caso.id) ?? []}
       daSecao={albunsAbertos(etapasPorCaso.get(caso.id) ?? [])}
-      // Uma etapa só, e a seção inteira é de fotolivro: "Álbum" no rótulo da
-      // linha não acrescentaria nada.
-      rotularLinha={() => 'Fotolivro'}
+      // Uma etapa por caso, e o rótulo do bloco do reels ("Parto") não se
+      // aplica. O nome repete o da seção de propósito: é o mesmo nome que a
+      // etapa tem no card, e ler dois nomes para a mesma coisa foi exatamente
+      // o que o gestor pediu para acabar em 10/09.
+      rotularLinha={() => 'Foto/Livro'}
       acoesDaLinha={(etapa) => (
         <>
           <FaseDoAlbum etapa={etapa} onErro={setErroFotolivro} />
@@ -472,7 +474,7 @@ export function QuadroPage() {
   const CRITERIO_MASTER =
     'Horizontal do MASTER, do backlog ao enviado. Prazo de 10 dias úteis.'
   const CRITERIO_FOTOLIVRO =
-    'Fotolivro do pagamento à entrega. Segue depois do caso encerrar.'
+    'Foto/Livro do pagamento à entrega. Segue depois do caso encerrar.'
   const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
 
   const painelReels = (
@@ -516,7 +518,7 @@ export function QuadroPage() {
       titulo="Foto/Livro"
       quantidade={emFotolivro.length}
       criterio={CRITERIO_FOTOLIVRO}
-      vazio="Nenhum fotolivro em produção."
+      vazio="Nenhum Foto/Livro em produção."
       erro={erroFotolivro}
     >
       {conteudoFotolivro}
@@ -836,7 +838,7 @@ export function QuadroPage() {
                   titulo="Foto/Livro"
                   quantidade={emFotolivro.length}
                   criterio={CRITERIO_FOTOLIVRO}
-                  vazio="Nenhum fotolivro em produção."
+                  vazio="Nenhum Foto/Livro em produção."
                   erro={erroFotolivro}
                 >
                   {conteudoFotolivro}

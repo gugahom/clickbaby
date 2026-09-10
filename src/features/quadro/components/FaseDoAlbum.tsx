@@ -58,8 +58,8 @@ export function FaseDoAlbum({
         alinhamento="direita"
         rotulo={
           atual
-            ? `Fase do fotolivro: ${ROTULO_FASE_ALBUM[atual]}`
-            : 'Definir a fase do fotolivro'
+            ? `Fase do Foto/Livro: ${ROTULO_FASE_ALBUM[atual]}`
+            : 'Definir a fase do Foto/Livro'
         }
         {...(atual ? { selecionado: atual } : {})}
         desabilitado={mover.isPending}
@@ -80,7 +80,7 @@ export function FaseDoAlbum({
           })),
           {
             id: DISPENSAR,
-            rotulo: 'Este caso não tem fotolivro',
+            rotulo: 'Este caso não tem Foto/Livro',
             icone: <IconeDispensar className="size-4" />,
             destrutivo: true,
           },
@@ -107,8 +107,8 @@ export function FaseDoAlbum({
 
       {dispensando && (
         <Dialogo
-          titulo="Este caso não tem fotolivro?"
-          rotuloConfirmar={dispensar.isPending ? 'Dispensando…' : 'Dispensar o fotolivro'}
+          titulo="Este caso não tem Foto/Livro?"
+          rotuloConfirmar={dispensar.isPending ? 'Dispensando…' : 'Dispensar o Foto/Livro'}
           confirmarDestrutivo
           ocupado={dispensar.isPending}
           onCancelar={() => setDispensando(false)}
@@ -117,7 +117,7 @@ export function FaseDoAlbum({
             dispensar
               .mutateAsync({
                 casoEtapaId: etapa.id,
-                motivo: 'Caso não tem fotolivro — etapa criada por engano.',
+                motivo: 'Caso não tem Foto/Livro — etapa criada por engano.',
               })
               .then(
                 () => setDispensando(false),
@@ -127,7 +127,7 @@ export function FaseDoAlbum({
         >
           <p className="text-sm text-muted-foreground">
             A etapa sai desta seção e conta como resolvida. Use quando o
-            fotolivro não faz parte do que foi vendido; se ele só ainda não
+            Foto/Livro não faz parte do que foi vendido; se ele só ainda não
             começou, deixe em “Aguardando pagamento e fotos”.
           </p>
         </Dialogo>

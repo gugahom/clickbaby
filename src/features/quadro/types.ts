@@ -274,7 +274,17 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   edicao_foto: 'Foto',
   reels: 'Reels',
   edicao_video: 'Vídeo',
-  album: 'Álbum',
+  // "Foto/Livro" e não "Álbum" (10/09/2026, pedido do gestor). O sistema
+  // chamava a mesma coisa de dois nomes: a etapa era "Álbum" e a seção era
+  // "Foto/Livro". O nome que ficou é o que a EQUIPE usa — está assim no quadro
+  // do Trello deles, e a seção 2 do CLAUDE.md manda usar o vocabulário da
+  // operação na tela.
+  //
+  // ATENÇÃO ao renomear coisas por perto: "álbum" também significa a GALERIA
+  // DO GOOGLE em vários lugares deste código ("o link do álbum", "subir as
+  // fotos no álbum"). São duas coisas diferentes, e trocar aquelas por
+  // "Foto/Livro" produziria frases erradas. Só a ETAPA e o ENTREGÁVEL mudaram.
+  album: 'Foto/Livro',
   // Só existem via "acrescentar etapa" (31/08/2026) — nenhum pacote as
   // inclui de fábrica. Ver migration 20260831133153.
   encontro_irmaos: 'Encontro de irmãos',

@@ -866,6 +866,25 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **A cor da fase diz DE QUEM É A BOLA**, não o quanto falta: âmbar quando é da equipe,
   neutra quando espera gente de fora, azul/verde no que anda. Um degradê de progresso seria
   bonito e inútil — a pergunta é "o que depende de mim".
+  **O CARD NÃO OPERA O FOTO/LIVRO** (10/09/2026, pedido do gestor), pela mesma razão do
+  vídeo: a linha da etapa mostra "na seção Foto/Livro" no lugar dos botões. Oferecer
+  play/concluir ali daria DOIS caminhos para o mesmo trabalho, e o do card pularia de
+  pendente direto para concluída sem passar por fase nenhuma. A linha CONTINUA aparecendo —
+  o card é o checklist do caso, e sumir com ela esconderia o que falta. O que ela perde é só
+  o poder de agir. Resolvida, a etapa sai da seção e recupera o desfazer no card.
+  Quais etapas caem nessa regra é a tabela `SECAO_DA_ETAPA` em `AcoesDoCaso.tsx`, e ela
+  também guarda o NOME da seção — antes o texto "na seção Master" estava cravado na linha, e
+  a segunda etapa a entrar na regra teria mandado a pessoa para a seção errada.
+  **O NOME É "FOTO/LIVRO", UM SÓ** (10/09/2026, pedido do gestor). O sistema chamava a mesma
+  coisa de dois nomes — a etapa era "Álbum" e a seção era "Foto/Livro". Ficou o nome que a
+  EQUIPE usa, que é o do quadro do Trello deles (seção 2: vocabulário da operação na tela).
+  Mudaram o rótulo da ETAPA (`ROTULO_ETAPA`, e o mapa gêmeo em `features/equipe`) e o do
+  ENTREGÁVEL (`ROTULO_TIPO` em `Entregaveis.tsx`); o identificador no banco continua `album`,
+  mesmo arranjo de `operador`/"Fotógrafo(a)" e `entregas`/"Entregáveis".
+  **ARMADILHA ao mexer nisso:** "álbum" também significa a GALERIA DO GOOGLE em vários
+  lugares do código — "o link do álbum", "subir as fotos no álbum", "a Morgana abre o álbum e
+  é a família errada". São duas coisas diferentes, e trocar aquelas por "Foto/Livro"
+  produziria frases erradas. Uma busca-e-substitui cega quebra isso.
 - **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
   É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
   `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.
