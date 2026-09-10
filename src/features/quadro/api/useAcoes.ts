@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { chavesQuadro } from './useQuadro'
-import type { FaseVideoMaster } from '../types'
+import type { FaseAlbum, FaseVideoMaster } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -327,6 +327,20 @@ export function useMoverVideoMaster() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseVideoMaster }>(
     ({ casoEtapaId, fase }) =>
       chamar('mover_video_master', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
+  )
+}
+
+/**
+ * Move o fotolivro na esteira (migration 20260910150425).
+ *
+ * Mesma forma do `useMoverVideoMaster` acima: a tela manda a fase de destino e
+ * o banco valida. A diferença está no que a RPC faz com ela — `mover_album`
+ * escreve TAMBÉM o status da etapa, para a fase e o relógio nunca discordarem.
+ */
+export function useMoverAlbum() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseAlbum }>(
+    ({ casoEtapaId, fase }) =>
+      chamar('mover_album', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
   )
 }
 

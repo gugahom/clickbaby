@@ -1,6 +1,6 @@
 import { podeIniciar } from './acoes'
 import { rascunhoDescartado } from './agrupar-por-dia'
-import type { CasoQuadro, EtapaQuadro } from '../types'
+import { FASES_ALBUM, type CasoQuadro, type EtapaQuadro } from '../types'
 
 /**
  * As seções laterais são VISÕES FILTRADAS, não estados novos.
@@ -264,6 +264,85 @@ export function casosComVideoMasterAberto(
       if (b.venceEm === null) return -1
       return a.venceEm.localeCompare(b.venceEm)
     })
+}
+
+/**
+ * O FOTOLIVRO ainda por fazer — liberado, em produção, ou parado na esteira.
+ *
+ * Mesmo critério do vídeo do MASTER, e pela mesma razão: a pergunta da seção é
+ * "que fotolivro há para tocar", não "qual está sendo diagramado agora". Um
+ * álbum pago em agosto e esquecido é exatamente o que a seção precisa mostrar.
+ *
+ * GATEIA POR TIPO DE ETAPA, não por pacote (decisão do gestor, 10/09/2026, e
+ * regra da seção 12 do CLAUDE.md). `album` é de fábrica só no MASTER + ÁLBUM,
+ * mas entra em qualquer caso por `adicionar_etapa` — o Trello deles já mostra
+ * um BIRTH + REELS no meio dos MASTER. Gatear por pacote deixaria esse caso de
+ * fora e obrigaria a mexer em código quando o comercial vendesse o fotolivro
+ * avulso de novo.
+ */
+export function albunsAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
+  return etapas
+    .filter((e) => e.tipo === 'album')
+    // Resolvida sai, como no vídeo: "Entregue / finalizado" tira o cartão da
+    // lista de trabalho a fazer. O caminho de volta é o botão de reabrir na
+    // linha da etapa dentro do card, que é onde toda etapa resolvida se desfaz.
+    .filter((e) => e.status !== 'dispensada' && e.status !== 'concluida')
+    .filter((e) =>
+      // Fase declarada = já entrou na esteira, e segue visível em qualquer
+      // ponto dela. `mover_album` nunca deixa a etapa em `pendente`, então
+      // fase não-nula e backlog são mutuamente exclusivos por construção.
+      e.faseAlbum !== null ? true : podeIniciar(e, etapas).habilitada,
+    )
+}
+
+/**
+ * O fotolivro que sobrevive à entrega das fotos.
+ *
+ * Desde 20260910150425 o caso encerra sem esperar o álbum, pela mesma razão do
+ * vídeo horizontal — e com um agravante: a maior parte da esteira do fotolivro
+ * é espera por gente de fora (cliente pagar, cliente aprovar, gráfica
+ * imprimir), trabalho que a equipe não pode acelerar nem terminar.
+ */
+export function temFotolivroPendente(etapas: EtapaQuadro[]): boolean {
+  return etapas.some(
+    (e) => e.tipo === 'album' && e.status !== 'concluida' && e.status !== 'dispensada',
+  )
+}
+
+export function casosComAlbumAberto(
+  casos: CasoQuadro[],
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+): CasoQuadro[] {
+  return casos
+    .filter((caso) => {
+      // ENCERRADO CONTINUA AQUI; CANCELADO, NÃO — mesma regra do MASTER. Ali o
+      // contrato caiu e não há fotolivro a terminar, e `mover_album` recusa
+      // caso cancelado: mostrá-lo seria oferecer botão que o banco nega.
+      if (caso.statusOperacional === 'cancelado') return false
+      return albunsAbertos(etapasPorCaso.get(caso.id) ?? []).length > 0
+    })
+    /*
+     * ORDENA PELA ESTEIRA, e não por prazo.
+     *
+     * O prazo do pacote é do parto — ele venceu há semanas quando o fotolivro
+     * ainda está na gráfica, e ordenar por ele deixaria a lista inteira
+     * igualmente vermelha, sem dizer nada. A ordem da esteira responde a
+     * pergunta certa: o que está mais perto de sair vem primeiro, e o que ainda
+     * espera pagamento fica no fim.
+     *
+     * Sem fase declarada vai para o TOPO: é o fotolivro que ninguém tocou
+     * ainda, e é o único que corre risco de ser esquecido de verdade.
+     */
+    .sort((a, b) => posicaoNaEsteira(a, etapasPorCaso) - posicaoNaEsteira(b, etapasPorCaso))
+}
+
+function posicaoNaEsteira(
+  caso: CasoQuadro,
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+): number {
+  const album = albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]
+  if (!album || album.faseAlbum === null) return -1
+  return FASES_ALBUM.indexOf(album.faseAlbum)
 }
 
 /**

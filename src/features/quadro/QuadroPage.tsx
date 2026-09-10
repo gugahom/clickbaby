@@ -17,8 +17,10 @@ import {
 import {
   casosComVideoAberto,
   casosComVideoMasterAberto,
+  casosComAlbumAberto,
   reelsAbertosDaSecao,
   videosMasterAbertos,
+  albunsAbertos,
   casosConcluidos,
   casosNaUti,
 } from './lib/secoes'
@@ -36,6 +38,7 @@ import { RascunhosPainel } from './components/RascunhosPainel'
 import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
+import { FaseDoAlbum } from './components/FaseDoAlbum'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
@@ -47,7 +50,15 @@ import type { EtapaQuadro } from './types'
  * pergunta "o que temos hoje" e a pergunta "quem está na UTI" são olhadas ao
  * mesmo tempo — inclusive na TV da sala de edição.
  */
-type Aba = 'lista' | 'uti' | 'reels' | 'master' | 'concluidos' | 'rascunhos' | 'entregas'
+type Aba =
+  | 'lista'
+  | 'uti'
+  | 'reels'
+  | 'master'
+  | 'fotolivro'
+  | 'concluidos'
+  | 'rascunhos'
+  | 'entregas'
 
 /** Mapa vazio estável: `new Map()` inline nasce sem tipo e vira `any` nos usos. */
 const SEM_ETAPAS: Map<string, EtapaQuadro[]> = new Map()
@@ -61,6 +72,7 @@ export function QuadroPage() {
   const [erroUti, setErroUti] = useState<string | null>(null)
   const [erroReels, setErroReels] = useState<string | null>(null)
   const [erroMaster, setErroMaster] = useState<string | null>(null)
+  const [erroFotolivro, setErroFotolivro] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [reabrindo, setReabrindo] = useState<CasoQuadro | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
@@ -82,6 +94,7 @@ export function QuadroPage() {
     naUti,
     emReels,
     emMaster,
+    emFotolivro,
     concluidos,
     totalAbertos,
     totalGeral,
@@ -142,6 +155,7 @@ export function QuadroPage() {
       naUti: casosNaUti(casos),
       emReels: casosComVideoAberto(casos, etapas),
       emMaster: casosComVideoMasterAberto(casos, etapas),
+      emFotolivro: casosComAlbumAberto(casos, etapas),
       concluidos: casosConcluidos(casos),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
       // O denominador do "3 de 88". Sem ele a busca diria "3 casos" e não
@@ -416,10 +430,49 @@ export function QuadroPage() {
     />
   ))
 
+  /*
+   * O CARTÃO DO FOTOLIVRO — a fase E o relógio, como ficou o MASTER em 09/09.
+   *
+   * `comSelo={false}` pelo mesmo motivo de lá: a linha já diz a fase por
+   * extenso, e um selo repetindo em outras palavras logo acima seria ruído.
+   *
+   * O PLAY/PAUSE fica junto de propósito, e aqui ele vale ainda mais que no
+   * vídeo: das dez fases só UMA é trabalho acontecendo, e sem o relógio o
+   * tempo de diagramação — a única parte que a equipe controla — ficaria
+   * enterrado num mês de espera por cliente e gráfica.
+   */
+  const conteudoFotolivro = emFotolivro.map((caso) => (
+    <CartaoDeEdicao
+      key={caso.id}
+      caso={caso}
+      hoje={hoje}
+      etapas={etapasPorCaso.get(caso.id) ?? []}
+      daSecao={albunsAbertos(etapasPorCaso.get(caso.id) ?? [])}
+      // Uma etapa só, e a seção inteira é de fotolivro: "Álbum" no rótulo da
+      // linha não acrescentaria nada.
+      rotularLinha={() => 'Fotolivro'}
+      acoesDaLinha={(etapa) => (
+        <>
+          <FaseDoAlbum etapa={etapa} onErro={setErroFotolivro} />
+          <AcoesDaEtapa
+            caso={caso}
+            etapa={etapa}
+            etapas={etapasPorCaso.get(caso.id) ?? []}
+            onErro={setErroFotolivro}
+          />
+        </>
+      )}
+      comSelo={false}
+      onErro={setErroFotolivro}
+    />
+  ))
+
   const CRITERIO_REELS =
     'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
   const CRITERIO_MASTER =
     'Horizontal do MASTER, do backlog ao enviado. Prazo de 10 dias úteis.'
+  const CRITERIO_FOTOLIVRO =
+    'Fotolivro do pagamento à entrega. Segue depois do caso encerrar.'
   const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
 
   const painelReels = (
@@ -455,6 +508,18 @@ export function QuadroPage() {
       erro={erroMaster}
     >
       {conteudoMaster}
+    </PainelLateral>
+  )
+
+  const painelFotolivro = (
+    <PainelLateral
+      titulo="Foto/Livro"
+      quantidade={emFotolivro.length}
+      criterio={CRITERIO_FOTOLIVRO}
+      vazio="Nenhum fotolivro em produção."
+      erro={erroFotolivro}
+    >
+      {conteudoFotolivro}
     </PainelLateral>
   )
 
@@ -655,6 +720,9 @@ export function QuadroPage() {
           <BotaoAba ativa={aba === 'master'} onClick={() => setAba('master')}>
             Master ({emMaster.length})
           </BotaoAba>
+          <BotaoAba ativa={aba === 'fotolivro'} onClick={() => setAba('fotolivro')}>
+            Foto/Livro ({emFotolivro.length})
+          </BotaoAba>
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
           </BotaoAba>
@@ -760,6 +828,19 @@ export function QuadroPage() {
                 >
                   {conteudoMaster}
                 </PainelDobravel>
+                {/* FOTO/LIVRO entra DEPOIS do Master, e não antes: o vídeo
+                    horizontal tem prazo de dez dias úteis correndo, o
+                    fotolivro leva semanas e a maior parte da espera é de
+                    gente de fora. A ordem da coluna é a ordem da urgência. */}
+                <PainelDobravel
+                  titulo="Foto/Livro"
+                  quantidade={emFotolivro.length}
+                  criterio={CRITERIO_FOTOLIVRO}
+                  vazio="Nenhum fotolivro em produção."
+                  erro={erroFotolivro}
+                >
+                  {conteudoFotolivro}
+                </PainelDobravel>
                 <PainelDobravel
                   titulo="UTI"
                   quantidade={naUti.length}
@@ -778,6 +859,7 @@ export function QuadroPage() {
               {aba === 'uti' && painelUti}
               {aba === 'reels' && painelReels}
               {aba === 'master' && painelMaster}
+              {aba === 'fotolivro' && painelFotolivro}
             </div>
           </>
         )}
