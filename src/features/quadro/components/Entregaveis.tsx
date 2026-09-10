@@ -21,7 +21,7 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   wetransfer: 'WeTransfer',
   cadeado: 'Cadeado',
   reels: 'Reels',
-  album: 'Álbum',
+  album: 'Foto/Livro',
 }
 
 interface PropsEntregaveis {

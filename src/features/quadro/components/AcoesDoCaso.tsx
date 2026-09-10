@@ -221,15 +221,22 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               para encerrar. O que ela perde é só o poder de agir.
             */
             /*
-             * O vídeo do MASTER só se opera pela seção — ENQUANTO ESTÁ ABERTO.
+             * DUAS ETAPAS SÓ SE OPERAM PELA SEÇÃO — enquanto estão ABERTAS.
              *
-             * Resolvido (concluído ou dispensado), ele sai da seção
-             * (`videosMasterAbertos`) e precisa recuperar o desfazer aqui: sem
-             * isto não haveria lugar nenhum para reabrir um vídeo entregue
-             * quando a família pede alteração, que é o caminho de volta que a
-             * seção guardava antes.
+             * O vídeo horizontal do MASTER desde 01/09, e o FOTO/LIVRO desde
+             * 10/09. As duas têm o mesmo formato: uma esteira de fases que o
+             * card não sabe percorrer, e um seletor que é o único caminho
+             * legítimo. Oferecer play/concluir aqui daria DOIS caminhos para o
+             * mesmo trabalho, e o daqui pularia de "pendente" direto para
+             * "concluída" sem passar por fase nenhuma.
+             *
+             * RESOLVIDA (concluída ou dispensada), a etapa SAI da seção
+             * (`videosMasterAbertos`, `albunsAbertos`) e precisa recuperar o
+             * desfazer aqui: sem isto não haveria lugar nenhum para reabrir um
+             * trabalho entregue quando a família pede alteração.
              */
-            const noFluxoDaSecao = etapa.tipo === 'edicao_video' && !encerrada
+            const secaoDaEtapa = SECAO_DA_ETAPA[etapa.tipo]
+            const noFluxoDaSecao = secaoDaEtapa !== undefined && !encerrada
 
             return (
               <li key={etapa.id} className="flex items-center gap-3 py-1.5 pr-1 pl-3">
@@ -312,7 +319,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     caminho de volta em vez de esperar a primeira queixa. */}
                 {noFluxoDaSecao ? (
                   <span className="flex-shrink-0 pr-2 text-[11px] font-semibold text-muted-foreground">
-                    na seção Master
+                    na seção {secaoDaEtapa}
                   </span>
                 ) : encerrada ? (
                   <div className="flex flex-shrink-0 items-center">
@@ -982,4 +989,18 @@ function pontoEtapa(etapa: EtapaQuadro): string {
     default:
       return 'bg-muted-foreground/30'
   }
+}
+
+/**
+ * As etapas cujo trabalho mora numa SEÇÃO LATERAL, e o nome dela.
+ *
+ * Uma tabela e não dois `if`: o dia em que uma terceira etapa ganhar esteira
+ * própria, o que muda é uma linha aqui — e a linha do card passa a nomear a
+ * seção certa sem que ninguém precise achar o segundo lugar onde o nome estava
+ * escrito. Era exatamente esse segundo lugar que dizia "na seção Master" para
+ * qualquer etapa que entrasse na regra.
+ */
+const SECAO_DA_ETAPA: Partial<Record<EtapaTipo, string>> = {
+  edicao_video: 'Master',
+  album: 'Foto/Livro',
 }

@@ -104,7 +104,7 @@ const ROTULO_ETAPA: Record<string, string> = {
   edicao_foto: 'Foto',
   reels: 'Reels',
   edicao_video: 'Vídeo',
-  album: 'Álbum',
+  album: 'Foto/Livro',
   encontro_irmaos: 'Irmãos',
   saida_uti: 'Saída de UTI',
   alta: 'Alta',
