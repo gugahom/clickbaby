@@ -76,7 +76,14 @@ export function Dialogo({
         atenção não tem para onde escapar — numa tela em que o fundo é uma
         lista de casos coloridos, isso importa mais do que numa tela lisa.
       */
-      className="m-auto w-[min(30rem,calc(100vw-2rem))] rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
+      /*
+        max-h + overflow: o checklist de entrega passou a trazer os links de
+        cada item, e com dois deles abertos num celular de 375px o diálogo
+        ultrapassa a tela. O `<dialog>` nativo limita a altura sozinho, mas com
+        overflow visível — o que sobra é cortado, e junto vão os botões. Rolar
+        aqui dentro é o que mantém "Cancelar" e "Enviar" alcançáveis.
+      */
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
     >
       <div className="space-y-4 p-5 md:p-6">
         <h2 className="text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>

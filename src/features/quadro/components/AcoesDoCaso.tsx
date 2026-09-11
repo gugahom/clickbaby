@@ -20,7 +20,7 @@ import {
   IconeMais,
   IconeAdicionar,
 } from '@/components/ui/icones'
-import { linksExigidosNaConclusao } from '../lib/links-da-conclusao'
+import { linksDaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { CampoEstacao } from './CampoEstacao'
@@ -397,7 +397,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                          "Concluir etapa" para um clique que abre formulário é
                          mentir sobre o que o botão faz. */
                       rotulo={
-                        linksExigidosNaConclusao(etapa, caso).length > 0
+                        linksDaConclusao(etapa, caso).length > 0
                           ? 'Concluir etapa com o link'
                           : 'Concluir etapa'
                       }
@@ -406,7 +406,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       motivo={conclusao.motivo}
                       onClick={() => {
                         setErro(null)
-                        if (linksExigidosNaConclusao(etapa, caso).length > 0) {
+                        if (linksDaConclusao(etapa, caso).length > 0) {
                           setLinksDe(etapa)
                         } else {
                           executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
@@ -426,7 +426,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                            menu, a porta que o botão principal fechou — e o
                            diálogo de link já tem campo de observação. */
                         if (item.id === 'observacao') {
-                          if (linksExigidosNaConclusao(etapa, caso).length > 0) {
+                          if (linksDaConclusao(etapa, caso).length > 0) {
                             setLinksDe(etapa)
                           } else {
                             setObservacaoDe(etapa)
@@ -666,17 +666,27 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         <DialogoConcluirComLinks
           caso={caso}
           etapa={linksDe}
-          exigidos={linksExigidosNaConclusao(linksDe, caso)}
-          ocupado={concluirComLinks.isPending}
+          links={linksDaConclusao(linksDe, caso)}
+          ocupado={concluirComLinks.isPending || concluir.isPending}
           erro={erro}
           onCancelar={() => setLinksDe(null)}
           onConfirmar={(entregaveis, observacao) =>
             executar(
-              concluirComLinks.mutateAsync({
-                casoEtapaId: linksDe.id,
-                entregaveis,
-                ...(observacao === '' ? {} : { observacao }),
-              }),
+              /* SEM LINK, OUTRA RPC. `concluir_etapa_com_entregaveis` recusa
+                 lista vazia de propósito — ela existe para conclusões que
+                 levam link junto, e concluir sem link é a `concluir_etapa` de
+                 sempre. Acontece no reels do BIRTH quando o cadeado ainda não
+                 nasceu: o diálogo mostra o campo, e a etapa fecha sem ele. */
+              entregaveis.length > 0
+                ? concluirComLinks.mutateAsync({
+                    casoEtapaId: linksDe.id,
+                    entregaveis,
+                    ...(observacao === '' ? {} : { observacao }),
+                  })
+                : concluir.mutateAsync({
+                    casoEtapaId: linksDe.id,
+                    ...(observacao === '' ? {} : { observacao }),
+                  }),
               () => setLinksDe(null),
             )
           }

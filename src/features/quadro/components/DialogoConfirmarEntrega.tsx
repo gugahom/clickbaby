@@ -1,51 +1,77 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { Botao } from '@/components/ui/Botao'
+import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
+import { Alerta } from '@/components/ui/Alerta'
+import {
+  useEntregaveis,
+  useRegistrarEntregavel,
+  type EntregavelResumo,
+  type TipoEntregavel,
+} from '../api/useAcoes'
+import { mensagemDeErro } from '../lib/erros'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
-interface ItemChecklistEntrega {
+interface ItemDeConferencia {
   id: string
   rotulo: string
+  /**
+   * O link que esta caixa confere. É o que aparece embaixo dela — e, quando
+   * não existe, o tipo com que o link novo é registrado ali mesmo.
+   */
+  tipo: TipoEntregavel
 }
 
-/** A única que vale para todo caso: sempre há fotos para entregar. */
-const CHECKLIST_ENTREGA_BASE: ItemChecklistEntrega[] = [
-  { id: 'fotos_completas', rotulo: 'Fotos completas no Google' },
-]
-
 /**
- * O reels, quando o caso TEM reels.
+ * O QUE SE CONFERE, POR PACOTE (11/09/2026, pedido do gestor).
  *
- * Era item fixo, porque "reels existe em todos os pacotes" (seção 2 do
- * CLAUDE.md). Deixou de valer para o MASTER em 03/09/2026, por decisão do
- * gestor — e pedir a conferência de um reels que não existe é ensinar a marcar
- * caixa sem olhar, que estraga a única coisa que este checklist faz.
+ * NOS PACOTES NORMAIS, DUAS CAIXAS. Fotos e reels viraram UMA: a família
+ * recebe os dois no mesmo álbum do Google, e conferir em duas linhas o que
+ * mora num endereço só era pedir a mesma verificação duas vezes. A outra é o
+ * WeTransfer, que não estava no checklist e é o segundo endereço que a família
+ * recebe de verdade.
  *
- * A condição olha as ETAPAS DO CASO, não o slug do pacote. É mais robusto e é o
- * que o CLAUDE.md manda: um MASTER que vender o vertical ganha a etapa por
- * `adicionar_etapa` e volta a ter a caixa, sem ninguém lembrar de mexer aqui.
- */
-const CHECKLIST_ENTREGA_REELS: ItemChecklistEntrega[] = [
-  { id: 'reels_completo', rotulo: 'Reels completo no Google' },
-]
-
-/**
- * SÓ NO BIRTH E BIRTH+REELS (31/08/2026, a pedido do gestor).
+ * O RÓTULO DA PRIMEIRA DEPENDE DE HAVER REELS, e isso vem de antes: o MASTER
+ * perdeu o reels de fábrica em 03/09/2026, e pedir a conferência de um vertical
+ * que não existe é ensinar a marcar caixa sem olhar — que estraga a única coisa
+ * que este checklist faz. A condição olha as ETAPAS do caso, não o slug do
+ * pacote: um MASTER que vender o vertical ganha a etapa por `adicionar_etapa` e
+ * o rótulo volta sozinho, sem ninguém lembrar de mexer aqui.
  *
- * Os dois pacotes entregam pelo mesmo formato — link único de foto+vídeo,
- * "cadeado" — e nascem sem contrato fechado (é a tentativa de venda
- * pós-parto, seção 2 do CLAUDE.md). O "com final" é a versão que a família
- * recebe depois de decidir se compra, com o encerramento do vídeo incluso;
- * o sem final é o que sai primeiro, para apresentar o material.
+ * NO BIRTH, UMA CAIXA SÓ. Os dois pacotes de pós-parto entregam pelo mesmo
+ * formato — o link único de foto+vídeo, o "cadeado" — e a partir de hoje é por
+ * ele que a entrega acontece. As quatro caixas antigas (fotos, reels, cadeado
+ * F+V, cadeado F+V com final) conferiam endereços que a operação não produz
+ * mais separadamente.
  *
  * `pacoteSlug` e não `pacoteNome`: BIRTH e BIRTH+REELS são dois slugs
- * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o
- * NOME exigiria listar as duas grafias e reencontrar a mesma armadilha se
- * um terceiro pacote de BIRTH nascer um dia.
+ * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o NOME
+ * exigiria listar as duas grafias e reencontrar a mesma armadilha se um
+ * terceiro pacote de BIRTH nascer um dia.
  */
-const CHECKLIST_ENTREGA_BIRTH: ItemChecklistEntrega[] = [
-  { id: 'cadeado_fv', rotulo: 'Link CADEADO F+V no Google' },
-  { id: 'cadeado_fv_final', rotulo: 'Link CADEADO F+V com final no Google' },
-]
+function itensDaConferencia(
+  caso: CasoQuadro,
+  etapas: EtapaQuadro[],
+): ItemDeConferencia[] {
+  const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
+
+  if (ehBirth) {
+    return [{ id: 'cadeado_completo', rotulo: 'Link CADEADO completo', tipo: 'cadeado' }]
+  }
+
+  const temReels = etapas.some((e) => e.tipo === 'reels')
+
+  return [
+    {
+      id: 'google_completo',
+      rotulo: temReels
+        ? 'Fotos e reels completos no Google'
+        : 'Fotos completas no Google',
+      tipo: 'google_photos',
+    },
+    { id: 'wetransfer_completo', rotulo: 'WeTransfer completo', tipo: 'wetransfer' },
+  ]
+}
 
 interface PropsDialogoConfirmarEntrega {
   caso: CasoQuadro
@@ -56,7 +82,7 @@ interface PropsDialogoConfirmarEntrega {
    * pessoas olhando a mesma lista pegam o que uma sozinha deixaria passar.
    */
   modo: 'envio' | 'confirmacao'
-  /** Para saber se este caso tem reels — ver CHECKLIST_ENTREGA_REELS. */
+  /** Para saber se este caso tem reels — ver itensDaConferencia. */
   etapas: EtapaQuadro[]
   ocupado: boolean
   erro: string | null
@@ -79,6 +105,22 @@ interface PropsDialogoConfirmarEntrega {
  * cada caixinha marcada criaria uma segunda fonte de verdade sobre o que
  * foi entregue, competindo com os links de `entregaveis` que já são essa
  * fonte.
+ *
+ * O LINK FICA DEBAIXO DA CAIXA (11/09/2026, pedido do gestor). Conferir "fotos
+ * completas" sem o endereço à mão obrigava a fechar o diálogo, procurar o link
+ * na lista do card e abrir de novo — e quem faz isso três vezes na quarta marca
+ * sem olhar. Com o link ali, a caixa vira o que ela promete ser: alguém ABRIU e
+ * viu.
+ *
+ * E QUANDO O LINK NÃO EXISTE, ELE NASCE AQUI. É o mesmo raciocínio da conclusão
+ * da edição: quem está com o caso na mão é quem tem o endereço. Sem isso, o
+ * caminho era cancelar o envio, rolar até a lista de entregáveis do card, somar
+ * o link e recomeçar a conferência.
+ *
+ * A CAIXA NÃO ESPERA PELO LINK. Marcar continua sendo um gesto humano de
+ * conferência — não travamos a caixa em "existe um entregável deste tipo",
+ * porque um caso sem WeTransfer ficaria impossível de enviar, e a trava de
+ * verdade (pelo menos um entregável) já está no banco, onde ela não diverge.
  */
 export function DialogoConfirmarEntrega({
   caso,
@@ -89,13 +131,8 @@ export function DialogoConfirmarEntrega({
   onCancelar,
   onConfirmar,
 }: PropsDialogoConfirmarEntrega) {
-  const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
-  const temReels = etapas.some((e) => e.tipo === 'reels')
-  const itens = [
-    ...CHECKLIST_ENTREGA_BASE,
-    ...(temReels ? CHECKLIST_ENTREGA_REELS : []),
-    ...(ehBirth ? CHECKLIST_ENTREGA_BIRTH : []),
-  ]
+  const itens = itensDaConferencia(caso, etapas)
+  const { data: links } = useEntregaveis(caso.id, true)
 
   const [conferidos, setConferidos] = useState<Set<string>>(new Set())
 
@@ -131,23 +168,166 @@ export function DialogoConfirmarEntrega({
           : 'Os links passam a contar como confirmados e o caso é encerrado. Não há como desfazer.'}
       </p>
 
-      <ul className="space-y-0.5">
+      <ul className="space-y-1">
         {itens.map((item) => (
-          <li key={item.id}>
-            {/* min-h-11: a linha inteira é o alvo de toque (seção 6 do
-                CLAUDE.md), não só o quadrado de 16px do checkbox. */}
-            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted">
-              <input
-                type="checkbox"
-                checked={conferidos.has(item.id)}
-                onChange={() => alternar(item.id)}
-                className="size-5 flex-shrink-0 rounded border-border accent-marca"
-              />
-              {item.rotulo}
-            </label>
-          </li>
+          <ItemConferido
+            key={item.id}
+            casoId={caso.id}
+            item={item}
+            links={(links ?? []).filter((l) => l.tipo === item.tipo)}
+            carregando={links === undefined}
+            marcado={conferidos.has(item.id)}
+            onAlternar={() => alternar(item.id)}
+          />
         ))}
       </ul>
     </Dialogo>
+  )
+}
+
+/**
+ * UMA LINHA DA CONFERÊNCIA: a caixa, o link que ela confere, e o jeito de
+ * criar esse link quando ele ainda não existe.
+ *
+ * TODOS os links daquele tipo aparecem, não só o último: um caso com dois
+ * álbuns do Google tem duas coisas para a pessoa abrir, e mostrar um só
+ * esconderia justamente o que ela precisaria conferir.
+ */
+function ItemConferido({
+  casoId,
+  item,
+  links,
+  carregando,
+  marcado,
+  onAlternar,
+}: {
+  casoId: string
+  item: ItemDeConferencia
+  links: EntregavelResumo[]
+  carregando: boolean
+  marcado: boolean
+  onAlternar: () => void
+}) {
+  const registrar = useRegistrarEntregavel()
+  const [adicionando, setAdicionando] = useState(false)
+  const [url, setUrl] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+
+  function salvar() {
+    setErro(null)
+    registrar
+      .mutateAsync({ casoId, tipo: item.tipo, url })
+      .then(() => {
+        setAdicionando(false)
+        setUrl('')
+      })
+      .catch((e) => setErro(mensagemDeErro(e)))
+  }
+
+  return (
+    <li>
+      {/* min-h-11: a linha inteira é o alvo de toque (seção 6 do CLAUDE.md),
+          não só o quadrado de 16px do checkbox. */}
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted">
+        <input
+          type="checkbox"
+          checked={marcado}
+          onChange={onAlternar}
+          className="size-5 flex-shrink-0 rounded border-border accent-marca"
+        />
+        {item.rotulo}
+      </label>
+
+      {/* Alinhado com o rótulo, não com a caixa: o link é a evidência daquele
+          item, e recuá-lo diz isso sem precisar de moldura. */}
+      <div className="ml-[2.1rem] space-y-1 pb-1">
+        {carregando ? (
+          <p className="text-xs text-muted-foreground">Buscando o link…</p>
+        ) : links.length > 0 ? (
+          links.map((link) => <LinhaDoLink key={link.id} url={link.url} />)
+        ) : adicionando ? (
+          <div className="space-y-1.5">
+            <input
+              type="url"
+              inputMode="url"
+              autoFocus
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://"
+              className="min-h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+            />
+            <div className="flex items-center gap-2">
+              <Botao
+                onClick={salvar}
+                disabled={url.trim() === '' || registrar.isPending}
+              >
+                Salvar link
+              </Botao>
+              <Botao
+                variante="fantasma"
+                onClick={() => {
+                  setErro(null)
+                  setAdicionando(false)
+                }}
+                disabled={registrar.isPending}
+              >
+                Cancelar
+              </Botao>
+            </div>
+            {erro && <Alerta onFechar={() => setErro(null)}>{erro}</Alerta>}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Sem link ainda.</span>
+            <button
+              type="button"
+              onClick={() => {
+                setErro(null)
+                setAdicionando(true)
+              }}
+              className="text-xs font-medium text-marca underline underline-offset-2"
+            >
+              Adicionar link
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
+  )
+}
+
+/**
+ * O link, clicável e copiável.
+ *
+ * `rel="noreferrer"`: a url é credencial de acesso à galeria da família (seção
+ * 10 do CLAUDE.md) e sem isso ela viaja no cabeçalho Referer para o destino.
+ *
+ * A falha do copiar aparece AQUI DENTRO, e não num alerta do painel de trás: o
+ * `<dialog>` modal inertiza o resto da página, então a frase ficaria invisível
+ * atrás do backdrop e a pessoa acharia que copiou — e mandaria nada para a
+ * família.
+ */
+function LinhaDoLink({ url }: { url: string }) {
+  const [falhouCopiar, setFalhouCopiar] = useState(false)
+
+  return (
+    <div>
+      <div className="flex items-center gap-1">
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="min-w-0 flex-1 truncate text-xs text-marca underline underline-offset-2"
+        >
+          {url}
+        </a>
+        <BotaoCopiar texto={url} onFalha={() => setFalhouCopiar(true)} />
+      </div>
+      {falhouCopiar && (
+        <p className="text-xs text-muted-foreground">
+          Não deu para copiar. Selecione o link e copie à mão.
+        </p>
+      )}
+    </div>
   )
 }
