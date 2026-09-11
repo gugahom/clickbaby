@@ -8,7 +8,7 @@ import {
   usePausarEtapa,
 } from '../api/useAcoes'
 import { podeConcluir, podeIniciar, podePausar } from '../lib/acoes'
-import { linksExigidosNaConclusao } from '../lib/links-da-conclusao'
+import { linksDaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { mensagemDeErro } from '../lib/erros'
 import type { CasoQuadro, EtapaQuadro } from '../types'
@@ -52,7 +52,7 @@ export function AcoesDaEtapa({ caso, etapa, etapas, onErro }: PropsAcoesDaEtapa)
   const [ocupadoLocal, setOcupadoLocal] = useState(false)
   const [pedindoLinks, setPedindoLinks] = useState(false)
 
-  const exigidos = linksExigidosNaConclusao(etapa, caso)
+  const links = linksDaConclusao(etapa, caso)
 
   const inicio = podeIniciar(etapa, etapas)
   const pausa = podePausar(etapa)
@@ -97,13 +97,13 @@ export function AcoesDaEtapa({ caso, etapa, etapas, onErro }: PropsAcoesDaEtapa)
       )}
 
       <BotaoIcone
-        rotulo={exigidos.length > 0 ? 'Concluir edição com o link' : 'Concluir edição'}
+        rotulo={links.length > 0 ? 'Concluir edição com o link' : 'Concluir edição'}
         tom="positivo"
         disabled={ocupado || !conclusao.habilitada}
         motivo={conclusao.motivo}
         onClick={() => {
           onErro(null)
-          if (exigidos.length > 0) setPedindoLinks(true)
+          if (links.length > 0) setPedindoLinks(true)
           else executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
         }}
       >
@@ -114,19 +114,31 @@ export function AcoesDaEtapa({ caso, etapa, etapas, onErro }: PropsAcoesDaEtapa)
         <DialogoConcluirComLinks
           caso={caso}
           etapa={etapa}
-          exigidos={exigidos}
+          links={links}
           ocupado={concluirComLinks.isPending}
           erro={null}
           onCancelar={() => setPedindoLinks(false)}
           onConfirmar={(entregaveis, observacao) => {
             onErro(null)
             setOcupadoLocal(true)
-            concluirComLinks
-              .mutateAsync({
-                casoEtapaId: etapa.id,
-                entregaveis,
-                ...(observacao === '' ? {} : { observacao }),
-              })
+            /* SEM LINK, OUTRA RPC. `concluir_etapa_com_entregaveis` recusa
+               lista vazia de propósito — ela existe para conclusões que levam
+               link junto, e o caminho de concluir sem é a `concluir_etapa` de
+               sempre. Isso acontece no reels do BIRTH quando o cadeado ainda
+               não nasceu: o diálogo mostra o campo, e a etapa fecha sem ele. */
+            const promessa =
+              entregaveis.length > 0
+                ? concluirComLinks.mutateAsync({
+                    casoEtapaId: etapa.id,
+                    entregaveis,
+                    ...(observacao === '' ? {} : { observacao }),
+                  })
+                : concluir.mutateAsync({
+                    casoEtapaId: etapa.id,
+                    ...(observacao === '' ? {} : { observacao }),
+                  })
+
+            promessa
               .then(() => setPedindoLinks(false))
               .catch((e) => onErro(mensagemDeErro(e)))
               .finally(() => setOcupadoLocal(false))

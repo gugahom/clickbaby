@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
-import { IconeCopiar, IconeLixeira } from '@/components/ui/icones'
+import { IconeLixeira } from '@/components/ui/icones'
+import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
@@ -180,22 +181,7 @@ function LinhaEntregavel({
   onMudou?: (() => void) | undefined
 }) {
   const remover = useRemoverEntregavel()
-  const [copiado, setCopiado] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
-
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(link.url)
-      setCopiado(true)
-      // Volta ao normal sozinho: um "copiado!" permanente vira parte do desenho
-      // e deixa de dizer que ACABOU de acontecer.
-      window.setTimeout(() => setCopiado(false), 1800)
-    } catch {
-      // Contexto sem permissão de área de transferência (http, permissão
-      // negada). O link continua clicável e selecionável — não é um beco.
-      onErro('Não deu para copiar. Selecione o link e copie à mão.')
-    }
-  }
 
   return (
     <li className="flex flex-wrap items-center gap-2 rounded bg-background/60 px-2 py-2 text-sm">
@@ -219,13 +205,10 @@ function LinhaEntregavel({
       )}
 
       <div className="flex flex-shrink-0 items-center">
-        <BotaoIcone
-          rotulo={copiado ? 'Link copiado' : 'Copiar link'}
-          tom={copiado ? 'positivo' : 'neutro'}
-          onClick={() => void copiar()}
-        >
-          <IconeCopiar className="size-4" />
-        </BotaoIcone>
+        <BotaoCopiar
+          texto={link.url}
+          onFalha={() => onErro('Não deu para copiar. Selecione o link e copie à mão.')}
+        />
 
         {/* Sem botão quando já confirmado: o banco recusa, e oferecer o que
             seria negado ensina a desconfiar dos botões. */}

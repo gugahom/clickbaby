@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { CampoTexto } from '@/components/ui/CampoTexto'
-import { BotaoIcone } from '@/components/ui/BotaoIcone'
-import { IconeCopiar } from '@/components/ui/icones'
+import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import { useEntregaveis, type TipoEntregavel } from '../api/useAcoes'
-import type { LinkExigido } from '../lib/links-da-conclusao'
+import type { LinkDaConclusao } from '../lib/links-da-conclusao'
 import { ROTULO_ETAPA, type CasoQuadro, type EtapaQuadro } from '../types'
 
 interface PropsConcluirComLinks {
   caso: CasoQuadro
   etapa: EtapaQuadro
-  exigidos: LinkExigido[]
+  links: LinkDaConclusao[]
   ocupado: boolean
   erro: string | null
   onCancelar: () => void
+  /**
+   * `entregaveis` vem SEM os campos vazios — pode chegar lista vazia quando o
+   * único link da etapa é opcional e ninguém colou nada. Quem chama precisa
+   * olhar o tamanho e escolher a RPC: `concluir_etapa_com_entregaveis` recusa
+   * lista vazia de propósito, e o caminho para concluir sem link é a
+   * `concluir_etapa` de sempre.
+   */
   onConfirmar: (
     entregaveis: { tipo: TipoEntregavel; url: string }[],
     observacao: string,
@@ -21,7 +27,7 @@ interface PropsConcluirComLinks {
 }
 
 /**
- * Concluir a etapa de edição PEDINDO o link no mesmo gesto.
+ * Concluir a etapa de edição PEDINDO — ou MOSTRANDO — o link no mesmo gesto.
  *
  * Regra do gestor em 04/09/2026: o link é pedido na conclusão da edição, e não
  * só no encerramento do caso. O motivo é operacional — quem acabou de editar
@@ -36,13 +42,19 @@ interface PropsConcluirComLinks {
  * QUANDO O LINK JÁ EXISTE, O DIÁLOGO PARA DE PEDIR UM (09/09/2026, pedido do
  * gestor). A rodada 2 da edição de fotos entrega o MESMO álbum da rodada 1 — a
  * família recebe um endereço só, e as fotos do banho e do fechamento sobem
- * dentro dele. Até hoje o campo vinha preenchido com esse link e nada mais: a
+ * dentro dele. Até então o campo vinha preenchido com esse link e nada mais: a
  * tela continuava dizendo "Link de Google" com uma caixa de texto, que é a
  * cara de "cole aqui um link novo". Quem chegava ali na segunda rodada parava
  * para pensar se devia criar outro álbum — e alguns criaram.
  *
  * Agora ele diz o que é para fazer: *adicione as fotos finais no link abaixo*,
  * com o endereço à vista e um botão de copiar. Não é campo, é instrução.
+ *
+ * E É POR ISSO QUE O REELS DO BIRTH ENTRA AQUI (11/09/2026, pedido do gestor).
+ * O pedido — "ao concluir o reels, abrir um quadro com o link CADEADO para
+ * adicionar o reels" — é exatamente esta tela, com um link que não trava: o
+ * vertical do BIRTH sobe dentro do mesmo cadeado que a edição de fotos criou.
+ * Ver `lib/links-da-conclusao.ts` para por que ele não pode ser exigência.
  *
  * COM SAÍDA. "Usar outro link" troca o bloco pelo campo vazio, porque existe o
  * caso legítimo de a segunda rodada ir para outro lugar — e uma tela que só
@@ -54,7 +66,7 @@ interface PropsConcluirComLinks {
 export function DialogoConcluirComLinks({
   caso,
   etapa,
-  exigidos,
+  links,
   ocupado,
   erro,
   onCancelar,
@@ -102,9 +114,44 @@ export function DialogoConcluirComLinks({
     return digitados[tipo] === undefined && sugestao(tipo) !== ''
   }
 
-  const completo = exigidos.every((link) => valor(link.tipo).trim() !== '')
+  // SÓ OS OBRIGATÓRIOS SEGURAM O BOTÃO. Opcional vazio não é pendência: é o
+  // reels do BIRTH cujo cadeado ainda não nasceu.
+  const completo = links
+    .filter((link) => link.obrigatorio)
+    .every((link) => valor(link.tipo).trim() !== '')
+
   const todosReaproveitados =
-    exigidos.length > 0 && exigidos.every((link) => reaproveitando(link.tipo))
+    links.length > 0 && links.every((link) => reaproveitando(link.tipo))
+
+  const soOpcionaisVazios =
+    links.length > 0 &&
+    links.every((link) => !link.obrigatorio && valor(link.tipo).trim() === '')
+
+  const plural = links.length > 1
+
+  function fraseDeAbertura(): string {
+    if (carregando) return 'Vendo se este caso já tem link…'
+
+    if (todosReaproveitados) {
+      if (etapa.tipo === 'reels') {
+        return 'Adicione o reels no link abaixo — é o mesmo que a família recebe com as fotos.'
+      }
+      return plural
+        ? 'Adicione as fotos finais nos links abaixo — são os mesmos da primeira rodada.'
+        : 'Adicione as fotos finais no link abaixo — é o mesmo da primeira rodada.'
+    }
+
+    // Nada criado ainda, e nada obrigatório: o campo está aqui para quem já
+    // tiver o endereço em mãos, e a etapa fecha sem ele.
+    if (soOpcionaisVazios) {
+      const rotulo = links[0]?.rotulo ?? 'link'
+      return `Este caso ainda não tem ${rotulo}. Cole aqui se já tiver — dá para concluir sem ele.`
+    }
+
+    return plural
+      ? 'Os links entram junto com a conclusão — a etapa não fecha sem eles.'
+      : 'O link entra junto com a conclusão — a etapa não fecha sem ele.'
+  }
 
   return (
     <Dialogo
@@ -116,7 +163,11 @@ export function DialogoConcluirComLinks({
       onCancelar={onCancelar}
       onConfirmar={() =>
         onConfirmar(
-          exigidos.map((link) => ({ tipo: link.tipo, url: valor(link.tipo).trim() })),
+          // Campo vazio não vira entregável: a RPC recusa url em branco, e o
+          // opcional em branco é justamente o caso que precisa passar.
+          links
+            .map((link) => ({ tipo: link.tipo, url: valor(link.tipo).trim() }))
+            .filter((link) => link.url !== ''),
           observacao.trim(),
         )
       }
@@ -125,20 +176,10 @@ export function DialogoConcluirComLinks({
           tudo é reaproveitado ela não está entregando link nenhum — está
           subindo arquivo num álbum que já existe, e "a etapa não fecha sem o
           link" descreveria uma trava que ela não vai encontrar. */}
-      <p className="text-sm text-muted-foreground">
-        {carregando
-          ? 'Vendo se este caso já tem link…'
-          : todosReaproveitados
-            ? exigidos.length > 1
-              ? 'Adicione as fotos finais nos links abaixo — são os mesmos da primeira rodada.'
-              : 'Adicione as fotos finais no link abaixo — é o mesmo da primeira rodada.'
-            : exigidos.length > 1
-              ? 'Os links entram junto com a conclusão — a etapa não fecha sem eles.'
-              : 'O link entra junto com a conclusão — a etapa não fecha sem ele.'}
-      </p>
+      <p className="text-sm text-muted-foreground">{fraseDeAbertura()}</p>
 
       {!carregando &&
-        exigidos.map((link) =>
+        links.map((link) =>
           reaproveitando(link.tipo) ? (
             <LinkQueJaExiste
               key={link.tipo}
@@ -152,6 +193,7 @@ export function DialogoConcluirComLinks({
               rotulo={link.rotulo}
               valor={valor(link.tipo)}
               aoMudar={(v) => setDigitados((atual) => ({ ...atual, [link.tipo]: v }))}
+              opcional={!link.obrigatorio}
               type="url"
               inputMode="url"
               placeholder="https://"
@@ -180,18 +222,15 @@ export function DialogoConcluirComLinks({
 /**
  * O LINK QUE JÁ EXISTE — instrução, não campo.
  *
- * O que a pessoa precisa fazer aqui não é entregar um endereço: é subir as
- * fotos da segunda rodada dentro do álbum que a primeira criou. Uma caixa de
- * texto pedia a coisa errada, e a única defesa contra criar um álbum novo era
- * reparar que o campo já vinha preenchido.
+ * O que a pessoa precisa fazer aqui não é entregar um endereço: é subir o
+ * material da rodada DENTRO do link que já existe — as fotos finais, no álbum
+ * que a primeira rodada criou; o reels do BIRTH, no cadeado que a edição de
+ * fotos criou. Uma caixa de texto pedia a coisa errada, e a única defesa
+ * contra criar um álbum novo era reparar que o campo já vinha preenchido.
  *
  * O LINK É CLICÁVEL, com `rel="noreferrer"`: a url é credencial de acesso à
  * galeria da família (seção 10 do CLAUDE.md), e sem isso ela viajaria no
  * cabeçalho Referer para o destino.
- *
- * COPIAR pela mesma razão da lista de entregáveis: a url fica truncada, e
- * selecionar com o dedo um texto que é link abre a galeria em vez de copiar.
- * Aqui ele serve para colar no navegador e subir as fotos.
  */
 function LinkQueJaExiste({
   rotulo,
@@ -202,23 +241,7 @@ function LinkQueJaExiste({
   url: string
   onOutro: () => void
 }) {
-  const [copiado, setCopiado] = useState(false)
   const [falhouCopiar, setFalhouCopiar] = useState(false)
-
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(url)
-      setFalhouCopiar(false)
-      setCopiado(true)
-      // Volta ao normal sozinho: um "copiado!" permanente vira parte do
-      // desenho e deixa de dizer que ACABOU de acontecer.
-      window.setTimeout(() => setCopiado(false), 1800)
-    } catch {
-      // Contexto sem permissão de área de transferência. O link continua
-      // clicável e selecionável — não é um beco.
-      setFalhouCopiar(true)
-    }
-  }
 
   return (
     <div className="rounded-md border border-concluido/25 bg-concluido/8 px-3 py-2.5">
@@ -236,13 +259,7 @@ function LinkQueJaExiste({
         >
           {url}
         </a>
-        <BotaoIcone
-          rotulo={copiado ? 'Link copiado' : 'Copiar link'}
-          tom={copiado ? 'positivo' : 'neutro'}
-          onClick={() => void copiar()}
-        >
-          <IconeCopiar className="size-4" />
-        </BotaoIcone>
+        <BotaoCopiar texto={url} onFalha={() => setFalhouCopiar(true)} />
       </div>
 
       {falhouCopiar && (

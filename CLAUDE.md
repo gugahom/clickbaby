@@ -898,9 +898,25 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
   depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
   sem o link** — é trava, não lembrete.
-  Quem pede o quê: **só a edição de FOTOS**, em todos os pacotes, pede o *Link de Google* —
-  e nos dois BIRTH pede também o *Link CADEADO*. A lista está em
-  `lib/links-da-conclusao.ts`.
+  Quem pede o quê (revisto em 11/09/2026): **só a edição de FOTOS** cobra link, e o que ela
+  cobra depende do pacote — o *Link de Google* em todo pacote, e nos dois BIRTH o *Link
+  CADEADO* **no lugar dele**, não além dele. A lista está em `lib/links-da-conclusao.ts`.
+  **No BIRTH o cadeado É a entrega.** Ele é o link único de foto+vídeo que a família
+  recebe, e desde 04/09 o BIRTH vinha pedindo os dois: o álbum do Google separado era um
+  endereço a mais para produzir, sem ninguém do outro lado esperando por ele.
+  **E O REELS DO BIRTH ABRE O CADEADO, sem cobrar nada.** Concluir o reels nos dois BIRTH
+  abre o mesmo quadro de "link já criado" da segunda rodada da foto, dizendo *adicione o
+  reels no link abaixo* — porque o vertical sobe DENTRO do cadeado que a edição de fotos
+  criou. É MOSTRAR, não exigir: `obrigatorio` é `false` ali, e sem o cadeado a etapa fecha
+  do mesmo jeito.
+  **Por que ele não pode ser trava:** o cadeado nasce na conclusão da edição de FOTOS, que
+  é etapa irmã e não tem ordem garantida — as duas liberam juntas, quando o nascimento
+  conclui. Quem concluísse o reels primeiro ficaria preso pedindo um link que ainda não
+  existe, que é o beco de 09/09 entrando por outra porta.
+  **Consequência no código, e ela morde:** o diálogo agora pode devolver lista VAZIA de
+  entregáveis, e `concluir_etapa_com_entregaveis` **recusa lista vazia de propósito** (ela
+  existe para conclusões que levam link junto). Quem chama olha o tamanho e cai na
+  `concluir_etapa` de sempre — nos DOIS caminhos de conclusão, o do card e o da seção.
   **O REELS NÃO PEDE MAIS NADA** (09/09/2026, pedido do gestor). Entre 04/09 e 09/09 o
   reels do BASIC e do STANDARD exigia o *Link de CADEADO do reels*; uma semana de operação
   mostrou que ali a trava estava no lugar errado. O cadeado do reels nem sempre existe na
@@ -955,10 +971,29 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   fotógrafa sem lugar nenhum para olhar. Quem não confirma vê "aguardando o ADM" no lugar do
   botão, e não um botão cinza: uma fileira de botões desabilitados ensina a ignorar o que
   está desabilitado. A trava de verdade está em `confirmar_entrega` (ver invariante 3.5).
-  **A MESMA CONFERÊNCIA acontece nos DOIS momentos** — o checklist de "fotos completas",
-  "reels completo" e os cadeados do BIRTH aparece ao enviar e ao confirmar. É deliberado:
-  quem edita marca o que produziu, quem entrega marca o que viu, e duas pessoas sobre a
-  mesma lista pegam o que uma sozinha deixaria passar.
+  **A MESMA CONFERÊNCIA acontece nos DOIS momentos** — o checklist aparece ao enviar e ao
+  confirmar. É deliberado: quem edita marca o que produziu, quem entrega marca o que viu, e
+  duas pessoas sobre a mesma lista pegam o que uma sozinha deixaria passar.
+  **O QUE SE CONFERE MUDOU EM 11/09/2026** (pedido do gestor). Fora do BIRTH são DUAS
+  caixas: *Fotos e reels completos no Google* — uma só, porque os dois moram no mesmo álbum,
+  e conferir em duas linhas o que é um endereço só era pedir a mesma coisa duas vezes — e
+  *WeTransfer completo*, que não estava na lista e é o segundo endereço que a família de
+  fato recebe. Nos dois BIRTH é UMA caixa: *Link CADEADO completo*, no lugar das quatro
+  antigas (fotos, reels, cadeado F+V e cadeado F+V com final), que conferiam endereços que
+  a operação não produz mais separadamente.
+  O rótulo da primeira ainda depende de HAVER REELS no caso — "Fotos completas no Google"
+  quando não há, como no MASTER desde 03/09. A condição olha as ETAPAS, não o slug: pedir a
+  conferência de um vertical que não existe ensina a marcar caixa sem olhar, que estraga a
+  única coisa que este checklist faz.
+  **O LINK FICA DEBAIXO DA CAIXA, e nasce ali quando não existe.** Conferir "fotos
+  completas" sem o endereço à mão obrigava a fechar o diálogo, achar o link na lista do card
+  e abrir de novo — e quem faz isso três vezes, na quarta marca sem olhar. Faltando o link
+  daquele tipo, um "Adicionar link" ali mesmo o registra por `registrar_entregavel`, com o
+  tipo da própria caixa.
+  **A CAIXA NÃO ESPERA PELO LINK.** Marcar continua sendo gesto humano de conferência:
+  travar a caixa em "existe entregável deste tipo" deixaria impossível enviar um caso sem
+  WeTransfer, e a trava de verdade — ao menos um entregável — já está no banco, onde ela não
+  diverge da tela.
   A pílula da aba ganha o **anel verde girando** quando há fila — o mesmo recurso do vídeo
   parado na seção REELS (`.anel-alerta`), ali em vermelho porque é prazo correndo, aqui em
   verde porque é trabalho pronto esperando alguém. Sem fila ele some; se girasse sempre não
@@ -997,8 +1032,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   tela, e o código não segue porque `Entregaveis.tsx` já é o componente da lista de LINKS do
   caso. Mesmo arranjo de `operador`/"Fotógrafo(a)" (invariante 3.1): o rótulo é do
   vocabulário da operação, o identificador é do código.
-- **Encerramento** com checklist de conferência (fotos, reels, e os dois links de cadeado
-  que só o BIRTH tem) e ao menos um entregável registrado.
+- **Encerramento** com o MESMO checklist de conferência do envio — ver a aba Entregáveis,
+  acima — e ao menos um entregável registrado.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
   `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
   ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo
