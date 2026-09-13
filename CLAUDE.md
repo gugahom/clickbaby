@@ -301,8 +301,12 @@ não é trabalho parado: é trabalho terminado esperando outra pessoa. Sem essa 
 do dia continuaria mostrando cartões que ninguém mais vai tocar, e o "x de y concluídos"
 passaria a medir a entrega do ADM em vez do trabalho do turno.
 
-O módulo financeiro (`despesas`, `status_financeiro`) foi removido do escopo. Não recrie essas
-tabelas/colunas sem instrução explícita.
+**`despesas` VOLTOU ao escopo em 12/09/2026** (instrução explícita do gestor, migration
+`20260913022926`), e é só isso que voltou: o registro de GASTO por caso — o Uber no cartão
+da empresa, a refeição extra. `status_financeiro` em `casos` continua removido, e com ele
+qualquer noção de receita, margem ou fechamento de mês. O plano já dizia o porquê: "sem
+receita, só despesa — não há margem por caso". Despesa não é status do caso e não entra em
+nenhum dos dois caminhos terminais: um caso encerra com ou sem gasto lançado.
 
 ---
 
@@ -348,6 +352,10 @@ mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
+
+-- despesas do caso (12/09/2026; ver seção 13)
+registrar_despesa(p_caso_id, p_tipo, p_valor, p_pessoa_id, p_momento, p_descricao)
+remover_despesa(p_despesa_id, p_motivo)                 -- não existe editar
 devolver_para_o_quadro(p_caso_id, p_motivo)             -- tira de Entregáveis; atendimento/adm
 liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
 confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
@@ -763,8 +771,9 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
 - Não use `localStorage` para dado de domínio — só preferência de UI.
 - Não instale biblioteca nova sem justificar. A stack da seção 5 é deliberada.
 - Não altere schema pelo painel web do Supabase.
-- Não recrie `despesas`, `tipo_despesa` ou `status_financeiro` sem instrução explícita —
-  módulo financeiro está fora do escopo do MVP.
+- Não recrie `status_financeiro` (nem receita, margem ou fechamento de mês) sem instrução
+  explícita. `despesas` e `tipo_despesa` VOLTARAM em 12/09/2026 por pedido do gestor e
+  existem — o que segue fora é a trilha financeira do CASO, não o registro de gasto.
 - Não hardcode os valores de `prazo_entrega` (SLA) nem a regra "BIRTH primeiro" — a
   ordenação da fila é por urgência de prazo derivada do pacote, o valor vem do seed.
 - Não crie tela de registro de ponto ou cálculo de jornada — está explicitamente fora de escopo.
@@ -1034,6 +1043,36 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   vocabulário da operação, o identificador é do código.
 - **Encerramento** com o MESMO checklist de conferência do envio — ver a aba Entregáveis,
   acima — e ao menos um entregável registrado.
+- **DESPESAS DO CASO** (12/09/2026, pedido do gestor, migration `20260913022926`). O botão
+  **"Despesa"** fica ao lado de "Acrescentar etapa" — foi onde ele pediu, e os dois combinam:
+  nenhum dos dois nasce do contrato, os dois nascem do que aconteceu. A LISTA e o TOTAL ficam
+  embaixo, ao lado dos links de entrega, porque lançar e conferir são gestos diferentes:
+  lançar acontece no corredor, conferir acontece sentado.
+  **É A FAIXA "DESPESAS" DA PLANILHA**, que tem IDA 1 / VOLTA 1, IDA e VOLTA da substituição,
+  IDA 2 / VOLTA 2, e duas colunas de REFEIÇÃO EXTRA (uma de parto, uma de fechamento), cada
+  par com um dropdown de nome. Aqui isso é uma LISTA: a planilha repete as colunas porque
+  grade não cresce, e o terceiro deslocamento não teria onde entrar.
+  Tipos: `uber_ida`, `uber_volta`, `refeicao` e `outro` — este exige descrição, por
+  constraint, senão vira linha que ninguém confere depois.
+  **O "MOMENTO" É RÓTULO, NÃO ETAPA** (parto · substituição · fechamento, opcional). Amarrar
+  a despesa a uma linha de `caso_etapas` seria mais bonito e quebraria na SUBSTITUIÇÃO, que
+  é handoff e não etapa — não existe `caso_etapas` para "a Thalia rendeu a Sarah às 4h".
+  **DUAS PESSOAS, DUAS COLUNAS:** `pessoa_id` é de quem foi o gasto (o dropdown de nome da
+  planilha) e `registrado_por` é quem digitou. Elas discordam sempre que o ADM lança pela
+  fotógrafa, que é metade dos casos. Sem `p_pessoa_id`, a despesa é de quem está lançando.
+  **CASO CANCELADO ACEITA DESPESA**, e isso é deliberado: a corrida acontece mesmo quando o
+  parto não acontece, e esse é justamente o gasto que a empresa precisa enxergar. Travar em
+  "só caso aberto" apagaria do total do mês a viagem que foi paga à toa. Vale o mesmo para
+  encerrado — a fatura do cartão chega depois da entrega.
+  **NÃO EXISTE EDITAR.** Valor errado se corrige apagando e lançando de novo, como no link de
+  entrega e pelo mesmo motivo: um UPDATE silencioso deixaria `eventos` dizendo R$ 140 num dia
+  em que a linha viva diz R$ 14, sem nada que explique a diferença. O evento de remoção
+  guarda o valor que era.
+  **O TOTAL É SOMADO NO CLIENTE** e isso só vale porque a lista inteira do caso está na tela,
+  sem paginação. O dia em que existir relatório de mês inteiro, a soma é do BANCO: somar no
+  cliente o que o servidor pagina é como se perde dinheiro sem erro nenhum na tela (ver a
+  nota sobre `db-max-rows` na seção 5).
+  A escrita é só por RPC — `authenticated` tem SELECT em `despesas` e mais nada.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
   `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
   ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo
