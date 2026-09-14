@@ -236,7 +236,7 @@ export function BotaoNovaDespesa({ caso }: { caso: CasoQuadro }) {
  * fotógrafa registra a própria corrida. Trocar é um toque, e serve para o ADM
  * lançando pela equipe.
  */
-function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar: () => void }) {
+export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar: () => void }) {
   const { pessoa } = useAuth()
   const { data: pessoas } = usePessoasAtivas()
   const registrar = useRegistrarDespesa()

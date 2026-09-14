@@ -136,6 +136,13 @@ export type Database = {
             foreignKeyName: "caso_etapas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "fila_edicao"
             referencedColumns: ["caso_id"]
           },
@@ -325,6 +332,13 @@ export type Database = {
             foreignKeyName: "despesas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "fila_edicao"
             referencedColumns: ["caso_id"]
           },
@@ -395,6 +409,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregaveis_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
           },
           {
             foreignKeyName: "entregaveis_caso_id_fkey"
@@ -525,6 +546,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
           },
           {
             foreignKeyName: "eventos_caso_id_fkey"
@@ -809,6 +837,27 @@ export type Database = {
       }
     }
     Views: {
+      despesas_por_caso: {
+        Row: {
+          bebe_nome: string | null
+          caso_id: string | null
+          dia: string | null
+          lancamentos: number | null
+          mae_nome: string | null
+          maternidade_sigla: string | null
+          pacote_nome: string | null
+          status_operacional:
+            | Database["public"]["Enums"]["status_operacional"]
+            | null
+          total: number | null
+          total_outro: number | null
+          total_refeicao: number | null
+          total_uber_ida: number | null
+          total_uber_volta: number | null
+          ultimo_lancamento_em: string | null
+        }
+        Relationships: []
+      }
       fila_edicao: {
         Row: {
           atribuido_em: string | null
@@ -883,6 +932,7 @@ export type Database = {
             | Database["public"]["Enums"]["status_operacional"]
             | null
           termo_status: Database["public"]["Enums"]["termo_status"] | null
+          total_despesas: number | null
           updated_at: string | null
           uti_desde: string | null
           uti_horas_total: number | null

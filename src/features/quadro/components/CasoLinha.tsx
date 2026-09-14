@@ -2,7 +2,7 @@ import { useId, useState, type CSSProperties } from 'react'
 import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
-import { formatarHora } from '@/lib/formato'
+import { formatarHora, formatarMoeda } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
@@ -413,6 +413,24 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
                       />
                       Vídeo em edição
                     </span>
+                  )}
+                  {/* O GASTO FICA EXPLÍCITO NO CARD (14/09/2026, pedido do
+                      gestor). Com valor, aparece em qualquer estado — é o
+                      número que o financeiro procura. Sem valor, só no caso
+                      ENCERRADO ou CANCELADO: ali "Sem despesas" é uma
+                      afirmação sobre um atendimento que acabou; num caso em
+                      andamento seria só um lembrete permanente de algo que
+                      talvez nem vá acontecer. */}
+                  {caso.totalDespesas > 0 ? (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground">
+                      Despesas {formatarMoeda(caso.totalDespesas)}
+                    </span>
+                  ) : (
+                    caso.ehTerminal && (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        Sem despesas
+                      </span>
+                    )
                   )}
                   {caso.ehTerminal && (
                     <span className="rotulo-sobrescrito rounded-full bg-muted px-2 py-1 text-muted-foreground">

@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
 import { RotaDeGestao } from './guards/RotaDeGestao'
+import { RotaDoFinanceiro } from './guards/RotaDoFinanceiro'
+import { DespesasPage } from '@/features/despesas/DespesasPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
 import { EquipePage } from '@/features/equipe/EquipePage'
@@ -45,6 +47,12 @@ export const router = createBrowserRouter(
               // navegação, não a segurança — ver o comentário lá.
               element: <RotaDeGestao />,
               children: [{ path: 'equipe', element: <EquipePage /> }],
+            },
+            {
+              // O recolhimento de despesas é do financeiro E da gestão —
+              // guarda própria, para não abrir a Equipe junto.
+              element: <RotaDoFinanceiro />,
+              children: [{ path: 'despesas', element: <DespesasPage /> }],
             },
           ],
         },

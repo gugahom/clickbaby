@@ -1068,11 +1068,38 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   entrega e pelo mesmo motivo: um UPDATE silencioso deixaria `eventos` dizendo R$ 140 num dia
   em que a linha viva diz R$ 14, sem nada que explique a diferença. O evento de remoção
   guarda o valor que era.
-  **O TOTAL É SOMADO NO CLIENTE** e isso só vale porque a lista inteira do caso está na tela,
-  sem paginação. O dia em que existir relatório de mês inteiro, a soma é do BANCO: somar no
-  cliente o que o servidor pagina é como se perde dinheiro sem erro nenhum na tela (ver a
-  nota sobre `db-max-rows` na seção 5).
+  **O TOTAL DA LISTA DO CARD É SOMADO NO CLIENTE** e isso só vale porque a lista inteira de
+  UM caso está na tela, sem paginação. Tudo que soma MAIS de um caso é do BANCO — ver o
+  relatório logo abaixo.
   A escrita é só por RPC — `authenticated` tem SELECT em `despesas` e mais nada.
+- **RECOLHIMENTO DAS DESPESAS** (14/09/2026, pedido do gestor, migration `20260914195059`).
+  **Quem LANÇA são as funcionárias, no card; quem RECOLHE é o financeiro.** Até aqui só
+  existia o primeiro lado: o gasto vivia dentro de cada card, e somar um mês exigia abrir
+  caso por caso.
+  **A tela `/quadro/despesas`** é do `financeiro` e da `gestao` (`RotaDoFinanceiro`, guarda
+  PRÓPRIA e não a `RotaDeGestao` com um papel a mais — juntar as duas abriria a Equipe para
+  o financeiro). Um mês por vez, com seta e não calendário; totais do mês; uma linha por caso
+  com a quebra por tipo; e **Exportar CSV** no formato que abre direto no Excel pt-BR (`;`
+  como separador, vírgula decimal, BOM UTF-8 — sem os três o arquivo abre ilegível).
+  **O MÊS É O DO ATENDIMENTO, não o do lançamento.** A planilha é por mês de parto: a corrida
+  de um parto de setembro lançada em outubro, quando a fatura chegou, pertence a setembro.
+  Filtrar pelo lançamento espalharia o gasto de um parto por dois meses.
+  **TODA SOMA DE MAIS DE UM CASO É DO BANCO.** `despesas_por_caso` devolve uma linha por
+  caso já somada e quebrada por tipo, e a tela pagina com `buscarTudo` mesmo sendo ~135
+  casos por mês: relatório é justamente a consulta que alguém um dia estica para o ano, e
+  sem paginação o PostgREST corta em mil e o total sai menor com cara de certo.
+  `quadro_casos.total_despesas` traz o mesmo número para o card, sem consulta extra — ZERO
+  e nunca nulo, para "sem despesa" não se confundir com "não carregou".
+  **CANCELADOS ENTRAM NO RELATÓRIO**, com selo: é o gasto que não virou atendimento, e o
+  que o financeiro mais precisa conseguir achar. Casos SEM gasto não entram — o relatório
+  é de despesa, não de zeros.
+  **O GASTO FICA EXPLÍCITO EM DOIS MOMENTOS.** No card, o chip "Despesas R$ X" aparece em
+  qualquer estado quando há valor, e "Sem despesas" só em caso encerrado ou cancelado —
+  num caso em andamento seria um lembrete permanente de algo que talvez nem aconteça. E no
+  diálogo de ENVIO (e de confirmação), um bloco mostra o que foi lançado, com atalho para
+  lançar ali: é o último momento em que quem trabalhou lembra do Uber daquela madrugada.
+  **O bloco NÃO TRAVA o envio** — despesa não é status do caso (invariante 3.5) e nem todo
+  atendimento tem gasto.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
   `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
   ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo

@@ -87,7 +87,7 @@ const PAGINA = 500
 // `id: string | null` porque `quadro_casos` é uma VIEW, e coluna de view nasce
 // anulável nos tipos gerados mesmo vindo de uma PK. Linha sem `id` não dá para
 // deduplicar; ela passa direto, e `normalizarCaso` já lida com esse caso.
-async function buscarTudo<T extends { id: string | null }>(
+export async function buscarTudo<T extends { id: string | null }>(
   consulta: (
     de: number,
     ate: number,
