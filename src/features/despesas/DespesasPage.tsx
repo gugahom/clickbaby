@@ -91,7 +91,11 @@ export function DespesasPage() {
         <Botao variante="fantasma" onClick={() => setMes((m) => deslocarMes(m, -1))} aria-label="Mês anterior">
           ‹
         </Botao>
-        <span className="text-base font-bold capitalize">{rotuloDoMes(mes)}</span>
+        {/* Maiúscula só na primeira letra, por código: a classe `capitalize`
+            põe em toda palavra e escrevia "Setembro De 2026". */}
+        <span className="text-base font-bold">
+          {rotuloDoMes(mes).replace(/^./, (letra) => letra.toUpperCase())}
+        </span>
         <Botao
           variante="fantasma"
           onClick={() => setMes((m) => deslocarMes(m, 1))}
