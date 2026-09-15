@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
+import { iniciais } from '@/lib/iniciais'
 import {
   ROTULO_FAIXA,
   ROTULO_FAIXA_CURTO,
@@ -217,7 +218,6 @@ function Etapa({
   soMarcador: boolean
   agora: Date
 }) {
-  const pessoas = nomesDaEtapa(etapa)
   const bloco = comRodada || soMarcador ? rotuloDaRodada(etapa.tipo, etapa.rodada) : null
   const decorrido = tempoDecorrido(etapa, agora)
 
@@ -241,13 +241,7 @@ function Etapa({
         )}
       </span>
 
-      {/* O chip de dentro herda a cor da pílula via `currentColor`, então ele
-          acompanha o estado sem uma segunda tabela de cores para manter. */}
-      {pessoas && (
-        <span className="max-w-[8rem] truncate rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold">
-          {pessoas}
-        </span>
-      )}
+      <ResponsavelDaEtapa etapa={etapa} larguraMaxima="max-w-[8rem]" />
 
       {decorrido && (
         <span className="rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold tabular-nums">
@@ -314,7 +308,14 @@ const CLASSE_PILULA: Record<StatusEtapa, string> = {
  * Aparece só onde há trabalho acontecendo — atribuída, em andamento ou
  * pausada. Concluída não mostra quem fez: isso é histórico, e vive no detalhe.
  */
-function nomesDaEtapa(etapa: EtapaQuadro): string | null {
+function ResponsavelDaEtapa({
+  etapa,
+  larguraMaxima,
+}: {
+  etapa: EtapaQuadro
+  /** Teto do nome, em classe do Tailwind: a fita completa e o resumo compacto têm espaços diferentes. */
+  larguraMaxima: string
+}) {
   /*
    * PAUSADO ganha a palavra, não o nome (06/09/2026, pedido do gestor).
    *
@@ -324,16 +325,61 @@ function nomesDaEtapa(etapa: EtapaQuadro): string | null {
    * dentro do card, e a seção REELS já chamava esse estado assim — agora as
    * duas telas dizem a mesma palavra para o mesmo estado.
    */
-  if (etapa.status === 'pausada') return 'Pausado'
+  if (etapa.status === 'pausada') {
+    return (
+      <span className={clsx('truncate rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold', larguraMaxima)}>
+        Pausado
+      </span>
+    )
+  }
 
   const trabalhando = etapa.status === 'atribuida' || etapa.status === 'em_andamento'
-
   if (!trabalhando || !etapa.responsavelNome) return null
 
-  const atual = primeiroNome(etapa.responsavelNome)
-  return etapa.proximoResponsavelNome
-    ? `${atual} › ${primeiroNome(etapa.proximoResponsavelNome)}`
-    : atual
+  const proximo = etapa.proximoResponsavelNome ? primeiroNome(etapa.proximoResponsavelNome) : null
+
+  /*
+   * O RESPONSÁVEL EM DESTAQUE (15/09/2026, pedido do gestor).
+   *
+   * Até aqui o nome era um chip no MESMO tom da pílula (`bg-current/12`): num
+   * card branco, "Jana" sumia ao lado de "Entrada", e a pergunta que o gestor
+   * faz ao olhar o Quadro — de quem é isto agora — não se respondia de longe.
+   * A ideia dele era o nome em vermelho; ficou de fora porque vermelho neste
+   * sistema já é ALARME (horário chegando, prazo estourado), e com todo nome
+   * vermelho o card atrasado deixaria de se distinguir do normal.
+   *
+   * O que entrou (proposta escolhida, com um pouco mais de peso):
+   *   - INICIAIS NUM CÍRCULO SÓLIDO, na cor do estado — marca quando só
+   *     atribuída, azul quando em andamento. É o elemento de maior contraste da
+   *     linha e se reconhece antes de se ler. A letra usa a cor do CARD, não
+   *     branco fixo: no tema escuro o azul do andamento é claro, e branco sobre
+   *     ele não se lê. O anel da cor do card descola o círculo da pílula.
+   *   - O NOME EM NEGRITO EXTRA, na cor principal do texto, e não no tom da
+   *     pílula — é aí que está o ganho de contraste de verdade.
+   *   - Na rendição, o próximo vem discreto depois do "›": quem trabalha agora é
+   *     quem precisa ser achado; quem assume depois é informação secundária.
+   *
+   * Só primeiro nome: na TV, "Sarah Fernandes de Oliveira" empurra a etapa
+   * seguinte para fora da linha. As iniciais saem do nome COMPLETO, então duas
+   * "Ana" diferentes continuam distinguíveis pelo círculo.
+   */
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1" title={etapa.responsavelNome}>
+      <span
+        aria-hidden="true"
+        className={clsx(
+          'inline-flex size-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] leading-none font-bold tracking-wide text-card ring-2 ring-card',
+          etapa.status === 'em_andamento' ? 'bg-andamento' : 'bg-marca',
+        )}
+      >
+        {iniciais(etapa.responsavelNome)}
+      </span>
+      <span className={clsx('truncate text-[13px] font-extrabold text-foreground', larguraMaxima)}>
+        {primeiroNome(etapa.responsavelNome)}
+        {proximo && <span className="font-semibold text-muted-foreground"> › {proximo}</span>}
+      </span>
+    </span>
+  )
 }
 
 function primeiroNome(nome: string): string {
@@ -412,7 +458,6 @@ export function ResumoDasTrilhas({ etapas }: PropsTrilhasDoCaso) {
 function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] }) {
   const atual = etapaAtualDaFaixa(etapas)
   const feitas = etapas.filter((e) => e.status === 'concluida').length
-  const pessoas = atual ? nomesDaEtapa(atual) : null
 
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -442,11 +487,7 @@ function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] 
               ? rotuloDaRodada(atual.tipo, atual.rodada)
               : ROTULO_ETAPA[atual.tipo]}
           </span>
-          {pessoas && (
-            <span className="max-w-[7rem] truncate rounded-full bg-current/12 px-1.5 text-xs font-semibold">
-              {pessoas}
-            </span>
-          )}
+          <ResponsavelDaEtapa etapa={atual} larguraMaxima="max-w-[7rem]" />
         </span>
       ) : (
         // Faixa inteira resolvida. Não é uma etapa, é a ausência delas — por

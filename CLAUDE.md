@@ -1164,6 +1164,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **`Dialogo` ganhou `soFechar`** para isso: um diálogo que só MOSTRA não tem o que
   cancelar, e "Cancelar" ao lado de "Fechar" oferece duas portas para a mesma saída.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+- **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor). O nome de
+  quem está com a etapa aparece com as INICIAIS num círculo sólido na cor do estado (marca
+  quando atribuída, azul em andamento) e o primeiro nome em negrito extra, na cor principal
+  do texto — na fita completa e no resumo compacto. Antes era um chip no mesmo tom da pílula,
+  e o nome sumia no card branco. A ideia original do gestor era o nome em VERMELHO, e ficou
+  de fora de propósito: vermelho aqui é alarme (horário chegando, prazo estourado), e com
+  todo nome vermelho o card atrasado deixaria de se distinguir. Pausado continua mostrando a
+  palavra, não o nome. As iniciais vivem em `lib/iniciais.ts`, compartilhadas com o `Avatar`.
 - **Presença no cabeçalho** (06/09/2026): quem está com a tela aberta aparece ao lado do
   chip de conta, com bolinha de estado — a referência do gestor foi a planilha compartilhada
   do Sheets. Teto de quatro avatares e "+N" no resto; some no mobile, onde a faixa não cabe.
