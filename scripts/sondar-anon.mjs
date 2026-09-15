@@ -59,9 +59,59 @@ const TABELAS = [
   { nome: 'padroes_tempo' },
   { nome: 'eventos' },
   { nome: 'quadro_casos', view: true },
+  // Despesas do caso (20260913022926) e o relatório do financeiro
+  // (20260914195059). Valor em reais com leitura ou escrita aberta a anon é a
+  // soma do mês deixando de valer alguma coisa.
+  { nome: 'despesas' },
+  { nome: 'despesas_por_caso', view: true },
 ]
 
+/*
+ * PARÂMETRO DE TIPO ENUM VAI COMO `null` nas entradas abaixo que o têm.
+ *
+ * Um valor fora do enum faria o Postgres recusar o CAST (22P02) e a sonda
+ * reportaria falha por um motivo que não é permissão — ou, pior, trocaria de
+ * resultado no dia em que o enum ganhasse o valor. Com `null` não há cast a
+ * falhar: ou o EXECUTE é negado (42501, o esperado), ou a função roda e
+ * levanta outra coisa, que a sonda reporta como falha — que é exatamente o
+ * que deveria acontecer se anon a alcançasse.
+ */
 const RPCS_TRANSICAO = {
+  // As cinco que entraram entre 04/09 e 10/09/2026 sem virar sonda. O
+  // auditar-privilegios mostrava o GRANT delas; esta lista não as testava, e o
+  // "50 sondas OK" dizia mais do que tinha verificado.
+  concluir_etapa_com_entregaveis: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_entregaveis: [],
+    p_observacao: null,
+  },
+  liberar_para_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },
+  devolver_para_o_quadro: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+  },
+  remover_entregavel: {
+    p_entregavel_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+  },
+  mover_album: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_fase: null,
+  },
+  // Despesas: quem alcançasse estas RPCs lançaria ou apagaria gasto de
+  // qualquer caso, e o relatório do financeiro somaria o que ele quisesse.
+  registrar_despesa: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_tipo: null,
+    p_valor: 1,
+    p_pessoa_id: null,
+    p_momento: null,
+    p_descricao: null,
+  },
+  remover_despesa: {
+    p_despesa_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+  },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },
@@ -188,7 +238,25 @@ async function esperaNegado(descricao, url, opcoes, aceitaNaoAtualizavel = false
 
 console.log(`Sondando ${alvo.url} como anon…\n`)
 
+/*
+ * A SONDA DE ESCRITA PRECISA CHEGAR NO BANCO.
+ *
+ * O padrão (filtro por `id`, gravando `created_at`) serve para toda tabela e
+ * para `quadro_casos`. `despesas_por_caso` não tem nenhuma das duas colunas — a
+ * chave é `caso_id` —, e com o padrão o PostgREST recusava ANTES de o Postgres
+ * checar permissão (PGRST204 / 42703). A sonda acusava falha, e a falha não
+ * dizia nada sobre privilégio: dizia que a pergunta estava mal feita. Pior
+ * seria o contrário — um erro de forma lido como "negado". Cada objeto sem
+ * `id`/`created_at` entra aqui com uma coluna que EXISTE nele.
+ */
+const FORMA = {
+  despesas_por_caso: { chave: 'caso_id', coluna: 'total', valor: 0 },
+}
+
 for (const { nome, view } of TABELAS) {
+  const { chave = 'id', coluna = 'created_at', valor = '2026-01-01T00:00:00Z' } =
+    FORMA[nome] ?? {}
+
   await esperaNegado(
     `SELECT em ${nome}`,
     `${alvo.url}/rest/v1/${nome}?select=*&limit=1`,
@@ -196,13 +264,13 @@ for (const { nome, view } of TABELAS) {
   )
   await esperaNegado(
     `UPDATE em ${nome}`,
-    `${alvo.url}/rest/v1/${nome}?id=eq.${NADA}`,
-    { method: 'PATCH', body: JSON.stringify({ created_at: '2026-01-01T00:00:00Z' }) },
+    `${alvo.url}/rest/v1/${nome}?${chave}=eq.${NADA}`,
+    { method: 'PATCH', body: JSON.stringify({ [coluna]: valor }) },
     view,
   )
   await esperaNegado(
     `DELETE em ${nome}`,
-    `${alvo.url}/rest/v1/${nome}?id=eq.${NADA}`,
+    `${alvo.url}/rest/v1/${nome}?${chave}=eq.${NADA}`,
     { method: 'DELETE' },
     view,
   )
