@@ -136,6 +136,13 @@ export type Database = {
             foreignKeyName: "caso_etapas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "fila_edicao"
             referencedColumns: ["caso_id"]
           },
@@ -273,6 +280,91 @@ export type Database = {
           },
         ]
       }
+      despesas: {
+        Row: {
+          caso_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          momento: Database["public"]["Enums"]["momento_despesa"] | null
+          pessoa_id: string
+          registrado_em: string
+          registrado_por: string
+          tipo: Database["public"]["Enums"]["tipo_despesa"]
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          caso_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          momento?: Database["public"]["Enums"]["momento_despesa"] | null
+          pessoa_id: string
+          registrado_em?: string
+          registrado_por: string
+          tipo: Database["public"]["Enums"]["tipo_despesa"]
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          caso_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          momento?: Database["public"]["Enums"]["momento_despesa"] | null
+          pessoa_id?: string
+          registrado_em?: string
+          registrado_por?: string
+          tipo?: Database["public"]["Enums"]["tipo_despesa"]
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entregaveis: {
         Row: {
           caso_id: string
@@ -317,6 +409,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregaveis_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
           },
           {
             foreignKeyName: "entregaveis_caso_id_fkey"
@@ -447,6 +546,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
           },
           {
             foreignKeyName: "eventos_caso_id_fkey"
@@ -731,6 +837,27 @@ export type Database = {
       }
     }
     Views: {
+      despesas_por_caso: {
+        Row: {
+          bebe_nome: string | null
+          caso_id: string | null
+          dia: string | null
+          lancamentos: number | null
+          mae_nome: string | null
+          maternidade_sigla: string | null
+          pacote_nome: string | null
+          status_operacional:
+            | Database["public"]["Enums"]["status_operacional"]
+            | null
+          total: number | null
+          total_outro: number | null
+          total_refeicao: number | null
+          total_uber_ida: number | null
+          total_uber_volta: number | null
+          ultimo_lancamento_em: string | null
+        }
+        Relationships: []
+      }
       fila_edicao: {
         Row: {
           atribuido_em: string | null
@@ -805,6 +932,7 @@ export type Database = {
             | Database["public"]["Enums"]["status_operacional"]
             | null
           termo_status: Database["public"]["Enums"]["termo_status"] | null
+          total_despesas: number | null
           updated_at: string | null
           uti_desde: string | null
           uti_horas_total: number | null
@@ -920,6 +1048,17 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
         Returns: undefined
       }
+      registrar_despesa: {
+        Args: {
+          p_caso_id: string
+          p_descricao?: string
+          p_momento?: Database["public"]["Enums"]["momento_despesa"]
+          p_pessoa_id?: string
+          p_tipo: Database["public"]["Enums"]["tipo_despesa"]
+          p_valor: number
+        }
+        Returns: undefined
+      }
       registrar_entregavel: {
         Args: {
           p_caso_id: string
@@ -930,6 +1069,10 @@ export type Database = {
       }
       registrar_estacao: {
         Args: { p_caso_etapa_id: string; p_estacao: string }
+        Returns: undefined
+      }
+      remover_despesa: {
+        Args: { p_despesa_id: string; p_motivo?: string }
         Returns: undefined
       }
       remover_entregavel: {
@@ -995,6 +1138,7 @@ export type Database = {
         | "enviado_grafica"
         | "pronto_para_entrega"
         | "entregue"
+      momento_despesa: "parto" | "substituicao" | "fechamento"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -1028,6 +1172,7 @@ export type Database = {
         | "encerrado"
         | "cancelado"
       termo_status: "assinado" | "pendente" | "sem_contrato" | "nao_aplicavel"
+      tipo_despesa: "uber_ida" | "uber_volta" | "refeicao" | "outro"
       tipo_entregavel:
         | "google_photos"
         | "wetransfer"
@@ -1190,6 +1335,7 @@ export const Constants = {
         "pronto_para_entrega",
         "entregue",
       ],
+      momento_despesa: ["parto", "substituicao", "fechamento"],
       papel_sistema: [
         "operador",
         "comercial",
@@ -1227,6 +1373,7 @@ export const Constants = {
         "cancelado",
       ],
       termo_status: ["assinado", "pendente", "sem_contrato", "nao_aplicavel"],
+      tipo_despesa: ["uber_ida", "uber_volta", "refeicao", "outro"],
       tipo_entregavel: [
         "google_photos",
         "wetransfer",

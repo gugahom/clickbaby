@@ -3,12 +3,15 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { Botao } from '@/components/ui/Botao'
 import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import { Alerta } from '@/components/ui/Alerta'
+import { formatarMoeda } from '@/lib/formato'
 import {
+  useDespesas,
   useEntregaveis,
   useRegistrarEntregavel,
   type EntregavelResumo,
   type TipoEntregavel,
 } from '../api/useAcoes'
+import { DialogoDespesa } from './DespesasDoCaso'
 import { mensagemDeErro } from '../lib/erros'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
@@ -135,6 +138,11 @@ export function DialogoConfirmarEntrega({
   const { data: links } = useEntregaveis(caso.id, true)
 
   const [conferidos, setConferidos] = useState<Set<string>>(new Set())
+  const { data: despesas } = useDespesas(caso.id, true)
+  const [lancandoDespesa, setLancandoDespesa] = useState(false)
+
+  const totalDespesas = (despesas ?? []).reduce((soma, d) => soma + d.valor, 0)
+  const qtdDespesas = (despesas ?? []).length
 
   function alternar(id: string) {
     setConferidos((atual) => {
@@ -146,6 +154,13 @@ export function DialogoConfirmarEntrega({
   }
 
   return (
+    <>
+    {/* O lançamento abre FORA do diálogo de envio, como irmão e não filho: um
+        <dialog> aberto por cima do outro entra no topo da pilha, e montá-lo
+        dentro do primeiro misturaria os dois no mesmo Esc. */}
+    {lancandoDespesa && (
+      <DialogoDespesa caso={caso} onFechar={() => setLancandoDespesa(false)} />
+    )}
     <Dialogo
       titulo={
         modo === 'envio'
@@ -181,7 +196,41 @@ export function DialogoConfirmarEntrega({
           />
         ))}
       </ul>
+
+      {/* AS DESPESAS APARECEM NA HORA DE ENVIAR (14/09/2026, pedido do gestor).
+          Quem lança o gasto é quem trabalhou no caso, e este é o último momento
+          em que ela está com ele na mão — depois de enviar, o card sai do
+          Quadro e o Uber daquela madrugada vira lembrança.
+
+          NÃO TRAVA NADA. Despesa não é status do caso (invariante 3.5), e nem
+          todo atendimento tem gasto: travar o envio em "tem despesa" obrigaria
+          a inventar uma para quem foi de carro próprio. */}
+      <section className="rounded-md border border-border px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Despesas do caso</span>
+          {qtdDespesas > 0 && (
+            <span className="text-sm font-bold tabular-nums">{formatarMoeda(totalDespesas)}</span>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {despesas === undefined
+            ? 'Vendo o que foi lançado…'
+            : qtdDespesas === 0
+              ? modo === 'envio'
+                ? 'Nenhuma despesa lançada. Se teve Uber ou refeição neste atendimento, lance antes de enviar.'
+                : 'Nenhuma despesa lançada neste caso.'
+              : `${qtdDespesas} ${qtdDespesas === 1 ? 'lançamento' : 'lançamentos'} neste caso.`}
+        </p>
+        <button
+          type="button"
+          onClick={() => setLancandoDespesa(true)}
+          className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-marca underline underline-offset-2"
+        >
+          Lançar despesa
+        </button>
+      </section>
     </Dialogo>
+    </>
   )
 }
 

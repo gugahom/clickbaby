@@ -2,13 +2,13 @@ import { useId, useState, type CSSProperties } from 'react'
 import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
-import { formatarHora } from '@/lib/formato'
+import { formatarHora, formatarMoeda } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
 import { podeCancelar, podeEditarCadastro } from '../lib/acoes'
-import { temVideoMasterPendente } from '../lib/secoes'
+import { temFotolivroPendente, temVideoMasterPendente } from '../lib/secoes'
 import { mensagemDeErro } from '../lib/erros'
 import { useCancelarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
@@ -107,6 +107,15 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
    */
   const videoPendente =
     caso.statusOperacional === 'encerrado' && temVideoMasterPendente(etapas)
+
+  // O FOTOLIVRO É O MESMO CASO (14/09/2026, pedido do gestor): o caso encerra
+  // com ele aberto, e ele segue na seção Foto/Livro. O selo tem de existir pelo
+  // mesmo motivo do vídeo — sem ele, o card em Concluídos parece terminado.
+  const fotolivroPendente =
+    caso.statusOperacional === 'encerrado' && temFotolivroPendente(etapas)
+
+  // Entregue, mas com trabalho de semanas ainda em curso. Não apaga o card.
+  const entregueComPendencia = videoPendente || fotolivroPendente
 
   /*
    * UM fundo, escolhido aqui — e não quatro classes empilhadas no clsx.
@@ -225,12 +234,12 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
           hora chegando.
         */
         prontoParaEntrega && 'border-pronto-borda',
-        // O caso terminal apaga — menos quando o vídeo ainda corre. Ali ele
-        // não é histórico, é trabalho em andamento com a entrega já feita, e
-        // apagá-lo esconderia o único cartão de Concluídos que ainda pede
-        // alguma coisa.
-        caso.ehTerminal && !videoPendente && 'opacity-60 shadow-none',
-        videoPendente && 'border-atencao/40',
+        // O caso terminal apaga — menos quando o vídeo ou o fotolivro ainda
+        // correm. Ali ele não é histórico, é trabalho em andamento com a
+        // entrega já feita, e apagá-lo esconderia o único cartão de Concluídos
+        // que ainda pede alguma coisa.
+        caso.ehTerminal && !entregueComPendencia && 'opacity-60 shadow-none',
+        entregueComPendencia && 'border-atencao/40',
       )}
     >
       {/*
@@ -413,6 +422,33 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
                       />
                       Vídeo em edição
                     </span>
+                  )}
+                  {fotolivroPendente && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-atencao/15 px-2 py-0.5 text-[11px] font-bold text-atencao-tinta">
+                      <span
+                        className="size-1.5 rounded-full bg-atencao"
+                        aria-hidden="true"
+                      />
+                      Foto/Livro em andamento
+                    </span>
+                  )}
+                  {/* O GASTO FICA EXPLÍCITO NO CARD (14/09/2026, pedido do
+                      gestor). Com valor, aparece em qualquer estado — é o
+                      número que o financeiro procura. Sem valor, só no caso
+                      ENCERRADO ou CANCELADO: ali "Sem despesas" é uma
+                      afirmação sobre um atendimento que acabou; num caso em
+                      andamento seria só um lembrete permanente de algo que
+                      talvez nem vá acontecer. */}
+                  {caso.totalDespesas > 0 ? (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground">
+                      Despesas {formatarMoeda(caso.totalDespesas)}
+                    </span>
+                  ) : (
+                    caso.ehTerminal && (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        Sem despesas
+                      </span>
+                    )
                   )}
                   {caso.ehTerminal && (
                     <span className="rotulo-sobrescrito rounded-full bg-muted px-2 py-1 text-muted-foreground">

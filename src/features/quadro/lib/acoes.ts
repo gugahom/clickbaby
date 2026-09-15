@@ -449,14 +449,13 @@ export function podeConfirmarEntrega(
   // ficaria ainda mais confuso agora que os reels saíram da fita de edição do
   // card: quem olha o Quadro não os vê ali.
   //
-  // O VÍDEO HORIZONTAL DO MASTER É A EXCEÇÃO, desde 20260903153101: ele leva
-  // dez dias úteis, a família já recebeu fotos e reels, e segurar o cartão na
-  // tela por isso era o que o gestor pediu para acabar. Se esta linha não
-  // acompanhasse a RPC, o botão ficaria desabilitado dizendo que falta o vídeo
-  // enquanto o banco aceitaria de bom grado — a tela mentindo sobre a regra.
+  // O VÍDEO HORIZONTAL DO MASTER E O FOTOLIVRO SÃO AS EXCEÇÕES — ver
+  // NAO_SEGURAM_A_ENTREGA. Se esta linha não acompanhasse a RPC, o botão ficaria
+  // desabilitado dizendo que falta a etapa enquanto o banco aceitaria de bom
+  // grado — a tela mentindo sobre a regra.
   const abertas = etapas.filter(
     (e) =>
-      e.tipo !== 'edicao_video' &&
+      !NAO_SEGURAM_A_ENTREGA.has(e.tipo) &&
       e.status !== 'concluida' &&
       e.status !== 'dispensada',
   )
@@ -473,6 +472,25 @@ export function podeConfirmarEntrega(
   }
   return OK
 }
+
+/**
+ * AS ETAPAS QUE NÃO SEGURAM A ENTREGA — espelho LITERAL do
+ * `ce.tipo not in ('edicao_video', 'album')` de `liberar_para_entrega` e
+ * `confirmar_entrega` (migration 20260910150425).
+ *
+ * As duas têm fluxo próprio numa seção lateral, levam semanas, e sobrevivem à
+ * entrega das fotos: o vídeo horizontal do MASTER (dez dias úteis) e o
+ * fotolivro (quase tudo espera por gente de fora — pagamento, aprovação,
+ * gráfica). O caso vai para Entregáveis e encerra; a etapa segue na seção dela.
+ *
+ * É UMA CONSTANTE, E NÃO DUAS LISTAS, POR CAUSA DE UM BUG REAL. A migration de
+ * 10/09 acrescentou `album` às RPCs, e as duas funções abaixo continuaram
+ * excluindo só `edicao_video` até 14/09: o botão de enviar ficava desabilitado
+ * dizendo "falta Foto/Livro" para um caso que o banco aceitaria. Tela e banco
+ * discordando, sem erro em lugar nenhum. A próxima etapa que entrar nesta
+ * regra muda aqui e nas duas RPCs, ou em nenhum dos três.
+ */
+const NAO_SEGURAM_A_ENTREGA: ReadonlySet<EtapaTipo> = new Set(['edicao_video', 'album'])
 
 /**
  * ENVIAR o caso para a aba Entregáveis.
@@ -497,12 +515,12 @@ export function podeLiberarParaEntrega(
     return { habilitada: false, motivo: 'Já está em Entregáveis.' }
   }
 
-  // Mesma exceção do vídeo horizontal do MASTER (20260903153101): ele leva dez
-  // dias úteis e tem fluxo próprio na seção. Sem isto, nenhum MASTER chegaria à
-  // aba antes de duas semanas.
+  // O vídeo do MASTER e o fotolivro não seguram o envio — ver
+  // NAO_SEGURAM_A_ENTREGA. Sem isto, nenhum MASTER chegaria à aba antes de duas
+  // semanas, e nenhum MASTER + ÁLBUM antes de a gráfica imprimir.
   const abertas = etapas.filter(
     (e) =>
-      e.tipo !== 'edicao_video' &&
+      !NAO_SEGURAM_A_ENTREGA.has(e.tipo) &&
       e.status !== 'concluida' &&
       e.status !== 'dispensada',
   )

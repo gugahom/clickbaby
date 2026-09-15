@@ -151,3 +151,21 @@ export function formatarDuracao(horas: number): string {
   if (horas < 48) return `${Math.round(horas)}h`
   return `${Math.round(horas / 24)}d`
 }
+
+/*
+ * DINHEIRO (12/09/2026, com as despesas do caso).
+ *
+ * `pt-BR` + `BRL` explícitos pelo mesmo motivo do fuso lá em cima: os CEL CLICK
+ * trocam de mão e nada garante a configuração de idioma do aparelho. Sem isso,
+ * um celular em inglês mostraria "R$24.90" com ponto no meio de uma tela em que
+ * todo o resto usa vírgula — e centavo lido errado vira conferência errada.
+ */
+const moeda = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
+/** 24.9 -> 'R$ 24,90'. */
+export function formatarMoeda(valor: number): string {
+  return moeda.format(valor)
+}

@@ -70,6 +70,12 @@ export interface CasoQuadro {
   liberadoParaEntregaEm: string | null
   /** Quem enviou. A resposta para "quem disse que estava pronto?". */
   liberadoParaEntregaPorNome: string | null
+  /**
+   * Soma das despesas lançadas no caso, feita pelo BANCO (quadro_casos). Zero
+   * quando não há gasto — nunca nulo, para "sem despesa" não se confundir com
+   * "não carregou".
+   */
+  totalDespesas: number
 }
 
 /**
@@ -182,6 +188,9 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     reabertoEm: linha.reaberto_em,
     liberadoParaEntregaEm: linha.liberado_para_entrega_em,
     liberadoParaEntregaPorNome: linha.liberado_para_entrega_por_nome,
+    // numeric chega do PostgREST como número JSON; o Number() segura o dia em
+    // que vier como texto, que é como alguns drivers serializam numeric.
+    totalDespesas: Number(linha.total_despesas ?? 0),
   }
 }
 

@@ -33,11 +33,13 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
   return useMutation({
     mutationFn: executar,
     onSuccess: () => {
-      // As três coisas que uma ação muda: o Quadro, os links do caso e o
-      // histórico. Esquecer o histórico o deixava congelado por 30s (o
-      // staleTime global) — a pessoa agia e o log não mostrava a própria ação.
+      // As quatro coisas que uma ação muda: o Quadro, os links do caso, as
+      // despesas e o histórico. Esquecer o histórico o deixava congelado por
+      // 30s (o staleTime global) — a pessoa agia e o log não mostrava a própria
+      // ação.
       void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
       void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
+      void queryClient.invalidateQueries({ queryKey: ['despesas'] })
       void queryClient.invalidateQueries({ queryKey: ['historico'] })
     },
   })
@@ -422,4 +424,101 @@ export function usePessoasAtivas() {
       return data ?? []
     },
   })
+}
+
+/* ===========================================================================
+ * DESPESAS DO CASO (12/09/2026, pedido do gestor)
+ *
+ * O Uber das fotógrafas sai do cartão da empresa e hoje é somado por caso numa
+ * faixa de colunas da planilha. Ver a migration 20260913022926 para o modelo e
+ * para por que o módulo financeiro voltou depois de ter sido removido.
+ * =========================================================================== */
+
+export type TipoDespesa = Database['public']['Enums']['tipo_despesa']
+export type MomentoDespesa = Database['public']['Enums']['momento_despesa']
+
+export interface DespesaResumo {
+  id: string
+  tipo: TipoDespesa
+  momento: MomentoDespesa | null
+  valor: number
+  descricao: string | null
+  registrado_em: string
+  /** De quem foi o gasto. Null só se a pessoa sumir do cadastro. */
+  pessoaNome: string | null
+}
+
+/**
+ * Despesas de UM caso, buscadas só com o card aberto.
+ *
+ * Mesma regra dos entregáveis, por outro motivo: valor não é credencial, mas
+ * somar oitenta casos para desenhar zero deles é tráfego à toa numa tela que a
+ * operação abre num celular, no corredor.
+ */
+export function useDespesas(casoId: string, habilitado: boolean) {
+  return useQuery({
+    queryKey: ['despesas', casoId],
+    enabled: habilitado,
+    queryFn: async (): Promise<DespesaResumo[]> => {
+      const { data, error } = await supabase
+        .from('despesas')
+        .select(
+          // O HINT DE FK É OBRIGATÓRIO AQUI: `despesas` aponta para `pessoas`
+          // DUAS vezes (pessoa_id e registrado_por), e sem dizer qual delas o
+          // PostgREST recusa a consulta inteira por ambiguidade.
+          'id, tipo, momento, valor, descricao, registrado_em, pessoa:pessoas!despesas_pessoa_id_fkey(nome)',
+        )
+        .eq('caso_id', casoId)
+        .order('registrado_em')
+        .order('id')
+      if (error) throw error
+
+      return (data ?? []).map((d) => ({
+        id: d.id,
+        tipo: d.tipo,
+        momento: d.momento,
+        valor: Number(d.valor),
+        descricao: d.descricao,
+        registrado_em: d.registrado_em,
+        pessoaNome: d.pessoa?.nome ?? null,
+      }))
+    },
+  })
+}
+
+/**
+ * Lança um gasto do caso.
+ *
+ * `pessoaId` omitido = a despesa é de quem está lançando, que é o caminho
+ * comum: a fotógrafa desceu do Uber e registra a própria corrida.
+ */
+export function useRegistrarDespesa() {
+  return useAcaoDoQuadro<{
+    casoId: string
+    tipo: TipoDespesa
+    valor: number
+    pessoaId?: string
+    momento?: MomentoDespesa
+    descricao?: string
+  }>(({ casoId, tipo, valor, pessoaId, momento, descricao }) =>
+    chamar('registrar_despesa', {
+      p_caso_id: casoId,
+      p_tipo: tipo,
+      p_valor: valor,
+      p_pessoa_id: pessoaId ?? null,
+      p_momento: momento ?? null,
+      p_descricao: descricao ?? null,
+    }),
+  )
+}
+
+/** Apaga um lançamento. Não existe editar — apaga e lança de novo. */
+export function useRemoverDespesa() {
+  return useAcaoDoQuadro<{ despesaId: string; motivo?: string }>(
+    ({ despesaId, motivo }) =>
+      chamar('remover_despesa', {
+        p_despesa_id: despesaId,
+        ...(motivo === undefined ? {} : { p_motivo: motivo }),
+      }),
+  )
 }

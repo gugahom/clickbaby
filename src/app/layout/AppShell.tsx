@@ -47,6 +47,9 @@ import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 export function AppShell() {
   const { pessoa, sair } = useAuth()
   const ehGestao = pessoa?.papelSistema === 'gestao'
+  // Quem recolhe as despesas. Espelha RotaDoFinanceiro: um link que a guarda
+  // redirecionaria de volta seria uma porta pintada na parede.
+  const recolheDespesas = ehGestao || pessoa?.papelSistema === 'financeiro'
   const telaLarga = useTelaLarga()
   // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
@@ -73,7 +76,7 @@ export function AppShell() {
    * quando quem a trouxe foi o botão do modo TV. Uma barra com o lado esquerdo
    * vazio parece coisa que não carregou, e a âncora ali não custa nada.
    */
-  const temNavegacao = ehGestao || !noQuadro
+  const temNavegacao = recolheDespesas || !noQuadro
   const [modoTv, alternarModoTv] = useModoTv()
   const temBotaoTv = telaLarga && noQuadro
   // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
@@ -255,6 +258,12 @@ export function AppShell() {
                   Painel
                 </ItemDeNavegacao>
                 {ehGestao && <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>}
+                {/* Despesas é do financeiro e da gestão — quem RECOLHE o gasto.
+                    Quem lança (as funcionárias) lança no card e não precisa
+                    desta porta. */}
+                {recolheDespesas && (
+                  <ItemDeNavegacao para="/despesas">Despesas</ItemDeNavegacao>
+                )}
             </nav>
 
             {/*

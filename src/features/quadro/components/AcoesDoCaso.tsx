@@ -24,6 +24,7 @@ import { linksDaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { CampoEstacao } from './CampoEstacao'
+import { BotaoNovaDespesa, DespesasDoCaso } from './DespesasDoCaso'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
@@ -536,6 +537,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         O PACOTE CONTINUA O MESMO: ele é o registro do que foi vendido no
         contrato, e a etapa avulsa fica em `eventos` como etapa_adicionada.
       */}
+      {/* O PAR DE BOTÕES DO QUE NÃO ESTAVA PREVISTO: a etapa que o pacote não
+          trazia, e o gasto que o atendimento teve. O gestor pediu a despesa
+          "ao lado de acrescentar etapa" e os dois combinam de fato — nenhum
+          dos dois nasce do contrato, os dois nascem do que aconteceu.
+
+          A despesa NÃO some junto: "Acrescentar etapa" desaparece quando não
+          há o que acrescentar, e gasto sempre pode haver. */}
+      <div className="flex flex-wrap items-center gap-2">
       {adicao.habilitada && (
         <Dropdown
           className="w-fit"
@@ -561,6 +570,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           }
         />
       )}
+
+        <BotaoNovaDespesa caso={caso} />
+      </div>
 
       {/* Ações que MOVEM o caso entre as seções da tela. Ficam separadas das
           que encerram: estas são reversíveis e do dia a dia, aquelas não têm
@@ -605,6 +617,19 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           Links de entrega
         </h5>
         <Entregaveis caso={caso} aberto />
+      </div>
+
+      {/* DESPESAS — a faixa que hoje vive na planilha (12/09/2026).
+
+          Fica ABAIXO dos links e não junto do botão que a lança, porque são
+          dois gestos diferentes: lançar acontece na hora, no corredor, e é por
+          isso que o botão está lá em cima com as outras ações; conferir a soma
+          acontece depois, sentado, e é leitura. */}
+      <div className="border-t border-border pt-3">
+        <h5 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Despesas
+        </h5>
+        <DespesasDoCaso caso={caso} aberto />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
