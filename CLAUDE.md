@@ -903,6 +903,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `entrega_confirmada` ganhou `fotolivro_pendente` ao lado de `video_master_pendente`, pela
   mesma razão de sempre: sem isso, daqui a um ano ninguém reconstrói por que um caso
   encerrado tinha etapa aberta.
+  **A TELA SÓ ACOMPANHOU EM 14/09/2026.** A migration mudou as RPCs e ninguém mudou
+  `lib/acoes.ts`: `podeLiberarParaEntrega` e `podeConfirmarEntrega` continuaram excluindo
+  só `edicao_video`, e o botão de enviar ficava desabilitado dizendo "falta Foto/Livro"
+  para um caso que o banco aceitaria. Quatro dias de tela e banco discordando sem erro em
+  lugar nenhum — a mesma classe de bug da nota sobre paginação na seção 5. A lista agora é
+  UMA constante, `NAO_SEGURAM_A_ENTREGA`, espelho literal do `not in` das duas RPCs; a
+  próxima etapa que entrar nessa regra muda os dois lados ou nenhum. Em Concluídos o card
+  ganhou o selo **"Foto/Livro em andamento"**, como o do vídeo.
 - **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
   não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
   depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
