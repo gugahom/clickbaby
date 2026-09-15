@@ -146,12 +146,13 @@ async function carregarQuadro(): Promise<DadosQuadro> {
   const linhasEtapas = await buscarTudo((de, ate) =>
     supabase
       .from('caso_etapas')
-      // Dois embeds pela MESMA tabela `pessoas`, então os dois precisam nomear
-      // a FK — sem isso o PostgREST não sabe por qual coluna juntar. E precisa
-      // ser um literal de uma peça só: concatenar com `+` faz o tipo do select
-      // virar string genérica e a inferência do supabase-js desabar.
+      // Quatro embeds pela MESMA tabela `pessoas` — responsável, rendição, e
+      // quem baixou e subiu o material (15/09/2026) —, então todos precisam
+      // nomear a FK: sem isso o PostgREST não sabe por qual coluna juntar. E
+      // precisa ser um literal de uma peça só: concatenar com `+` faz o tipo do
+      // select virar string genérica e a inferência do supabase-js desabar.
       .select(
-        '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome)',
+        '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome)',
         { count: 'exact' },
       )
       .in('caso_id', ids)

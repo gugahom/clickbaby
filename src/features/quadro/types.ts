@@ -140,6 +140,18 @@ export interface EtapaQuadro {
   estacao: string | null
   responsavelNome: string | null
   proximoResponsavelNome: string | null
+  /**
+   * O MATERIAL DO ACOMPANHAMENTO (15/09/2026) — as colunas CARTÃO F, CARTÃO V,
+   * BAIXOU e UPLOAD da planilha, por etapa. Nulos em toda etapa de edição: a
+   * constraint `caso_etapas_material_so_no_acompanhamento` não deixa existir.
+   */
+  cartaoFoto: string | null
+  /** O celular que filmou: "CEL CLICK 4" pela lista, ou texto livre ("CELULAR SARAH"). */
+  cartaoVideo: string | null
+  baixouPorId: string | null
+  baixouPorNome: string | null
+  uploadPorId: string | null
+  uploadPorNome: string | null
 }
 
 /** Um bloco de dia do Quadro, já com o contador resolvido. */
@@ -203,6 +215,8 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
 type LinhaEtapaComResponsavel = LinhaEtapa & {
   responsavel: { nome: string } | null
   proximo_responsavel: { nome: string } | null
+  baixou: { nome: string } | null
+  subiu: { nome: string } | null
 }
 
 export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
@@ -225,6 +239,14 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     estacao: linha.estacao,
     responsavelNome: linha.responsavel?.nome ?? null,
     proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,
+    cartaoFoto: linha.cartao_foto,
+    cartaoVideo: linha.cartao_video,
+    baixouPorId: linha.baixou_por,
+    baixouPorNome: linha.baixou?.nome ?? null,
+    // UPLOAD na tela, `subiu_por` no banco: a coluna existe desde o schema
+    // inicial com esse nome, e a migration 20260915134638 a reaproveitou.
+    uploadPorId: linha.subiu_por,
+    uploadPorNome: linha.subiu?.nome ?? null,
   }
 }
 

@@ -259,6 +259,25 @@ export function useRegistrarEstacao() {
   )
 }
 
+export type CampoMaterial = Database['public']['Enums']['campo_material']
+
+/**
+ * Grava UM campo do material do acompanhamento — cartão F, CEL CLICK, quem
+ * baixou, quem subiu. Um campo por chamada de propósito: duas pessoas mexendo
+ * em campos diferentes da mesma etapa não se sobrescrevem. Em branco limpa.
+ * Ver registrar_material_da_etapa na migration 20260915134638.
+ */
+export function useRegistrarMaterial() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; campo: CampoMaterial; valor: string }>(
+    ({ casoEtapaId, campo, valor }) =>
+      chamar('registrar_material_da_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_campo: campo,
+        p_valor: valor,
+      }),
+  )
+}
+
 /**
  * Desfaz a conclusão de uma etapa: volta para em_andamento e limpa
  * concluido_em, preservando iniciado_em. Ver reabrir_etapa na migration

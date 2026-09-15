@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { iniciais } from '@/lib/iniciais'
+import { PilulaAtribuida } from './PilulaAtribuida'
 import {
   ROTULO_FAIXA,
   ROTULO_FAIXA_CURTO,
@@ -339,18 +340,30 @@ function ResponsavelDaEtapa({
   const proximo = etapa.proximoResponsavelNome ? primeiroNome(etapa.proximoResponsavelNome) : null
 
   /*
-   * O RESPONSÁVEL EM DESTAQUE (15/09/2026, pedido do gestor).
+   * ATRIBUÍDA É VERMELHA E PULSA (15/09/2026, segundo pedido do gestor no dia).
+   * É o trabalho que tem dona e ainda não começou — e a dona precisa achar o
+   * próprio nome de longe. O porquê do vermelho está em PilulaAtribuida.
+   */
+  if (etapa.status === 'atribuida') {
+    return (
+      <PilulaAtribuida
+        nome={etapa.responsavelNome}
+        exibido={primeiroNome(etapa.responsavelNome)}
+        proximo={proximo}
+        larguraMaxima={larguraMaxima}
+      />
+    )
+  }
+
+  /*
+   * O RESPONSÁVEL EM DESTAQUE (15/09/2026, pedido do gestor) — EM ANDAMENTO.
    *
    * Até aqui o nome era um chip no MESMO tom da pílula (`bg-current/12`): num
    * card branco, "Jana" sumia ao lado de "Entrada", e a pergunta que o gestor
    * faz ao olhar o Quadro — de quem é isto agora — não se respondia de longe.
-   * A ideia dele era o nome em vermelho; ficou de fora porque vermelho neste
-   * sistema já é ALARME (horário chegando, prazo estourado), e com todo nome
-   * vermelho o card atrasado deixaria de se distinguir do normal.
    *
    * O que entrou (proposta escolhida, com um pouco mais de peso):
-   *   - INICIAIS NUM CÍRCULO SÓLIDO, na cor do estado — marca quando só
-   *     atribuída, azul quando em andamento. É o elemento de maior contraste da
+   *   - INICIAIS NUM CÍRCULO SÓLIDO AZUL. É o elemento de maior contraste da
    *     linha e se reconhece antes de se ler. A letra usa a cor do CARD, não
    *     branco fixo: no tema escuro o azul do andamento é claro, e branco sobre
    *     ele não se lê. O anel da cor do card descola o círculo da pílula.
@@ -358,6 +371,9 @@ function ResponsavelDaEtapa({
    *     pílula — é aí que está o ganho de contraste de verdade.
    *   - Na rendição, o próximo vem discreto depois do "›": quem trabalha agora é
    *     quem precisa ser achado; quem assume depois é informação secundária.
+   *
+   * A atribuída tinha o mesmo desenho na cor da marca até o gestor pedir mais
+   * destaque para ela — ver o bloco acima.
    *
    * Só primeiro nome: na TV, "Sarah Fernandes de Oliveira" empurra a etapa
    * seguinte para fora da linha. As iniciais saem do nome COMPLETO, então duas
@@ -367,10 +383,7 @@ function ResponsavelDaEtapa({
     <span className="inline-flex min-w-0 items-center gap-1" title={etapa.responsavelNome}>
       <span
         aria-hidden="true"
-        className={clsx(
-          'inline-flex size-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] leading-none font-bold tracking-wide text-card ring-2 ring-card',
-          etapa.status === 'em_andamento' ? 'bg-andamento' : 'bg-marca',
-        )}
+        className="inline-flex size-5 flex-shrink-0 items-center justify-center rounded-full bg-andamento text-[10px] leading-none font-bold tracking-wide text-card ring-2 ring-card"
       >
         {iniciais(etapa.responsavelNome)}
       </span>

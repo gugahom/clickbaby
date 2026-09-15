@@ -39,6 +39,8 @@ export type Database = {
           atribuido_em: string | null
           atribuido_por: string | null
           baixou_por: string | null
+          cartao_foto: string | null
+          cartao_video: string | null
           caso_id: string
           concluido_em: string | null
           created_at: string
@@ -64,6 +66,8 @@ export type Database = {
           atribuido_em?: string | null
           atribuido_por?: string | null
           baixou_por?: string | null
+          cartao_foto?: string | null
+          cartao_video?: string | null
           caso_id: string
           concluido_em?: string | null
           created_at?: string
@@ -89,6 +93,8 @@ export type Database = {
           atribuido_em?: string | null
           atribuido_por?: string | null
           baixou_por?: string | null
+          cartao_foto?: string | null
+          cartao_video?: string | null
           caso_id?: string
           concluido_em?: string | null
           created_at?: string
@@ -1073,6 +1079,14 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_estacao: string }
         Returns: undefined
       }
+      registrar_material_da_etapa: {
+        Args: {
+          p_campo: Database["public"]["Enums"]["campo_material"]
+          p_caso_etapa_id: string
+          p_valor: string
+        }
+        Returns: undefined
+      }
       remover_despesa: {
         Args: { p_despesa_id: string; p_motivo?: string }
         Returns: undefined
@@ -1121,6 +1135,7 @@ export type Database = {
       }
     }
     Enums: {
+      campo_material: "cartao_foto" | "cartao_video" | "baixou" | "upload"
       etapa_tipo:
         | "entrada"
         | "nascimento"
@@ -1316,6 +1331,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      campo_material: ["cartao_foto", "cartao_video", "baixou", "upload"],
       etapa_tipo: [
         "entrada",
         "nascimento",

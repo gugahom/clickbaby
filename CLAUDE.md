@@ -336,6 +336,7 @@ adicionar_etapa(p_caso_id, p_tipo)                      -- etapa fora do pacote
 agendar_etapa(p_caso_etapa_id, p_previsao_em)           -- hora do banho/fechamento
 anotar_etapa(p_caso_etapa_id, p_observacao)             -- aviso, em qualquer status
 registrar_estacao(p_caso_etapa_id, p_estacao)           -- "pc-1"
+registrar_material_da_etapa(p_caso_etapa_id, p_campo, p_valor) -- cartão F/V, baixou, upload
 
 -- pessoas
 atribuir_etapa(p_caso_etapa_id, p_para_pessoa_id)
@@ -1164,14 +1165,44 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **`Dialogo` ganhou `soFechar`** para isso: um diálogo que só MOSTRA não tem o que
   cancelar, e "Cancelar" ao lado de "Fechar" oferece duas portas para a mesma saída.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
-- **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor). O nome de
-  quem está com a etapa aparece com as INICIAIS num círculo sólido na cor do estado (marca
-  quando atribuída, azul em andamento) e o primeiro nome em negrito extra, na cor principal
-  do texto — na fita completa e no resumo compacto. Antes era um chip no mesmo tom da pílula,
-  e o nome sumia no card branco. A ideia original do gestor era o nome em VERMELHO, e ficou
-  de fora de propósito: vermelho aqui é alarme (horário chegando, prazo estourado), e com
-  todo nome vermelho o card atrasado deixaria de se distinguir. Pausado continua mostrando a
-  palavra, não o nome. As iniciais vivem em `lib/iniciais.ts`, compartilhadas com o `Avatar`.
+- **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
+  voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e
+  o primeiro nome em negrito extra, na cor principal do texto — na fita completa e no resumo
+  compacto. Antes era um chip no mesmo tom da pílula, e o nome sumia no card branco.
+  **ATRIBUÍDA É VERMELHA E PULSA** (`PilulaAtribuida`): nome numa pílula vermelha sólida, com
+  uma onda saindo dela, na fita, no resumo do modo TV e na lista de etapas do card (ali com
+  "aguardando início" por extenso). Na primeira volta a atribuída tinha o círculo na cor da
+  marca e o vermelho ficou de fora por ser alarme; o gestor voltou pedindo MAIS destaque
+  justamente nela — é o trabalho que tem dona e ainda não começou, e a dona precisa achar o
+  próprio nome de longe. **O vermelho mudou de sentido por decisão dele:** deixou de ser só
+  "tempo estourando" e passou a ser "precisa de alguém agora". O que ainda separa os dois é a
+  FORMA — o alarme de tempo pinta o cartão inteiro e gira o anel da borda; a atribuída é uma
+  pílula dentro dele, com pulso e sem giro. O pulso para no play. Pausado continua mostrando
+  a palavra, não o nome. As iniciais vivem em `lib/iniciais.ts`, compartilhadas com o `Avatar`.
+- **O MATERIAL DO ACOMPANHAMENTO** (15/09/2026, pedido do gestor, migration `20260915134638`)
+  — "zerar a planilha". As colunas CARTÃO F, CARTÃO V, BAIXOU e UPLOAD da faixa ENTRADA viram
+  quatro pílulas em TODA etapa de acompanhamento, no espaço entre o nome da etapa e os botões
+  (`MaterialDoAcompanhamento`). Cartão F é texto curto ("14 HSC" existe: a HSC tem cartões
+  próprios); Cartão V é o CEL CLICK escolhido numa lista, ou digitado quando o vídeo saiu
+  de outro aparelho ("CELULAR SARAH"); Baixou e Upload são pessoas. **SÓ NO PC**, pedido do gestor: o corte é por CONTAINER (`@2xl` na lista de etapas),
+  não por viewport, porque quem decide é a largura da lista.
+  **`baixou_por` e `subiu_por` JÁ EXISTIAM** desde o schema inicial, com FK e índice, e nunca
+  tinham sido escritas (zero linhas no remoto). Foram reaproveitadas — UPLOAD na tela é
+  `subiu_por` no banco — em vez de criar uma segunda coluna para a mesma pergunta. Novas são
+  só `cartao_foto` e `cartao_video`, as duas TEXTO. A constraint `caso_etapas_material_so_no_acompanhamento`
+  recusa os quatro em etapa de edição. **Os seis CEL CLICK moram na TELA**, como sugestão, não no
+  banco: o sétimo aparelho é uma linha de código, e o celular de alguém da equipe é texto
+  digitado.
+  A escrita é UM CAMPO POR CHAMADA (`registrar_material_da_etapa`), para duas pessoas mexendo em
+  campos diferentes da mesma etapa não se sobrescreverem; valor igual ao gravado não gera
+  evento, e em branco limpa. Aceita etapa e caso em qualquer estado: a planilha é preenchida
+  DEPOIS, quando o cartão é baixado.
+- **LISTAS DE PESSOAS FILTRAM POR DIGITAÇÃO** (15/09/2026, pedido do gestor). O `Dropdown`
+  ganhou `buscavel`: um campo no topo do painel filtra sem acento e sem caixa, e Enter escolhe
+  a primeira que sobrou. Vale em atribuir, rendição, handoff, "de quem foi" da despesa, e
+  baixou/upload. O foco vai para o campo sozinho **só com ponteiro fino** (mouse): no celular o
+  teclado subiria por cima da lista que a pessoa queria ver, e lá quase sempre se escolhe
+  tocando.
 - **Presença no cabeçalho** (06/09/2026): quem está com a tela aberta aparece ao lado do
   chip de conta, com bolinha de estado — a referência do gestor foi a planilha compartilhada
   do Sheets. Teto de quatro avatares e "+N" no resto; some no mobile, onde a faixa não cabe.
