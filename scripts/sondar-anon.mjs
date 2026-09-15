@@ -120,6 +120,14 @@ const RPCS_TRANSICAO = {
     p_caso_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',
   },
+  // Material do acompanhamento (20260915134638). Quem alcançasse esta RPC
+  // trocaria o cartão e o nome de quem baixou em qualquer etapa — o rastro
+  // físico do material, que é o que se consulta quando uma foto some.
+  registrar_material_da_etapa: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_campo: null,
+    p_valor: null,
+  },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

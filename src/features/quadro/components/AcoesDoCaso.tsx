@@ -24,6 +24,8 @@ import { linksDaConclusao } from '../lib/links-da-conclusao'
 import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { CampoEstacao } from './CampoEstacao'
+import { MaterialDoAcompanhamento } from './MaterialDoAcompanhamento'
+import { PilulaAtribuida } from './PilulaAtribuida'
 import { BotaoNovaDespesa, DespesasDoCaso } from './DespesasDoCaso'
 import { formatarDataHora } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
@@ -194,7 +196,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
             : 'Nenhuma etapa gerada.'}
         </p>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
+        // `@container`: as pílulas de material aparecem pela largura DESTA lista,
+        // não da janela — ver MaterialDoAcompanhamento.
+        <ul className="@container divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {etapas.map((etapa) => {
             const inicio = podeIniciar(etapa, etapas)
             const pausa = podePausar(etapa)
@@ -272,8 +276,22 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     <span className="font-semibold text-acento">
                       {ROTULO_FAIXA_DETALHE[etapa.tipo === 'reels' ? 'reels' : etapa.trilha]}
                     </span>
-                    <span>· {ROTULO_STATUS_ETAPA[etapa.status]}</span>
-                    {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
+                    {/* ATRIBUÍDA VIRA A PÍLULA VERMELHA (15/09/2026, pedido do
+                        gestor): status e nome numa peça só, porque juntos são a
+                        frase que a fotógrafa procura — "isto é seu e ainda não
+                        começou". Ver PilulaAtribuida. */}
+                    {etapa.status === 'atribuida' && etapa.responsavelNome ? (
+                      <PilulaAtribuida
+                        nome={etapa.responsavelNome}
+                        exibido={etapa.responsavelNome}
+                        aguardando
+                      />
+                    ) : (
+                      <>
+                        <span>· {ROTULO_STATUS_ETAPA[etapa.status]}</span>
+                        {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
+                      </>
+                    )}
                     {etapa.proximoResponsavelNome && (
                       <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">
                         rende para {etapa.proximoResponsavelNome}
@@ -314,6 +332,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   )}
                 </div>
 
+                {/* O MATERIAL DO ACOMPANHAMENTO (15/09/2026): cartão F, cartão V,
+                    baixou e upload, no espaço entre a etapa e os botões. Só nas
+                    etapas de acompanhamento e só quando a lista é larga — no
+                    celular ele se esconde sozinho. */}
+                {etapa.trilha === 'acompanhamento' && (
+                  <MaterialDoAcompanhamento etapa={etapa} onErro={setErro} />
+                )}
+
                 {/* Etapa RESOLVIDA fica só com o desfazer. Concluir e
                     dispensar são gestos de um toque, feitos com uma mão num
                     corredor — e dispensar acabou de nascer, então nasce com o
@@ -323,7 +349,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     na seção {secaoDaEtapa}
                   </span>
                 ) : encerrada ? (
-                  <div className="flex flex-shrink-0 items-center">
+                  <div className="flex flex-shrink-0 items-center justify-end @2xl:w-33">
                     <BotaoIcone
                       rotulo="Reabrir etapa"
                       motivo={reabertura.motivo}
@@ -362,7 +388,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                   precedência para quem ainda não a conhece.
                 */}
                 {!encerrada && !noFluxoDaSecao && (
-                  <div className="flex flex-shrink-0 items-center">
+                  <div className="flex flex-shrink-0 items-center @2xl:w-33">
                     {/* Play e pause são a MESMA alavanca em estados opostos, e
                         por isso ocupam a mesma posição: em andamento mostra
                         pause, o resto mostra play (que também retoma). */}
@@ -987,6 +1013,7 @@ function DialogoPessoa({
         <div className="mt-1">
           <Dropdown
             rotulo={isPending ? 'Carregando…' : 'Selecione uma pessoa'}
+            buscavel
             desabilitado={isPending}
             selecionado={paraPessoaId}
             onEscolher={(item) => setParaPessoaId(item.id)}
@@ -1019,8 +1046,9 @@ function pontoEtapa(etapa: EtapaQuadro): string {
       return 'bg-concluido'
     case 'em_andamento':
       return 'bg-andamento'
+    // Vermelho, acompanhando a pílula da atribuída (15/09/2026).
     case 'atribuida':
-      return 'bg-muted-foreground'
+      return 'bg-atrasado'
     default:
       return 'bg-muted-foreground/30'
   }

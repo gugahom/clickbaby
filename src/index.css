@@ -541,6 +541,39 @@
       animation: none;
     }
   }
+
+  /* O PULSO DA ETAPA ATRIBUÍDA (15/09/2026). Ver PilulaAtribuida.
+
+     Uma onda que SAI da pílula e some, e não um piscar da pílula inteira: o nome
+     tem de continuar legível o tempo todo — é ele que a fotógrafa procura — e
+     um piscar de opacidade o apagaria a cada ciclo. Box-shadow e não `outline`
+     ou borda, pelo mesmo motivo do anel do cartão: não mexe no layout.
+
+     Mais lento que o anel do alerta (2.4s de volta) e sem giro: são dois
+     vermelhos na mesma tela, e o movimento é o que separa "o horário está
+     estourando" de "tem trabalho seu esperando". */
+  .pulso-atribuida {
+    animation: pulso-atribuida 2s ease-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulso-atribuida {
+      animation: none;
+      box-shadow: 0 0 0 2px color-mix(in oklch, var(--atrasado) 30%, transparent);
+    }
+  }
+}
+
+@keyframes pulso-atribuida {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--atrasado) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in oklch, var(--atrasado) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--atrasado) 0%, transparent);
+  }
 }
 
 /* ============================================================================

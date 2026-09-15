@@ -322,6 +322,7 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
         <div className="mt-1.5">
           <Dropdown
             rotulo="Escolher pessoa"
+            buscavel
             selecionado={pessoaId}
             onEscolher={(item) => setPessoaId(item.id)}
             itens={(pessoas ?? []).map((p) => ({ id: p.id, rotulo: p.nome }))}

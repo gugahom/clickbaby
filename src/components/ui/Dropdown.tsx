@@ -56,6 +56,43 @@ interface PropsDropdown {
   className?: string
   /** Vira o `id` do gatilho, para um <label> externo apontar para cá. */
   id?: string
+  /**
+   * Um campo de texto no topo do painel filtra a lista enquanto se digita
+   * (15/09/2026, pedido do gestor). Existe para as listas de PESSOAS: com
+   * catorze nomes, rolar até achar "Thalia" custa mais que digitar "tha".
+   */
+  buscavel?: boolean
+  /**
+   * Com `buscavel`, o que foi digitado e não bate com nenhum item vira um item
+   * a mais no fim da lista — "Usar “CELULAR SARAH”". Para o campo que tem uma
+   * lista para o caso comum e precisa aceitar a exceção sem virar formulário.
+   * Quem chama decide o id e o rótulo do item criado.
+   */
+  textoLivre?: (texto: string) => ItemDropdown
+  /** O que o campo de busca mostra vazio. */
+  placeholderBusca?: string
+  /**
+   * Tira o piso de 44px do gatilho próprio. SÓ para gatilho que mora numa
+   * superfície de PC — as pílulas de material do acompanhamento, que o gestor
+   * pediu só no desktop e que empilham duas por linha. No toque o piso volta a
+   * ser obrigatório (seção 6), e quem usar isto no celular está errando.
+   */
+  compacto?: boolean
+}
+
+/** "Thália" e "thalia" são a mesma busca: sem acento, sem caixa. */
+function normalizar(texto: string): string {
+  return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+/**
+ * O teclado só sobe sozinho onde há teclado. No celular, focar a busca ao
+ * abrir levantaria o teclado virtual por cima da lista que a pessoa queria ver
+ * — e na maioria das vezes ela escolhe tocando, sem digitar nada. Lá o campo
+ * fica à vista e um toque nele basta.
+ */
+function temPonteiroFino(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
 }
 
 /**
@@ -88,8 +125,13 @@ export function Dropdown({
   desabilitado = false,
   className,
   id,
+  buscavel = false,
+  compacto = false,
+  textoLivre,
+  placeholderBusca = 'Digite para filtrar',
 }: PropsDropdown) {
   const [aberto, setAberto] = useState(false)
+  const [busca, setBusca] = useState('')
   const [caixaDoPainel, setCaixaDoPainel] = useState<Posicao | null>(null)
   const caixa = useRef<HTMLDivElement>(null)
   const botao = useRef<HTMLButtonElement>(null)
@@ -98,6 +140,32 @@ export function Dropdown({
   const semMovimento = useReducedMotion()
 
   const escolhido = selecionado ? itens.find((i) => i.id === selecionado) : undefined
+
+  // A busca FILTRA, não reordena: a lista chega em ordem alfabética e continua
+  // assim, só com menos linhas. E cada abertura começa do zero — um filtro
+  // esquecido da vez anterior faria a lista parecer ter perdido gente.
+  const termo = normalizar(busca.trim())
+  const filtrados =
+    buscavel && termo !== '' ? itens.filter((i) => normalizar(i.rotulo).includes(termo)) : itens
+  // O texto livre só aparece quando NÃO é exatamente um item que já existe:
+  // "cel click 4" digitado tem que escolher o CEL CLICK 4 da lista, e não criar
+  // uma segunda grafia dele.
+  const itemLivre =
+    buscavel && textoLivre && termo !== '' && !itens.some((i) => normalizar(i.rotulo) === termo)
+      ? textoLivre(busca.trim())
+      : null
+  const visiveis = itemLivre ? [...filtrados, itemLivre] : filtrados
+
+  function alternar() {
+    setBusca('')
+    setAberto((v) => !v)
+  }
+
+  function escolher(item: ItemDropdown) {
+    setAberto(false)
+    setBusca('')
+    onEscolher(item)
+  }
 
   /*
    * O PAINEL É `fixed`, e essa é a diferença que importa.
@@ -170,7 +238,7 @@ export function Dropdown({
           ref={botao}
           type="button"
           id={idGatilho}
-          onClick={() => setAberto((v) => !v)}
+          onClick={alternar}
           aria-haspopup="menu"
           aria-expanded={aberto}
           // O NOME ACESSÍVEL VEM DAQUI, e não de um aria-label no gatilho
@@ -184,9 +252,11 @@ export function Dropdown({
           // min-h-11 mesmo com gatilho próprio: quem passa um gatilho cuida da
           // aparência, mas o alvo de toque é responsabilidade daqui — o chip de
           // usuário, por exemplo, tem 40px de desenho e ficaria abaixo dos 44
-          // da seção 6 sem esta linha.
+          // da seção 6 sem esta linha. A exceção é `compacto`, que só existe
+          // em superfície de PC.
           className={clsx(
-            'flex min-h-11 cursor-pointer items-center disabled:cursor-not-allowed',
+            'flex cursor-pointer items-center disabled:cursor-not-allowed',
+            !compacto && 'min-h-11',
             larguraCheia && 'w-full',
           )}
         >
@@ -197,7 +267,7 @@ export function Dropdown({
           ref={botao}
           type="button"
           id={idGatilho}
-          onClick={() => setAberto((v) => !v)}
+          onClick={alternar}
           aria-haspopup="menu"
           aria-expanded={aberto}
           disabled={desabilitado}
@@ -273,42 +343,70 @@ export function Dropdown({
               gatilho && 'min-w-44',
             )}
           >
-            <ul className="py-1">
-              {itens.map((item) => {
-                const marcado = escolhido?.id === item.id
-                return (
-                  <li key={item.id} role="none">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      disabled={item.desabilitado}
-                      title={item.motivo}
-                      onClick={() => {
-                        setAberto(false)
-                        onEscolher(item)
-                      }}
-                      className={clsx(
-                        // min-h-11: a linha É o alvo de toque (seção 6).
-                        'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                        item.desabilitado
-                          ? 'cursor-not-allowed text-muted-foreground/60'
-                          : item.destrutivo
-                            ? 'cursor-pointer text-atrasado hover:bg-atrasado/10'
-                            : marcado
-                              ? 'cursor-pointer bg-marca-suave font-semibold text-marca'
-                              : 'cursor-pointer text-foreground hover:bg-muted',
-                      )}
-                    >
-                      {item.icone && <span className="flex-shrink-0">{item.icone}</span>}
-                      <span className="truncate">{item.rotulo}</span>
-                      {marcado && (
-                        <IconeCheck className="ml-auto size-4 flex-shrink-0 text-marca" />
-                      )}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            {buscavel && (
+              // STICKY dentro do painel que rola: com a lista longa, o campo
+              // não pode sumir para cima justamente quando a pessoa percebe
+              // que era mais rápido digitar.
+              <div className="sticky top-0 z-10 border-b border-border bg-card p-1.5">
+                <input
+                  type="search"
+                  value={busca}
+                  autoFocus={temPonteiroFino()}
+                  onChange={(e) => setBusca(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter escolhe a PRIMEIRA que sobrou: "tha" + Enter é o
+                    // gesto inteiro, sem tirar a mão do teclado. E não deixa o
+                    // Enter chegar ao <dialog>, que o leria como confirmar.
+                    if (e.key !== 'Enter') return
+                    e.preventDefault()
+                    const primeiro = visiveis.find((i) => !i.desabilitado)
+                    if (primeiro) escolher(primeiro)
+                  }}
+                  placeholder={placeholderBusca}
+                  aria-label={`Filtrar: ${rotulo}`}
+                  // text-base (16px): abaixo disso o Safari do iPhone dá zoom
+                  // na página ao focar o campo.
+                  className="min-h-10 w-full rounded-md border border-border bg-background px-2.5 text-base outline-none focus:border-marca"
+                />
+              </div>
+            )}
+            {visiveis.length === 0 ? (
+              <p className="px-3 py-2.5 text-sm text-muted-foreground">Nada com esse nome.</p>
+            ) : (
+              <ul className="py-1">
+                {visiveis.map((item) => {
+                  const marcado = escolhido?.id === item.id
+                  return (
+                    <li key={item.id} role="none">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={item.desabilitado}
+                        title={item.motivo}
+                        onClick={() => escolher(item)}
+                        className={clsx(
+                          // min-h-11: a linha É o alvo de toque (seção 6).
+                          'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                          item.desabilitado
+                            ? 'cursor-not-allowed text-muted-foreground/60'
+                            : item.destrutivo
+                              ? 'cursor-pointer text-atrasado hover:bg-atrasado/10'
+                              : marcado
+                                ? 'cursor-pointer bg-marca-suave font-semibold text-marca'
+                                : 'cursor-pointer text-foreground hover:bg-muted',
+                        )}
+                      >
+                        {item.icone && <span className="flex-shrink-0">{item.icone}</span>}
+                        <span className="truncate">{item.rotulo}</span>
+                        {marcado && (
+                          <IconeCheck className="ml-auto size-4 flex-shrink-0 text-marca" />
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </m.div>
         )}
       </AnimatePresence>
