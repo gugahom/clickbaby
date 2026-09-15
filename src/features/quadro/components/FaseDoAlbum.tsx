@@ -16,6 +16,10 @@ import {
 /**
  * A FASE DO FOTOLIVRO — o segundo quadro do Trello, sem virar um Trello.
  *
+ * (15/09/2026: a seção passou a abrir num modal com uma visão POR FASE em
+ * colunas, em teste ao lado da lista — ver SecaoEmModal. A fase continua
+ * mudando por aqui nas duas visões.)
+ *
  * Mesma decisão da FaseDoVideo, e vale repetir porque aqui a tentação é maior:
  * são DEZ colunas, e dez colunas é onde um kanban parece obrigatório. Não é. Um
  * kanban serve para ver CARGA — quantos há em cada coluna, onde entope —, e a
@@ -56,6 +60,10 @@ export function FaseDoAlbum({
     <>
       <Dropdown
         alinhamento="direita"
+        // `min-w-0`: os rótulos do fotolivro são longos ("Aguardando pagamento e
+        // fotos"), e sem isto a pílula se recusa a encolher — empurra o cartão e
+        // vira rolagem lateral numa coluna estreita. Com ele, o texto trunca.
+        className="min-w-0"
         rotulo={
           atual
             ? `Fase do Foto/Livro: ${ROTULO_FASE_ALBUM[atual]}`

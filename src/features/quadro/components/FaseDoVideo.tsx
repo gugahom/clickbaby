@@ -16,6 +16,11 @@ import {
 /**
  * A FASE do vídeo do MASTER — o fluxo do Trello, sem virar um Trello.
  *
+ * (15/09/2026: a seção passou a abrir num modal, e o modal ganhou uma visão
+ * POR FASE em colunas, para o gestor comparar com a lista antes de decidir —
+ * ver SecaoEmModal. O argumento abaixo continua sendo o motivo da decisão
+ * original. Nas duas visões a fase muda por aqui, sem arrastar.)
+ *
  * O gestor mostrou o quadro de colunas que a equipe usa hoje só para o vídeo
  * horizontal e pediu esse fluxo aqui dentro. As cinco fases são o pedido; o
  * QUADRO não era — ele foi descartado explicitamente. E não custa nada perder:
