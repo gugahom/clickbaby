@@ -267,7 +267,9 @@ tem explicação. Em 25/08 a restrição saiu porque quem gerava os links eram a
 e prender o encerramento ao atendimento fazia gargalo de um passo que ele não executava.
 Esse motivo acabou em 04/09 (`20260904190000`): o link passou a ser pedido na conclusão da
 edição, então quando o caso chega ao fim os links já estão nele, e quem confirma não
-precisa mais ser quem editou.
+precisa mais ser quem editou. Desde 15/09/2026 o link é cobrado no ENVIO para Entregáveis,
+não na conclusão — e o argumento continua de pé: quando o caso chega ao ADM, o link principal
+já está nele.
 
 **Atenção a uma armadilha ao mexer nisso:** `eh_adm()` **não** inclui `atendimento` (ele é
 comercial, coordenacao, financeiro, gestao). Escrever a checagem só com ele deixaria de
@@ -275,7 +277,10 @@ fora justamente a pessoa que faz a entrega. O par correto é `eh_atendimento() o
 o mesmo que `cancelar_caso` usa — e é o que "atendimento ou adm" significa neste projeto.
 
 `cancelar_caso` **continua** restrita ao mesmo par: cancelar é decisão comercial sobre o
-contrato, não o fim natural de um trabalho.
+contrato, não o fim natural de um trabalho. Esse par é, na prática, **todo papel menos
+`operador`** (atendimento, comercial, coordenacao, financeiro, gestao), e na tela as portas de
+cancelar — "Cancelar caso" no detalhe e "Descartar rascunho" no menu — **não existem** para
+fotógrafa (15/09/2026, pedido do gestor), em vez de aparecerem apagadas.
 
 `status_operacional = cancelado` exige `motivo_cancelamento` preenchido e não vazio — seja
 porque o sync detectou o card cinza no Calendar (preenche um texto padrão automaticamente),
@@ -329,7 +334,7 @@ Funções RPC que EXISTEM (01/09/2026). Toda escrita de estado passa por uma del
 iniciar_etapa(p_caso_etapa_id)                          -- inicia ou retoma
 pausar_etapa(p_caso_etapa_id)
 concluir_etapa(p_caso_etapa_id, p_observacao)
-concluir_etapa_com_entregaveis(p_caso_etapa_id, p_entregaveis, p_observacao)
+concluir_etapa_com_entregaveis(p_caso_etapa_id, p_entregaveis, p_observacao) -- sem uso na tela desde 15/09/2026
 reabrir_etapa(p_caso_etapa_id, p_motivo)                -- desfaz conclusão ou dispensa
 dispensar_etapa(p_caso_etapa_id, p_motivo)              -- "não vai acontecer"
 adicionar_etapa(p_caso_id, p_tipo)                      -- etapa fora do pacote
@@ -940,73 +945,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   UMA constante, `NAO_SEGURAM_A_ENTREGA`, espelho literal do `not in` das duas RPCs; a
   próxima etapa que entrar nessa regra muda os dois lados ou nenhum. Em Concluídos o card
   ganhou o selo **"Foto/Livro em andamento"**, como o do vídeo.
-- **O link de entrega é pedido NA CONCLUSÃO DA EDIÇÃO** (04/09/2026, pedido do gestor), e
-  não só no encerramento. Quem acaba de editar tem o link na mão; quem encerra o caso dias
-  depois vai atrás dele. A conclusão dessas etapas passa a abrir um diálogo e **não fecha
-  sem o link** — é trava, não lembrete.
-  Quem pede o quê (revisto em 11/09/2026): **só a edição de FOTOS** cobra link, e o que ela
-  cobra depende do pacote — o *Link de Google* em todo pacote, e nos dois BIRTH o *Link
-  CADEADO* **no lugar dele**, não além dele. A lista está em `lib/links-da-conclusao.ts`.
-  **No BIRTH o cadeado É a entrega.** Ele é o link único de foto+vídeo que a família
-  recebe, e desde 04/09 o BIRTH vinha pedindo os dois: o álbum do Google separado era um
-  endereço a mais para produzir, sem ninguém do outro lado esperando por ele.
-  **E O REELS DO BIRTH ABRE O CADEADO, sem cobrar nada.** Concluir o reels nos dois BIRTH
-  abre o mesmo quadro de "link já criado" da segunda rodada da foto, dizendo *adicione o
-  reels no link abaixo* — porque o vertical sobe DENTRO do cadeado que a edição de fotos
-  criou. É MOSTRAR, não exigir: `obrigatorio` é `false` ali, e sem o cadeado a etapa fecha
-  do mesmo jeito.
-  **Por que ele não pode ser trava:** o cadeado nasce na conclusão da edição de FOTOS, que
-  é etapa irmã e não tem ordem garantida — as duas liberam juntas, quando o nascimento
-  conclui. Quem concluísse o reels primeiro ficaria preso pedindo um link que ainda não
-  existe, que é o beco de 09/09 entrando por outra porta.
-  **Consequência no código, e ela morde:** o diálogo agora pode devolver lista VAZIA de
-  entregáveis, e `concluir_etapa_com_entregaveis` **recusa lista vazia de propósito** (ela
-  existe para conclusões que levam link junto). Quem chama olha o tamanho e cai na
-  `concluir_etapa` de sempre — nos DOIS caminhos de conclusão, o do card e o da seção.
-  **O REELS NÃO PEDE MAIS NADA** (09/09/2026, pedido do gestor). Entre 04/09 e 09/09 o
-  reels do BASIC e do STANDARD exigia o *Link de CADEADO do reels*; uma semana de operação
-  mostrou que ali a trava estava no lugar errado. O cadeado do reels nem sempre existe na
-  hora em que a edição termina, e a etapa ficava presa justamente na lista de trabalho
-  parado — a seção REELS, onde pendente é vermelho e o cartão gira.
-  **A diferença para a edição de fotos, que continua exigindo:** lá o link nasce junto com
-  o trabalho, quem terminou acabou de subir o álbum e tem a URL na mão. No reels não é
-  assim, e transformar em trava o que é sequência de outra pessoa dá o pior dos dois
-  mundos: nem o link aparece, nem a etapa fecha. O registro não se perdeu — entra pelo
-  "Adicionar link" da lista de entregáveis do card, e é conferido de novo na aba
-  Entregáveis, que é onde o cadeado é olhado de qualquer forma. O que saiu foi a cobrança
-  antecipada.
-  Se um dia voltar, volta como LISTA de slugs (eram `basic` e `standard`, nomeados pelo
-  gestor) e nunca como dedução do tipo "todo pacote com reels" — essa regra ele não deu.
-  A trava vale nos **dois** caminhos de conclusão: o botão do card e o da seção lateral
-  (`AcoesDaEtapa`), que é onde a equipe de edição de fato trabalha. Uma regra que valesse
-  só num deles não seria regra.
-  Isto custa toques, contra a seção 6 — e a conta fecha porque a edição não acontece no
-  corredor: é feita sentada, numa estação, onde colar um link é barato. Nenhuma etapa de
-  CAMPO passa por aí.
-  A REGRA COMERCIAL VIVE NA TELA, como a do checklist de encerramento. A RPC
-  `concluir_etapa_com_entregaveis` garante só o que é dela: link e conclusão na MESMA
-  transação (meio caminho produziria link órfão, ou a etapa concluída sem link — os dois
-  estados que a regra veio impedir), carimbo do servidor e evento append-only. Link
-  **NA SEGUNDA RODADA O DIÁLOGO PARA DE PEDIR LINK** (09/09/2026, pedido do gestor). A
-  rodada 2 da edição de fotos entrega o MESMO álbum da rodada 1 — a família recebe um
-  endereço só, e as fotos do banho e do fechamento sobem dentro dele. O campo já vinha
-  preenchido com esse link desde 04/09, e não bastava: a tela continuava sendo um rótulo
-  ("Link de Google") em cima de uma caixa de texto, que é a cara de "cole aqui um link
-  novo". Quem chegava na segunda rodada parava para pensar se devia criar outro álbum, e
-  alguns criaram. Agora, quando o caso JÁ TEM link daquele tipo, o campo dá lugar a um bloco
-  que diz o que fazer — *adicione as fotos finais no link abaixo* — com o endereço à vista,
-  clicável e com botão de copiar. **Não é campo, é instrução.**
-  **Com saída:** "Usar outro link" troca o bloco pelo campo vazio, porque existe o caso
-  legítimo de a segunda rodada ir para outro lugar. Ela fica discreta de propósito — o
-  caminho comum é reaproveitar, e um botão do mesmo peso convidaria a criar álbum novo, que
-  é o que o bloco veio evitar.
-  O diálogo **não mostra campo nenhum enquanto os links do caso não chegam**. Hoje ele abre
-  com o card aberto, onde a consulta já está no cache; se um dia abrir de um lugar frio, o
-  primeiro quadro seria justamente a caixa vazia pedindo link — e ela sumiria sozinha um
-  instante depois, cedo demais para desconfiar e tarde demais para desfazer o álbum criado.
-  Link
-  idêntico ao que o caso já tem não vira linha nova: a rodada 2 da edição de fotos entrega
-  o mesmo álbum, e o campo já vem preenchido com ele.
+- **O LINK DE ENTREGA É COBRADO NO ENVIO para Entregáveis** (15/09/2026, pedido do gestor),
+  em TODO pacote — e não mais na conclusão da edição de fotos. Concluir qualquer etapa é um
+  toque, no card e na seção lateral.
+  **A história, porque ela vai tentar voltar.** De 04/09 a 15/09 a conclusão da edição de
+  FOTOS abria um diálogo e não fechava sem o link (o de Google; no BIRTH, o CADEADO), e o reels
+  do BIRTH mostrava o cadeado para o vertical subir dentro dele. O argumento era bom — quem acaba
+  de editar tem a URL na mão —, e a operação mostrou o contrário: a etapa ficava presa esperando
+  um endereço que muitas vezes ainda não existia, e quem ENVIA o caso é quem confere os links de
+  qualquer forma. A equipe pediu a trava no envio, e foi o gestor que trouxe o pedido.
+  **O que segura o envio agora** (`DialogoConfirmarEntrega`): o LINK PRINCIPAL — Google fora do
+  BIRTH, CADEADO nos dois BIRTH. Faltando, a linha da caixa diz "Falta este link para enviar" e o
+  "Adicionar link" o registra ali mesmo; o botão Enviar só acende com ele. O WeTransfer continua
+  SEM trava. O botão "Enviar para Entregáveis" do card deixou de exigir link para abrir —
+  exigir ali prenderia a pessoa fora do único diálogo que pede o link.
+  A trava do banco não mudou: `liberar_para_entrega` e `confirmar_entrega` exigem ao menos um
+  entregável, e a do diálogo é mais estrita do que ela, nunca mais frouxa.
+  **Saíram** `lib/links-da-conclusao.ts`, `DialogoConcluirComLinks` e o hook da conclusão com
+  link. A RPC `concluir_etapa_com_entregaveis` ficou no banco, sem uso na tela.
 - **A aba ENTREGÁVEIS** (06/09/2026), entre Quadro e Rascunhos. O card verde deixou de
   oferecer "Confirmar entrega" a qualquer um: quem termina o trabalho aperta **"Enviar para
   Entregáveis"**, o caso SAI DO QUADRO, e o ADM confere os links e confirma lá. É a
@@ -1039,7 +995,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **A CAIXA NÃO ESPERA PELO LINK.** Marcar continua sendo gesto humano de conferência:
   travar a caixa em "existe entregável deste tipo" deixaria impossível enviar um caso sem
   WeTransfer, e a trava de verdade — ao menos um entregável — já está no banco, onde ela não
-  diverge da tela.
+  diverge da tela. Quem espera pelo link, desde 15/09/2026, é o BOTÃO — e só pelo link
+  principal (ver "O LINK DE ENTREGA É COBRADO NO ENVIO", acima).
   A pílula da aba ganha o **anel verde girando** quando há fila — o mesmo recurso do vídeo
   parado na seção REELS (`.anel-alerta`), ali em vermelho porque é prazo correndo, aqui em
   verde porque é trabalho pronto esperando alguém. Sem fila ele some; se girasse sempre não
@@ -1164,6 +1121,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   distingue o trabalho novo do que já foi entregue.
   **`Dialogo` ganhou `soFechar`** para isso: um diálogo que só MOSTRA não tem o que
   cancelar, e "Cancelar" ao lado de "Fechar" oferece duas portas para a mesma saída.
+  **O AVISO É VERMELHO E PULSA, NO ESTILO DA ETAPA ATRIBUÍDA** (15/09/2026, pedido do gestor,
+  em duas voltas no mesmo dia). A faixa era um lavado claro no tom do rascunho, e a equipe
+  passou a escrever os avisos com fileiras de emoji ("10:30 - Q 201 🟢🟢🟢") para chamar atenção
+  — a prova de que ela não chamava. A primeira volta foi âmbar sólido; o gestor pediu o
+  vermelho com a onda, igual à pílula de quem foi atribuída. Agora o aviso é uma PÍLULA
+  vermelha com megafone (`IconeAviso`) no disco translúcido em que a atribuída tem as
+  iniciais, texto em negrito na cor do card (5,9:1), e a mesma onda — a classe virou
+  `.pulso-chamado`, porque serve às duas.
+  **É PÍLULA COM MARGEM, não faixa de ponta a ponta:** o card tem `overflow-hidden` e a onda
+  saindo de uma faixa encostada nas bordas seria cortada. Dentro do card aberto, a observação
+  de etapa ABERTA vira o mesmo bloco vermelho pulsando; a de etapa concluída ou dispensada fica
+  num bloco neutro, sem pulso — ali ela é relato, não chamado. O diálogo com o texto completo
+  não pulsa: ele já é a resposta ao chamado.
+  **Três vermelhos no card, separados pela FORMA:** horário estourando pinta o cartão inteiro
+  e gira o anel da borda; a atribuída é pílula com iniciais; o aviso é pílula com megafone.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e

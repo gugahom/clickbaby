@@ -416,7 +416,6 @@ export function QuadroPage() {
         <>
           <FaseDoVideo etapa={etapa} onErro={setErroMaster} />
           <AcoesDaEtapa
-            caso={caso}
             etapa={etapa}
             etapas={etapasPorCaso.get(caso.id) ?? []}
             onErro={setErroMaster}
@@ -457,7 +456,6 @@ export function QuadroPage() {
         <>
           <FaseDoAlbum etapa={etapa} onErro={setErroFotolivro} />
           <AcoesDaEtapa
-            caso={caso}
             etapa={etapa}
             etapas={etapasPorCaso.get(caso.id) ?? []}
             onErro={setErroFotolivro}

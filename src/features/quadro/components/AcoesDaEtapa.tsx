@@ -1,21 +1,12 @@
 import { useState } from 'react'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { IconeCheck, IconePause, IconePlay } from '@/components/ui/icones'
-import {
-  useConcluirEtapa,
-  useConcluirEtapaComEntregaveis,
-  useIniciarEtapa,
-  usePausarEtapa,
-} from '../api/useAcoes'
+import { useConcluirEtapa, useIniciarEtapa, usePausarEtapa } from '../api/useAcoes'
 import { podeConcluir, podeIniciar, podePausar } from '../lib/acoes'
-import { linksDaConclusao } from '../lib/links-da-conclusao'
-import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { mensagemDeErro } from '../lib/erros'
-import type { CasoQuadro, EtapaQuadro } from '../types'
+import type { EtapaQuadro } from '../types'
 
 interface PropsAcoesDaEtapa {
-  /** De quem é a etapa — o pacote decide se a conclusão pede link. */
-  caso: CasoQuadro
   etapa: EtapaQuadro
   /** Todas as etapas do caso: a precedência depende delas, não só desta. */
   etapas: EtapaQuadro[]
@@ -39,30 +30,22 @@ interface PropsAcoesDaEtapa {
  * As regras (podeIniciar, podePausar, podeConcluir) são as MESMAS de lá — não
  * há uma segunda definição de quando um botão pode ser tocado.
  *
- * E A TRAVA DO LINK TAMBÉM É A MESMA. Este botão concluía direto pela RPC
- * antiga, o que abriria um buraco exatamente no caminho mais usado: a seção
- * REELS é onde a equipe de edição trabalha, com o Quadro na TV da sala. Uma
- * regra que vale no card e não vale aqui não é uma regra — é uma sugestão.
+ * CONCLUIR É UM TOQUE, SEM LINK (15/09/2026, pedido do gestor). Entre 04/09 e
+ * 15/09 a conclusão da edição abria um diálogo pedindo o link de entrega, e o
+ * card e esta seção tinham de pedir igual. A cobrança do link foi para o ENVIO
+ * a Entregáveis (`DialogoConfirmarEntrega`) — nos dois caminhos de uma vez,
+ * porque aqui não há mais nada a pedir.
  */
-export function AcoesDaEtapa({ caso, etapa, etapas, onErro }: PropsAcoesDaEtapa) {
+export function AcoesDaEtapa({ etapa, etapas, onErro }: PropsAcoesDaEtapa) {
   const iniciar = useIniciarEtapa()
   const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
-  const concluirComLinks = useConcluirEtapaComEntregaveis()
   const [ocupadoLocal, setOcupadoLocal] = useState(false)
-  const [pedindoLinks, setPedindoLinks] = useState(false)
-
-  const links = linksDaConclusao(etapa, caso)
 
   const inicio = podeIniciar(etapa, etapas)
   const pausa = podePausar(etapa)
   const conclusao = podeConcluir(etapa, etapas)
-  const ocupado =
-    ocupadoLocal ||
-    iniciar.isPending ||
-    pausar.isPending ||
-    concluir.isPending ||
-    concluirComLinks.isPending
+  const ocupado = ocupadoLocal || iniciar.isPending || pausar.isPending || concluir.isPending
 
   function executar(promessa: Promise<unknown>) {
     onErro(null)
@@ -97,54 +80,14 @@ export function AcoesDaEtapa({ caso, etapa, etapas, onErro }: PropsAcoesDaEtapa)
       )}
 
       <BotaoIcone
-        rotulo={links.length > 0 ? 'Concluir edição com o link' : 'Concluir edição'}
+        rotulo="Concluir edição"
         tom="positivo"
         disabled={ocupado || !conclusao.habilitada}
         motivo={conclusao.motivo}
-        onClick={() => {
-          onErro(null)
-          if (links.length > 0) setPedindoLinks(true)
-          else executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
-        }}
+        onClick={() => executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))}
       >
         <IconeCheck className="size-[18px]" />
       </BotaoIcone>
-
-      {pedindoLinks && (
-        <DialogoConcluirComLinks
-          caso={caso}
-          etapa={etapa}
-          links={links}
-          ocupado={concluirComLinks.isPending}
-          erro={null}
-          onCancelar={() => setPedindoLinks(false)}
-          onConfirmar={(entregaveis, observacao) => {
-            onErro(null)
-            setOcupadoLocal(true)
-            /* SEM LINK, OUTRA RPC. `concluir_etapa_com_entregaveis` recusa
-               lista vazia de propósito — ela existe para conclusões que levam
-               link junto, e o caminho de concluir sem é a `concluir_etapa` de
-               sempre. Isso acontece no reels do BIRTH quando o cadeado ainda
-               não nasceu: o diálogo mostra o campo, e a etapa fecha sem ele. */
-            const promessa =
-              entregaveis.length > 0
-                ? concluirComLinks.mutateAsync({
-                    casoEtapaId: etapa.id,
-                    entregaveis,
-                    ...(observacao === '' ? {} : { observacao }),
-                  })
-                : concluir.mutateAsync({
-                    casoEtapaId: etapa.id,
-                    ...(observacao === '' ? {} : { observacao }),
-                  })
-
-            promessa
-              .then(() => setPedindoLinks(false))
-              .catch((e) => onErro(mensagemDeErro(e)))
-              .finally(() => setOcupadoLocal(false))
-          }}
-        />
-      )}
     </div>
   )
 }

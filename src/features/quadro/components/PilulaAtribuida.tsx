@@ -40,7 +40,7 @@ export function PilulaAtribuida({
   return (
     <span
       title={`${nome} — atribuída, aguardando início`}
-      className="pulso-atribuida inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-atrasado py-px pr-2 pl-px text-card"
+      className="pulso-chamado inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-atrasado py-px pr-2 pl-px text-card"
     >
       {/* A letra usa a cor do CARD, como no círculo azul: no tema escuro o
           vermelho é claro, e branco fixo sobre ele não se lê. */}

@@ -19,9 +19,8 @@ import {
   IconeDispensar,
   IconeMais,
   IconeAdicionar,
+  IconeAviso,
 } from '@/components/ui/icones'
-import { linksDaConclusao } from '../lib/links-da-conclusao'
-import { DialogoConcluirComLinks } from './DialogoConcluirComLinks'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { CampoEstacao } from './CampoEstacao'
 import { MaterialDoAcompanhamento } from './MaterialDoAcompanhamento'
@@ -36,7 +35,6 @@ import {
   useAtribuirEtapa,
   useCancelarCaso,
   useConcluirEtapa,
-  useConcluirEtapaComEntregaveis,
   useLiberarParaEntrega,
   useIniciarEtapa,
   useMoverParaUti,
@@ -66,7 +64,6 @@ import {
 } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
 import { Entregaveis } from './Entregaveis'
-import { useEntregaveis } from '../api/useAcoes'
 import {
   ROTULO_ETAPA,
   rotuloDaRodada,
@@ -123,13 +120,11 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
   const [anotarDe, setAnotarDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
-  const [linksDe, setLinksDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
   const atribuir = useAtribuirEtapa()
   const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
-  const concluirComLinks = useConcluirEtapaComEntregaveis()
   const moverParaUti = useMoverParaUti()
   const retornarDaUti = useRetornarDaUti()
   const planejarRendicao = usePlanejarRendicao()
@@ -148,7 +143,6 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     moverParaUti.isPending ||
     retornarDaUti.isPending ||
     concluir.isPending ||
-    concluirComLinks.isPending ||
     transferir.isPending ||
     liberar.isPending ||
     adicionarEtapa.isPending ||
@@ -162,12 +156,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     )
   }
 
-  // O card só renderiza AcoesDoCaso quando está aberto, então buscar aqui já é
-  // "só com o card aberto" — ver useEntregaveis.
-  const { data: entregaveis } = useEntregaveis(caso.id, true)
-  const temEntregavel = (entregaveis ?? []).length > 0
-
-  const envio = podeLiberarParaEntrega(caso, temEntregavel, etapas)
+  // O link não entra mais nesta conta (15/09/2026): quem o cobra é o diálogo
+  // de envio, que também deixa registrá-lo ali mesmo. Ver podeLiberarParaEntrega.
+  const envio = podeLiberarParaEntrega(caso, etapas)
   const cancelamento = podeCancelar(caso, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
@@ -325,11 +316,29 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       <span>· {formatarDataHora(etapa.concluidoEm)}</span>
                     )}
                   </div>
-                  {etapa.observacao && (
-                    <p className="mt-1 text-xs whitespace-pre-line text-foreground/80">
-                      {etapa.observacao}
-                    </p>
-                  )}
+                  {/* O AVISO EM DESTAQUE TAMBÉM AQUI (15/09/2026, pedido do
+                      gestor). Numa etapa ABERTA a observação é chamado para
+                      quem vem, e ganha o mesmo vermelho pulsando da faixa do
+                      card e da etapa atribuída, com o megafone. Numa etapa
+                      resolvida ela é relato do que aconteceu, e fica num bloco
+                      neutro — pulsar os dois faria o card aberto gritar pelo
+                      que já passou. */}
+                  {etapa.observacao &&
+                    (encerrada ? (
+                      <p className="mt-1.5 rounded-md bg-muted/70 px-2 py-1 text-xs whitespace-pre-line text-foreground/80">
+                        {etapa.observacao}
+                      </p>
+                    ) : (
+                      <p className="pulso-chamado mt-2 mb-1 flex items-start gap-2 rounded-2xl bg-atrasado py-1.5 pr-3 pl-1.5 text-sm font-bold whitespace-pre-line text-card">
+                        <span
+                          aria-hidden="true"
+                          className="inline-flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-card/25"
+                        >
+                          <IconeAviso className="size-3.5" />
+                        </span>
+                        <span className="min-w-0 self-center">{etapa.observacao}</span>
+                      </p>
+                    ))}
                 </div>
 
                 {/* O MATERIAL DO ACOMPANHAMENTO (15/09/2026): cartão F, cartão V,
@@ -418,27 +427,15 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       </BotaoIcone>
                     )}
 
+                    {/* UM TOQUE, SEM LINK (15/09/2026, pedido do gestor). A
+                        edição de fotos pedia o link aqui desde 04/09; a cobrança
+                        foi para o envio a Entregáveis. */}
                     <BotaoIcone
-                      /* O rótulo muda quando há link a pedir: o toque abre um
-                         diálogo em vez de concluir na hora, e prometer
-                         "Concluir etapa" para um clique que abre formulário é
-                         mentir sobre o que o botão faz. */
-                      rotulo={
-                        linksDaConclusao(etapa, caso).length > 0
-                          ? 'Concluir etapa com o link'
-                          : 'Concluir etapa'
-                      }
+                      rotulo="Concluir etapa"
                       tom="positivo"
                       disabled={ocupado || !conclusao.habilitada}
                       motivo={conclusao.motivo}
-                      onClick={() => {
-                        setErro(null)
-                        if (linksDaConclusao(etapa, caso).length > 0) {
-                          setLinksDe(etapa)
-                        } else {
-                          executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))
-                        }
-                      }}
+                      onClick={() => executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))}
                     >
                       <IconeCheck className="size-[18px]" />
                     </BotaoIcone>
@@ -448,17 +445,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       rotulo={`Mais ações de ${ROTULO_ETAPA[etapa.tipo]}`}
                       onEscolher={(item) => {
                         setErro(null)
-                        /* Os dois caminhos de conclusão passam pela mesma
-                           trava. Deixar este de fora seria deixar aberta, no
-                           menu, a porta que o botão principal fechou — e o
-                           diálogo de link já tem campo de observação. */
-                        if (item.id === 'observacao') {
-                          if (linksDaConclusao(etapa, caso).length > 0) {
-                            setLinksDe(etapa)
-                          } else {
-                            setObservacaoDe(etapa)
-                          }
-                        }
+                        if (item.id === 'observacao') setObservacaoDe(etapa)
                         if (item.id === 'atribuir') setAtribuirDe(etapa)
                         if (item.id === 'handoff') setHandoffDe(etapa)
                         if (item.id === 'rendicao') setRendicaoDe(etapa)
@@ -712,37 +699,6 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           Encerram o caso — sem desfazer.
         </span>
       </div>
-
-      {linksDe && (
-        <DialogoConcluirComLinks
-          caso={caso}
-          etapa={linksDe}
-          links={linksDaConclusao(linksDe, caso)}
-          ocupado={concluirComLinks.isPending || concluir.isPending}
-          erro={erro}
-          onCancelar={() => setLinksDe(null)}
-          onConfirmar={(entregaveis, observacao) =>
-            executar(
-              /* SEM LINK, OUTRA RPC. `concluir_etapa_com_entregaveis` recusa
-                 lista vazia de propósito — ela existe para conclusões que
-                 levam link junto, e concluir sem link é a `concluir_etapa` de
-                 sempre. Acontece no reels do BIRTH quando o cadeado ainda não
-                 nasceu: o diálogo mostra o campo, e a etapa fecha sem ele. */
-              entregaveis.length > 0
-                ? concluirComLinks.mutateAsync({
-                    casoEtapaId: linksDe.id,
-                    entregaveis,
-                    ...(observacao === '' ? {} : { observacao }),
-                  })
-                : concluir.mutateAsync({
-                    casoEtapaId: linksDe.id,
-                    ...(observacao === '' ? {} : { observacao }),
-                  }),
-              () => setLinksDe(null),
-            )
-          }
-        />
-      )}
 
       {observacaoDe && (
         <DialogoObservacao
