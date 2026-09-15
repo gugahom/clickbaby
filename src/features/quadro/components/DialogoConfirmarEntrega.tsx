@@ -23,6 +23,11 @@ interface ItemDeConferencia {
    * não existe, o tipo com que o link novo é registrado ali mesmo.
    */
   tipo: TipoEntregavel
+  /**
+   * `true` = o caso NÃO SAI deste diálogo sem um link deste tipo registrado.
+   * Ver "O LINK PRINCIPAL SEGURA O ENVIO" logo abaixo.
+   */
+  obrigatorio: boolean
 }
 
 /**
@@ -42,10 +47,16 @@ interface ItemDeConferencia {
  * o rótulo volta sozinho, sem ninguém lembrar de mexer aqui.
  *
  * NO BIRTH, UMA CAIXA SÓ. Os dois pacotes de pós-parto entregam pelo mesmo
- * formato — o link único de foto+vídeo, o "cadeado" — e a partir de hoje é por
- * ele que a entrega acontece. As quatro caixas antigas (fotos, reels, cadeado
- * F+V, cadeado F+V com final) conferiam endereços que a operação não produz
- * mais separadamente.
+ * formato — o link único de foto+vídeo, o "cadeado" — e é por ele que a
+ * entrega acontece.
+ *
+ * O LINK PRINCIPAL SEGURA O ENVIO (15/09/2026, pedido do gestor). O link de
+ * Google — o CADEADO, no BIRTH — era cobrado na conclusão da edição de fotos
+ * desde 04/09, e a equipe pediu para ele ser cobrado AQUI: na conclusão a
+ * etapa ficava presa esperando um endereço que muitas vezes ainda não existia,
+ * e quem envia o caso é quem confere os links de qualquer forma. É a mesma
+ * trava, no momento em que ela faz sentido, e vale para TODO pacote. O
+ * WeTransfer continua sem trava: um caso sem WeTransfer existe.
  *
  * `pacoteSlug` e não `pacoteNome`: BIRTH e BIRTH+REELS são dois slugs
  * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o NOME
@@ -59,7 +70,9 @@ function itensDaConferencia(
   const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
 
   if (ehBirth) {
-    return [{ id: 'cadeado_completo', rotulo: 'Link CADEADO completo', tipo: 'cadeado' }]
+    return [
+      { id: 'cadeado_completo', rotulo: 'Link CADEADO completo', tipo: 'cadeado', obrigatorio: true },
+    ]
   }
 
   const temReels = etapas.some((e) => e.tipo === 'reels')
@@ -71,8 +84,14 @@ function itensDaConferencia(
         ? 'Fotos e reels completos no Google'
         : 'Fotos completas no Google',
       tipo: 'google_photos',
+      obrigatorio: true,
     },
-    { id: 'wetransfer_completo', rotulo: 'WeTransfer completo', tipo: 'wetransfer' },
+    {
+      id: 'wetransfer_completo',
+      rotulo: 'WeTransfer completo',
+      tipo: 'wetransfer',
+      obrigatorio: false,
+    },
   ]
 }
 
@@ -102,28 +121,19 @@ interface PropsDialogoConfirmarEntrega {
  * item por item, antes do gesto que não tem volta.
  *
  * DE PROPÓSITO NÃO VIRA COLUNA NOVA NO BANCO. O que a RPC exige continua
- * sendo o mesmo de sempre — pelo menos um entregável registrado
- * (podeConfirmarEntrega, lib/acoes.ts). Este checklist é a certeza de QUEM
- * está confirmando, não um registro que o sistema audita depois; guardar
- * cada caixinha marcada criaria uma segunda fonte de verdade sobre o que
- * foi entregue, competindo com os links de `entregaveis` que já são essa
- * fonte.
+ * sendo o mesmo de sempre — pelo menos um entregável registrado. Este
+ * checklist é a certeza de QUEM está confirmando, não um registro que o
+ * sistema audita depois; guardar cada caixinha marcada criaria uma segunda
+ * fonte de verdade sobre o que foi entregue, competindo com os links de
+ * `entregaveis` que já são essa fonte.
  *
- * O LINK FICA DEBAIXO DA CAIXA (11/09/2026, pedido do gestor). Conferir "fotos
- * completas" sem o endereço à mão obrigava a fechar o diálogo, procurar o link
- * na lista do card e abrir de novo — e quem faz isso três vezes na quarta marca
- * sem olhar. Com o link ali, a caixa vira o que ela promete ser: alguém ABRIU e
- * viu.
+ * O LINK FICA DEBAIXO DA CAIXA (11/09/2026, pedido do gestor), e quando não
+ * existe ele NASCE AQUI. Conferir "fotos completas" sem o endereço à mão
+ * obrigava a fechar o diálogo, procurar o link na lista do card e abrir de
+ * novo — e quem faz isso três vezes na quarta marca sem olhar.
  *
- * E QUANDO O LINK NÃO EXISTE, ELE NASCE AQUI. É o mesmo raciocínio da conclusão
- * da edição: quem está com o caso na mão é quem tem o endereço. Sem isso, o
- * caminho era cancelar o envio, rolar até a lista de entregáveis do card, somar
- * o link e recomeçar a conferência.
- *
- * A CAIXA NÃO ESPERA PELO LINK. Marcar continua sendo um gesto humano de
- * conferência — não travamos a caixa em "existe um entregável deste tipo",
- * porque um caso sem WeTransfer ficaria impossível de enviar, e a trava de
- * verdade (pelo menos um entregável) já está no banco, onde ela não diverge.
+ * A CAIXA NÃO ESPERA PELO LINK: marcar continua sendo um gesto humano de
+ * conferência. Quem espera pelo link é o BOTÃO, e só pelo principal.
  */
 export function DialogoConfirmarEntrega({
   caso,
@@ -143,6 +153,12 @@ export function DialogoConfirmarEntrega({
 
   const totalDespesas = (despesas ?? []).reduce((soma, d) => soma + d.valor, 0)
   const qtdDespesas = (despesas ?? []).length
+
+  // Enquanto os links não chegam, falta tudo: habilitar o botão por um instante
+  // e desabilitar logo depois seria um convite a clicar no meio.
+  const faltaLinkObrigatorio = itens.some(
+    (item) => item.obrigatorio && !(links ?? []).some((l) => l.tipo === item.tipo),
+  )
 
   function alternar(id: string) {
     setConferidos((atual) => {
@@ -169,7 +185,11 @@ export function DialogoConfirmarEntrega({
       }
       rotuloConfirmar={modo === 'envio' ? 'Enviar' : 'Confirmar entrega'}
       confirmarDestrutivo={modo === 'confirmacao'}
-      confirmarDesabilitado={itens.some((item) => !conferidos.has(item.id))}
+      confirmarDesabilitado={
+        links === undefined ||
+        faltaLinkObrigatorio ||
+        itens.some((item) => !conferidos.has(item.id))
+      }
       ocupado={ocupado}
       erro={erro}
       onCancelar={onCancelar}
@@ -327,14 +347,25 @@ function ItemConferido({
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sem link ainda.</span>
+            {/* O link que segura o envio diz isso com todas as letras: um
+                "Sem link ainda" neutro ao lado de um botão Enviar apagado deixa
+                a pessoa procurando o que falta. */}
+            <span
+              className={
+                item.obrigatorio
+                  ? 'text-xs font-semibold text-atencao-tinta'
+                  : 'text-xs text-muted-foreground'
+              }
+            >
+              {item.obrigatorio ? 'Falta este link para enviar.' : 'Sem link ainda.'}
+            </span>
             <button
               type="button"
               onClick={() => {
                 setErro(null)
                 setAdicionando(true)
               }}
-              className="text-xs font-medium text-marca underline underline-offset-2"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-marca underline underline-offset-2"
             >
               Adicionar link
             </button>

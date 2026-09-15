@@ -498,14 +498,19 @@ const NAO_SEGURAM_A_ENTREGA: ReadonlySet<EtapaTipo> = new Set(['edicao_video', '
  * Espelha `liberar_para_entrega` (20260906151515), que por sua vez repete as
  * travas de `confirmar_entrega`. A repetição é deliberada: liberar um caso que
  * a confirmação vai recusar empurra o erro para a mesa de quem não pode
- * consertá-lo. Quem editou vê "falta o link" e resolve; o ADM veria o mesmo
+ * consertá-lo. Quem editou vê o que falta e resolve; o ADM veria o mesmo
  * texto sobre um caso que não é dele.
+ *
+ * O LINK NÃO ESTÁ AQUI (15/09/2026). Até esta data o botão ficava apagado sem
+ * entregável; agora quem cobra o link principal é o diálogo de envio
+ * (`DialogoConfirmarEntrega`), que deixa registrá-lo ali mesmo. Travar o botão
+ * por falta de link prenderia a pessoa do lado de fora do único lugar que pede
+ * o link.
  *
  * Não pede papel: qualquer pessoa ativa envia. Quem CONFIRMA é que é o ADM.
  */
 export function podeLiberarParaEntrega(
   caso: CasoQuadro,
-  temEntregavel: boolean,
   etapas: EtapaQuadro[] = [],
 ): Disponibilidade {
   if (caso.ehTerminal) {
@@ -527,10 +532,6 @@ export function podeLiberarParaEntrega(
   if (abertas.length > 0) {
     const nomes = abertas.map((e) => ROTULO_ETAPA[e.tipo]).join(', ')
     return { habilitada: false, motivo: `Falta concluir ou dispensar: ${nomes}.` }
-  }
-
-  if (!temEntregavel) {
-    return { habilitada: false, motivo: 'Registre ao menos um link antes de enviar.' }
   }
 
   return OK

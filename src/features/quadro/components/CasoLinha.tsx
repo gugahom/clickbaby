@@ -7,7 +7,7 @@ import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
-import { podeCancelar, podeEditarCadastro, podeRestaurarCaso } from '../lib/acoes'
+import { podeCancelar, podeEditarCadastro, podeEncerrarCaso, podeRestaurarCaso } from '../lib/acoes'
 import { temFotolivroPendente, temVideoMasterPendente } from '../lib/secoes'
 import { mensagemDeErro } from '../lib/erros'
 import { useCancelarCaso, useRestaurarCaso } from '../api/useAcoes'
@@ -184,7 +184,10 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
           },
         ]
       : []),
-    ...(caso.ehRascunho && !caso.ehTerminal
+    // Para fotógrafa o item NÃO EXISTE (15/09/2026, pedido do gestor) — e não
+    // apagado, como era: cancelar é decisão de quem não é fotógrafa, e um item
+    // destrutivo cinza no menu de todo rascunho só ensinava a desconfiar dele.
+    ...(caso.ehRascunho && !caso.ehTerminal && podeEncerrarCaso(papel)
       ? [
           {
             id: 'descartar',

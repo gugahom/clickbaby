@@ -542,7 +542,10 @@
     }
   }
 
-  /* O PULSO DA ETAPA ATRIBUÍDA (15/09/2026). Ver PilulaAtribuida.
+  /* O PULSO DO CHAMADO (15/09/2026): a etapa ATRIBUÍDA (PilulaAtribuida) e o
+     AVISO da etapa (AvisosDoCaso e a observação no card aberto). Nasceu só para
+     a atribuída, com o nome `pulso-atribuida`; o aviso pediu o mesmo estilo no
+     mesmo dia, e o nome passou a dizer o que as duas têm em comum.
 
      Uma onda que SAI da pílula e some, e não um piscar da pílula inteira: o nome
      tem de continuar legível o tempo todo — é ele que a fotógrafa procura — e
@@ -552,19 +555,19 @@
      Mais lento que o anel do alerta (2.4s de volta) e sem giro: são dois
      vermelhos na mesma tela, e o movimento é o que separa "o horário está
      estourando" de "tem trabalho seu esperando". */
-  .pulso-atribuida {
-    animation: pulso-atribuida 2s ease-out infinite;
+  .pulso-chamado {
+    animation: pulso-chamado 2s ease-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .pulso-atribuida {
+    .pulso-chamado {
       animation: none;
       box-shadow: 0 0 0 2px color-mix(in oklch, var(--atrasado) 30%, transparent);
     }
   }
 }
 
-@keyframes pulso-atribuida {
+@keyframes pulso-chamado {
   0% {
     box-shadow: 0 0 0 0 color-mix(in oklch, var(--atrasado) 55%, transparent);
   }
