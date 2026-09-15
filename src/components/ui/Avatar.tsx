@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { iniciais } from '@/lib/iniciais'
 
 interface PropsAvatar {
   nome: string
@@ -23,14 +24,6 @@ interface PropsAvatar {
   className?: string
 }
 
-/** "Maria Eduarda Santos" -> "MS". Primeira e última palavra, no máximo duas letras. */
-function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/).filter(Boolean)
-  if (partes.length === 0) return '?'
-  const primeira = partes[0]?.[0] ?? ''
-  const ultima = partes.length > 1 ? (partes[partes.length - 1]?.[0] ?? '') : ''
-  return (primeira + ultima).toUpperCase()
-}
 
 export function Avatar({ nome, fotoUrl, tom = 'escuro', className }: PropsAvatar) {
   const base = clsx(
