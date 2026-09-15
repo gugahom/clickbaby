@@ -356,6 +356,7 @@ remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirma
 -- despesas do caso (12/09/2026; ver seção 13)
 registrar_despesa(p_caso_id, p_tipo, p_valor, p_pessoa_id, p_momento, p_descricao)
 remover_despesa(p_despesa_id, p_motivo)                 -- não existe editar
+restaurar_caso_cancelado_pelo_sync(p_caso_id, p_motivo) -- só o que o SYNC cancelou; atendimento/adm
 devolver_para_o_quadro(p_caso_id, p_motivo)             -- tira de Entregáveis; atendimento/adm
 liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
 confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
@@ -812,6 +813,33 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   inteiro para cobrir mais depressa uma falha rara.
   Cria, atualiza, e cancela por card cinza OU por deleção do evento. Evento de dia inteiro
   (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
+  **"O EVENTO SUMIU" NÃO É "O CONTRATO CAIU"** (15/09/2026, migration `20260915030822`).
+  Investigado em produção: o sync cancelou 45 casos e nenhum foi inventado — todo evento
+  estava de fato apagado ou cinza no Calendar. O defeito era a regra. Três casos tinham
+  trabalho feito (nascimento concluído, edição, link) e foram cancelados porque o evento
+  sumiu da agenda DEPOIS do parto; dois se perderam, porque cancelado não tinha volta.
+  Para a equipe o parto acabou e o evento sai da agenda (o gestor acredita que ele é apagado
+  sozinho pelo horário); com o caso já encerrado o sync ignora, com qualquer coisa pendente
+  — reels, revisão, a confirmação do ADM — ele cancelava.
+  **Duas travas, no BANCO** (a Edge Function não mudou e não precisa de deploy):
+  a DELEÇÃO (`sync_cancelar_caso`) não cancela caso com TRABALHO nem caso cuja PREVISÃO JÁ
+  PASSOU — a de horário existe porque campo aceita registro retroativo (seção 9), e o
+  evento pode sumir antes de a fotógrafa tocar no aparelho. O CARD CINZA (`sync_upsert_caso`)
+  só tem a de trabalho: cinza é o gesto explícito de cancelamento, e um cinza legítimo no
+  próprio dia do evento existe no histórico. Conferido: nenhum dos 42 cancelamentos
+  legítimos seria bloqueado por nenhuma das duas.
+  **"Trabalho" é `caso_tem_trabalho`, a definição única:** etapa iniciada ou concluída, link
+  de entrega, envio para Entregáveis, ou QUALQUER ação humana em `eventos`. Preservar grava
+  `evento_calendar_removido` ou `card_cinza_ignorado` UMA VEZ por caso — o cron roda a cada
+  25s e `eventos` é append-only, então sem essa guarda seriam milhares de linhas por dia.
+  Cancelar um atendimento que aconteceu continua possível, pelo gesto humano de sempre
+  (`cancelar_caso`).
+  **`restaurar_caso_cancelado_pelo_sync`**, atendimento ou adm e com motivo obrigatório,
+  desfaz SÓ o que o sync cancelou (o texto do motivo diz quem foi) — cancelamento da equipe é
+  decisão comercial e segue sem volta. O status é derivado das etapas, e o sync não o cancela
+  de novo: a restauração é ação humana, e ação humana conta como trabalho. No card, é o item
+  "Restaurar caso" do menu, só nesses casos. Os dois atendimentos perdidos foram restaurados
+  na própria migration; o terceiro ficou cancelado porque o gêmeo recriado já foi encerrado.
 - **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de
   horário chegando, realtime, auto-refresh alinhado ao cron.
 - **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,

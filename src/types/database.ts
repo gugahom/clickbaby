@@ -912,6 +912,7 @@ export type Database = {
           maternidade_id: string | null
           maternidade_nome: string | null
           maternidade_sigla: string | null
+          motivo_cancelamento: string | null
           na_uti: boolean | null
           nascimento_concluido_em: string | null
           observacao: string | null
@@ -980,6 +981,7 @@ export type Database = {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined
       }
+      caso_tem_trabalho: { Args: { p_caso_id: string }; Returns: boolean }
       concluir_etapa: {
         Args: { p_caso_etapa_id: string; p_observacao?: string }
         Returns: undefined
@@ -1077,6 +1079,10 @@ export type Database = {
       }
       remover_entregavel: {
         Args: { p_entregavel_id: string; p_motivo?: string }
+        Returns: undefined
+      }
+      restaurar_caso_cancelado_pelo_sync: {
+        Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined
       }
       retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }

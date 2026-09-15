@@ -7,10 +7,10 @@ import { useAuth } from '@/features/auth/contexto'
 import { alertaDeHorario, type NivelAlerta } from '../lib/alerta-horario'
 import { corDoCaso } from '../lib/cores-calendar'
 import { CLASSE_URGENCIA, estadoSla } from '../lib/sla'
-import { podeCancelar, podeEditarCadastro } from '../lib/acoes'
+import { podeCancelar, podeEditarCadastro, podeRestaurarCaso } from '../lib/acoes'
 import { temFotolivroPendente, temVideoMasterPendente } from '../lib/secoes'
 import { mensagemDeErro } from '../lib/erros'
-import { useCancelarCaso } from '../api/useAcoes'
+import { useCancelarCaso, useRestaurarCaso } from '../api/useAcoes'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 import { CasoDetalhe } from './CasoDetalhe'
@@ -87,6 +87,14 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
   const descarte = podeCancelar(caso, papel)
   const editaCadastro = podeEditarCadastro(papel)
 
+  // Restaurar só existe no que o SYNC cancelou — ver podeRestaurarCaso. O
+  // cancelamento da equipe é decisão comercial e não ganha este item.
+  const restauracao = podeRestaurarCaso(caso, papel)
+  const restaurar = useRestaurarCaso()
+  const [restaurando, setRestaurando] = useState(false)
+  const [motivoRestauracao, setMotivoRestauracao] = useState('')
+  const [erroRestauracao, setErroRestauracao] = useState<string | null>(null)
+
   // Todas as etapas feitas e o caso ainda aberto: é o único estado em que o
   // caso está esperando por uma PESSOA, não por trabalho. Por isso ganha peso
   // próprio — é a informação mais acionável do Quadro.
@@ -160,6 +168,18 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
           {
             id: 'reabrir',
             rotulo: 'Reabrir para alteração',
+            icone: <IconeReabrir className="size-4" />,
+          },
+        ]
+      : []),
+    // Ausente, e não desabilitado, pelo mesmo motivo do editar: num caso que a
+    // equipe cancelou, ou para quem não é atendimento/adm, restaurar não é algo
+    // que "ainda não dá" — não é uma porta que exista ali.
+    ...(restauracao.habilitada
+      ? [
+          {
+            id: 'restaurar',
+            rotulo: 'Restaurar caso',
             icone: <IconeReabrir className="size-4" />,
           },
         ]
@@ -558,6 +578,11 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
             onEscolher={(item) => {
               if (item.id === 'editar') setEditando(true)
               if (item.id === 'reabrir') onReabrir?.(caso)
+              if (item.id === 'restaurar') {
+                setErroRestauracao(null)
+                setMotivoRestauracao('')
+                setRestaurando(true)
+              }
               if (item.id === 'descartar') {
                 setErroDescarte(null)
                 setDescartando(true)
@@ -608,6 +633,51 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
             um caso cancelado, é ruído do sync que não precisa mais aparecer. Não há
             como desfazer.
           </p>
+        </Dialogo>
+      )}
+
+      {/*
+        RESTAURAR (15/09/2026). Só existe no que o sync cancelou — o evento
+        sumiu da agenda, e em produção isso cancelou atendimentos com o parto
+        feito. O motivo é obrigatório porque desfazer um cancelamento é gesto
+        que precisa de explicação daqui a um ano, e o banco o grava em
+        `eventos`. O texto do cancelamento aparece aqui para quem restaura ver
+        exatamente o que está desfazendo.
+      */}
+      {restaurando && (
+        <Dialogo
+          titulo="Restaurar este caso?"
+          rotuloConfirmar="Restaurar caso"
+          confirmarDesabilitado={motivoRestauracao.trim() === ''}
+          ocupado={restaurar.isPending}
+          erro={erroRestauracao}
+          onCancelar={() => setRestaurando(false)}
+          onConfirmar={() => {
+            setErroRestauracao(null)
+            restaurar
+              .mutateAsync({ casoId: caso.id, motivo: motivoRestauracao.trim() })
+              .then(
+                () => setRestaurando(false),
+                (e) => setErroRestauracao(mensagemDeErro(e)),
+              )
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo}. Foi cancelado pelo sync do Calendar, não pela equipe
+            {caso.motivoCancelamento ? ` — “${caso.motivoCancelamento}”` : ''}. O caso
+            volta no ponto em que estava, e o sync não o cancela de novo.
+          </p>
+          <label className="block">
+            <span className="text-sm font-medium">Por quê?</span>
+            <textarea
+              autoFocus
+              rows={2}
+              value={motivoRestauracao}
+              onChange={(e) => setMotivoRestauracao(e.target.value)}
+              placeholder="ex.: o parto aconteceu, o evento só sumiu da agenda"
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base"
+            />
+          </label>
         </Dialogo>
       )}
 
