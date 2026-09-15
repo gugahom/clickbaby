@@ -671,7 +671,6 @@ export function QuadroPage() {
             <BotaoAba
               ativa={aba === 'concluidos'}
               onClick={() => setAba('concluidos')}
-              contagem={concluidos.length}
             >
               Concluídos
             </BotaoAba>
@@ -744,7 +743,7 @@ export function QuadroPage() {
             Rascunhos
           </BotaoAba>
           <BotaoAba ativa={aba === 'concluidos'} onClick={() => setAba('concluidos')}>
-            Concluídos ({concluidos.length})
+            Concluídos
           </BotaoAba>
         </div>
       </header>

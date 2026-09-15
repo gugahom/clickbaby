@@ -383,6 +383,20 @@ export function useReabrirCaso() {
 }
 
 /**
+ * Desfaz um cancelamento feito pelo SYNC do Calendar. O banco recusa o que a
+ * equipe cancelou e quem não é atendimento ou adm; o status volta derivado das
+ * etapas.
+ */
+export function useRestaurarCaso() {
+  return useAcaoDoQuadro<{ casoId: string; motivo: string }>(({ casoId, motivo }) =>
+    chamar('restaurar_caso_cancelado_pelo_sync', {
+      p_caso_id: casoId,
+      p_motivo: motivo,
+    }),
+  )
+}
+
+/**
  * Marca a etapa como DISPENSADA — ela não vai acontecer neste caso.
  *
  * É o que destrava um BIRTH sem fechamento: dispensada conta como resolvida na

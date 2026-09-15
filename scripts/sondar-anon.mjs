@@ -112,6 +112,14 @@ const RPCS_TRANSICAO = {
     p_despesa_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',
   },
+  // Desfaz cancelamento (20260915030822). Quem alcançasse esta RPC traria de
+  // volta ao Quadro qualquer caso que o sync cancelou — restrita a
+  // atendimento/adm por papel, e papel só vale se o GRANT não deixar anon
+  // chegar antes.
+  restaurar_caso_cancelado_pelo_sync: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_motivo: 'sonda',
+  },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

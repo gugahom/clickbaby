@@ -34,7 +34,10 @@ select 'Operador Teste CancelaSync', u.id, 'operador', true
 from auth.users u where u.email = 'operador.teste.cancelasync@clickbaby.test';
 
 insert into public.casos (mae_nome, bebe_nome, previsao_em, google_calendar_event_id)
-values ('Mãe Evento Deletado', 'Bebê', now(), 'evt-deletado-001');
+-- Data FUTURA: desde a trava de horário (sync_nao_cancela_atendimento_que_aconteceu),
+-- um evento que some com a previsão já passada NÃO cancela. Estes testes são do
+-- cancelamento normal — o evento sumiu ANTES do parto.
+values ('Mãe Evento Deletado', 'Bebê', now() + interval '2 days', 'evt-deletado-001');
 
 insert into public.casos (mae_nome, bebe_nome, previsao_em, google_calendar_event_id,
                            status_operacional, motivo_cancelamento)
@@ -85,7 +88,7 @@ select is(
 -- =============================================================================
 
 insert into public.casos (mae_nome, bebe_nome, previsao_em, google_calendar_event_id)
-values ('Mãe Motivo Custom', 'Bebê', now(), 'evt-deletado-motivo');
+values ('Mãe Motivo Custom', 'Bebê', now() + interval '2 days', 'evt-deletado-motivo');
 
 set local role service_role;
 select public.sync_cancelar_caso('evt-deletado-motivo', 'motivo escrito à mão para o teste');

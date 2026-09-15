@@ -76,6 +76,11 @@ export interface CasoQuadro {
    * "não carregou".
    */
   totalDespesas: number
+  /**
+   * Por que foi cancelado — a tela usa para distinguir o cancelamento do SYNC
+   * (restaurável) do cancelamento da equipe (decisão comercial, não se desfaz).
+   */
+  motivoCancelamento: string | null
 }
 
 /**
@@ -191,6 +196,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     // numeric chega do PostgREST como número JSON; o Number() segura o dia em
     // que vier como texto, que é como alguns drivers serializam numeric.
     totalDespesas: Number(linha.total_despesas ?? 0),
+    motivoCancelamento: linha.motivo_cancelamento,
   }
 }
 

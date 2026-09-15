@@ -35,6 +35,7 @@ GRANT ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.
 GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) TO authenticated;
+GRANT ALL ON FUNCTION public.restaurar_caso_cancelado_pelo_sync(p_caso_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.retornar_da_uti(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.somar_dias_uteis(p_inicio timestamp with time zone, p_dias integer) TO authenticated;
 GRANT ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) TO authenticated;
@@ -69,6 +70,7 @@ REVOKE ALL ON FUNCTION public.agendar_etapa(p_caso_etapa_id uuid, p_previsao_em 
 REVOKE ALL ON FUNCTION public.anotar_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.caso_tem_trabalho(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.completar_etapas_do_pacote() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.concluir_etapa_com_entregaveis(p_caso_etapa_id uuid, p_entregaveis jsonb, p_observacao text) FROM PUBLIC;
@@ -99,6 +101,7 @@ REVOKE ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public
 REVOKE ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.restaurar_caso_cancelado_pelo_sync(p_caso_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.retornar_da_uti(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.somar_dias_uteis(p_inicio timestamp with time zone, p_dias integer) FROM PUBLIC;

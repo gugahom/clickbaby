@@ -548,3 +548,38 @@ export function podeCancelar(
   }
   return OK
 }
+
+/**
+ * Os dois textos que SÓ o sync grava ao cancelar — espelho literal de
+ * `sync_cancelar_caso` e `sync_upsert_caso`, e da checagem em
+ * `restaurar_caso_cancelado_pelo_sync`. É o que separa "o evento sumiu do
+ * Calendar" de "a equipe cancelou o contrato".
+ */
+const MOTIVOS_DO_SYNC = ['Evento removido do Google Calendar', 'Cancelado via Google Calendar (card cinza)']
+
+export function foiCanceladoPeloSync(caso: CasoQuadro): boolean {
+  return (
+    caso.statusOperacional === 'cancelado' &&
+    MOTIVOS_DO_SYNC.some((m) => (caso.motivoCancelamento ?? '').startsWith(m))
+  )
+}
+
+/**
+ * RESTAURAR um caso que o sync cancelou (15/09/2026).
+ *
+ * Até esta data o sync cancelava todo caso cujo evento sumia do Calendar,
+ * inclusive atendimentos com o parto feito — e cancelado não tinha volta. Só o
+ * cancelamento do SYNC se restaura: o da equipe é decisão comercial, pela mesma
+ * razão que `reabrir_caso` recusa cancelado.
+ *
+ * Mesmo par de papéis que cancela e confirma entrega (invariante 3.5).
+ */
+export function podeRestaurarCaso(caso: CasoQuadro, papelSistema: string): Disponibilidade {
+  if (!foiCanceladoPeloSync(caso)) {
+    return { habilitada: false, motivo: 'Só um caso cancelado pelo sync do Calendar.' }
+  }
+  if (!podeEncerrarCaso(papelSistema)) {
+    return { habilitada: false, motivo: 'Só atendimento ou gestão.' }
+  }
+  return OK
+}
