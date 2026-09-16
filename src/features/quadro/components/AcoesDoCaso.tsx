@@ -20,6 +20,7 @@ import {
   IconeMais,
   IconeAdicionar,
   IconeAviso,
+  IconeReabrir,
 } from '@/components/ui/icones'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { CampoEstacao } from './CampoEstacao'
@@ -44,6 +45,8 @@ import {
   usePessoasAtivas,
   useDispensarEtapa,
   useAdicionarEtapa,
+  useMoverAlbum,
+  useMoverVideoMaster,
 } from '../api/useAcoes'
 import {
   podeAtribuir,
@@ -135,6 +138,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const liberar = useLiberarParaEntrega()
   const cancelar = useCancelarCaso()
   const adicionarEtapa = useAdicionarEtapa()
+  const moverVideo = useMoverVideoMaster()
+  const moverAlbum = useMoverAlbum()
 
   const ocupado =
     iniciar.isPending ||
@@ -146,6 +151,8 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
     transferir.isPending ||
     liberar.isPending ||
     adicionarEtapa.isPending ||
+    moverVideo.isPending ||
+    moverAlbum.isPending ||
     cancelar.isPending
 
   function executar(promessa: Promise<unknown>, aoTerminar?: () => void) {
@@ -358,17 +365,83 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     na seção {secaoDaEtapa}
                   </span>
                 ) : encerrada ? (
-                  <div className="flex flex-shrink-0 items-center justify-end @2xl:w-33">
-                    <BotaoIcone
-                      rotulo="Reabrir etapa"
-                      motivo={reabertura.motivo}
-                      disabled={ocupado || !reabertura.habilitada}
-                      onClick={() =>
-                        executar(reabrir.mutateAsync({ casoEtapaId: etapa.id }))
-                      }
-                    >
-                      <IconeDesfazer className="size-[18px]" />
-                    </BotaoIcone>
+                  <div
+                    className={clsx(
+                      'flex flex-shrink-0 items-center justify-end',
+                      // A largura fixa alinha os ícones de desfazer de todas as
+                      // linhas. O "Pedir alteração" tem texto e não cabe nela —
+                      // e é a única linha da lista que o tem, então não há
+                      // coluna para desalinhar.
+                      !secaoDaEtapa && '@2xl:w-33',
+                    )}
+                  >
+                    {/*
+                      PEDIDO DE ALTERAÇÃO NÃO REABRE O CASO (16/09/2026, pedido
+                      do gestor).
+
+                      "Quando o vídeo já foi finalizado e o cliente pede
+                      alteração, o ideal é que volte apenas o card para a seção,
+                      sem voltar o card todo." Era isso que `reabrir_caso`
+                      fazia: trazia o caso inteiro de volta ao Quadro, com o
+                      checklist de novo aberto, por causa de um ajuste de dez
+                      minutos no vídeo.
+
+                      Aqui a etapa volta SOZINHA para a seção dela —
+                      `mover_video_master` e `mover_album` aceitam caso
+                      encerrado desde 20260903153101 e 20260910150425, e é
+                      exatamente para isso. O caso continua encerrado, os links
+                      continuam confirmados, e o que reabre é o trabalho.
+
+                      `reabrir_etapa` NÃO serve: ela recusa caso terminal, e
+                      voltaria a etapa para "em andamento" — que no vídeo não é
+                      fase nenhuma. Por isso as duas mandam para a fase de
+                      ALTERAÇÃO, que é o nome do que aconteceu.
+
+                      COM O NOME ESCRITO, e não um ícone (16/09/2026, o gestor
+                      não achou). Esta linha é lida quase sempre em CONCLUÍDOS:
+                      o caso foi entregue, a família pediu mudança, e alguém
+                      abre o card procurando por onde voltar. Ali não é o
+                      corredor da maternidade — não há pressa de um toque nem
+                      escassez de largura —, e uma seta solta ao lado do nome da
+                      etapa não diz o que faz. O ícone continua, ao lado do
+                      texto.
+                    */}
+                    {secaoDaEtapa ? (
+                      <Botao
+                        variante="contorno"
+                        onda
+                        aria-label={`Pedir alteração — volta para a seção ${secaoDaEtapa}`}
+                        disabled={ocupado}
+                        className="min-h-11 px-3 text-xs font-semibold"
+                        onClick={() =>
+                          executar(
+                            etapa.tipo === 'edicao_video'
+                              ? moverVideo.mutateAsync({
+                                  casoEtapaId: etapa.id,
+                                  fase: 'em_alteracao',
+                                })
+                              : moverAlbum.mutateAsync({
+                                  casoEtapaId: etapa.id,
+                                  fase: 'pedido_de_alteracoes',
+                                }),
+                          )
+                        }
+                      >
+                        <IconeReabrir className="size-4" />
+                        Pedir alteração
+                      </Botao>
+                    ) : (
+                      <BotaoIcone
+                        rotulo="Reabrir etapa"
+                        motivo={reabertura.motivo}
+                        disabled={ocupado || !reabertura.habilitada}
+                        onClick={() =>
+                          executar(reabrir.mutateAsync({ casoEtapaId: etapa.id }))
+                        }
+                      >
+                        <IconeDesfazer className="size-[18px]" />
+                      </BotaoIcone>
+                    )}
                   </div>
                 ) : null}
 

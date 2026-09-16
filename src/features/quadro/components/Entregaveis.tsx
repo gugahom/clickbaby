@@ -23,6 +23,10 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   cadeado: 'Cadeado',
   reels: 'Reels',
   album: 'Foto/Livro',
+  // O horizontal do MASTER (16/09/2026). Tipo próprio e não "wetransfer": o
+  // meio pelo qual o arquivo viaja muda com o tamanho do vídeo, e o que a
+  // lista precisa dizer é O QUE é aquele link.
+  video: 'Vídeo',
 }
 
 interface PropsEntregaveis {

@@ -1,9 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type LiHTMLAttributes } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
 import { useQuadro } from './api/useQuadro'
-import { useReabrirCaso, useRetornarDaUti, type EtapaTipo } from './api/useAcoes'
+import {
+  useFinalizarVideoMaster,
+  useMoverAlbum,
+  useMoverVideoMaster,
+  usePedirAlteracaoDaEtapa,
+  useReabrirCaso,
+  useRetornarDaUti,
+  type EtapaTipo,
+} from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
 import { mensagemDeErro } from './lib/erros'
 import {
@@ -26,6 +34,7 @@ import {
 } from './lib/secoes'
 import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
+import { CONFIRMAR_FIM_DO_ALBUM, CONFIRMAR_FIM_DO_VIDEO } from './lib/fim-da-edicao'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { useTelaLarga } from './lib/useTelaLarga'
 import { useModoTv } from './lib/useModoTv'
@@ -34,30 +43,46 @@ import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
-import { SecaoEmModal, type ItemDaSecao } from './components/SecaoEmModal'
+import {
+  SecaoEmModal,
+  type ColunaDaSecao,
+  type ItemDaSecao,
+} from './components/SecaoEmModal'
 import { RascunhosPainel } from './components/RascunhosPainel'
 import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { FaseDoAlbum } from './components/FaseDoAlbum'
+import { PrazoDaEtapa } from './components/PrazoDaEtapa'
+import { PedidosDaEtapa } from './components/PedidosDaEtapa'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import type { BlocoDia, CasoQuadro } from './types'
 import {
-  FASES_ALBUM,
-  FASES_VIDEO_MASTER,
+  FASES_ALBUM_NA_TELA,
+  FASES_VIDEO_NA_TELA,
+  FASE_ALBUM_FINAL,
+  FASE_VIDEO_FINAL,
   ROTULO_FASE_ALBUM,
   ROTULO_FASE_VIDEO,
   faseDoVideo,
 } from './types'
-import type { EtapaQuadro } from './types'
+import type { EtapaQuadro, FaseAlbum, FaseVideoMaster } from './types'
 
 /**
  * Aba só existe no mobile. No desktop as duas colunas convivem, porque a
  * pergunta "o que temos hoje" e a pergunta "quem está na UTI" são olhadas ao
  * mesmo tempo — inclusive na TV da sala de edição.
  */
+/**
+ * As duas etapas que voltam SOZINHAS para a fase de alteração, sem reabrir o
+ * caso. É a mesma lista de `SECAO_DA_ETAPA` (AcoesDoCaso) e de
+ * `SEM_FAIXA_NO_CARD` (AvisosDoCaso), e pelo mesmo motivo de sempre: são as que
+ * têm esteira própria e não seguram o encerramento.
+ */
+const TEM_SECAO_PROPRIA = new Set<EtapaTipo>(['edicao_video', 'album'])
+
 type Aba =
   | 'lista'
   | 'uti'
@@ -85,6 +110,12 @@ export function QuadroPage() {
   const [reabrindo, setReabrindo] = useState<CasoQuadro | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
   const reabrirCaso = useReabrirCaso()
+  // Arrastar entre as colunas do modal cai nas MESMAS RPCs do seletor de fase
+  // do cartão — o atalho não é um segundo caminho de escrita.
+  const moverVideo = useMoverVideoMaster()
+  const finalizarVideo = useFinalizarVideoMaster()
+  const moverAlbum = useMoverAlbum()
+  const pedirAlteracao = usePedirAlteracaoDaEtapa()
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
@@ -389,9 +420,10 @@ export function QuadroPage() {
     />
   ))
 
-  const cartaoMaster = (caso: CasoQuadro) => (
+  const cartaoMaster = (caso: CasoQuadro, raiz?: LiHTMLAttributes<HTMLLIElement>) => (
     <CartaoDeEdicao
       key={caso.id}
+      {...(raiz ? { raiz } : {})}
       caso={caso}
       hoje={hoje}
       etapas={etapasPorCaso.get(caso.id) ?? []}
@@ -422,6 +454,11 @@ export function QuadroPage() {
        */
       acoesDaLinha={(etapa) => (
         <>
+          {/* PRAZO e PEDIDOS entram ao lado da fase (16/09/2026, pedido do
+              gestor): a data combinada para ESTE vídeo, e o que a família pediu
+              — prints, link de música. Ver PrazoDaEtapa e PedidosDaEtapa. */}
+          <PrazoDaEtapa etapa={etapa} onErro={setErroMaster} />
+          <PedidosDaEtapa etapa={etapa} onErro={setErroMaster} />
           <FaseDoVideo etapa={etapa} onErro={setErroMaster} />
           <AcoesDaEtapa
             etapa={etapa}
@@ -433,10 +470,14 @@ export function QuadroPage() {
       // A linha já diz a fase por extenso; um selo repetindo em outras
       // palavras logo acima seria ruído.
       comSelo={false}
+      // Quatro controles numa ponta só espremiam o nome da etapa — ver
+      // `acoesAbaixo` em CartaoDeEdicao.
+      acoesAbaixo
+      rotuloObservacao="Pedidos do cliente"
       onErro={setErroMaster}
     />
   )
-  const conteudoMaster = emMaster.map(cartaoMaster)
+  const conteudoMaster = emMaster.map((caso) => cartaoMaster(caso))
 
   /*
    * O CARTÃO DO FOTOLIVRO — a fase E o relógio, como ficou o MASTER em 09/09.
@@ -449,9 +490,10 @@ export function QuadroPage() {
    * tempo de diagramação — a única parte que a equipe controla — ficaria
    * enterrado num mês de espera por cliente e gráfica.
    */
-  const cartaoFotolivro = (caso: CasoQuadro) => (
+  const cartaoFotolivro = (caso: CasoQuadro, raiz?: LiHTMLAttributes<HTMLLIElement>) => (
     <CartaoDeEdicao
       key={caso.id}
+      {...(raiz ? { raiz } : {})}
       caso={caso}
       hoje={hoje}
       etapas={etapasPorCaso.get(caso.id) ?? []}
@@ -463,6 +505,8 @@ export function QuadroPage() {
       rotularLinha={() => 'Foto/Livro'}
       acoesDaLinha={(etapa) => (
         <>
+          <PrazoDaEtapa etapa={etapa} onErro={setErroFotolivro} />
+          <PedidosDaEtapa etapa={etapa} onErro={setErroFotolivro} />
           <FaseDoAlbum etapa={etapa} onErro={setErroFotolivro} />
           <AcoesDaEtapa
             etapa={etapa}
@@ -472,10 +516,63 @@ export function QuadroPage() {
         </>
       )}
       comSelo={false}
+      acoesAbaixo
+      rotuloObservacao="Pedidos do cliente"
       onErro={setErroFotolivro}
     />
   )
-  const conteudoFotolivro = emFotolivro.map(cartaoFotolivro)
+  const conteudoFotolivro = emFotolivro.map((caso) => cartaoFotolivro(caso))
+
+  /*
+   * O MESMO DIÁLOGO, DOIS EFEITOS (16/09/2026, pedido do gestor).
+   *
+   * Marcar "Foto" reabre o CASO; marcar "Vídeo" ou "Foto/Livro" devolve só a
+   * ETAPA para a fase de alteração, com o caso seguindo encerrado. Quem decide
+   * é o TIPO, e a divisão mora aqui e não no diálogo — ele pergunta, esta
+   * função executa. Ver ReabrirCasoDialogo e a migration 20260916215022.
+   *
+   * O PEDIDO DAS SEÇÕES VAI PRIMEIRO. Se a reabertura do caso falhar, o vídeo
+   * já voltou e a pessoa vê o erro e tenta de novo só a parte que faltou; na
+   * ordem inversa, um caso reaberto por engano precisaria ser encerrado outra
+   * vez à mão.
+   *
+   * A rodada é a MAIOR de cada tipo: um vídeo que já passou por alteração antes
+   * tem duas linhas, e quem volta é a última — a que foi entregue.
+   */
+  async function confirmarReabertura(
+    caso: CasoQuadro,
+    motivo: string,
+    escolhidas: EtapaTipo[],
+  ) {
+    const doCaso = etapasPorCaso.get(caso.id) ?? []
+    const comSecao = escolhidas.filter((t) => TEM_SECAO_PROPRIA.has(t))
+    const pelaReabertura = escolhidas.filter((t) => !TEM_SECAO_PROPRIA.has(t))
+
+    setErroReabrir(null)
+    try {
+      for (const tipo of comSecao) {
+        const etapa = doCaso
+          .filter((e) => e.tipo === tipo)
+          .reduce<EtapaQuadro | null>(
+            (maior, e) => (maior === null || e.rodada > maior.rodada ? e : maior),
+            null,
+          )
+        if (etapa) {
+          await pedirAlteracao.mutateAsync({ casoEtapaId: etapa.id, motivo })
+        }
+      }
+      if (pelaReabertura.length > 0) {
+        await reabrirCaso.mutateAsync({
+          casoId: caso.id,
+          motivo,
+          etapas: pelaReabertura,
+        })
+      }
+      setReabrindo(null)
+    } catch (e) {
+      setErroReabrir(mensagemDeErro(e))
+    }
+  }
 
   const CRITERIO_REELS =
     'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
@@ -495,15 +592,90 @@ export function QuadroPage() {
    */
   const itensMaster: ItemDaSecao[] = emMaster.map((caso) => {
     const video = videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])[0]
-    return { id: caso.id, fase: video ? faseDoVideo(video.status) : null, cartao: cartaoMaster(caso) }
+    return {
+      id: caso.id,
+      fase: video ? faseDoVideo(video.status) : null,
+      cartao: (raiz) => cartaoMaster(caso, raiz),
+    }
   })
   const itensFotolivro: ItemDaSecao[] = emFotolivro.map((caso) => ({
     id: caso.id,
     fase: albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseAlbum ?? null,
-    cartao: cartaoFotolivro(caso),
+    cartao: (raiz) => cartaoFotolivro(caso, raiz),
   }))
-  const colunasMaster = FASES_VIDEO_MASTER.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] }))
-  const colunasFotolivro = FASES_ALBUM.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_ALBUM[fase] }))
+
+  /*
+   * AS COLUNAS, E A DE SAÍDA (16/09/2026).
+   *
+   * As fases do seletor mais uma coluna FINAL, que é onde o trabalho acaba. Ela
+   * vive vazia — quem chega ali conclui a etapa e sai da seção —, e existe por
+   * dois motivos: é o alvo de quem arrasta para finalizar, e é onde aparece o
+   * vídeo ANTIGO parado em "pronto para entrega", da época em que essa fase era
+   * um estado de passagem. Sem ela aquele vídeo caía em "Sem fase", com a
+   * pílula dizendo "Pronto para entrega" logo abaixo — a coluna e o cartão
+   * discordando na mesma tela.
+   *
+   * Soltar nela PERGUNTA antes, e no vídeo pede o link: é o mesmo diálogo do
+   * seletor, com o mesmo texto (ver CONFIRMAR_FIM_DO_VIDEO).
+   */
+  const colunasMaster: ColunaDaSecao[] = [
+    ...FASES_VIDEO_NA_TELA.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] })),
+    {
+      id: FASE_VIDEO_FINAL,
+      rotulo: ROTULO_FASE_VIDEO[FASE_VIDEO_FINAL],
+      confirmacao: CONFIRMAR_FIM_DO_VIDEO,
+      terminal: true,
+    },
+  ]
+  const colunasFotolivro: ColunaDaSecao[] = FASES_ALBUM_NA_TELA.map((fase) =>
+    fase === FASE_ALBUM_FINAL
+      ? {
+          id: fase,
+          rotulo: ROTULO_FASE_ALBUM[fase],
+          confirmacao: CONFIRMAR_FIM_DO_ALBUM,
+          terminal: true,
+        }
+      : { id: fase, rotulo: ROTULO_FASE_ALBUM[fase] },
+  )
+
+  /*
+   * SOLTAR UM CARTÃO NUMA COLUNA — o atalho do arrastar (16/09/2026, pedido do
+   * gestor). Cai nas MESMAS RPCs do seletor de fase, e o erro vai para o mesmo
+   * alerta da seção: o arrastar não é um segundo caminho de escrita, é outra
+   * mão no mesmo caminho.
+   */
+  const soltarNoMaster = async (casoId: string, fase: string, valor?: string) => {
+    const video = videosMasterAbertos(etapasPorCaso.get(casoId) ?? [])[0]
+    if (!video) return false
+    setErroMaster(null)
+    try {
+      if (fase === FASE_VIDEO_FINAL) {
+        // A coluna final EXIGE o link, e o diálogo já não deixa confirmar sem
+        // ele — esta guarda é para o caso de alguém mudar aquele contrato.
+        if (!valor) return false
+        await finalizarVideo.mutateAsync({ casoEtapaId: video.id, url: valor })
+      } else {
+        await moverVideo.mutateAsync({ casoEtapaId: video.id, fase: fase as FaseVideoMaster })
+      }
+      return true
+    } catch (e) {
+      setErroMaster(mensagemDeErro(e))
+      return false
+    }
+  }
+
+  const soltarNoFotolivro = async (casoId: string, fase: string) => {
+    const album = albunsAbertos(etapasPorCaso.get(casoId) ?? [])[0]
+    if (!album) return false
+    setErroFotolivro(null)
+    try {
+      await moverAlbum.mutateAsync({ casoEtapaId: album.id, fase: fase as FaseAlbum })
+      return true
+    } catch (e) {
+      setErroFotolivro(mensagemDeErro(e))
+      return false
+    }
+  }
 
   const painelReels = (
     <PainelLateral
@@ -860,6 +1032,7 @@ export function QuadroPage() {
                   onLimparErro={() => setErroMaster(null)}
                   itens={itensMaster}
                   colunas={colunasMaster}
+                  onMoverFase={soltarNoMaster}
                   chaveModo="master"
                 />
                 {/* FOTO/LIVRO entra DEPOIS do Master, e não antes: o vídeo
@@ -875,6 +1048,7 @@ export function QuadroPage() {
                   onLimparErro={() => setErroFotolivro(null)}
                   itens={itensFotolivro}
                   colunas={colunasFotolivro}
+                  onMoverFase={soltarNoFotolivro}
                   chaveModo="fotolivro"
                 />
                 <PainelDobravel
@@ -905,16 +1079,12 @@ export function QuadroPage() {
         <ReabrirCasoDialogo
           caso={reabrindo}
           etapas={etapasPorCaso.get(reabrindo.id) ?? []}
-          ocupado={reabrirCaso.isPending}
+          ocupado={reabrirCaso.isPending || pedirAlteracao.isPending}
           erro={erroReabrir}
           onCancelar={() => setReabrindo(null)}
-          onConfirmar={(motivo, etapas) => {
-            setErroReabrir(null)
-            reabrirCaso
-              .mutateAsync({ casoId: reabrindo.id, motivo, etapas: etapas as EtapaTipo[] })
-              .then(() => setReabrindo(null))
-              .catch((e) => setErroReabrir(mensagemDeErro(e)))
-          }}
+          onConfirmar={(motivo, escolhidas) =>
+            confirmarReabertura(reabrindo, motivo, escolhidas)
+          }
         />
       )}
     </div>

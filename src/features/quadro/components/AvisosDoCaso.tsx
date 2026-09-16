@@ -1,7 +1,21 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeAviso, IconeOlho } from '@/components/ui/icones'
-import { ROTULO_ETAPA, rotuloDaRodada, type EtapaQuadro } from '../types'
+import { ROTULO_ETAPA, rotuloDaRodada, type EtapaQuadro, type EtapaTipo } from '../types'
+
+/**
+ * AS DUAS ETAPAS QUE NÃO ENTRAM NA FAIXA (16/09/2026, decisão do gestor).
+ *
+ * O vídeo do MASTER e o Foto/Livro ganharam um campo de PEDIDOS na seção
+ * lateral — prints, link de música, o que a família pediu. É texto que a editora
+ * lê sentada, num trabalho de semanas. Na faixa do card ele pulsaria em vermelho
+ * no Quadro do dia, para quem está na maternidade, e ensinaria a equipe a
+ * ignorar justamente o chamado que a faixa existe para dar.
+ *
+ * As duas são as mesmas de `SECAO_DA_ETAPA` (AcoesDoCaso), e pelo mesmo motivo:
+ * são as que se operam fora do card.
+ */
+const SEM_FAIXA_NO_CARD = new Set<EtapaTipo>(['edicao_video', 'album'])
 
 interface PropsAvisosDoCaso {
   etapas: EtapaQuadro[]
@@ -61,7 +75,8 @@ export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
       e.observacao !== null &&
       e.observacao.trim() !== '' &&
       e.status !== 'concluida' &&
-      e.status !== 'dispensada',
+      e.status !== 'dispensada' &&
+      !SEM_FAIXA_NO_CARD.has(e.tipo),
   )
 
   if (avisos.length === 0) return null

@@ -348,11 +348,15 @@ atribuir_etapa(p_caso_etapa_id, p_para_pessoa_id)
 transferir_etapa(p_caso_etapa_id, p_para_pessoa_id, p_motivo)   -- handoff
 planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 
--- fluxo do vídeo horizontal do MASTER (4 fases na tela; ver seção 13)
+-- fluxo do vídeo horizontal do MASTER (2 fases na tela + o fim; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
+finalizar_video_master(p_caso_etapa_id, p_url)   -- link + conclusão na mesma transação
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
+
+-- pedido de alteração pós-entrega, SÓ das duas com seção própria (ver seção 13)
+pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
 
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
@@ -941,8 +945,94 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `localStorage` do aparelho e começa em POR FASE. Isso REABRE uma decisão escrita: quando as
   seções nasceram, o quadro de colunas foi descartado (ver `FaseDoVideo`), porque a pergunta
   ali é sobre UM caso e não sobre carga por coluna. O gestor pediu para ver e está inclinado à
-  lista — **a visão que perder sai, e a chave junto**. Nas duas, a fase muda pelo seletor do
-  cartão: sem arrastar.
+  lista — **a visão que perder sai, e a chave junto**.
+  **ARRASTAR ENTRE AS COLUNAS** (16/09/2026, pedido do gestor: "como em clickup e outros
+  kanbans"). Só na visão POR FASE, e só no MOUSE: o arrastar nativo do HTML não existe no
+  toque, e é o gesto mais difícil de acertar com uma mão num corredor (seção 6). **O SELETOR
+  DE FASE DO CARTÃO CONTINUA SENDO O CAMINHO**, e é o único que funciona no celular e por
+  teclado — arrastar é atalho, e cai nas MESMAS RPCs (`mover_video_master`, `mover_album`,
+  `finalizar_video_master`), com o mesmo erro no mesmo alerta. Dois detalhes que não são
+  capricho: um gesto começado num CONTROLE (o seletor, o campo do PC) não arrasta o cartão —
+  quem sabe onde a mão caiu é o `mousedown`, e ele grava isso num `data-` do próprio nó —, e
+  **"Sem fase" NÃO RECEBE cartão**, porque não existe RPC que APAGUE a fase de um trabalho, e
+  oferecer um alvo que o banco recusa ensina a duvidar do quadro.
+  **A COLUNA FINAL É DE SAÍDA e vive vazia:** quem chega nela conclui a etapa e sai da seção.
+  Ela existe por dois motivos — é o alvo de quem arrasta para terminar (perguntando antes, e
+  pedindo o link no vídeo, com o MESMO texto do seletor: `lib/fim-da-edicao.ts`), e é onde
+  aparece o vídeo ANTIGO parado em "pronto para entrega", de quando essa fase era de
+  passagem. Sem ela aquele vídeo caía em "Sem fase" com a pílula dizendo "Pronto para
+  entrega" logo abaixo: a coluna e o cartão discordando na mesma tela.
+- **O FIM DO VÍDEO E DO FOTO/LIVRO VIROU UM ESTADO SÓ** (16/09/2026, pedido do gestor,
+  migration `20260916180834`). "Pronto para entrega" e "Enviado / finalizado" eram
+  redundantes — a equipe marcava os dois no mesmo minuto, e o segundo só afirmava que
+  alguém tinha mandado o link, que era justamente o que ninguém registrava.
+  **NO VÍDEO, O FIM COBRA O LINK.** Escolher "Pronto para entrega" abre um diálogo que não
+  fecha sem a URL; com ela, `finalizar_video_master` grava o entregável e conclui a etapa
+  **na mesma transação** — meio caminho produziria link órfão num vídeo aberto, ou um vídeo
+  "entregue" sem endereço para a família. O tipo de entregável **`video`** nasceu aqui
+  (decisão do gestor: tipo próprio, não "wetransfer" — o meio pelo qual o arquivo viaja muda,
+  e o que a lista precisa dizer é O QUE é aquele link). O seletor passa a ter duas fases
+  (Editando, Alterações) mais o fim; `mover_video_master` continua aceitando 'concluida',
+  porque a regra comercial vive na tela.
+  **NO FOTO/LIVRO, o fim é confirmação simples**, sem link: o fotolivro é objeto físico. São
+  nove fases na tela; `pronto_para_entrega` sumiu do seletor e o fim é `entregue`, agora
+  rotulado "Pronto para entrega". O valor continua no enum — fase de banco não se apaga.
+- **PRAZO E PEDIDOS NO CARTÃO DE EDIÇÃO** (16/09/2026, pedido do gestor). Ao lado da fase, duas
+  pastilhas novas no vídeo e no fotolivro:
+  **PRAZO** (`PrazoDaEtapa`) é a "Data Entrega" do Trello deles: um `datetime-local` que grava
+  `caso_etapas.previsao_em` por `agendar_etapa` — RPC que já existia para a hora do banho, e
+  data PLANEJADA é a única que a invariante 3.4 deixa vir do cliente. Fica VERMELHA quando
+  passa, sem pulso (o pulso é do chamado). **Não é o SLA:** o prazo do pacote é derivado do
+  nascimento e responde "a empresa cumpriu o que vendeu"; este responde "para quando
+  prometemos ESTE vídeo", e é combinado caso a caso, muitas vezes depois do caso encerrar.
+  **PEDIDOS** (`PedidosDaEtapa`) é a observação da etapa (`anotar_etapa`), onde entram os
+  pedidos da família — prints, link de música. O texto aparece POR EXTENSO dentro do cartão,
+  que por isso cresceu.
+  **EM ÂMBAR, COM TARJA E NOME** (16/09/2026, segunda volta do gestor: "o pedido ficou meio
+  sem destaque"). Era um bloco no tom do cartão e passava por legenda. Agora a pastilha e o
+  bloco dividem a cor de ATENÇÃO, e o bloco diz o que é ("Pedidos do cliente"). O que ele NÃO
+  tem é o vermelho e a onda do aviso do Quadro, de propósito — ver o parágrafo seguinte.
+  **E AS AÇÕES DESCERAM UMA LINHA** no cartão do MASTER e do FOTO/LIVRO (`acoesAbaixo`): são
+  quatro controles — prazo, pedidos, fase e o play/concluir —, e dividir a largura com o nome
+  da etapa espremia os dois ("ficou tudo meio amontoado no card"). No REELS continuam ao
+  lado, porque lá são dois botões e uma linha a mais custaria altura na única seção com teto
+  de 192px. **NÃO entra na faixa de aviso do card** (decisão do gestor): aquela
+  faixa pulsa em vermelho para quem está na maternidade, e um pedido de música dentro de um
+  vídeo de dez dias úteis ensinaria a equipe a ignorá-la. A lista está em
+  `SEM_FAIXA_NO_CARD` (AvisosDoCaso) e é a mesma de `SECAO_DA_ETAPA`.
+- **PEDIDO DE ALTERAÇÃO NÃO REABRE O CASO** (16/09/2026, pedido do gestor). Quando a família
+  pede mudança num vídeo ou fotolivro já finalizado, a etapa volta SOZINHA para a fase de
+  alteração — "Pedir alteração" na linha da etapa dentro do card, que chama
+  `mover_video_master('em_alteracao')` ou `mover_album('pedido_de_alteracoes')`. As duas RPCs
+  aceitam caso encerrado desde 20260903153101 e 20260910150425, e é para isto que serve.
+  O caso continua encerrado, os links continuam confirmados, e o que reabre é o trabalho.
+  **`reabrir_etapa` não serve:** recusa caso terminal e devolveria a etapa para "em
+  andamento", que no vídeo não é fase nenhuma.
+  **E O PEDIDO ENTRA PELO DIÁLOGO DE REABERTURA** (mesmo dia, segunda volta do gestor,
+  migration `20260916215022`). De manhã as duas SAÍRAM da lista "o que precisa ser refeito",
+  porque reabrir o caso inteiro por um ajuste de dez minutos era o que ele pediu para acabar.
+  Ele olhou e trouxe o que faltava: **a equipe usa ESSE diálogo**, inclusive quando o pedido
+  é só do vídeo — é lá que se escreve o que a família pediu, e é lá que se olha quando um caso
+  entregue volta a ter trabalho. Tirar as duas da lista não tirou o pedido do caminho delas,
+  só escondeu a porta.
+  Então elas voltaram para a lista, **com comportamento diferente**, e quem decide é o TIPO:
+  marcar "Foto" chama `reabrir_caso` (rodada nova, cartão de volta ao Quadro, prazo
+  recomeçando); marcar "Vídeo" ou "Foto/Livro" chama `pedir_alteracao_da_etapa`, que devolve
+  SÓ a etapa para a fase de alteração — **o caso continua encerrado**. Marcar dos dois lados
+  faz as duas coisas, e o diálogo diz em voz alta o que acontece com o que está marcado
+  agora: um botão com dois efeitos sem aviso seria pior que dois botões.
+  A RPC nova faz as duas escritas **na mesma transação** — mover a fase e guardar o pedido —
+  porque separadas a rede caindo no meio produz um vídeo em ALTERAÇÕES sem ninguém saber o
+  que alterar, que é o estado que o pedido existe para evitar. Ela DELEGA a fase para
+  `mover_video_master`/`mover_album` em vez de repetir o UPDATE (uma segunda definição de
+  "mover" receberia só metade da próxima correção), e **SOMA** o pedido à observação em vez
+  de escrever por cima: aquele campo é onde moram os PEDIDOS DO CLIENTE, e um pedido novo que
+  apagasse o anterior mandaria a editora para a estação com metade do que a família pediu.
+  As duas só aparecem na lista quando estão RESOLVIDAS — vídeo ainda aberto está na seção,
+  onde a fase se muda direto.
+  O botão da linha da etapa no card continua existindo, e desde 16/09 com o NOME escrito
+  ("Pedir alteração") em vez de um ícone solto: ele é lido quase sempre em CONCLUÍDOS, onde
+  não há pressa de um toque nem falta de largura, e uma seta sozinha não diz o que faz.
 - **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
   É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
   `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.
@@ -1018,6 +1108,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   chamaria ninguém.
   A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
   o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
+  **OS TIPOS DE LINK SÃO SEIS** desde 16/09/2026: Google Photos, WeTransfer, cadeado, reels,
+  Foto/Livro e **Vídeo** — este último nasceu com a finalização do horizontal do MASTER, e é
+  o único que uma RPC registra sozinha (`finalizar_video_master`).
   **O LINK TEM AÇÕES** (07/09/2026): copiar e apagar, na própria linha. O caso que
   motivou é a Morgana abrindo o álbum e sendo a família errada. Copiar existe porque o
   link é para ser MANDADO — selecionar uma URL truncada com o dedo, num link clicável,

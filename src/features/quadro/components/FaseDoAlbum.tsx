@@ -5,9 +5,11 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeDispensar } from '@/components/ui/icones'
 import { useDispensarEtapa, useMoverAlbum } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
+import { CONFIRMAR_FIM_DO_ALBUM } from '../lib/fim-da-edicao'
 import {
   ESTILO_FASE_ALBUM,
-  FASES_ALBUM,
+  FASES_ALBUM_NA_TELA,
+  FASE_ALBUM_FINAL,
   ROTULO_FASE_ALBUM,
   type EtapaQuadro,
   type FaseAlbum,
@@ -18,29 +20,37 @@ import {
  *
  * (15/09/2026: a seção passou a abrir num modal com uma visão POR FASE em
  * colunas, em teste ao lado da lista — ver SecaoEmModal. A fase continua
- * mudando por aqui nas duas visões.)
+ * mudando por aqui nas duas visões; desde 16/09 o quadro de colunas também
+ * aceita arrastar com o mouse, como atalho para esta mesma RPC.)
  *
  * Mesma decisão da FaseDoVideo, e vale repetir porque aqui a tentação é maior:
- * são DEZ colunas, e dez colunas é onde um kanban parece obrigatório. Não é. Um
- * kanban serve para ver CARGA — quantos há em cada coluna, onde entope —, e a
- * pergunta de quem abre esta seção é sobre UM fotolivro: "onde está este, e
+ * são muitas colunas, e muitas colunas é onde um kanban parece obrigatório. Não
+ * é. Um kanban serve para ver CARGA — quantos há em cada coluna, onde entope —,
+ * e a pergunta de quem abre esta seção é sobre UM fotolivro: "onde está este, e
  * para onde ele vai agora". A fase é uma pílula na linha, e trocá-la é abrir a
- * lista. Dois toques, sem arrastar.
+ * lista: dois toques, em qualquer aparelho.
+ *
+ * NOVE FASES DESDE 16/09/2026 (pedido do gestor), e não dez: "Pronto para
+ * entrega" e "Entregue / finalizado" eram redundantes — a mesma queixa que ele
+ * fez do vídeo. Ficou UMA fase final, com o rótulo "Pronto para entrega" e o
+ * valor `entregue` no banco (é ele que `mover_album` traduz para etapa
+ * concluída). Diferente do vídeo, ela NÃO pede link: o fotolivro é objeto
+ * físico, entregue na mão da família — não há endereço para colar.
+ *
+ * Ela PERGUNTA antes, porque é o fim: com ela a etapa conclui e o cartão sai da
+ * seção. Voltar é o "Pedir alteração no Foto/Livro" da linha da etapa no card,
+ * que devolve o fotolivro para "Pedido de alterações" sem reabrir o caso.
  *
  * A LISTA INTEIRA, NOS DOIS SENTIDOS. Um álbum volta de "Aprovado" para "Pedido
  * de alterações" quando a família muda de ideia depois de aprovar, e isso não é
- * desfazer — é o fluxo normal. Uma lista que só oferecesse o próximo passo
- * esconderia metade do que acontece de verdade.
+ * desfazer — é o fluxo normal.
  *
  * SEM FASE ATÉ ALGUÉM DIZER UMA. Estar nesta seção já é ser um fotolivro a
  * fazer; uma fase inventada de padrão afirmaria um estado que ninguém declarou
  * — e a primeira delas ("aguardando pagamento") é uma afirmação sobre o
  * FINANCEIRO do cliente, que é a última coisa que o sistema deve chutar.
  *
- * DISPENSAR NÃO É UMA FASE, e por isso vem separado no fim, em vermelho. Ele
- * existe pelo mesmo motivo que existe no vídeo: a seção é o único lugar onde o
- * fotolivro se opera, e sem ele um álbum que não deveria existir — vendido e
- * depois cancelado, ou acrescentado por engano — ficaria sem saída.
+ * DISPENSAR NÃO É UMA FASE, e por isso vem separado no fim, em vermelho.
  */
 const DISPENSAR = 'dispensar'
 
@@ -54,7 +64,15 @@ export function FaseDoAlbum({
   const mover = useMoverAlbum()
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
+  const [finalizando, setFinalizando] = useState(false)
   const atual = etapa.faseAlbum
+
+  function mudarFase(fase: FaseAlbum) {
+    onErro(null)
+    mover
+      .mutateAsync({ casoEtapaId: etapa.id, fase })
+      .catch((e) => onErro(mensagemDeErro(e)))
+  }
 
   return (
     <>
@@ -77,12 +95,16 @@ export function FaseDoAlbum({
             setDispensando(true)
             return
           }
-          mover
-            .mutateAsync({ casoEtapaId: etapa.id, fase: item.id as FaseAlbum })
-            .catch((e) => onErro(mensagemDeErro(e)))
+          // A fase FINAL pergunta antes: ela conclui a etapa e tira o cartão da
+          // seção, e é a única da lista que não tem volta por ela mesma.
+          if (item.id === FASE_ALBUM_FINAL) {
+            setFinalizando(true)
+            return
+          }
+          mudarFase(item.id as FaseAlbum)
         }}
         itens={[
-          ...FASES_ALBUM.map((fase) => ({
+          ...FASES_ALBUM_NA_TELA.map((fase) => ({
             id: fase,
             rotulo: ROTULO_FASE_ALBUM[fase],
           })),
@@ -112,6 +134,23 @@ export function FaseDoAlbum({
           </span>
         }
       />
+
+      {finalizando && (
+        <Dialogo
+          titulo={CONFIRMAR_FIM_DO_ALBUM.titulo}
+          rotuloConfirmar={
+            mover.isPending ? 'Salvando…' : CONFIRMAR_FIM_DO_ALBUM.rotuloConfirmar
+          }
+          ocupado={mover.isPending}
+          onCancelar={() => setFinalizando(false)}
+          onConfirmar={() => {
+            mudarFase(FASE_ALBUM_FINAL)
+            setFinalizando(false)
+          }}
+        >
+          <p className="text-sm text-muted-foreground">{CONFIRMAR_FIM_DO_ALBUM.texto}</p>
+        </Dialogo>
+      )}
 
       {dispensando && (
         <Dialogo

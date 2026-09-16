@@ -326,6 +326,20 @@ export function useMoverVideoMaster() {
 }
 
 /**
+ * FINALIZA o vídeo do MASTER com o link, numa transação só (migration
+ * 20260916180834).
+ *
+ * "Pronto para entrega" e "Enviado / finalizado" eram duas fases para o mesmo
+ * momento. Agora são uma, e ela cobra o endereço: sem link o vídeo não termina,
+ * pelo mesmo motivo que o envio para Entregáveis cobra o link do Google.
+ */
+export function useFinalizarVideoMaster() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; url: string }>(({ casoEtapaId, url }) =>
+    chamar('finalizar_video_master', { p_caso_etapa_id: casoEtapaId, p_url: url }),
+  )
+}
+
+/**
  * Move o fotolivro na esteira (migration 20260910150425).
  *
  * Mesma forma do `useMoverVideoMaster` acima: a tela manda a fase de destino e
@@ -336,6 +350,25 @@ export function useMoverAlbum() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseAlbum }>(
     ({ casoEtapaId, fase }) =>
       chamar('mover_album', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
+  )
+}
+
+/**
+ * PEDIDO DE ALTERAÇÃO do vídeo ou do Foto/Livro (migration 20260916215022).
+ *
+ * Devolve SÓ a etapa para a fase de alteração e guarda o que a família pediu,
+ * na mesma transação — o caso continua encerrado. É o que o diálogo de
+ * reabertura chama quando o que foi marcado é uma das duas etapas com seção
+ * própria; para todas as outras ele continua chamando `reabrir_caso`, que cria
+ * rodada nova e devolve o cartão ao Quadro.
+ */
+export function usePedirAlteracaoDaEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; motivo: string }>(
+    ({ casoEtapaId, motivo }) =>
+      chamar('pedir_alteracao_da_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_motivo: motivo,
+      }),
   )
 }
 

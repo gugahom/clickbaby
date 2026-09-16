@@ -379,6 +379,32 @@ export const FASES_VIDEO_MASTER = [
 
 export type FaseVideoMaster = (typeof FASES_VIDEO_MASTER)[number]
 
+/**
+ * AS FASES QUE O SELETOR OFERECE (16/09/2026, pedido do gestor).
+ *
+ * Duas, e não quatro. "Pronto para entrega" saiu da lista porque virou o FIM:
+ * escolhê-lo abre o pedido do LINK e finaliza o vídeo (`finalizar_video_master`,
+ * migration 20260916180834). E "Enviado / finalizado" deixou de existir — o
+ * gestor viu que os dois diziam a mesma coisa.
+ *
+ * `FASES_VIDEO_MASTER` continua com as quatro porque é o que o BANCO aceita, e
+ * `faseDoVideo` continua sabendo ler um vídeo antigo parado em "pronto para
+ * entrega".
+ */
+/**
+ * A FASE FINAL DO VÍDEO — a que o seletor não oferece como fase, porque
+ * escolhê-la é FINALIZAR: abre o pedido do link e `finalizar_video_master`
+ * conclui a etapa. Ela continua nomeada aqui porque é a coluna de saída do
+ * quadro por fase, e porque é onde aparece o vídeo ANTIGO que parou neste
+ * estado quando ele ainda era de passagem.
+ */
+export const FASE_VIDEO_FINAL: FaseVideoMaster = 'pronto_para_entrega'
+
+export const FASES_VIDEO_NA_TELA = [
+  'em_andamento',
+  'em_alteracao',
+] as const satisfies readonly FaseVideoMaster[]
+
 /** Os nomes como estão no Trello da equipe, menos as reticências de
  *  "Editando…" — elas sugeriam que o rótulo estava cortado. Ver
  *  FASES_VIDEO_MASTER. */
@@ -386,7 +412,10 @@ export const ROTULO_FASE_VIDEO: Record<FaseVideoMaster, string> = {
   em_andamento: 'Editando',
   em_alteracao: 'Alterações',
   pronto_para_entrega: 'Pronto para entrega',
-  concluida: 'Enviado / finalizado',
+  // Desde 16/09/2026 o fim se chama PRONTO PARA ENTREGA: a fase antiga e a
+  // conclusão viraram o mesmo estado, e um vídeo concluído não aparece mais na
+  // seção para ninguém ler dois nomes para a mesma coisa.
+  concluida: 'Pronto para entrega',
 }
 
 /**
@@ -436,6 +465,22 @@ export const FASES_ALBUM = [
 export type FaseAlbum = (typeof FASES_ALBUM)[number]
 
 /**
+ * A FASE FINAL DO FOTOLIVRO, e a lista que o seletor mostra (16/09/2026,
+ * pedido do gestor).
+ *
+ * Eram duas fases no fim — "Pronto para entrega" e "Entregue / finalizado" —, e
+ * a queixa foi a mesma do vídeo: redundantes. Ficou UMA, com o rótulo "Pronto
+ * para entrega" e o valor `entregue` no banco, que é o que `mover_album`
+ * traduz para etapa concluída. O valor `pronto_para_entrega` continua no enum
+ * (fase de banco não se apaga) e some do seletor.
+ */
+export const FASE_ALBUM_FINAL: FaseAlbum = 'entregue'
+
+export const FASES_ALBUM_NA_TELA: readonly FaseAlbum[] = FASES_ALBUM.filter(
+  (fase) => fase !== 'pronto_para_entrega',
+)
+
+/**
  * Os nomes como estão no Trello deles, não uma tradução nossa.
  *
  * "Pago e enviado para a gráfica" é a única que se afasta do original, que diz
@@ -452,7 +497,9 @@ export const ROTULO_FASE_ALBUM: Record<FaseAlbum, string> = {
   aprovado: 'Aprovado pelo cliente',
   enviado_grafica: 'Pago e enviado para a gráfica',
   pronto_para_entrega: 'Pronto para entrega',
-  entregue: 'Entregue / finalizado',
+  // O FIM, desde 16/09/2026. Mesmo rótulo da fase antiga de propósito: para a
+  // equipe é o mesmo momento, e era a duplicidade que o gestor quis tirar.
+  entregue: 'Pronto para entrega',
 }
 
 /**
@@ -481,7 +528,7 @@ export const ESTILO_FASE_ALBUM: Record<FaseAlbum, string> = {
   aprovado: 'bg-andamento/12 text-andamento-tinta',
   enviado_grafica: 'bg-muted text-muted-foreground',
   pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',
-  entregue: 'bg-concluido/12 text-concluido-tinta',
+  entregue: 'bg-pronto-fundo text-pronto border border-pronto-borda',
 }
 
 /**

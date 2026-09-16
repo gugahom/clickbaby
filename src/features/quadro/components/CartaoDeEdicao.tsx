@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react'
+import { type LiHTMLAttributes, type ReactNode } from 'react'
 import clsx from 'clsx'
+import { IconeNota } from '@/components/ui/icones'
 import { rotularDia } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
 import { rotuloDaRodada, type CasoQuadro, type EtapaQuadro, type StatusEtapa } from '../types'
@@ -31,6 +32,27 @@ interface PropsCartaoDeEdicao {
    * palavras logo acima seria ruído — não uma segunda informação.
    */
   comSelo?: boolean
+  /**
+   * AS AÇÕES EM LINHA PRÓPRIA (16/09/2026, pedido do gestor: "ficou tudo meio
+   * amontoado no card"). No MASTER e no FOTO/LIVRO a ponta direita da linha tem
+   * QUATRO controles — prazo, pedidos, fase e o play/concluir —, e dividir a
+   * largura com o nome da etapa espremia os dois. No REELS continuam ao lado:
+   * lá são dois botões, e uma linha a mais custaria altura na única seção com
+   * teto de 192px.
+   */
+  acoesAbaixo?: boolean
+  /**
+   * Como chamar a observação da etapa no bloco de baixo. No MASTER e no
+   * FOTO/LIVRO ela É o pedido da família; no REELS costuma ser o motivo de uma
+   * reabertura, e chamar aquilo de "pedido do cliente" seria mentira.
+   */
+  rotuloObservacao?: string
+  /**
+   * Props soltas na raiz do cartão. É por aqui que a visão POR FASE pendura o
+   * arrastar (ver SecaoEmModal) — genérico de propósito, para o cartão não
+   * precisar saber o que é um kanban.
+   */
+  raiz?: LiHTMLAttributes<HTMLLIElement>
   onErro: (mensagem: string | null) => void
 }
 
@@ -70,6 +92,9 @@ export function CartaoDeEdicao({
   rotularLinha = (e) => rotuloDaRodada(e.tipo, e.rodada),
   acoesDaLinha,
   comSelo = true,
+  acoesAbaixo = false,
+  rotuloObservacao = 'Observação',
+  raiz,
   onErro,
 }: PropsCartaoDeEdicao) {
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
@@ -78,6 +103,7 @@ export function CartaoDeEdicao({
 
   return (
     <li
+      {...raiz}
       className={clsx(
         'relative flex items-stretch gap-2.5 rounded-cartao border border-border bg-card px-3 py-3 shadow-cartao transition-shadow hover:shadow-cartao-alto',
         // O anel que corre, e SÓ no parado. É o mesmo recurso do card com hora
@@ -85,6 +111,7 @@ export function CartaoDeEdicao({
         // um vídeo liberado que ninguém pegou é prazo correndo sem trabalho
         // acontecendo. Se todo cartão da seção girasse, nenhum chamaria.
         selo.anel && 'anel-alerta anel-alerta-vivo',
+        raiz?.className,
       )}
       style={selo.anel ? ({ '--cor-alerta': 'var(--atrasado)' } as React.CSSProperties) : undefined}
     >
@@ -149,6 +176,8 @@ export function CartaoDeEdicao({
               etapas={etapas}
               rotulo={rotularLinha(etapa)}
               acoes={acoesDaLinha?.(etapa)}
+              acoesAbaixo={acoesAbaixo}
+              rotuloObservacao={rotuloObservacao}
               onErro={onErro}
             />
           ))}
@@ -163,12 +192,16 @@ function LinhaDeRodada({
   etapas,
   rotulo,
   acoes,
+  acoesAbaixo,
+  rotuloObservacao,
   onErro,
 }: {
   etapa: EtapaQuadro
   etapas: EtapaQuadro[]
   rotulo: string
   acoes?: ReactNode
+  acoesAbaixo: boolean
+  rotuloObservacao: string
   onErro: (mensagem: string | null) => void
 }) {
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
@@ -181,8 +214,13 @@ function LinhaDeRodada({
    * escondido do lado de fora.
    */
   return (
-    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-muted/60 py-1 pr-1 pl-2.5">
-      <div className="min-w-0 flex-1">
+    <li
+      className={clsx(
+        'flex flex-wrap items-center gap-x-2 rounded-md bg-muted/60 pr-1 pl-2.5',
+        acoesAbaixo ? 'gap-y-2 py-2' : 'gap-y-1 py-1',
+      )}
+    >
+      <div className={clsx('min-w-0', acoesAbaixo ? 'w-full' : 'flex-1')}>
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
           {/*
             SEMPRE o nome do bloco, mesmo com uma rodada aberta só.
@@ -205,8 +243,37 @@ function LinhaDeRodada({
         </div>
       </div>
 
-      {acoes ?? (
-        <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />
+      <div
+        className={clsx(
+          'flex flex-wrap items-center gap-x-1.5 gap-y-1',
+          acoesAbaixo && 'w-full',
+        )}
+      >
+        {acoes ?? <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />}
+      </div>
+
+      {/* OS PEDIDOS DO CLIENTE POR EXTENSO (16/09/2026, pedido do gestor). O
+          cartão cresce para caber o que a família pediu — prints, link de
+          música — porque é aqui que a editora lê antes de sentar na estação.
+          Ele NÃO aparece na faixa do card no Quadro: ver AvisosDoCaso.
+
+          ÂMBAR, E NÃO O CINZA DE ANTES (16/09/2026, segunda volta do gestor:
+          "o pedido ficou meio sem destaque"). Era um bloco no tom do cartão e
+          passava por legenda. Agora tem a cor de ATENÇÃO, a tarja na lateral e
+          o nome do que é — e NÃO tem o vermelho nem a onda do aviso do Quadro,
+          de propósito: aquilo é chamado para quem está na maternidade agora, e
+          um pedido de música dentro de um vídeo de dez dias úteis pulsando
+          junto ensinaria a equipe a ignorar os dois. */}
+      {etapa.observacao && (
+        <div className="flex w-full gap-2 rounded-md border-l-[3px] border-atencao bg-atencao/12 px-2.5 py-2">
+          <IconeNota className="mt-0.5 size-3.5 flex-shrink-0 text-atencao-tinta" />
+          <div className="min-w-0">
+            <p className="rotulo-sobrescrito text-atencao-tinta">{rotuloObservacao}</p>
+            <p className="mt-0.5 text-xs whitespace-pre-line text-foreground">
+              {etapa.observacao}
+            </p>
+          </div>
+        </div>
       )}
     </li>
   )
