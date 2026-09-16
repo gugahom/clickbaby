@@ -353,6 +353,25 @@ export function useMoverAlbum() {
   )
 }
 
+/**
+ * PEDIDO DE ALTERAÇÃO do vídeo ou do Foto/Livro (migration 20260916215022).
+ *
+ * Devolve SÓ a etapa para a fase de alteração e guarda o que a família pediu,
+ * na mesma transação — o caso continua encerrado. É o que o diálogo de
+ * reabertura chama quando o que foi marcado é uma das duas etapas com seção
+ * própria; para todas as outras ele continua chamando `reabrir_caso`, que cria
+ * rodada nova e devolve o cartão ao Quadro.
+ */
+export function usePedirAlteracaoDaEtapa() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; motivo: string }>(
+    ({ casoEtapaId, motivo }) =>
+      chamar('pedir_alteracao_da_etapa', {
+        p_caso_etapa_id: casoEtapaId,
+        p_motivo: motivo,
+      }),
+  )
+}
+
 export function useCancelarCaso() {
   return useAcaoDoQuadro<{ casoId: string; motivo: string }>(({ casoId, motivo }) =>
     chamar('cancelar_caso', { p_caso_id: casoId, p_motivo: motivo }),

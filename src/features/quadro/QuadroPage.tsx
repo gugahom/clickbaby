@@ -7,6 +7,7 @@ import {
   useFinalizarVideoMaster,
   useMoverAlbum,
   useMoverVideoMaster,
+  usePedirAlteracaoDaEtapa,
   useReabrirCaso,
   useRetornarDaUti,
   type EtapaTipo,
@@ -74,6 +75,14 @@ import type { EtapaQuadro, FaseAlbum, FaseVideoMaster } from './types'
  * pergunta "o que temos hoje" e a pergunta "quem está na UTI" são olhadas ao
  * mesmo tempo — inclusive na TV da sala de edição.
  */
+/**
+ * As duas etapas que voltam SOZINHAS para a fase de alteração, sem reabrir o
+ * caso. É a mesma lista de `SECAO_DA_ETAPA` (AcoesDoCaso) e de
+ * `SEM_FAIXA_NO_CARD` (AvisosDoCaso), e pelo mesmo motivo de sempre: são as que
+ * têm esteira própria e não seguram o encerramento.
+ */
+const TEM_SECAO_PROPRIA = new Set<EtapaTipo>(['edicao_video', 'album'])
+
 type Aba =
   | 'lista'
   | 'uti'
@@ -106,6 +115,7 @@ export function QuadroPage() {
   const moverVideo = useMoverVideoMaster()
   const finalizarVideo = useFinalizarVideoMaster()
   const moverAlbum = useMoverAlbum()
+  const pedirAlteracao = usePedirAlteracaoDaEtapa()
 
   const hoje = hojeNoFuso()
   const agora = useRelogioDeMinuto()
@@ -512,6 +522,57 @@ export function QuadroPage() {
     />
   )
   const conteudoFotolivro = emFotolivro.map((caso) => cartaoFotolivro(caso))
+
+  /*
+   * O MESMO DIÁLOGO, DOIS EFEITOS (16/09/2026, pedido do gestor).
+   *
+   * Marcar "Foto" reabre o CASO; marcar "Vídeo" ou "Foto/Livro" devolve só a
+   * ETAPA para a fase de alteração, com o caso seguindo encerrado. Quem decide
+   * é o TIPO, e a divisão mora aqui e não no diálogo — ele pergunta, esta
+   * função executa. Ver ReabrirCasoDialogo e a migration 20260916215022.
+   *
+   * O PEDIDO DAS SEÇÕES VAI PRIMEIRO. Se a reabertura do caso falhar, o vídeo
+   * já voltou e a pessoa vê o erro e tenta de novo só a parte que faltou; na
+   * ordem inversa, um caso reaberto por engano precisaria ser encerrado outra
+   * vez à mão.
+   *
+   * A rodada é a MAIOR de cada tipo: um vídeo que já passou por alteração antes
+   * tem duas linhas, e quem volta é a última — a que foi entregue.
+   */
+  async function confirmarReabertura(
+    caso: CasoQuadro,
+    motivo: string,
+    escolhidas: EtapaTipo[],
+  ) {
+    const doCaso = etapasPorCaso.get(caso.id) ?? []
+    const comSecao = escolhidas.filter((t) => TEM_SECAO_PROPRIA.has(t))
+    const pelaReabertura = escolhidas.filter((t) => !TEM_SECAO_PROPRIA.has(t))
+
+    setErroReabrir(null)
+    try {
+      for (const tipo of comSecao) {
+        const etapa = doCaso
+          .filter((e) => e.tipo === tipo)
+          .reduce<EtapaQuadro | null>(
+            (maior, e) => (maior === null || e.rodada > maior.rodada ? e : maior),
+            null,
+          )
+        if (etapa) {
+          await pedirAlteracao.mutateAsync({ casoEtapaId: etapa.id, motivo })
+        }
+      }
+      if (pelaReabertura.length > 0) {
+        await reabrirCaso.mutateAsync({
+          casoId: caso.id,
+          motivo,
+          etapas: pelaReabertura,
+        })
+      }
+      setReabrindo(null)
+    } catch (e) {
+      setErroReabrir(mensagemDeErro(e))
+    }
+  }
 
   const CRITERIO_REELS =
     'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
@@ -1018,16 +1079,12 @@ export function QuadroPage() {
         <ReabrirCasoDialogo
           caso={reabrindo}
           etapas={etapasPorCaso.get(reabrindo.id) ?? []}
-          ocupado={reabrirCaso.isPending}
+          ocupado={reabrirCaso.isPending || pedirAlteracao.isPending}
           erro={erroReabrir}
           onCancelar={() => setReabrindo(null)}
-          onConfirmar={(motivo, etapas) => {
-            setErroReabrir(null)
-            reabrirCaso
-              .mutateAsync({ casoId: reabrindo.id, motivo, etapas: etapas as EtapaTipo[] })
-              .then(() => setReabrindo(null))
-              .catch((e) => setErroReabrir(mensagemDeErro(e)))
-          }}
+          onConfirmar={(motivo, escolhidas) =>
+            confirmarReabertura(reabrindo, motivo, escolhidas)
+          }
         />
       )}
     </div>

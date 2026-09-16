@@ -15,6 +15,12 @@ interface PropsReabrirCasoDialogo {
 }
 
 /**
+ * AS DUAS COM SEÇÃO PRÓPRIA. Elas aparecem na lista como qualquer outra, e o
+ * que acontece ao marcá-las é diferente — ver o comentário grande abaixo.
+ */
+const COM_SECAO = new Set<EtapaTipo>(['edicao_video', 'album'])
+
+/**
  * Trazer de volta um caso entregue.
  *
  * O CENÁRIO, do gestor: "o cliente pede depois de entregue pra fazer alteração
@@ -31,6 +37,31 @@ interface PropsReabrirCasoDialogo {
  * sobre o material entregue; nascimento e banho não acontecem de novo, e
  * oferecê-los convidaria a marcar por engano uma etapa que ninguém consegue
  * executar — o caso ficaria aberto para sempre esperando um parto que já foi.
+ *
+ * O VÍDEO E O FOTO/LIVRO ESTÃO NA LISTA, COM COMPORTAMENTO DIFERENTE
+ * (16/09/2026, pedido do gestor, em duas voltas no mesmo dia). De manhã eles
+ * SAÍRAM daqui: têm seção própria e voltam sozinhos pelo "Pedir alteração" da
+ * linha da etapa, sem arrastar o caso inteiro de volta ao Quadro. Ele olhou e
+ * trouxe o que faltava — **a equipe usa ESTE diálogo**, inclusive quando o
+ * pedido é só do vídeo. É aqui que se escreve o que a família pediu, e é aqui
+ * que se olha quando um caso entregue volta a ter trabalho; tirar as duas da
+ * lista não tirou o pedido do caminho delas, só escondeu a porta.
+ *
+ * Então elas voltaram, e o que muda é o EFEITO, não o gesto:
+ *
+ *   • Foto (e qualquer outra edição) → `reabrir_caso`: rodada nova, cartão de
+ *     volta ao Quadro, prazo recomeçando.
+ *   • Vídeo e Foto/Livro → `pedir_alteracao_da_etapa`: só a etapa volta, para a
+ *     fase de alteração da seção dela. O CASO CONTINUA ENCERRADO.
+ *
+ * Marcar dos dois lados faz as duas coisas. A diferença é do TIPO da etapa e
+ * não de quem clica, e a caixa embaixo dos chips diz em voz alta o que vai
+ * acontecer com o que está marcado AGORA — sem isso, "reabrir" significaria
+ * duas coisas diferentes no mesmo botão sem avisar.
+ *
+ * AS DUAS SÓ APARECEM QUANDO ESTÃO RESOLVIDAS. Vídeo ainda aberto está na
+ * seção, onde a fase se muda direto: oferecer aqui um segundo caminho para o
+ * que já tem um caminho seria convidar a marcar por engano.
  */
 export function ReabrirCasoDialogo({
   caso,
@@ -46,23 +77,24 @@ export function ReabrirCasoDialogo({
   // O que este caso pode refazer: os tipos de edição que ele de fato tem.
   // Sai das etapas existentes e não de uma lista fixa, então um BASIC não
   // oferece vídeo e um MASTER oferece — sem o código saber o que é um MASTER.
-  //
-  // O VÍDEO E O FOTO/LIVRO SAÍRAM DA LISTA (16/09/2026, pedido do gestor). Os
-  // dois têm seção própria e voltam sozinhos para a fase de ALTERAÇÃO pelo
-  // "Pedir alteração" da linha da etapa — sem trazer o caso inteiro de volta ao
-  // Quadro. Reabrir o caso por causa de um ajuste de vídeo era o que ele pediu
-  // para acabar: o atendimento já terminou, e o que precisa refazer é a edição.
   const disponiveis = [
     ...new Set(
       etapas
         .filter((e) => e.trilha === 'edicao')
-        .filter((e) => e.tipo !== 'edicao_video' && e.tipo !== 'album')
+        .filter(
+          (e) =>
+            !COM_SECAO.has(e.tipo) ||
+            e.status === 'concluida' ||
+            e.status === 'dispensada',
+        )
         .map((e) => e.tipo),
     ),
   ]
 
   const semMotivo = motivo.trim() === ''
   const semEtapa = marcadas.length === 0
+  const reabreOCaso = marcadas.some((t) => !COM_SECAO.has(t))
+  const voltaParaSecao = marcadas.filter((t) => COM_SECAO.has(t))
 
   function alternar(tipo: EtapaTipo) {
     setMarcadas((atual) =>
@@ -71,11 +103,14 @@ export function ReabrirCasoDialogo({
   }
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+  // O título e o botão seguem o que está marcado: com só o vídeo na mão, dizer
+  // "Reabrir caso" seria prometer uma coisa e fazer outra.
+  const soDaSecao = !reabreOCaso && voltaParaSecao.length > 0
 
   return (
     <Dialogo
-      titulo={`Reabrir ${titulo}`}
-      rotuloConfirmar="Reabrir caso"
+      titulo={soDaSecao ? `Pedir alteração — ${titulo}` : `Reabrir ${titulo}`}
+      rotuloConfirmar={soDaSecao ? 'Pedir alteração' : 'Reabrir caso'}
       ocupado={ocupado}
       erro={erro}
       confirmarDesabilitado={semMotivo || semEtapa}
@@ -84,7 +119,6 @@ export function ReabrirCasoDialogo({
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          O caso volta para o Quadro com as etapas marcadas como trabalho novo.
           O que já foi entregue continua registrado — nada é apagado.
         </p>
 
@@ -98,7 +132,7 @@ export function ReabrirCasoDialogo({
             className="mt-1.5 w-full rounded-md border border-border bg-background/60 px-3 py-2 text-base transition-colors focus:border-marca focus:bg-card"
           />
           <span className="mt-1 block text-xs text-muted-foreground">
-            Vira o aviso de cada etapa criada — é o que a editora vai ler.
+            Vira o aviso da etapa — é o que a editora vai ler.
           </span>
         </label>
 
@@ -138,12 +172,31 @@ export function ReabrirCasoDialogo({
           )}
         </fieldset>
 
-        {/* O prazo é a consequência menos óbvia da reabertura, e a que mais
-            afeta a fila. Dizer aqui evita a descoberta na tela seguinte. */}
-        <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          O prazo recomeça agora: a revisão vence pelo prazo do pacote contado
-          da reabertura, e entra na fila de edição pela urgência dele.
-        </p>
+        {/* O QUE VAI ACONTECER COM O QUE ESTÁ MARCADO AGORA.
+
+            As duas frases podem aparecer juntas, e é justamente quando o aviso
+            mais vale: marcar Foto e Vídeo dispara dois efeitos diferentes no
+            mesmo botão. A consequência do prazo fica junto da reabertura, que é
+            a única que o move. */}
+        {voltaParaSecao.length > 0 && (
+          <p className="rounded-md border-l-[3px] border-atencao bg-atencao/12 px-3 py-2 text-xs text-foreground">
+            <strong className="font-bold">
+              {voltaParaSecao.map((t) => ROTULO_ETAPA[t]).join(' e ')}
+            </strong>{' '}
+            {voltaParaSecao.length > 1 ? ' voltam' : ' volta'} só para a fase de
+            alteração, {voltaParaSecao.length > 1 ? 'nas seções' : 'na seção'} de
+            edição. O caso continua encerrado e os links continuam confirmados.
+          </p>
+        )}
+
+        {reabreOCaso && (
+          <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            O caso volta para o Quadro com as outras etapas marcadas como
+            trabalho novo. O prazo recomeça agora: a revisão vence pelo prazo do
+            pacote contado da reabertura, e entra na fila de edição pela
+            urgência dele.
+          </p>
+        )}
       </div>
     </Dialogo>
   )

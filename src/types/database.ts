@@ -1044,6 +1044,10 @@ export type Database = {
         Returns: number
       }
       pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      pedir_alteracao_da_etapa: {
+        Args: { p_caso_etapa_id: string; p_motivo: string }
+        Returns: undefined
+      }
       planejar_rendicao: {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
         Returns: undefined

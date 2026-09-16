@@ -355,6 +355,9 @@ finalizar_video_master(p_caso_etapa_id, p_url)   -- link + conclusão na mesma t
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
 
+-- pedido de alteração pós-entrega, SÓ das duas com seção própria (ver seção 13)
+pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
+
 -- caso
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
@@ -1004,9 +1007,32 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   aceitam caso encerrado desde 20260903153101 e 20260910150425, e é para isto que serve.
   O caso continua encerrado, os links continuam confirmados, e o que reabre é o trabalho.
   **`reabrir_etapa` não serve:** recusa caso terminal e devolveria a etapa para "em
-  andamento", que no vídeo não é fase nenhuma. E `reabrir_caso` deixou de oferecer vídeo e
-  fotolivro na lista do diálogo: trazer o caso inteiro de volta ao Quadro por causa de um
-  ajuste de dez minutos era exatamente o que o gestor pediu para acabar.
+  andamento", que no vídeo não é fase nenhuma.
+  **E O PEDIDO ENTRA PELO DIÁLOGO DE REABERTURA** (mesmo dia, segunda volta do gestor,
+  migration `20260916215022`). De manhã as duas SAÍRAM da lista "o que precisa ser refeito",
+  porque reabrir o caso inteiro por um ajuste de dez minutos era o que ele pediu para acabar.
+  Ele olhou e trouxe o que faltava: **a equipe usa ESSE diálogo**, inclusive quando o pedido
+  é só do vídeo — é lá que se escreve o que a família pediu, e é lá que se olha quando um caso
+  entregue volta a ter trabalho. Tirar as duas da lista não tirou o pedido do caminho delas,
+  só escondeu a porta.
+  Então elas voltaram para a lista, **com comportamento diferente**, e quem decide é o TIPO:
+  marcar "Foto" chama `reabrir_caso` (rodada nova, cartão de volta ao Quadro, prazo
+  recomeçando); marcar "Vídeo" ou "Foto/Livro" chama `pedir_alteracao_da_etapa`, que devolve
+  SÓ a etapa para a fase de alteração — **o caso continua encerrado**. Marcar dos dois lados
+  faz as duas coisas, e o diálogo diz em voz alta o que acontece com o que está marcado
+  agora: um botão com dois efeitos sem aviso seria pior que dois botões.
+  A RPC nova faz as duas escritas **na mesma transação** — mover a fase e guardar o pedido —
+  porque separadas a rede caindo no meio produz um vídeo em ALTERAÇÕES sem ninguém saber o
+  que alterar, que é o estado que o pedido existe para evitar. Ela DELEGA a fase para
+  `mover_video_master`/`mover_album` em vez de repetir o UPDATE (uma segunda definição de
+  "mover" receberia só metade da próxima correção), e **SOMA** o pedido à observação em vez
+  de escrever por cima: aquele campo é onde moram os PEDIDOS DO CLIENTE, e um pedido novo que
+  apagasse o anterior mandaria a editora para a estação com metade do que a família pediu.
+  As duas só aparecem na lista quando estão RESOLVIDAS — vídeo ainda aberto está na seção,
+  onde a fase se muda direto.
+  O botão da linha da etapa no card continua existindo, e desde 16/09 com o NOME escrito
+  ("Pedir alteração") em vez de um ícone solto: ele é lido quase sempre em CONCLUÍDOS, onde
+  não há pressa de um toque nem falta de largura, e uma seta sozinha não diz o que faz.
 - **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
   É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
   `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.
