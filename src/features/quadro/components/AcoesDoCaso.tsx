@@ -365,7 +365,16 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                     na seção {secaoDaEtapa}
                   </span>
                 ) : encerrada ? (
-                  <div className="flex flex-shrink-0 items-center justify-end @2xl:w-33">
+                  <div
+                    className={clsx(
+                      'flex flex-shrink-0 items-center justify-end',
+                      // A largura fixa alinha os ícones de desfazer de todas as
+                      // linhas. O "Pedir alteração" tem texto e não cabe nela —
+                      // e é a única linha da lista que o tem, então não há
+                      // coluna para desalinhar.
+                      !secaoDaEtapa && '@2xl:w-33',
+                    )}
+                  >
                     {/*
                       PEDIDO DE ALTERAÇÃO NÃO REABRE O CASO (16/09/2026, pedido
                       do gestor).
@@ -387,11 +396,23 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                       voltaria a etapa para "em andamento" — que no vídeo não é
                       fase nenhuma. Por isso as duas mandam para a fase de
                       ALTERAÇÃO, que é o nome do que aconteceu.
+
+                      COM O NOME ESCRITO, e não um ícone (16/09/2026, o gestor
+                      não achou). Esta linha é lida quase sempre em CONCLUÍDOS:
+                      o caso foi entregue, a família pediu mudança, e alguém
+                      abre o card procurando por onde voltar. Ali não é o
+                      corredor da maternidade — não há pressa de um toque nem
+                      escassez de largura —, e uma seta solta ao lado do nome da
+                      etapa não diz o que faz. O ícone continua, ao lado do
+                      texto.
                     */}
                     {secaoDaEtapa ? (
-                      <BotaoIcone
-                        rotulo={`Pedir alteração — volta para a seção ${secaoDaEtapa}`}
+                      <Botao
+                        variante="contorno"
+                        onda
+                        aria-label={`Pedir alteração — volta para a seção ${secaoDaEtapa}`}
                         disabled={ocupado}
+                        className="min-h-11 px-3 text-xs font-semibold"
                         onClick={() =>
                           executar(
                             etapa.tipo === 'edicao_video'
@@ -406,8 +427,9 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                           )
                         }
                       >
-                        <IconeReabrir className="size-[18px]" />
-                      </BotaoIcone>
+                        <IconeReabrir className="size-4" />
+                        Pedir alteração
+                      </Botao>
                     ) : (
                       <BotaoIcone
                         rotulo="Reabrir etapa"
