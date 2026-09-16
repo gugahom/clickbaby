@@ -173,8 +173,15 @@ function LinhaDeRodada({
 }) {
   const responsavel = etapa.responsavelNome?.trim().split(/\s+/)[0] ?? null
 
+  /*
+   * `flex-wrap`: onde a linha não couber — a coluna estreita do modal por fase,
+   * com a pílula "Aguardando pagamento e fotos" ao lado dos botões — as ações
+   * descem para a linha de baixo. Antes elas empurravam o cartão além da
+   * largura disponível, e o que sobrava virava rolagem lateral com o botão
+   * escondido do lado de fora.
+   */
   return (
-    <li className="flex items-center gap-2 rounded-md bg-muted/60 py-1 pr-1 pl-2.5">
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-muted/60 py-1 pr-1 pl-2.5">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
           {/*

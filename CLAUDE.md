@@ -928,6 +928,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   lugares do código — "o link do álbum", "subir as fotos no álbum", "a Morgana abre o álbum e
   é a família errada". São duas coisas diferentes, e trocar aquelas por "Foto/Livro"
   produziria frases erradas. Uma busca-e-substitui cega quebra isso.
+- **MASTER E FOTO/LIVRO ABREM EM MODAL** (15/09/2026, pedido do gestor). Na coluna da direita
+  as duas seções continuam no mesmo lugar, fechadas do mesmo jeito (título e contador), mas o
+  clique abre um modal largo (`SecaoEmModal`, sobre `ModalAmplo`) em vez da sanfona. Motivo: a
+  sanfona tinha teto de 192px — pedido do próprio gestor, para nenhuma seção roubar altura do
+  REELS —, e um cartão com nome, pacote, seletor de fase e play/pause não cabia para ser mexido.
+  O modal resolve sem quebrar a regra do teto: o REELS não perde nada. Os CARTÕES SÃO OS MESMOS
+  (`CartaoDeEdicao`, com as mesmas ações e o mesmo realtime). A UTI continua sanfona; o celular
+  continua com as abas de tela cheia.
+  **DUAS VISÕES EM TESTE, com chave no cabeçalho do modal:** LISTA (grade de cartões maiores, na
+  ordem de sempre) e POR FASE (uma coluna por fase, "Sem fase" primeiro). A escolha fica no
+  `localStorage` do aparelho e começa em POR FASE. Isso REABRE uma decisão escrita: quando as
+  seções nasceram, o quadro de colunas foi descartado (ver `FaseDoVideo`), porque a pergunta
+  ali é sobre UM caso e não sobre carga por coluna. O gestor pediu para ver e está inclinado à
+  lista — **a visão que perder sai, e a chave junto**. Nas duas, a fase muda pelo seletor do
+  cartão: sem arrastar.
 - **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
   É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
   `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.

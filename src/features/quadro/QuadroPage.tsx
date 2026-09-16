@@ -34,6 +34,7 @@ import { CasoLinha } from './components/CasoLinha'
 import { CartaoLateral } from './components/CartaoLateral'
 import { PainelLateral } from './components/PainelLateral'
 import { PainelDobravel } from './components/PainelDobravel'
+import { SecaoEmModal, type ItemDaSecao } from './components/SecaoEmModal'
 import { RascunhosPainel } from './components/RascunhosPainel'
 import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
@@ -43,6 +44,13 @@ import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import type { BlocoDia, CasoQuadro } from './types'
+import {
+  FASES_ALBUM,
+  FASES_VIDEO_MASTER,
+  ROTULO_FASE_ALBUM,
+  ROTULO_FASE_VIDEO,
+  faseDoVideo,
+} from './types'
 import type { EtapaQuadro } from './types'
 
 /**
@@ -381,7 +389,7 @@ export function QuadroPage() {
     />
   ))
 
-  const conteudoMaster = emMaster.map((caso) => (
+  const cartaoMaster = (caso: CasoQuadro) => (
     <CartaoDeEdicao
       key={caso.id}
       caso={caso}
@@ -427,7 +435,8 @@ export function QuadroPage() {
       comSelo={false}
       onErro={setErroMaster}
     />
-  ))
+  )
+  const conteudoMaster = emMaster.map(cartaoMaster)
 
   /*
    * O CARTÃO DO FOTOLIVRO — a fase E o relógio, como ficou o MASTER em 09/09.
@@ -440,7 +449,7 @@ export function QuadroPage() {
    * tempo de diagramação — a única parte que a equipe controla — ficaria
    * enterrado num mês de espera por cliente e gráfica.
    */
-  const conteudoFotolivro = emFotolivro.map((caso) => (
+  const cartaoFotolivro = (caso: CasoQuadro) => (
     <CartaoDeEdicao
       key={caso.id}
       caso={caso}
@@ -465,7 +474,8 @@ export function QuadroPage() {
       comSelo={false}
       onErro={setErroFotolivro}
     />
-  ))
+  )
+  const conteudoFotolivro = emFotolivro.map(cartaoFotolivro)
 
   const CRITERIO_REELS =
     'Vídeo liberado para editar, em andamento ou pausado. O caso segue na lista do dia.'
@@ -474,6 +484,26 @@ export function QuadroPage() {
   const CRITERIO_FOTOLIVRO =
     'Foto/Livro do pagamento à entrega. Segue depois do caso encerrar.'
   const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
+
+  /*
+   * MASTER E FOTO/LIVRO EM MODAL (15/09/2026). Cada cartão vai junto com a FASE
+   * em que o caso está, para o modal poder mostrar a mesma lista em colunas.
+   * Os cartões são os mesmos da aba do celular — só a moldura muda.
+   *
+   * A fase do MASTER sai de `faseDoVideo`, que lê `pausada` como "Editando" —
+   * a mesma leitura do seletor, para a coluna e a pílula nunca discordarem.
+   */
+  const itensMaster: ItemDaSecao[] = emMaster.map((caso) => {
+    const video = videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])[0]
+    return { id: caso.id, fase: video ? faseDoVideo(video.status) : null, cartao: cartaoMaster(caso) }
+  })
+  const itensFotolivro: ItemDaSecao[] = emFotolivro.map((caso) => ({
+    id: caso.id,
+    fase: albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseAlbum ?? null,
+    cartao: cartaoFotolivro(caso),
+  }))
+  const colunasMaster = FASES_VIDEO_MASTER.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] }))
+  const colunasFotolivro = FASES_ALBUM.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_ALBUM[fase] }))
 
   const painelReels = (
     <PainelLateral
@@ -818,28 +848,35 @@ export function QuadroPage() {
               */}
               <div className="flex min-h-0 flex-col gap-3">
                 <div className="min-h-0 flex-1">{painelReels}</div>
-                <PainelDobravel
+                {/* MASTER e FOTO/LIVRO abrem em MODAL, não em sanfona
+                    (15/09/2026, pedido do gestor): ver SecaoEmModal. A UTI
+                    continua sanfona logo abaixo — quase não tem ação dentro. */}
+                <SecaoEmModal
                   titulo="Master"
                   quantidade={emMaster.length}
                   criterio={CRITERIO_MASTER}
                   vazio="Nenhum vídeo de MASTER em andamento."
                   erro={erroMaster}
-                >
-                  {conteudoMaster}
-                </PainelDobravel>
+                  onLimparErro={() => setErroMaster(null)}
+                  itens={itensMaster}
+                  colunas={colunasMaster}
+                  chaveModo="master"
+                />
                 {/* FOTO/LIVRO entra DEPOIS do Master, e não antes: o vídeo
                     horizontal tem prazo de dez dias úteis correndo, o
                     fotolivro leva semanas e a maior parte da espera é de
                     gente de fora. A ordem da coluna é a ordem da urgência. */}
-                <PainelDobravel
+                <SecaoEmModal
                   titulo="Foto/Livro"
                   quantidade={emFotolivro.length}
                   criterio={CRITERIO_FOTOLIVRO}
                   vazio="Nenhum Foto/Livro em produção."
                   erro={erroFotolivro}
-                >
-                  {conteudoFotolivro}
-                </PainelDobravel>
+                  onLimparErro={() => setErroFotolivro(null)}
+                  itens={itensFotolivro}
+                  colunas={colunasFotolivro}
+                  chaveModo="fotolivro"
+                />
                 <PainelDobravel
                   titulo="UTI"
                   quantidade={naUti.length}
