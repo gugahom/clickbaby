@@ -9,8 +9,10 @@ import {
   useMoverVideoMaster,
 } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
+import { CONFIRMAR_FIM_DO_VIDEO } from '../lib/fim-da-edicao'
 import {
   FASES_VIDEO_NA_TELA,
+  FASE_VIDEO_FINAL,
   ROTULO_FASE_VIDEO,
   faseDoVideo,
   type EtapaQuadro,
@@ -23,7 +25,10 @@ import {
  * (15/09/2026: a seção passou a abrir num modal, e o modal ganhou uma visão
  * POR FASE em colunas, para o gestor comparar com a lista antes de decidir —
  * ver SecaoEmModal. O argumento abaixo continua sendo o motivo da decisão
- * original. Nas duas visões a fase muda por aqui, sem arrastar.)
+ * original, e a fase muda por aqui nas duas visões. Em 16/09 o gestor pediu o
+ * ARRASTAR do ClickUp, que existe só no quadro de colunas e só no mouse: ele
+ * cai nesta mesma RPC, e este seletor continua sendo o caminho de todo dia — o
+ * único que funciona no celular e por teclado.)
  *
  * O gestor mostrou o quadro de colunas que a equipe usa hoje só para o vídeo
  * horizontal e pediu esse fluxo aqui dentro. As fases são o pedido; o QUADRO
@@ -33,9 +38,10 @@ import {
  * de MASTER por vez, e a pergunta de quem senta na estação é sobre UM deles —
  * "em que pé está este, e para onde ele vai agora".
  *
- * Então a fase é uma PÍLULA na linha do vídeo, e trocá-la é abrir a lista.
- * Dois toques, sem arrastar — arrastar é o gesto mais difícil de acertar num
- * celular segurado com uma mão num corredor (seção 6 do CLAUDE.md).
+ * Então a fase é uma PÍLULA na linha do vídeo, e trocá-la é abrir a lista:
+ * dois toques. Arrastar é o gesto mais difícil de acertar num celular segurado
+ * com uma mão num corredor (seção 6 do CLAUDE.md), e por isso ele é ATALHO no
+ * PC — nunca o único caminho.
  *
  * SÃO TRÊS FASES DESDE 16/09/2026 (pedido do gestor): Editando, Alterações e
  * PRONTO PARA ENTREGA. "Enviado / finalizado" saiu — o gestor viu que os dois
@@ -65,7 +71,6 @@ import {
  * podia ser tirado de lá por ninguém.
  */
 const DISPENSAR = 'dispensar'
-const FINALIZAR = 'finalizar'
 
 export function FaseDoVideo({
   etapa,
@@ -96,7 +101,9 @@ export function FaseDoVideo({
             setDispensando(true)
             return
           }
-          if (item.id === FINALIZAR) {
+          // A FASE FINAL não é uma fase que se escolhe: escolhê-la é
+          // finalizar, e finalizar cobra o link.
+          if (item.id === FASE_VIDEO_FINAL) {
             setErroDialogo(null)
             setLink('')
             setFinalizando(true)
@@ -112,8 +119,8 @@ export function FaseDoVideo({
             rotulo: ROTULO_FASE_VIDEO[fase],
           })),
           {
-            id: FINALIZAR,
-            rotulo: 'Pronto para entrega',
+            id: FASE_VIDEO_FINAL,
+            rotulo: ROTULO_FASE_VIDEO[FASE_VIDEO_FINAL],
             icone: <IconeCheck className="size-4" />,
           },
           {
@@ -146,8 +153,10 @@ export function FaseDoVideo({
 
       {finalizando && (
         <Dialogo
-          titulo="Vídeo pronto para entrega"
-          rotuloConfirmar={finalizar.isPending ? 'Finalizando…' : 'Finalizar com o link'}
+          titulo={CONFIRMAR_FIM_DO_VIDEO.titulo}
+          rotuloConfirmar={
+            finalizar.isPending ? 'Finalizando…' : CONFIRMAR_FIM_DO_VIDEO.rotuloConfirmar
+          }
           confirmarDesabilitado={link.trim() === ''}
           ocupado={finalizar.isPending}
           erro={erroDialogo}
@@ -162,22 +171,17 @@ export function FaseDoVideo({
               )
           }}
         >
-          <p className="text-sm text-muted-foreground">
-            O link entra na lista de entregáveis do caso e o vídeo é finalizado —
-            o cartão sai desta seção. Se a família pedir alteração depois, o
-            caminho é “Pedir alteração no vídeo”, na linha da etapa dentro do
-            card.
-          </p>
+          <p className="text-sm text-muted-foreground">{CONFIRMAR_FIM_DO_VIDEO.texto}</p>
 
           <label className="block">
-            <span className="text-sm font-medium">Link do vídeo</span>
+            <span className="text-sm font-medium">{CONFIRMAR_FIM_DO_VIDEO.campo.rotulo}</span>
             <input
               type="url"
               inputMode="url"
               autoFocus
               value={link}
               onChange={(e) => setLink(e.target.value)}
-              placeholder="https://"
+              placeholder={CONFIRMAR_FIM_DO_VIDEO.campo.placeholder}
               className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background px-3 text-base"
             />
           </label>

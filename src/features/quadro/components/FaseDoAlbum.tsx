@@ -5,6 +5,7 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeDispensar } from '@/components/ui/icones'
 import { useDispensarEtapa, useMoverAlbum } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
+import { CONFIRMAR_FIM_DO_ALBUM } from '../lib/fim-da-edicao'
 import {
   ESTILO_FASE_ALBUM,
   FASES_ALBUM_NA_TELA,
@@ -19,14 +20,15 @@ import {
  *
  * (15/09/2026: a seção passou a abrir num modal com uma visão POR FASE em
  * colunas, em teste ao lado da lista — ver SecaoEmModal. A fase continua
- * mudando por aqui nas duas visões.)
+ * mudando por aqui nas duas visões; desde 16/09 o quadro de colunas também
+ * aceita arrastar com o mouse, como atalho para esta mesma RPC.)
  *
  * Mesma decisão da FaseDoVideo, e vale repetir porque aqui a tentação é maior:
  * são muitas colunas, e muitas colunas é onde um kanban parece obrigatório. Não
  * é. Um kanban serve para ver CARGA — quantos há em cada coluna, onde entope —,
  * e a pergunta de quem abre esta seção é sobre UM fotolivro: "onde está este, e
  * para onde ele vai agora". A fase é uma pílula na linha, e trocá-la é abrir a
- * lista. Dois toques, sem arrastar.
+ * lista: dois toques, em qualquer aparelho.
  *
  * NOVE FASES DESDE 16/09/2026 (pedido do gestor), e não dez: "Pronto para
  * entrega" e "Entregue / finalizado" eram redundantes — a mesma queixa que ele
@@ -135,8 +137,10 @@ export function FaseDoAlbum({
 
       {finalizando && (
         <Dialogo
-          titulo="Foto/Livro pronto para entrega?"
-          rotuloConfirmar={mover.isPending ? 'Salvando…' : 'Concluir o Foto/Livro'}
+          titulo={CONFIRMAR_FIM_DO_ALBUM.titulo}
+          rotuloConfirmar={
+            mover.isPending ? 'Salvando…' : CONFIRMAR_FIM_DO_ALBUM.rotuloConfirmar
+          }
           ocupado={mover.isPending}
           onCancelar={() => setFinalizando(false)}
           onConfirmar={() => {
@@ -144,11 +148,7 @@ export function FaseDoAlbum({
             setFinalizando(false)
           }}
         >
-          <p className="text-sm text-muted-foreground">
-            A etapa conclui e o cartão sai desta seção. Se a família pedir
-            alteração depois, o caminho é “Pedir alteração no Foto/Livro”, na
-            linha da etapa dentro do card.
-          </p>
+          <p className="text-sm text-muted-foreground">{CONFIRMAR_FIM_DO_ALBUM.texto}</p>
         </Dialogo>
       )}
 

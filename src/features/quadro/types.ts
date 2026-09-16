@@ -391,6 +391,15 @@ export type FaseVideoMaster = (typeof FASES_VIDEO_MASTER)[number]
  * `faseDoVideo` continua sabendo ler um vídeo antigo parado em "pronto para
  * entrega".
  */
+/**
+ * A FASE FINAL DO VÍDEO — a que o seletor não oferece como fase, porque
+ * escolhê-la é FINALIZAR: abre o pedido do link e `finalizar_video_master`
+ * conclui a etapa. Ela continua nomeada aqui porque é a coluna de saída do
+ * quadro por fase, e porque é onde aparece o vídeo ANTIGO que parou neste
+ * estado quando ele ainda era de passagem.
+ */
+export const FASE_VIDEO_FINAL: FaseVideoMaster = 'pronto_para_entrega'
+
 export const FASES_VIDEO_NA_TELA = [
   'em_andamento',
   'em_alteracao',

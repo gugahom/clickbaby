@@ -942,8 +942,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `localStorage` do aparelho e começa em POR FASE. Isso REABRE uma decisão escrita: quando as
   seções nasceram, o quadro de colunas foi descartado (ver `FaseDoVideo`), porque a pergunta
   ali é sobre UM caso e não sobre carga por coluna. O gestor pediu para ver e está inclinado à
-  lista — **a visão que perder sai, e a chave junto**. Nas duas, a fase muda pelo seletor do
-  cartão: sem arrastar.
+  lista — **a visão que perder sai, e a chave junto**.
+  **ARRASTAR ENTRE AS COLUNAS** (16/09/2026, pedido do gestor: "como em clickup e outros
+  kanbans"). Só na visão POR FASE, e só no MOUSE: o arrastar nativo do HTML não existe no
+  toque, e é o gesto mais difícil de acertar com uma mão num corredor (seção 6). **O SELETOR
+  DE FASE DO CARTÃO CONTINUA SENDO O CAMINHO**, e é o único que funciona no celular e por
+  teclado — arrastar é atalho, e cai nas MESMAS RPCs (`mover_video_master`, `mover_album`,
+  `finalizar_video_master`), com o mesmo erro no mesmo alerta. Dois detalhes que não são
+  capricho: um gesto começado num CONTROLE (o seletor, o campo do PC) não arrasta o cartão —
+  quem sabe onde a mão caiu é o `mousedown`, e ele grava isso num `data-` do próprio nó —, e
+  **"Sem fase" NÃO RECEBE cartão**, porque não existe RPC que APAGUE a fase de um trabalho, e
+  oferecer um alvo que o banco recusa ensina a duvidar do quadro.
+  **A COLUNA FINAL É DE SAÍDA e vive vazia:** quem chega nela conclui a etapa e sai da seção.
+  Ela existe por dois motivos — é o alvo de quem arrasta para terminar (perguntando antes, e
+  pedindo o link no vídeo, com o MESMO texto do seletor: `lib/fim-da-edicao.ts`), e é onde
+  aparece o vídeo ANTIGO parado em "pronto para entrega", de quando essa fase era de
+  passagem. Sem ela aquele vídeo caía em "Sem fase" com a pílula dizendo "Pronto para
+  entrega" logo abaixo: a coluna e o cartão discordando na mesma tela.
 - **O FIM DO VÍDEO E DO FOTO/LIVRO VIROU UM ESTADO SÓ** (16/09/2026, pedido do gestor,
   migration `20260916180834`). "Pronto para entrega" e "Enviado / finalizado" eram
   redundantes — a equipe marcava os dois no mesmo minuto, e o segundo só afirmava que
@@ -969,7 +984,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   prometemos ESTE vídeo", e é combinado caso a caso, muitas vezes depois do caso encerrar.
   **PEDIDOS** (`PedidosDaEtapa`) é a observação da etapa (`anotar_etapa`), onde entram os
   pedidos da família — prints, link de música. O texto aparece POR EXTENSO dentro do cartão,
-  que por isso cresceu. **NÃO entra na faixa de aviso do card** (decisão do gestor): aquela
+  que por isso cresceu.
+  **EM ÂMBAR, COM TARJA E NOME** (16/09/2026, segunda volta do gestor: "o pedido ficou meio
+  sem destaque"). Era um bloco no tom do cartão e passava por legenda. Agora a pastilha e o
+  bloco dividem a cor de ATENÇÃO, e o bloco diz o que é ("Pedidos do cliente"). O que ele NÃO
+  tem é o vermelho e a onda do aviso do Quadro, de propósito — ver o parágrafo seguinte.
+  **E AS AÇÕES DESCERAM UMA LINHA** no cartão do MASTER e do FOTO/LIVRO (`acoesAbaixo`): são
+  quatro controles — prazo, pedidos, fase e o play/concluir —, e dividir a largura com o nome
+  da etapa espremia os dois ("ficou tudo meio amontoado no card"). No REELS continuam ao
+  lado, porque lá são dois botões e uma linha a mais custaria altura na única seção com teto
+  de 192px. **NÃO entra na faixa de aviso do card** (decisão do gestor): aquela
   faixa pulsa em vermelho para quem está na maternidade, e um pedido de música dentro de um
   vídeo de dez dias úteis ensinaria a equipe a ignorá-la. A lista está em
   `SEM_FAIXA_NO_CARD` (AvisosDoCaso) e é a mesma de `SECAO_DA_ETAPA`.

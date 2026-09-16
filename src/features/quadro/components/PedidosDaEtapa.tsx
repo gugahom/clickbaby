@@ -55,7 +55,11 @@ export function PedidosDaEtapa({
           'relative inline-flex h-6 flex-shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 text-xs font-semibold transition-colors',
           "before:absolute before:top-1/2 before:left-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
           tem
-            ? 'bg-marca-suave text-marca'
+            ? // A MESMA COR DO BLOCO que mostra o texto logo abaixo (ver
+              // CartaoDeEdicao): a pastilha diz que HÁ pedido, o bloco diz
+              // qual é, e uma cor só amarra as duas coisas. Era `bg-marca-
+              // suave`, que é a cor de identidade do pacote — nada a ver.
+              'bg-atencao/15 text-atencao-tinta'
             : 'border border-dashed border-border text-muted-foreground hover:border-marca hover:text-marca',
         )}
       >
