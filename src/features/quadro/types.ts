@@ -261,9 +261,20 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
 /**
  * O RÓTULO DA RODADA, que NÃO é só o número.
  *
- * A tabela abaixo diz "3 = Irmãos", e isso vale para o REELS: a rodada 3 dele
- * nasce da trigger do encontro de irmãos (migration 20260903193219), e é a
- * única coisa no sistema que a cria.
+ * A tabela abaixo diz "3 = Irmãos", e isso vale para o REELS: as rodadas 3 que
+ * existem hoje nele nasceram da trigger do encontro de irmãos (migration
+ * 20260903193219).
+ *
+ * A TRIGGER MORREU EM 16/09/2026 (migration 20260916233119, pedido do gestor:
+ * o encontro voltou a ser só uma etapa de acompanhamento e não gera edição). O
+ * rótulo FICA assim mesmo assim, e é escolha, não esquecimento: as dez rodadas
+ * já criadas SÃO o encontro — duas ainda abertas —, e chamá-las de "Revisão"
+ * mentiria sobre trabalho que está na tela de alguém agora. O preço é que uma
+ * revisão de reels que caia na rodada 3 daqui em diante vai aparecer como
+ * "Irmãos": é a mesma imprecisão descrita no parágrafo seguinte, que já existia
+ * e que agora passa a ser a única fonte de rodada 3 nova. Quando ela incomodar,
+ * o conserto é olhar se o caso tem um `encontro_irmaos` — não trocar o número
+ * por outro chute.
  *
  * PARA AS OUTRAS ETAPAS, rodada 3 significa outra coisa: `reabrir_caso`
  * (20260828135838) numera a revisão com `max(rodada) + 1`, então uma edição de
@@ -291,10 +302,10 @@ export const ROTULO_RODADA: Record<number, string> = {
   // (seção 2 do CLAUDE.md). Quando o fechamento se descolar do banho, o aviso
   // da etapa cobre a exceção — não é caso de mudar o rótulo.
   2: 'B+F',
-  // A rodada do encontro de irmãos (migration 20260903193219). É SEMPRE a 3,
-  // mesmo num caso que nunca teve a 2 — o número diz QUAL bloco de captura,
-  // não a ordem em que apareceram. Se ele deslizasse conforme o caso, este
-  // rótulo mentiria em metade deles.
+  // A rodada do encontro de irmãos (migration 20260903193219), que nenhuma
+  // trigger cria desde 16/09/2026 — ver o comentário de `rotuloDaRodada`. Era
+  // SEMPRE a 3, mesmo num caso que nunca teve a 2: o número diz QUAL bloco de
+  // captura, não a ordem em que apareceram.
   3: 'Irmãos',
 }
 

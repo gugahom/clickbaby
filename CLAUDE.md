@@ -125,21 +125,36 @@ certo:
 | ------ | -------- | ------------ |
 | 1 | parto | com o caso (libera quando o nascimento conclui) |
 | 2 | banho + fechamento ("B+F") | o fechamento conclui |
-| 3 | encontro de irmãos | o encontro de irmãos conclui — só reels |
+| 3 | encontro de irmãos | **nada mais cria** — ver abaixo |
 
 **O NÚMERO NÃO BASTA PARA O RÓTULO.** A tabela acima vale para o que as TRIGGERS criam;
 `reabrir_caso` numera a revisão com `max(rodada) + 1`, então uma edição de fotos reaberta
 depois do parto e do B+F também cai na rodada 3 — e não tem nada a ver com o encontro de
 irmãos. A regra que a tela usa (`rotuloDaRodada`, em `features/quadro/types.ts`): rodada 3
-é "Irmãos" só no `reels`, que é a única que a trigger cria; nas outras etapas, e em
-qualquer rodada 4 ou acima, é "Revisão". Ficou visível em 07/09/2026, quando o Quadro
-voltou a enxergar as rodadas altas.
+é "Irmãos" só no `reels`; nas outras etapas, e em qualquer rodada 4 ou acima, é "Revisão".
+Ficou visível em 07/09/2026, quando o Quadro voltou a enxergar as rodadas altas.
 
-A rodada 3 entrou em 03/09/2026 (`20260903193219`), a pedido do gestor: um caso
-teve o reels concluído e depois a família viveu o encontro, e não havia onde
-registrar o material novo. Reabrir a rodada do parto misturaria dois trabalhos
-no mesmo carimbo de tempo — e o tempo de ciclo da seção 9 sairia errado nos dois.
-Só reels, não foto: foi o que ele pediu.
+**A RODADA 3 NÃO NASCE MAIS SOZINHA** (16/09/2026, `20260916233119`, pedido do gestor:
+"tirar encontro de irmãos como reels e colocar como uma etapa a mais de acompanhamento").
+Ela entrou em 03/09 (`20260903193219`) e a regra era verdadeira quando foi escrita: um caso
+teve o reels concluído, a família viveu o encontro, e não havia onde registrar o material
+novo — reabrir a rodada do parto misturaria dois trabalhos no mesmo carimbo, e o tempo de
+ciclo da seção 9 sairia errado nos dois. Duas semanas de operação mudaram a conta: **nem
+todo encontro vira vertical**, e a trigger decidia por quem edita. Em produção eram 10
+rodadas 3 para 6 encontros concluídos, duas ainda pendentes — edição que ninguém pediu,
+ocupando lugar na lista.
+O encontro volta a ser **só o que ele é: uma etapa de ACOMPANHAMENTO** — trilha, ordem 9,
+fora de todo pacote, entrando por `adicionar_etapa`, sem pré-requisito. Quando o material
+do encontro precisar de vertical, o caminho é o de qualquer material fora do contrato:
+`adicionar_etapa` para o reels, ou `reabrir_caso` se o caso já encerrou. **A decisão passou
+a ser de uma pessoa olhando o material, em vez de uma trigger decidindo por todos.**
+O QUE JÁ EXISTE FICA: as 10 rodadas criadas até aqui continuam onde estão, com seus eventos
+e seus tempos, e as 2 pendentes se resolvem à mão pela tela. Por isso o rótulo "Irmãos"
+também fica — chamá-las de "Revisão" mentiria sobre trabalho que está aberto na tela de
+alguém. O preço é conhecido: a partir de agora a única coisa que cria rodada 3 é
+`reabrir_caso`, e uma revisão de reels que caia nela vai aparecer como "Irmãos". É a mesma
+imprecisão do parágrafo acima, agora sem contrapeso; quando incomodar, o conserto é olhar
+se o caso tem um `encontro_irmaos`, não trocar o número por outro chute.
 
 - **Entrada existe em todos menos BIRTH e BIRTH + REELS.**
 - **Fechamento é de fábrica só nos quatro pacotes de acompanhamento completo** — STANDARD,
