@@ -348,8 +348,9 @@ atribuir_etapa(p_caso_etapa_id, p_para_pessoa_id)
 transferir_etapa(p_caso_etapa_id, p_para_pessoa_id, p_motivo)   -- handoff
 planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 
--- fluxo do vídeo horizontal do MASTER (4 fases na tela; ver seção 13)
+-- fluxo do vídeo horizontal do MASTER (2 fases na tela + o fim; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
+finalizar_video_master(p_caso_etapa_id, p_url)   -- link + conclusão na mesma transação
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
@@ -943,6 +944,45 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   ali é sobre UM caso e não sobre carga por coluna. O gestor pediu para ver e está inclinado à
   lista — **a visão que perder sai, e a chave junto**. Nas duas, a fase muda pelo seletor do
   cartão: sem arrastar.
+- **O FIM DO VÍDEO E DO FOTO/LIVRO VIROU UM ESTADO SÓ** (16/09/2026, pedido do gestor,
+  migration `20260916180834`). "Pronto para entrega" e "Enviado / finalizado" eram
+  redundantes — a equipe marcava os dois no mesmo minuto, e o segundo só afirmava que
+  alguém tinha mandado o link, que era justamente o que ninguém registrava.
+  **NO VÍDEO, O FIM COBRA O LINK.** Escolher "Pronto para entrega" abre um diálogo que não
+  fecha sem a URL; com ela, `finalizar_video_master` grava o entregável e conclui a etapa
+  **na mesma transação** — meio caminho produziria link órfão num vídeo aberto, ou um vídeo
+  "entregue" sem endereço para a família. O tipo de entregável **`video`** nasceu aqui
+  (decisão do gestor: tipo próprio, não "wetransfer" — o meio pelo qual o arquivo viaja muda,
+  e o que a lista precisa dizer é O QUE é aquele link). O seletor passa a ter duas fases
+  (Editando, Alterações) mais o fim; `mover_video_master` continua aceitando 'concluida',
+  porque a regra comercial vive na tela.
+  **NO FOTO/LIVRO, o fim é confirmação simples**, sem link: o fotolivro é objeto físico. São
+  nove fases na tela; `pronto_para_entrega` sumiu do seletor e o fim é `entregue`, agora
+  rotulado "Pronto para entrega". O valor continua no enum — fase de banco não se apaga.
+- **PRAZO E PEDIDOS NO CARTÃO DE EDIÇÃO** (16/09/2026, pedido do gestor). Ao lado da fase, duas
+  pastilhas novas no vídeo e no fotolivro:
+  **PRAZO** (`PrazoDaEtapa`) é a "Data Entrega" do Trello deles: um `datetime-local` que grava
+  `caso_etapas.previsao_em` por `agendar_etapa` — RPC que já existia para a hora do banho, e
+  data PLANEJADA é a única que a invariante 3.4 deixa vir do cliente. Fica VERMELHA quando
+  passa, sem pulso (o pulso é do chamado). **Não é o SLA:** o prazo do pacote é derivado do
+  nascimento e responde "a empresa cumpriu o que vendeu"; este responde "para quando
+  prometemos ESTE vídeo", e é combinado caso a caso, muitas vezes depois do caso encerrar.
+  **PEDIDOS** (`PedidosDaEtapa`) é a observação da etapa (`anotar_etapa`), onde entram os
+  pedidos da família — prints, link de música. O texto aparece POR EXTENSO dentro do cartão,
+  que por isso cresceu. **NÃO entra na faixa de aviso do card** (decisão do gestor): aquela
+  faixa pulsa em vermelho para quem está na maternidade, e um pedido de música dentro de um
+  vídeo de dez dias úteis ensinaria a equipe a ignorá-la. A lista está em
+  `SEM_FAIXA_NO_CARD` (AvisosDoCaso) e é a mesma de `SECAO_DA_ETAPA`.
+- **PEDIDO DE ALTERAÇÃO NÃO REABRE O CASO** (16/09/2026, pedido do gestor). Quando a família
+  pede mudança num vídeo ou fotolivro já finalizado, a etapa volta SOZINHA para a fase de
+  alteração — "Pedir alteração" na linha da etapa dentro do card, que chama
+  `mover_video_master('em_alteracao')` ou `mover_album('pedido_de_alteracoes')`. As duas RPCs
+  aceitam caso encerrado desde 20260903153101 e 20260910150425, e é para isto que serve.
+  O caso continua encerrado, os links continuam confirmados, e o que reabre é o trabalho.
+  **`reabrir_etapa` não serve:** recusa caso terminal e devolveria a etapa para "em
+  andamento", que no vídeo não é fase nenhuma. E `reabrir_caso` deixou de oferecer vídeo e
+  fotolivro na lista do diálogo: trazer o caso inteiro de volta ao Quadro por causa de um
+  ajuste de dez minutos era exatamente o que o gestor pediu para acabar.
 - **O FOTOLIVRO NÃO SEGURA O ENCERRAMENTO** (10/09/2026, decisão do gestor, mesma migration).
   É a segunda exceção da trava, ao lado do `edicao_video` — `liberar_para_entrega` e
   `confirmar_entrega` passaram a dizer `ce.tipo not in ('edicao_video', 'album')`.
@@ -1018,6 +1058,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   chamaria ninguém.
   A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
   o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
+  **OS TIPOS DE LINK SÃO SEIS** desde 16/09/2026: Google Photos, WeTransfer, cadeado, reels,
+  Foto/Livro e **Vídeo** — este último nasceu com a finalização do horizontal do MASTER, e é
+  o único que uma RPC registra sozinha (`finalizar_video_master`).
   **O LINK TEM AÇÕES** (07/09/2026): copiar e apagar, na própria linha. O caso que
   motivou é a Morgana abrindo o álbum e sendo a família errada. Copiar existe porque o
   link é para ser MANDADO — selecionar uma URL truncada com o dedo, num link clicável,

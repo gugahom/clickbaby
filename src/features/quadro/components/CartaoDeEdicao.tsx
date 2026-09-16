@@ -208,6 +208,16 @@ function LinhaDeRodada({
       {acoes ?? (
         <AcoesDaEtapa etapa={etapa} etapas={etapas} onErro={onErro} />
       )}
+
+      {/* OS PEDIDOS DO CLIENTE POR EXTENSO (16/09/2026, pedido do gestor). O
+          cartão cresce para caber o que a família pediu — prints, link de
+          música — porque é aqui que a editora lê antes de sentar na estação.
+          Ele NÃO aparece na faixa do card no Quadro: ver AvisosDoCaso. */}
+      {etapa.observacao && (
+        <p className="w-full rounded-md bg-card px-2 py-1.5 text-xs whitespace-pre-line text-foreground/80">
+          {etapa.observacao}
+        </p>
+      )}
     </li>
   )
 }

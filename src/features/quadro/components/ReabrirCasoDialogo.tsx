@@ -46,7 +46,20 @@ export function ReabrirCasoDialogo({
   // O que este caso pode refazer: os tipos de edição que ele de fato tem.
   // Sai das etapas existentes e não de uma lista fixa, então um BASIC não
   // oferece vídeo e um MASTER oferece — sem o código saber o que é um MASTER.
-  const disponiveis = [...new Set(etapas.filter((e) => e.trilha === 'edicao').map((e) => e.tipo))]
+  //
+  // O VÍDEO E O FOTO/LIVRO SAÍRAM DA LISTA (16/09/2026, pedido do gestor). Os
+  // dois têm seção própria e voltam sozinhos para a fase de ALTERAÇÃO pelo
+  // "Pedir alteração" da linha da etapa — sem trazer o caso inteiro de volta ao
+  // Quadro. Reabrir o caso por causa de um ajuste de vídeo era o que ele pediu
+  // para acabar: o atendimento já terminou, e o que precisa refazer é a edição.
+  const disponiveis = [
+    ...new Set(
+      etapas
+        .filter((e) => e.trilha === 'edicao')
+        .filter((e) => e.tipo !== 'edicao_video' && e.tipo !== 'album')
+        .map((e) => e.tipo),
+    ),
+  ]
 
   const semMotivo = motivo.trim() === ''
   const semEtapa = marcadas.length === 0

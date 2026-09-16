@@ -98,6 +98,12 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_fase: null,
   },
+  // Finaliza o vídeo do MASTER e grava um link de entrega (20260916180834).
+  // Quem alcançasse isto poria endereço de galeria em caso alheio.
+  finalizar_video_master: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_url: 'https://sonda.test',
+  },
   // Despesas: quem alcançasse estas RPCs lançaria ou apagaria gasto de
   // qualquer caso, e o relatório do financeiro somaria o que ele quisesse.
   registrar_despesa: {

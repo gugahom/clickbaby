@@ -326,6 +326,20 @@ export function useMoverVideoMaster() {
 }
 
 /**
+ * FINALIZA o vídeo do MASTER com o link, numa transação só (migration
+ * 20260916180834).
+ *
+ * "Pronto para entrega" e "Enviado / finalizado" eram duas fases para o mesmo
+ * momento. Agora são uma, e ela cobra o endereço: sem link o vídeo não termina,
+ * pelo mesmo motivo que o envio para Entregáveis cobra o link do Google.
+ */
+export function useFinalizarVideoMaster() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; url: string }>(({ casoEtapaId, url }) =>
+    chamar('finalizar_video_master', { p_caso_etapa_id: casoEtapaId, p_url: url }),
+  )
+}
+
+/**
  * Move o fotolivro na esteira (migration 20260910150425).
  *
  * Mesma forma do `useMoverVideoMaster` acima: a tela manda a fase de destino e

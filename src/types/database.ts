@@ -1018,6 +1018,10 @@ export type Database = {
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
+      finalizar_video_master: {
+        Args: { p_caso_etapa_id: string; p_url: string }
+        Returns: undefined
+      }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       mover_album: {
@@ -1200,6 +1204,7 @@ export type Database = {
         | "cadeado"
         | "reels"
         | "album"
+        | "video"
       turno: "diurno" | "noturno" | "comercial"
     }
     CompositeTypes: {
@@ -1402,6 +1407,7 @@ export const Constants = {
         "cadeado",
         "reels",
         "album",
+        "video",
       ],
       turno: ["diurno", "noturno", "comercial"],
     },

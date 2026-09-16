@@ -40,13 +40,15 @@ import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { FaseDoAlbum } from './components/FaseDoAlbum'
+import { PrazoDaEtapa } from './components/PrazoDaEtapa'
+import { PedidosDaEtapa } from './components/PedidosDaEtapa'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import type { BlocoDia, CasoQuadro } from './types'
 import {
-  FASES_ALBUM,
-  FASES_VIDEO_MASTER,
+  FASES_ALBUM_NA_TELA,
+  FASES_VIDEO_NA_TELA,
   ROTULO_FASE_ALBUM,
   ROTULO_FASE_VIDEO,
   faseDoVideo,
@@ -422,6 +424,11 @@ export function QuadroPage() {
        */
       acoesDaLinha={(etapa) => (
         <>
+          {/* PRAZO e PEDIDOS entram ao lado da fase (16/09/2026, pedido do
+              gestor): a data combinada para ESTE vídeo, e o que a família pediu
+              — prints, link de música. Ver PrazoDaEtapa e PedidosDaEtapa. */}
+          <PrazoDaEtapa etapa={etapa} onErro={setErroMaster} />
+          <PedidosDaEtapa etapa={etapa} onErro={setErroMaster} />
           <FaseDoVideo etapa={etapa} onErro={setErroMaster} />
           <AcoesDaEtapa
             etapa={etapa}
@@ -463,6 +470,8 @@ export function QuadroPage() {
       rotularLinha={() => 'Foto/Livro'}
       acoesDaLinha={(etapa) => (
         <>
+          <PrazoDaEtapa etapa={etapa} onErro={setErroFotolivro} />
+          <PedidosDaEtapa etapa={etapa} onErro={setErroFotolivro} />
           <FaseDoAlbum etapa={etapa} onErro={setErroFotolivro} />
           <AcoesDaEtapa
             etapa={etapa}
@@ -502,8 +511,10 @@ export function QuadroPage() {
     fase: albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseAlbum ?? null,
     cartao: cartaoFotolivro(caso),
   }))
-  const colunasMaster = FASES_VIDEO_MASTER.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] }))
-  const colunasFotolivro = FASES_ALBUM.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_ALBUM[fase] }))
+  // As colunas são as fases que a TELA oferece: um vídeo finalizado sai da
+  // seção, então uma coluna "pronto para entrega" viveria sempre vazia.
+  const colunasMaster = FASES_VIDEO_NA_TELA.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] }))
+  const colunasFotolivro = FASES_ALBUM_NA_TELA.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_ALBUM[fase] }))
 
   const painelReels = (
     <PainelLateral
