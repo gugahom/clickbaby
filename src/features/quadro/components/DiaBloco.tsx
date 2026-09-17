@@ -105,8 +105,20 @@ export function DiaBloco({
               A borda continua existindo SEMPRE e só trocando de cor, pela
               mesma razão de antes: o 1px entrando e saindo empurraria o bloco.
             */
+            /*
+              O DIA ATRASADO PESA MAIS (17/09/2026, pedido do gestor: "como
+              está já atrasado, apareça com destaque"). O lavado de 8% era
+              quase o mesmo tom do dia normal a um metro de distância — e é
+              justamente o dia atrasado que alguém precisa achar de longe,
+              porque agora ele também nasce ABERTO (ver `abrePorPadrao`).
+              
+              Continua sendo TINGIMENTO, não vermelho sólido: o sólido é a
+              linguagem do chamado dentro do card (pílula da atribuída, pílula
+              do aviso), e um cabeçalho de dia inteiro em vermelho cheio
+              apagaria os dois logo abaixo dele.
+            */
             emAtraso
-              ? 'border-atrasado/20 bg-atrasado/8 hover:bg-atrasado/12'
+              ? 'border-atrasado/45 bg-atrasado/14 hover:bg-atrasado/20'
               : 'border-acento/15 bg-acento-suave hover:bg-acento-suave/70',
             !aberto && 'shadow-cartao hover:shadow-cartao-alto',
           )}
