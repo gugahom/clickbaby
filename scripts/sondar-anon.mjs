@@ -64,6 +64,10 @@ const TABELAS = [
   // soma do mês deixando de valer alguma coisa.
   { nome: 'despesas' },
   { nome: 'despesas_por_caso', view: true },
+  // A marca do sino (20260917215442). Ela guarda a que horas cada pessoa abriu
+  // o app: leitura aberta a anon seria um relógio de presença da equipe
+  // exposto na rua.
+  { nome: 'notificacoes_vistas' },
 ]
 
 /*
@@ -104,6 +108,9 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_url: 'https://sonda.test',
   },
+  // A marca do sino (20260917215442). Sem argumento de propósito: ela só
+  // marca o sino de quem chama. Para o visitante, nem isso.
+  marcar_notificacoes_vistas: {},
   // Devolve o vídeo ou o Foto/Livro para a fase de alteração (20260916215022).
   // Quem alcançasse isto poria trabalho entregue de volta na fila alheia.
   pedir_alteracao_da_etapa: {

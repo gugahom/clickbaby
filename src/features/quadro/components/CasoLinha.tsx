@@ -1,4 +1,4 @@
-import { useId, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import { Sanfona } from '@/components/ui/Sanfona'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
@@ -43,10 +43,35 @@ interface PropsCasoLinha {
    * ao abrir. Ver `ResumoDasTrilhas` para a razão de existir e o que se perde.
    */
   compacto?: boolean
+  /**
+   * O caso que o SINO mandou abrir (17/09/2026). Nasce expandido e se puxa
+   * para o meio da tela — clicar numa notificação e cair num Quadro onde o
+   * card está em algum lugar lá embaixo, fechado, seria informar sem resolver.
+   */
+  emFoco?: boolean
 }
 
-export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCasoLinha) {
-  const [aberto, setAberto] = useState(false)
+export function CasoLinha({
+  caso,
+  etapas,
+  onReabrir,
+  compacto = false,
+  emFoco = false,
+}: PropsCasoLinha) {
+  const [aberto, setAberto] = useState(emFoco)
+  const raiz = useRef<HTMLDivElement>(null)
+
+  /*
+   * ROLA ATÉ O CARD, uma vez, quando ele é o alvo da notificação.
+   *
+   * Efeito e não `autoFocus`: o que precisa acontecer é a PÁGINA se mover, e
+   * `scrollIntoView` só funciona depois que o nó existe. `block: 'center'`
+   * porque no topo ele ficaria debaixo do cabeçalho fixo.
+   */
+  useEffect(() => {
+    if (!emFoco) return
+    raiz.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [emFoco])
   const [editando, setEditando] = useState(false)
   const [descartando, setDescartando] = useState(false)
   const [erroDescarte, setErroDescarte] = useState<string | null>(null)
@@ -203,6 +228,7 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
 
   return (
     <div
+      ref={raiz}
       // A cor do anel viaja por variável para o CSS poder usá-la dentro do
       // conic-gradient, que não alcança classe do Tailwind.
       {...(alerta
@@ -214,6 +240,9 @@ export function CasoLinha({ caso, etapas, onReabrir, compacto = false }: PropsCa
         // queixa de "tudo colado". A sombra sobe no hover para dar o retorno
         // de que a coisa inteira é clicável.
         'group relative overflow-hidden rounded-cartao border border-border shadow-cartao transition-shadow hover:shadow-cartao-alto',
+        // Veio de uma notificação: um anel na cor da marca diz "é este" sem
+        // inventar mais um vermelho — o vermelho aqui já quer dizer prazo.
+        emFoco && 'ring-2 ring-marca ring-offset-2 ring-offset-background',
         fundoDoCartao,
         caso.ehRascunho && 'border-rascunho-borda',
         /*

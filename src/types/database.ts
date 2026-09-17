@@ -693,6 +693,35 @@ export type Database = {
         }
         Relationships: []
       }
+      notificacoes_vistas: {
+        Row: {
+          created_at: string
+          pessoa_id: string
+          updated_at: string
+          visto_em: string
+        }
+        Insert: {
+          created_at?: string
+          pessoa_id: string
+          updated_at?: string
+          visto_em?: string
+        }
+        Update: {
+          created_at?: string
+          pessoa_id?: string
+          updated_at?: string
+          visto_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_vistas_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: true
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pacote_etapas: {
         Row: {
           created_at: string
@@ -1024,6 +1053,7 @@ export type Database = {
       }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      marcar_notificacoes_vistas: { Args: never; Returns: string }
       mover_album: {
         Args: {
           p_caso_etapa_id: string

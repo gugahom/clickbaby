@@ -14,6 +14,8 @@ interface PropsDiaBloco {
   abertoInicialmente: boolean
   /** Modo TV: os cartões do dia vêm compactos. Ver `ResumoDasTrilhas`. */
   compacto?: boolean
+  /** O caso que o sino mandou abrir — nasce expandido e com anel. */
+  casoEmFoco?: string
 }
 
 /**
@@ -35,6 +37,7 @@ export function DiaBloco({
   etapasPorCaso,
   abertoInicialmente,
   compacto = false,
+  casoEmFoco,
 }: PropsDiaBloco) {
   const [aberto, setAberto] = useState(abertoInicialmente)
   const idPainel = useId()
@@ -184,6 +187,7 @@ export function DiaBloco({
               caso={caso}
               etapas={etapasPorCaso.get(caso.id) ?? []}
               compacto={compacto}
+              emFoco={caso.id === casoEmFoco}
             />
           ))}
         </div>

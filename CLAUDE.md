@@ -388,6 +388,9 @@ confirmar_entrega(p_caso_id)                            -- encerra; atendimento/
 cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
 reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um encerrado
 
+-- sino do cabeçalho (17/09/2026; ver seção 13)
+marcar_notificacoes_vistas()                            -- só o "já vi" — a lista é derivada
+
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 ```
@@ -887,6 +890,51 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   trinta dias é uma parede), mas agora só corta passado distante; pode sobrar um buraco no
   meio da lista, e é preço aceito — a alternativa, mostrar sempre os mais novos, tiraria os
   dias parados de vista.
+- **O SINO DO CABEÇALHO** (17/09/2026, pedido do gestor, migration `20260917215442`).
+  Ao lado da presença, um sino com contador; a bolinha fica **vermelha e pulsa** quando há
+  algo esperando por MIM. Ele existe no celular, ao contrário da fileira de presença — quem
+  está no corredor não escolhe a quem passar trabalho, mas é justamente ela que precisa
+  saber que uma etapa foi atribuída ao seu nome.
+  **A LISTA É DERIVADA, e não existe tabela de notificações.** A frase que decidiu o desenho
+  é dele: "deve manter o fluxo de quando resolvido sumir nas notificações" — ou seja, a
+  notificação não é registro, é ESTADO VIVO. Com tabela, toda ação teria que lembrar de
+  apagar a linha correspondente, e a primeira regra esquecida viraria sino tocando por
+  trabalho que já acabou: a mesma classe de defeito de tela e banco discordando sem erro que
+  este projeto já pagou três vezes. Derivado, **resolver é apagar** — a condição deixa de ser
+  verdade e o item some. O que se calcula está em `features/notificacoes/lib/derivar.ts`, e é
+  lá que a lista do que conta como urgente se mexe.
+  **DUAS FAMÍLIAS.** MINHAS — atribuição, rendição, alteração pedida em trabalho meu — são as
+  únicas que acendem o pulso. GERAIS — aviso escrito num card, horário estourando, edição
+  liberada sem ninguém, prazo vencido, alteração em trabalho de outra — entram no contador
+  **sem gritar**. Um sino que pulsa por qualquer urgência da operação inteira pulsa o dia
+  todo, e alerta que toca sempre é alerta que ninguém olha (foi o que aconteceu com a faixa
+  de avisos antes de 15/09). Duas notificações são POR PAPEL: entrega esperando conferência e
+  rascunho pendente são trabalho de atendimento e adm.
+  **O QUE O BANCO GUARDA É SÓ O "JÁ VI"** — uma linha por pessoa em `notificacoes_vistas`,
+  legível só por ela. Abrir o sino apaga o PULSO; o item continua listado até o trabalho ser
+  resolvido, que é o que separa "já vi" de "já fiz". A tabela é própria (e não uma coluna em
+  `pessoas`) porque o cadastro é de leitura geral e isso ali seria "a que horas fulana abriu o
+  app", um relógio de presença pela porta dos fundos — ver a seção 9. **Não grava evento:**
+  abrir o sino não é trabalho, e catorze pessoas abrindo dezenas de vezes por turno encheriam
+  `eventos` de ruído de leitura. O backfill da migration nasce com `now()`, para o sino nascer
+  calado em vez de estrear com o pulso aceso por trabalho velho.
+  **CLICAR LEVA AO CASO:** `/?caso=<id>`, que o Quadro lê para trocar de aba, garantir o dia
+  na tela, abrir o card e rolar até ele com um anel na cor da marca. Query e não rota própria
+  — o caso não tem tela, ele tem um lugar DENTRO do Quadro —, e de brinde o endereço vira
+  algo que uma pessoa manda para outra.
+  **O CARIMBO DE NOVIDADE é `caso_etapas.updated_at`**, aproximado de propósito: ele diz
+  "esta etapa mudou", não "foi atribuída às 14h". O exato viria de `eventos`, que só adm pode
+  ler (policy `eventos_select_adm`) — e o sino é de todo mundo.
+  **Fica fora, por ora:** push no celular com o app fechado (pede service worker, VAPID e uma
+  Edge Function — e cuidado de LGPD, porque o texto passaria pelo serviço do Google/Apple com
+  nome de mãe e bebê dentro), som e vibração.
+- **A PRESENÇA ABRE UM PAINEL** (17/09/2026, pedido do gestor). A fileira de avatares virou
+  GATILHO: o clique abre a lista com todo mundo que está na tela, com estado e frase de
+  atividade por extenso, ocupadas primeiro — a pergunta ali é "quem está livre para pegar a
+  próxima". Eu apareço em primeiro lugar, marcada com "você": sem isso a contagem do painel
+  discordaria da sala. O cartão de hover SAIU: ele dizia o que cada linha do painel diz, e
+  manter os dois faria o mesmo retrato responder de dois jeitos. A fileira continua fora do
+  mobile pela razão de 06/09 — o espaço que sobra ali é do sino.
 - **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,
   anotável tanto nas seções laterais quanto na lista de etapas do card — a edição de
   FOTOS não tem seção, então lá era o único lugar possível, e até 06/09/2026 o campo

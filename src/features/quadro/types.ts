@@ -138,6 +138,18 @@ export interface EtapaQuadro {
    */
   previsaoEm: string | null
   estacao: string | null
+  /**
+   * Última escrita nesta etapa, pelo banco. É o carimbo que o SINO usa para
+   * saber o que é NOVIDADE desde a última vez que a pessoa olhou — atribuir,
+   * escrever um aviso e pedir alteração passam todos por aqui.
+   *
+   * É aproximado de propósito: qualquer mudança na linha o move, então ele não
+   * diz "quando foi atribuída", diz "quando esta etapa mudou pela última vez".
+   * Para um sino é a pergunta certa, e a exata — que viria de `eventos` — não
+   * está disponível: `eventos` só é legível por adm (policy eventos_select_adm),
+   * e o sino é de todo mundo.
+   */
+  atualizadoEm: string | null
   responsavelNome: string | null
   proximoResponsavelNome: string | null
   /**
@@ -237,6 +249,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     faseAlbum: linha.fase_album,
     previsaoEm: linha.previsao_em,
     estacao: linha.estacao,
+    atualizadoEm: linha.updated_at,
     responsavelNome: linha.responsavel?.nome ?? null,
     proximoResponsavelNome: linha.proximo_responsavel?.nome ?? null,
     cartaoFoto: linha.cartao_foto,
