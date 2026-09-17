@@ -138,7 +138,23 @@ export function AppShell() {
             {/* Quem mais está no Quadro agora — a mesma vizinhança dos
                 colaboradores de uma planilha compartilhada, que foi a
                 referência do gestor. */}
-            <EquipePresente outros={outros} atividade={atividade} />
+            <EquipePresente
+              outros={outros}
+              atividade={atividade}
+              // Eu entro na lista do painel: a pergunta é "quem está aqui", e
+              // quem está lendo também está.
+              eu={
+                pessoa
+                  ? {
+                      pessoaId: pessoa.id,
+                      nome: pessoa.nome,
+                      papel: pessoa.papelSistema,
+                      estado: meuEstado,
+                      fotoUrl: minhaFoto ?? null,
+                    }
+                  : null
+              }
+            />
 
             {pessoa && (
             <Dropdown
