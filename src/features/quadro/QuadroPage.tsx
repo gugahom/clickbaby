@@ -19,6 +19,7 @@ import {
   DIAS_POR_PAGINA,
   agruparPorDia,
   blocosAbertos,
+  blocosVisiveis,
   dividirEmDuasColunas,
   semFuturo,
 } from './lib/agrupar-por-dia'
@@ -222,7 +223,8 @@ export function QuadroPage() {
   }
 
   const etapasPorCaso = data?.etapasPorCaso ?? SEM_ETAPAS
-  const mostrados = blocos.slice(0, diasVisiveis)
+  // O corte por dia NUNCA leva o turno junto — ver `blocosVisiveis`.
+  const mostrados = blocosVisiveis(blocos, diasVisiveis, hoje)
   const restantes = blocos.length - mostrados.length
 
   /*
@@ -257,23 +259,44 @@ export function QuadroPage() {
   const colunasDeDias = emDuasColunas ? [atrasados, doTurno] : [mostrados]
 
   /**
-   * O que nasce aberto.
+   * O QUE NASCE ABERTO: o que já está atrasado, e hoje (17/09/2026, pedido do
+   * gestor).
    *
-   * FORA DO MODO TV, os dois primeiros dias — como sempre foi.
+   * A REGRA ANTIGA ERA POSIÇÃO, e é isso que estava errado. Fora do modo TV
+   * abriam "os dois primeiros dias" da lista — e a lista é do MAIS VELHO para
+   * o mais novo, então os dois abertos eram os dois dias mais antigos e HOJE
+   * vinha fechado. Medido no remoto em 17/09: quatro dias com trabalho aberto
+   * (13, 15 e 16 de setembro com um caso cada, e hoje com SETE), e os que
+   * nasciam abertos eram 13 e 15.
    *
-   * NO MODO TV, ontem e hoje, e mais nada. Foi o desenho do gestor: anteontem
-   * fechado com a possibilidade de abrir, ontem inteiro à mostra, hoje ao
-   * lado, amanhã fechado embaixo. Abrir tudo, que era a regra anterior,
-   * enchia a tela de dias que ninguém está olhando — os antigos porque já
-   * viraram cobrança e não trabalho do turno, amanhã porque ainda não
-   * aconteceu — e empurrava para fora justamente ontem e hoje.
+   * O CAMINHO PELO QUAL ELE VIU ISSO foi a UTI: um caso volta da UTI para um
+   * dia de dois meses atrás — aquele dia tinha sumido do Quadro justamente
+   * porque só lhe restava o caso na UTI (ver `montarBloco`) — e reaparece
+   * fechado, obrigando a procurar e abrir. As palavras dele: "como está já
+   * atrasado, apareça com destaque ali". Vale para toda volta, não só a da
+   * UTI: reabertura de caso, devolução de Entregáveis, um cancelamento
+   * desfeito.
+   *
+   * A REGRA NOVA É SIGNIFICADO: **atrasado abre, hoje abre**, amanhã e o bloco
+   * SEM DATA nascem fechados. Atrasado abre porque é o que cobra alguém agora;
+   * amanhã fica fechado porque é prévia, não turno.
+   *
+   * ISTO REVISA O DESENHO DO MODO TV de 01/09 ("anteontem fechado com a
+   * possibilidade de abrir, ontem inteiro à mostra"), e a revisão é do mesmo
+   * gestor. O medo de então — abrir tudo enche a tela — continua endereçado
+   * por outro lado: `blocosVisiveis` mostra no máximo `diasVisiveis` blocos, e
+   * um dia sem trabalho aberto nem chega aqui.
+   *
+   * Não é a mesma coisa que o `emAtraso` do cabeçalho: lá é a cor, aqui é a
+   * sanfona. As duas respondem "este dia ficou para trás" e é de propósito que
+   * usem o mesmo `diasAtras`.
    */
   const abrePorPadrao = (bloco: BlocoDia): boolean => {
     if (buscando) return true
-    if (!emDuasColunas) return mostrados.indexOf(bloco) < 2
+    // Sem data não é passado — é ausência de dado (ver `semFuturo`). Abrir por
+    // suspeita seria afirmar o que o dado não diz.
     if (bloco.dia === null) return false
-    const atraso = diasAtras(bloco.dia, hoje)
-    return atraso === 0 || atraso === 1
+    return diasAtras(bloco.dia, hoje) >= 0
   }
 
   const listaPorDia = (

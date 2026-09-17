@@ -111,8 +111,45 @@ function ordenarDentroDoDia(a: CasoQuadro, b: CasoQuadro): number {
 export const DIAS_INICIAIS = 5
 export const DIAS_POR_PAGINA = 5
 
-export function blocosVisiveis(blocos: BlocoDia[], quantidade: number): BlocoDia[] {
-  return blocos.filter((b) => !b.fechado).slice(0, quantidade)
+/**
+ * Os dias que a tela mostra: os `quantidade` primeiros MAIS O TURNO, que nunca
+ * é cortado (17/09/2026).
+ *
+ * A lista vai do MAIS ANTIGO para o mais novo, e o corte sempre foi um
+ * `slice` na cabeça dela — ou seja, cortava fora o que estava no FIM, que é
+ * hoje e amanhã. Com cinco dias iniciais e quatro dias velhos ainda abertos
+ * (o estado do remoto em 17/09/2026), bastava mais um dia parado para o
+ * QUADRO DE HOJE sair da tela, com os sete casos do dia dentro, atrás de um
+ * botão "Carregar mais dias" que ninguém aperta procurando por hoje.
+ *
+ * O limite continua existindo pela razão de sempre — abrir trinta dias de uma
+ * vez é uma parede (seção 7 de docs/plano.md) —, e o que muda é que ele passa
+ * a cortar só o passado distante. Quem manda no que sobra é a data, não a
+ * posição no array.
+ *
+ * A ordem não se mexe: os cortados que voltam são todos posteriores aos
+ * primeiros, então concatenar mantém a lista crescente.
+ *
+ * PODE SOBRAR UM BURACO no meio — com o limite em 5 e SEIS dias velhos, a tela
+ * mostra os cinco mais antigos e depois hoje, sem o sexto. É o preço aceito: o
+ * botão "Carregar mais dias" está logo abaixo dizendo que há mais, e a
+ * alternativa (mostrar sempre os mais NOVOS) tiraria os dias parados de vista,
+ * que é a regra de visibilidade do Quadro (invariante 3.5).
+ */
+export function blocosVisiveis(
+  blocos: BlocoDia[],
+  quantidade: number,
+  hoje: string,
+): BlocoDia[] {
+  const primeiros = blocos.slice(0, quantidade)
+  if (primeiros.length === blocos.length) return primeiros
+
+  const doTurnoCortado = blocos
+    .slice(quantidade)
+    // `dia === null` NÃO entra: sem data não é turno, é ausência de dado.
+    .filter((b) => b.dia !== null && b.dia >= hoje)
+
+  return [...primeiros, ...doTurnoCortado]
 }
 
 export function blocosAbertos(blocos: BlocoDia[]): BlocoDia[] {

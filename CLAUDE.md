@@ -867,6 +867,26 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   na própria migration; o terceiro ficou cancelado porque o gêmeo recriado já foi encerrado.
 - **Quadro** em blocos por dia, de hoje até AMANHÃ (não mais que isso). Busca, alerta de
   horário chegando, realtime, auto-refresh alinhado ao cron.
+  **DIA ATRASADO NASCE ABERTO** (17/09/2026, pedido do gestor). A regra antiga era POSIÇÃO —
+  "os dois primeiros dias da lista" —, e a lista vai do mais velho para o mais novo: os dois
+  abertos eram os dois dias mais ANTIGOS, e HOJE vinha fechado. Medido no remoto no dia:
+  quatro dias com trabalho aberto (13, 15 e 16/09 com um caso cada, hoje com SETE), e os
+  abertos eram 13 e 15. A regra agora é significado — **atrasado abre, hoje abre**; amanhã e
+  o bloco SEM DATA nascem fechados, porque prévia e ausência de dado não são turno. Isso
+  revisa o desenho do modo TV de 01/09 ("anteontem fechado"), e a revisão é do mesmo gestor.
+  O cabeçalho do dia atrasado também pesa mais na cor — tingimento, nunca vermelho sólido,
+  que é a linguagem do chamado dentro do card.
+  **O CAMINHO PELO QUAL ELE VIU ISSO foi a UTI:** um caso volta da UTI para um dia de dois
+  meses atrás — dia que tinha sumido do Quadro justamente porque só lhe restava o caso na
+  UTI — e reaparecia fechado, obrigando a procurar e abrir. Vale para toda volta, não só a
+  da UTI: reabertura, devolução de Entregáveis, cancelamento desfeito.
+  **E O CORTE POR DIA NÃO LEVA MAIS O TURNO JUNTO.** `blocosVisiveis` cortava um `slice` na
+  cabeça de uma lista crescente, ou seja, jogava fora o FIM — hoje e amanhã. Faltava UM dia
+  parado a mais para o Quadro de hoje sair da tela com os sete casos dentro, atrás de um
+  "Carregar mais dias" que ninguém aperta procurando por hoje. O limite continua (abrir
+  trinta dias é uma parede), mas agora só corta passado distante; pode sobrar um buraco no
+  meio da lista, e é preço aceito — a alternativa, mostrar sempre os mais novos, tiraria os
+  dias parados de vista.
 - **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,
   anotável tanto nas seções laterais quanto na lista de etapas do card — a edição de
   FOTOS não tem seção, então lá era o único lugar possível, e até 06/09/2026 o campo
