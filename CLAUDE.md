@@ -928,6 +928,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **Fica fora, por ora:** push no celular com o app fechado (pede service worker, VAPID e uma
   Edge Function — e cuidado de LGPD, porque o texto passaria pelo serviço do Google/Apple com
   nome de mãe e bebê dentro), som e vibração.
+  **O VISUAL É O DA CAIXA DE ENTRADA QUE O GESTOR MANDOU** (18/09/2026): botão com borda e
+  contador no canto, painel com abas, um ícone por linha, negrito e bolinha no que é novo,
+  rodapé. Duas coisas mudaram de sentido com ele: o **contador conta NOVIDADES** (some quando
+  não há nada novo — a "bolinha no momento que o usuário precisa dar atenção", do pedido
+  original), e as abas são **"Todas" e "Para você"**, não "Todas" e "Não lidas" — com o
+  abrir marcando tudo como visto, uma aba de não lidas ficaria vazia no instante em que fosse
+  vista. Pelo mesmo motivo não existe "Marcar todas como lidas": abrir já faz isso.
+  **Refeito com as peças da casa, SEM o shadcn que veio no exemplo** (seis pacotes: Radix
+  Popover/Tabs/Slot/Label, cva e lucide). O projeto não usa shadcn (ver `Dialogo`); o `Button`
+  dele seria um segundo sistema de botões ao lado do `Botao`, com ícone de 40px, abaixo do
+  piso da seção 6; as classes de animação do exemplo pedem um plugin do Tailwind que não está
+  instalado — não errariam, só não animariam —; e os tokens dele (`bg-popover`, `bg-accent`)
+  não são os da casa. A animação é do `motion`, que já está no projeto.
 - **A PRESENÇA ABRE UM PAINEL** (17/09/2026, pedido do gestor). A fileira de avatares virou
   GATILHO: o clique abre a lista com todo mundo que está na tela, com estado e frase de
   atividade por extenso, ocupadas primeiro — a pergunta ali é "quem está livre para pegar a
