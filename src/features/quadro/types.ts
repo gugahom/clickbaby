@@ -145,9 +145,10 @@ export interface EtapaQuadro {
    *
    * É aproximado de propósito: qualquer mudança na linha o move, então ele não
    * diz "quando foi atribuída", diz "quando esta etapa mudou pela última vez".
-   * Para um sino é a pergunta certa, e a exata — que viria de `eventos` — não
-   * está disponível: `eventos` só é legível por adm (policy eventos_select_adm),
-   * e o sino é de todo mundo.
+   * Para um sino é a pergunta certa. A exata viria de `eventos` — que é
+   * legível por toda pessoa ativa desde 25/08 (migration 20260825020122; o
+   * texto que dizia "só adm" estava velho) —, mas custaria uma consulta a mais
+   * a cada recarga do Quadro, e o sino não precisa da hora exata.
    */
   atualizadoEm: string | null
   responsavelNome: string | null

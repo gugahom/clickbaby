@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { chavesQuadro } from './useQuadro'
+import { agendarRecargaDoQuadro } from './recarga'
 
 /**
  * Mantém o Quadro igual em todos os aparelhos.
@@ -30,8 +30,12 @@ import { chavesQuadro } from './useQuadro'
  * dezenas de refetch do Quadro inteiro em sequência. A janela agrupa a rajada
  * numa recarga só, e o custo é a tela ficar até meio segundo atrás — invisível
  * para quem está do outro lado do corredor.
+ *
+ * DESDE 18/09/2026 A JANELA É COMPARTILHADA com as ações da própria tela
+ * (`agendarRecargaDoQuadro`, em recarga.ts). Antes cada lado tinha a sua, e
+ * quem agia recarregava o Quadro inteiro duas vezes por toque — uma no sucesso
+ * da ação, outra no eco do Realtime. Ver o diagnóstico em recarga.ts.
  */
-const ESPERA_MS = 400
 
 export interface EstadoRealtime {
   /** Falso enquanto o canal não está escutando: a tela avisa que pode estar velha. */
@@ -41,18 +45,11 @@ export interface EstadoRealtime {
 export function useRealtimeQuadro(): EstadoRealtime {
   const queryClient = useQueryClient()
   const [conectado, setConectado] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    function agendarRecarga() {
-      if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
-        // O histórico também: uma ação de outra pessoa é fato novo no log, e é
-        // justamente o que o card aberto deveria mostrar aparecendo.
-        void queryClient.invalidateQueries({ queryKey: ['historico'] })
-      }, ESPERA_MS)
-    }
+    // O histórico recarrega junto (ver recarga.ts): uma ação de outra pessoa é
+    // fato novo no log, e é o que o card aberto deveria mostrar aparecendo.
+    const agendarRecarga = () => agendarRecargaDoQuadro(queryClient)
 
     const canal = supabase
       .channel('quadro')
@@ -76,8 +73,10 @@ export function useRealtimeQuadro(): EstadoRealtime {
         if (status === 'SUBSCRIBED') agendarRecarga()
       })
 
+    // A recarga já agendada NÃO é cancelada ao sair: a espera é compartilhada
+    // com as ações, e o sino do cabeçalho continua lendo o Quadro em qualquer
+    // tela.
     return () => {
-      if (timer.current) clearTimeout(timer.current)
       void supabase.removeChannel(canal)
     }
   }, [queryClient])

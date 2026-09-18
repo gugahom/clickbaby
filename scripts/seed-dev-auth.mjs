@@ -14,8 +14,9 @@
  * do motivo. A Admin API faz as duas coisas.
  *
  * DOIS PAPÉIS, NÃO UM: operador e gestao (adm). É o que permite exercitar a
- * RLS com o caso positivo e o negativo — `eventos`, por exemplo, só é legível
- * por adm (policy eventos_select_adm).
+ * RLS com o caso positivo e o negativo — as escritas de cadastro, por exemplo,
+ * são só de adm (policies `*_escrita_adm`). (`eventos` já foi exemplo disto;
+ * desde 25/08 ele é legível por toda pessoa ativa — 20260825020122.)
  *
  * POR QUE A PESSOA ENTRA POR SQL, E NÃO PELO PostgREST
  * `service_role` não tem GRANT em `public.pessoas`: as migrations de RLS só
