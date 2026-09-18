@@ -81,6 +81,13 @@ export interface CasoQuadro {
    * (restaurável) do cancelamento da equipe (decisão comercial, não se desfaz).
    */
   motivoCancelamento: string | null
+  /**
+   * Terminal e sem nada que o Quadro principal mostre — nem vídeo ou fotolivro
+   * aberto, nem dia com caso em aberto. É o ARQUIVO: o Quadro não o carrega, e
+   * só a aba Concluídos o busca. Quem decide é a view (migration
+   * 20260918091859), porque a regra do dia olha os OUTROS casos.
+   */
+  arquivado: boolean
 }
 
 /**
@@ -167,6 +174,12 @@ export interface EtapaQuadro {
   uploadPorNome: string | null
 }
 
+/** O que uma carga do Quadro devolve — o Quadro, a aba Concluídos, ou só alguns casos. */
+export interface DadosQuadro {
+  casos: CasoQuadro[]
+  etapasPorCaso: Map<string, EtapaQuadro[]>
+}
+
 /** Um bloco de dia do Quadro, já com o contador resolvido. */
 export interface BlocoDia {
   dia: string | null
@@ -222,6 +235,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     // que vier como texto, que é como alguns drivers serializam numeric.
     totalDespesas: Number(linha.total_despesas ?? 0),
     motivoCancelamento: linha.motivo_cancelamento,
+    arquivado: linha.arquivado ?? false,
   }
 }
 

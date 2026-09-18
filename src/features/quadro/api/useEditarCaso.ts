@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { agendarRecargaDoQuadro } from './recarga'
+import { agendarRecargaDoCaso } from './recarga'
 
 export interface EdicaoDoCaso {
   casoId: string
@@ -56,6 +56,9 @@ export function useEditarCaso() {
     },
     // Na fila compartilhada com o Realtime, como toda ação do Quadro: o UPDATE
     // em `casos` volta como aviso, e recarregar aqui E lá dobrava o trabalho.
-    onSuccess: () => agendarRecargaDoQuadro(queryClient),
+    // Só o caso editado, com as etapas que o pacote novo acabou de gerar. Se a
+    // edição mudar o dia dele, quem remenda percebe e recarrega tudo (ver
+    // atualizar-por-caso.ts).
+    onSuccess: (_resultado, { casoId }) => agendarRecargaDoCaso(queryClient, casoId),
   })
 }

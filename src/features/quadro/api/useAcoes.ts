@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
-import { agendarRecargaDoQuadro } from './recarga'
+import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
+import { casoDaEtapa } from './atualizar-por-caso'
 import type { FaseAlbum, FaseVideoMaster } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
@@ -32,7 +33,7 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: executar,
-    onSuccess: () => {
+    onSuccess: (_resultado, vars) => {
       // As quatro coisas que uma ação muda: o Quadro, os links do caso, as
       // despesas e o histórico. Esquecer o histórico o deixava congelado por
       // 30s (o staleTime global) — a pessoa agia e o log não mostrava a própria
@@ -41,11 +42,26 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
       // O QUADRO E O HISTÓRICO ENTRAM NA FILA COMPARTILHADA com o Realtime
       // (18/09/2026): recarregar aqui E no eco do Realtime fazia quem agia
       // baixar o Quadro inteiro duas vezes por toque. Ver recarga.ts.
-      agendarRecargaDoQuadro(queryClient)
+      //
+      // E SÓ O CASO DA AÇÃO, quando dá para saber qual é — quase sempre dá. A
+      // ação que não diz (apagar um link ou uma despesa pelo id deles) recarrega
+      // tudo, como antes: é rara, e não vale uma consulta a mais para descobrir.
+      const casoId = casoDaAcao(queryClient, vars)
+      if (casoId) agendarRecargaDoCaso(queryClient, casoId)
+      else agendarRecargaDoQuadro(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
       void queryClient.invalidateQueries({ queryKey: ['despesas'] })
     },
   })
+}
+
+/** O caso sobre o qual a ação agiu: pelo `casoId`, ou pela etapa em memória. */
+function casoDaAcao(queryClient: QueryClient, vars: unknown): string | null {
+  if (typeof vars !== 'object' || vars === null) return null
+  const campos = vars as Record<string, unknown>
+  if (typeof campos.casoId === 'string') return campos.casoId
+  if (typeof campos.casoEtapaId === 'string') return casoDaEtapa(queryClient, campos.casoEtapaId)
+  return null
 }
 
 /** Erro do PostgREST já vem tipado; só precisa virar throw para o TanStack. */

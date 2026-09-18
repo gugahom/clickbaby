@@ -35,11 +35,16 @@ export function rascunhoDescartado(caso: CasoQuadro): boolean {
  * Dias sem previsão (`dia === null`) caem num bloco próprio no fim: existem no
  * banco (previsao_em é nullable) e sumir com eles esconderia trabalho.
  *
- * Casos terminais e casos na UTI continuam vindo dentro de `casos` (a aba
- * Concluídos e a seção UTI leem daqui e precisam saber de que dia eram), mas
- * ficam fora das contagens do bloco — ver montarBloco. EXCEÇÃO: um rascunho
- * DESCARTADO (`rascunhoDescartado`) não entra nem aqui — nunca foi caso de
- * verdade, não é histórico de dia nenhum.
+ * Casos terminais e casos na UTI continuam vindo dentro de `casos` (a seção UTI
+ * lê daqui e precisa saber de que dia eram), e o terminal CONTA no "x de y" do
+ * dia — ver montarBloco. EXCEÇÃO: um rascunho DESCARTADO
+ * (`rascunhoDescartado`) não entra nem aqui — nunca foi caso de verdade, não é
+ * histórico de dia nenhum.
+ *
+ * Desde 18/09/2026 o Quadro não carrega o ARQUIVO, e é seguro para esta conta:
+ * a view só arquiva um terminal quando o dia dele não tem mais caso em aberto —
+ * e um dia assim sairia da tela de qualquer jeito (`blocosAbertos`). Ver a
+ * migration 20260918091859.
  */
 export function agruparPorDia(casos: CasoQuadro[]): BlocoDia[] {
   const porDia = new Map<string, CasoQuadro[]>()

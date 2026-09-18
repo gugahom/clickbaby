@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
-import { useQuadro } from './api/useQuadro'
+import { useConcluidos, useQuadro } from './api/useQuadro'
 import {
   useFinalizarVideoMaster,
   useMoverAlbum,
@@ -138,20 +138,37 @@ export function QuadroPage() {
    * a tela renderizaria uma vez na aba errada antes de se corrigir.
    */
   const [focoAplicado, setFocoAplicado] = useState<string | null>(null)
-  if (casoEmFoco !== null && casoEmFoco !== focoAplicado && data) {
+  const focoPendente = casoEmFoco !== null && casoEmFoco !== focoAplicado
+  const alvoDoFoco =
+    focoPendente && data ? (data.casos.find((c) => c.id === casoEmFoco) ?? null) : null
+
+  /*
+   * O ARQUIVO SÓ VEM QUANDO ALGUÉM PEDE (18/09/2026, correção 4 da lentidão).
+   *
+   * O Quadro deixou de carregar os casos arquivados — ver useConcluidos. A aba
+   * os busca quando é aberta, e o FOCO também: um link para um caso que não
+   * está no Quadro só pode apontar para o arquivo, e a aba certa só se sabe
+   * depois de procurá-lo lá.
+   */
+  const focoNoArquivo = focoPendente && data !== undefined && alvoDoFoco === null
+  const doArquivo = useConcluidos(aba === 'concluidos' || focoNoArquivo)
+
+  if (focoPendente && alvoDoFoco) {
     setFocoAplicado(casoEmFoco)
-    const alvo = data.casos.find((c) => c.id === casoEmFoco)
-    if (alvo) {
-      setAba(
-        alvo.ehTerminal
-          ? 'concluidos'
-          : alvo.liberadoParaEntregaEm !== null
-            ? 'entregas'
-            : alvo.ehRascunho
-              ? 'rascunhos'
-              : 'lista',
-      )
-    }
+    setAba(
+      alvoDoFoco.ehTerminal
+        ? 'concluidos'
+        : alvoDoFoco.liberadoParaEntregaEm !== null
+          ? 'entregas'
+          : alvoDoFoco.ehRascunho
+            ? 'rascunhos'
+            : 'lista',
+    )
+  } else if (focoNoArquivo && ((doArquivo.data && !doArquivo.isFetching) || doArquivo.isError)) {
+    // Procurado no arquivo. Se nem lá estiver — link velho, rascunho
+    // descartado —, a tela fica onde está, como antes.
+    setFocoAplicado(casoEmFoco)
+    if (doArquivo.data?.casos.some((c) => c.id === casoEmFoco)) setAba('concluidos')
   }
   // Arrastar entre as colunas do modal cai nas MESMAS RPCs do seletor de fase
   // do cartão — o atalho não é um segundo caminho de escrita.
@@ -177,7 +194,6 @@ export function QuadroPage() {
     emReels,
     emMaster,
     emFotolivro,
-    concluidos,
     totalAbertos,
     totalGeral,
   } = useMemo(() => {
@@ -185,9 +201,9 @@ export function QuadroPage() {
     const etapas = data?.etapasPorCaso ?? SEM_ETAPAS
 
     // A busca filtra ANTES do agrupamento, e por isso vale para tudo de uma
-    // vez: dias, rascunhos, concluídos e as três seções. Filtrar depois
-    // exigiria repetir a regra em cada lista, e elas divergiriam na primeira
-    // vez que alguem mexesse em uma só.
+    // vez: dias, rascunhos e as três seções — e os concluídos, logo abaixo,
+    // pela mesma função. Filtrar depois exigiria repetir a regra em cada lista,
+    // e elas divergiriam na primeira vez que alguem mexesse em uma só.
     const casos = filtrarCasos(todos, busca)
 
     /*
@@ -238,7 +254,6 @@ export function QuadroPage() {
       emReels: casosComVideoAberto(casos, etapas),
       emMaster: casosComVideoMasterAberto(casos, etapas),
       emFotolivro: casosComAlbumAberto(casos, etapas),
-      concluidos: casosConcluidos(casos),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
       // O denominador do "3 de 88". Sem ele a busca diria "3 casos" e não
       // haveria como saber se sobrou pouco por filtro ou por dia vazio. Corta
@@ -256,6 +271,12 @@ export function QuadroPage() {
     // `semFuturo` existe: à meia-noite um dia deixa de ser futuro sozinho.
   }, [data, busca, agora, hoje])
 
+  // A aba Concluídos lê do ARQUIVO, que tem consulta própria — ver useConcluidos.
+  const concluidos = useMemo(
+    () => casosConcluidos(filtrarCasos(doArquivo.data?.casos ?? [], busca)),
+    [doArquivo.data, busca],
+  )
+
   if (error) {
     return (
       <Aviso titulo="Não foi possível carregar o Quadro">
@@ -265,6 +286,12 @@ export function QuadroPage() {
   }
 
   const etapasPorCaso = data?.etapasPorCaso ?? SEM_ETAPAS
+  // Os cartões de Concluídos leem as etapas do ARQUIVO, que é a consulta deles.
+  // O mapa do Quadro fica de reserva para o que está nos dois lugares — o
+  // MASTER encerrado com o vídeo ainda aberto.
+  const etapasDoArquivo = doArquivo.data?.etapasPorCaso ?? SEM_ETAPAS
+  const etapasDoConcluido = (casoId: string): EtapaQuadro[] =>
+    etapasDoArquivo.get(casoId) ?? etapasPorCaso.get(casoId) ?? []
 
   // O corte por dia NUNCA leva o turno junto — ver `blocosVisiveis`.
   // E o dia do caso em foco também não: uma notificação que aponta para um dia
@@ -629,7 +656,7 @@ export function QuadroPage() {
     motivo: string,
     escolhidas: EtapaTipo[],
   ) {
-    const doCaso = etapasPorCaso.get(caso.id) ?? []
+    const doCaso = etapasDoConcluido(caso.id)
     const comSecao = escolhidas.filter((t) => TEM_SECAO_PROPRIA.has(t))
     const pelaReabertura = escolhidas.filter((t) => !TEM_SECAO_PROPRIA.has(t))
 
@@ -833,7 +860,7 @@ export function QuadroPage() {
             // o `emFoco`, que só vale no nascimento do estado.
             key={`${caso.id}-${caso.id === casoEmFoco ? 'foco' : ''}`}
             caso={caso}
-            etapas={etapasPorCaso.get(caso.id) ?? []}
+            etapas={etapasDoConcluido(caso.id)}
             emFoco={caso.id === casoEmFoco}
             onReabrir={(c) => {
               setErroReabrir(null)
@@ -1045,7 +1072,23 @@ export function QuadroPage() {
             Carregando casos…
           </p>
         ) : aba === 'concluidos' ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">{listaConcluidos}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {/* O arquivo só é buscado quando a aba abre — ver useConcluidos. A
+                espera aparece na primeira vez; depois ele fica em memória. */}
+            {doArquivo.data ? (
+              listaConcluidos
+            ) : doArquivo.error ? (
+              <Aviso titulo="Não foi possível carregar os concluídos">
+                {doArquivo.error instanceof Error
+                  ? doArquivo.error.message
+                  : 'Erro desconhecido.'}
+              </Aviso>
+            ) : (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                Carregando concluídos…
+              </p>
+            )}
+          </div>
         ) : aba === 'entregas' ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <EntregasPainel
@@ -1166,7 +1209,7 @@ export function QuadroPage() {
       {reabrindo && (
         <ReabrirCasoDialogo
           caso={reabrindo}
-          etapas={etapasPorCaso.get(reabrindo.id) ?? []}
+          etapas={etapasDoConcluido(reabrindo.id)}
           ocupado={reabrirCaso.isPending || pedirAlteracao.isPending}
           erro={erroReabrir}
           onCancelar={() => setReabrindo(null)}
