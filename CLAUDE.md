@@ -576,11 +576,14 @@ Rode as duas **depois de todo `db push` que toque schema**.
   sempre, e só decide entre linhas que já eram indistinguíveis na tela. A deduplicação
   dentro de `buscarTudo` é cinto de segurança e não devolve a linha perdida — o servidor
   nunca a mandou.
-- **O QUADRO RECARREGA POR UM LUGAR SÓ: `agendarRecargaDoQuadro`** (`api/recarga.ts`,
-  18/09/2026). Ações e Realtime entram na mesma espera de 400ms, e o eco da própria ação vira
-  uma recarga só. Antes, cada ação recarregava no sucesso E no eco do Realtime — o Quadro
-  inteiro duas vezes por toque, e foi um dos multiplicadores da lentidão de 18/09 (ver a
-  dívida "O Quadro baixa o histórico inteiro"). **Não chame `invalidateQueries(['quadro'])`
+- **O QUADRO RECARREGA POR UM LUGAR SÓ: a fila de `api/recarga.ts`** (18/09/2026). Ações e
+  Realtime entram na mesma espera de 400ms, e o eco da própria ação vira uma recarga só. Antes,
+  cada ação recarregava no sucesso E no eco do Realtime — o Quadro inteiro duas vezes por
+  toque, e foi um dos multiplicadores da lentidão de 18/09 (ver "O QUADRO SÓ CARREGA O QUE ESTÁ
+  VIVO", na seção 13). A fila tem DOIS TAMANHOS: `agendarRecargaDoCaso` busca só os casos que
+  mudaram e os costura na lista; `agendarRecargaDoQuadro` recarrega tudo, e fica para o que não
+  diz de que caso se trata (reconexão do canal, ação sem caso conhecido). Ação nova passa por
+  `useAcaoDoQuadro`, que descobre o caso sozinho. **Não chame `invalidateQueries(['quadro'])`
   direto** numa ação nova: ela volta a dobrar. E NÃO troque a fila por "ignorar o aviso se já
   houver recarga em andamento": aquela recarga pode ter lido o banco antes da mudança de outra
   pessoa, e o aviso engolido deixaria a tela errada até a rede de segurança de 2 minutos.
@@ -909,6 +912,38 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   trinta dias é uma parede), mas agora só corta passado distante; pode sobrar um buraco no
   meio da lista, e é preço aceito — a alternativa, mostrar sempre os mais novos, tiraria os
   dias parados de vista.
+- **O QUADRO SÓ CARREGA O QUE ESTÁ VIVO** (18/09/2026, diagnóstico da lentidão: uma pausa de
+  96ms levava 7 segundos para aparecer). O Quadro baixava o histórico INTEIRO a cada mudança —
+  266 casos e 1.431 etapas no dia, 239 deles já encerrados ou cancelados —, em toda tela aberta
+  e a cada aviso do Realtime de qualquer pessoa. Isolada, a consulta levava 44ms; em uso real,
+  1,26s de média e picos de 8s, porque dezenas de cópias dela disputavam um banco de 60
+  conexões. Em 30 dias foram 38.866 recargas completas, 13,7 das 20,2 horas de trabalho do
+  banco. E a conta crescia sozinha, ~135 casos por mês.
+  **Foram cinco correções, em duas PRs.** As três primeiras aliviaram: recarga única por toque,
+  validade de 2 minutos (as duas na seção 5) e RLS avaliada uma vez por consulta
+  (`20260918085454`). A estrutural veio em seguida, em duas frentes:
+  **O ARQUIVO SAIU DA CARGA** (`20260918091859`). A view ganhou `arquivado`: terminal e sem nada
+  que o Quadro mostre. Fora da aba Concluídos, um caso terminado só aparece em dois lugares — nas
+  seções MASTER e FOTO/LIVRO, quando ENCERROU com o vídeo ou o fotolivro aberto, e no "x de y"
+  de um dia que ainda tem caso aberto (o cartão some do bloco, mas conta). O Quadro carrega
+  `arquivado = false` — 76 casos no dia, número que acompanha a operação e não o histórico —, e
+  a aba **Concluídos busca o arquivo quando é aberta**, com um "Carregando" na primeira vez.
+  **A regra do vídeo é SÓ DE ENCERRADO:** no remoto havia 12 cancelados com vídeo ou fotolivro
+  pendente para sempre, e contá-los os carregaria em toda recarga até o fim dos tempos. A regra
+  mora na VIEW, e não no cliente, porque a metade do dia olha os OUTROS casos — no cliente
+  seriam três consultas encadeadas, no 4G do corredor. E é coluna de uma view que já existia:
+  nenhum GRANT novo, nenhuma superfície nova para o `anon`.
+  **O REALTIME BUSCA SÓ O CASO QUE MUDOU** (`api/atualizar-por-caso.ts`, com a decisão em
+  `lib/remendo.ts`). O aviso traz o id do caso — o ÚNICO campo lido do payload —, a tela busca
+  aquele caso pela mesma view e sob a mesma RLS, e o costura na lista em memória. **Na dúvida,
+  recarrega tudo:** quando o caso PASSA A ESTAR aberto (criado, reaberto, restaurado, trocado de
+  dia), porque ele pode trazer os terminados do dia dele e a busca por id não os traz; quando a
+  lista mudou enquanto a busca viajava; e quando a busca falha. Uma lista remendada errada é a
+  tela discordando do banco sem erro nenhum, e o remendo só acontece onde dá para provar que o
+  resultado é o de uma recarga.
+  **A LISTA DE IDS VAI EM LOTES DE 150** (`CASOS_POR_LOTE`, em `useQuadro.ts`). Ela viaja na
+  URL, e até aqui o Quadro mandava todos os casos do sistema numa lista só: ~10kB no dia,
+  crescendo uns 5kB por mês. Quem precisa do lote agora é a aba Concluídos.
 - **O SINO DO CABEÇALHO** (17/09/2026, pedido do gestor, migration `20260917215442`).
   Ao lado da presença, um sino com contador; a bolinha fica **vermelha e pulsa** quando há
   algo esperando por MIM. Ele existe no celular, ao contrário da fileira de presença — quem
@@ -1490,19 +1525,6 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   gestor; quando ganhar poderes próprios, muda `papel_sistema`, não o modelo.
 
 ### Dívidas abertas, em ordem de dor
-
-0. **O Quadro baixa o histórico INTEIRO a cada mudança** (medido em 18/09/2026, quando uma
-   pausa de 96ms levou 7 segundos para aparecer). `carregarQuadro` busca TODOS os casos e TODAS
-   as etapas — 266 casos e 1.431 etapas no dia, dos quais 239 casos já encerrados ou
-   cancelados —, e todo navegador aberto faz isso a cada aviso do Realtime, de qualquer pessoa.
-   Isolada, a consulta leva 44ms; em uso real levava 1,26s de média, com picos de 8s, porque
-   dezenas de cópias dela disputavam um banco de 60 conexões. Em 30 dias foram 38.866 recargas
-   completas: 13,7 das 20,2 horas de trabalho do banco. **E a conta cresce sozinha** — ~135
-   casos por mês, para sempre, em toda tela.
-   Aliviado em 18/09 com três correções (recarga única, validade de 2 minutos, RLS uma vez por
-   consulta). A correção de verdade é ATUALIZAR SÓ O QUE MUDOU: o aviso do Realtime traz o id
-   do caso, e o Quadro busca aquele caso — pela view, sob RLS, sem ler o payload (as duas razões
-   de `useRealtimeQuadro` continuam valendo) — em vez do universo.
 
 1. **Editar o próprio perfil, e a senha inicial que ninguém é obrigado a trocar.**
    A tela de Conta troca a senha, e só. Faltam três coisas, cada uma com um motivo

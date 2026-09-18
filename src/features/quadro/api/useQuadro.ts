@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import {
   normalizarCaso,
   normalizarEtapa,
-  type CasoQuadro,
+  type DadosQuadro,
   type EtapaQuadro,
 } from '../types'
 
@@ -12,25 +12,40 @@ import {
  *
  *   1. `quadro_casos`  — casos achatados, com pacote/maternidade resolvidos e
  *      dia/vence_em/eh_rascunho derivados no banco (uma definição só).
- *   2. `caso_etapas`   — todas as etapas dos casos carregados, num único
+ *   2. `caso_etapas`   — todas as etapas dos casos carregados, por
  *      `.in('caso_id', ids)`, com o responsável embedado (join lateral do
  *      PostgREST, não uma query por etapa).
  *
- * Duas requisições independente de haver 84 ou 800 casos. As etapas são
- * indexadas num Map e coladas em memória.
+ * As etapas são indexadas num Map e coladas em memória.
  *
  * Por que as etapas não vêm dentro da view: agregá-las em jsonb impediria
  * ordenar/filtrar por etapa no PostgREST e esconderia o custo do join.
+ *
+ * -------------------------------------------------------------------------
+ * O QUADRO NÃO CARREGA O ARQUIVO (18/09/2026, correção 4 da lentidão).
+ *
+ * Até aqui a consulta 1 não tinha filtro: o Quadro era o histórico INTEIRO do
+ * sistema — 266 casos e 1.431 etapas no dia do diagnóstico, 239 deles já
+ * encerrados ou cancelados —, baixado por toda tela aberta a cada mudança de
+ * qualquer pessoa, e crescendo ~135 casos por mês. Agora são TRÊS recortes da
+ * mesma view, cada um com o seu dono:
+ *
+ *   - o QUADRO carrega `arquivado = false`: o que está aberto, mais o pouco de
+ *     terminado que ele ainda mostra (vídeo/fotolivro em andamento, e a conta
+ *     "x de y" dos dias abertos). A regra mora na view — ver a migration
+ *     20260918091859. Eram 76 casos no dia, e o número não cresce com o tempo;
+ *   - a aba CONCLUÍDOS carrega `eh_terminal = true`, e só quando é aberta;
+ *   - o REALTIME busca só os casos que mudaram (ver atualizar-por-caso.ts).
  */
 
-export interface DadosQuadro {
-  casos: CasoQuadro[]
-  etapasPorCaso: Map<string, EtapaQuadro[]>
-}
+export type { DadosQuadro }
 
 export const chavesQuadro = {
   todos: ['quadro'] as const,
   lista: () => [...chavesQuadro.todos, 'lista'] as const,
+  concluidos: () => [...chavesQuadro.todos, 'concluidos'] as const,
+  // Mora debaixo de `todos` de propósito — ver useAtividadeDaEquipe.
+  atividade: () => [...chavesQuadro.todos, 'atividade'] as const,
 }
 
 /**
@@ -123,11 +138,90 @@ export async function buscarTudo<T extends { id: string | null }>(
   }
 }
 
+/**
+ * Quantos casos cabem num `.in('caso_id', ...)`.
+ *
+ * A lista de ids viaja NA URL, e URL tem teto — o proxy na frente do Supabase
+ * recusa endereço grande demais. Um uuid ocupa ~39 caracteres codificado, então
+ * 150 dão uns 6kB, com folga. Até 18/09 o Quadro mandava TODOS os casos do
+ * sistema numa lista só (266 no dia, ~10kB, e crescendo ~135 por mês); a aba
+ * Concluídos herdou esse volume, e é ela que precisa do lote.
+ */
+const CASOS_POR_LOTE = 150
+
+/**
+ * As etapas dos casos dados, agrupadas por caso e na ordem da tela.
+ *
+ * Os lotes rodam em paralelo, e cada caso cai inteiro num lote só — por isso a
+ * ordem das etapas DENTRO de um caso é a da consulta, que é o que importa.
+ */
+async function buscarEtapas(ids: string[]): Promise<Map<string, EtapaQuadro[]>> {
+  const etapasPorCaso = new Map<string, EtapaQuadro[]>()
+  const validos = ids.filter((id) => id !== '')
+  if (validos.length === 0) return etapasPorCaso
+
+  const lotes: string[][] = []
+  for (let i = 0; i < validos.length; i += CASOS_POR_LOTE) {
+    lotes.push(validos.slice(i, i + CASOS_POR_LOTE))
+  }
+
+  const resultados = await Promise.all(
+    lotes.map((lote) =>
+      buscarTudo((de, ate) =>
+        supabase
+          .from('caso_etapas')
+          // Quatro embeds pela MESMA tabela `pessoas` — responsável, rendição, e
+          // quem baixou e subiu o material (15/09/2026) —, então todos precisam
+          // nomear a FK: sem isso o PostgREST não sabe por qual coluna juntar. E
+          // precisa ser um literal de uma peça só: concatenar com `+` faz o tipo
+          // do select virar string genérica e a inferência do supabase-js desabar.
+          .select(
+            '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome)',
+            { count: 'exact' },
+          )
+          .in('caso_id', lote)
+          // rodada ANTES de ordem: agrupa a edição do parto e a do banho em
+          // blocos, que é como o trabalho se organiza. Ordenar só por `ordem`
+          // intercalaria "Foto parto, Foto banho, Reels parto, Reels banho".
+          // A trilha de acompanhamento é toda rodada 1, então não muda de posição.
+          //
+          // E ESTA ORDEM É O QUE TORNAVA O TRUNCAMENTO TÃO RUIM: cortando pelo
+          // fim, sumia sempre a rodada mais alta — a revisão e o encontro de
+          // irmãos.
+          .order('rodada', { ascending: true })
+          .order('ordem', { ascending: true })
+          // E `id` fecha a ordenação. Sem ele, (rodada 1, ordem 4) é o mesmo par
+          // para TODO fechamento do sistema, e o corte de página no meio desse
+          // grupo repetia umas linhas e perdia outras. Ver o bloco acima.
+          .order('id', { ascending: true })
+          .range(de, ate),
+      ),
+    ),
+  )
+
+  for (const linha of resultados.flat()) {
+    const etapa = normalizarEtapa(linha)
+    const atuais = etapasPorCaso.get(etapa.casoId)
+    if (atuais) atuais.push(etapa)
+    else etapasPorCaso.set(etapa.casoId, [etapa])
+  }
+
+  return etapasPorCaso
+}
+
+/**
+ * O que o Quadro mostra: tudo que NÃO é arquivo. Ver a migration 20260918091859.
+ *
+ * A ORDEM (`previsao_em`, `id`) é a que `ordemDaConsulta` (lib/remendo.ts)
+ * repete na memória — mudar uma sem a outra faz a lista remendada e a
+ * recarregada saírem em ordens diferentes.
+ */
 async function carregarQuadro(): Promise<DadosQuadro> {
   const linhas = await buscarTudo((de, ate) =>
     supabase
       .from('quadro_casos')
       .select('*', { count: 'exact' })
+      .eq('arquivado', false)
       .order('previsao_em', { ascending: true })
       // O desempate. Dois casos marcados para a mesma hora — que é o normal
       // numa agenda de maternidade — empatam aqui, e empate quebra a
@@ -137,50 +231,48 @@ async function carregarQuadro(): Promise<DadosQuadro> {
   )
 
   const casos = linhas.map(normalizarCaso)
-  const ids = casos.map((c) => c.id).filter((id) => id !== '')
+  return { casos, etapasPorCaso: await buscarEtapas(casos.map((c) => c.id)) }
+}
 
-  if (ids.length === 0) {
-    return { casos, etapasPorCaso: new Map() }
-  }
-
-  const linhasEtapas = await buscarTudo((de, ate) =>
+/**
+ * A aba Concluídos: todo caso encerrado ou cancelado. É o recorte que CRESCE
+ * com o tempo, e por isso só é buscado quando alguém abre a aba.
+ */
+async function carregarConcluidos(): Promise<DadosQuadro> {
+  const linhas = await buscarTudo((de, ate) =>
     supabase
-      .from('caso_etapas')
-      // Quatro embeds pela MESMA tabela `pessoas` — responsável, rendição, e
-      // quem baixou e subiu o material (15/09/2026) —, então todos precisam
-      // nomear a FK: sem isso o PostgREST não sabe por qual coluna juntar. E
-      // precisa ser um literal de uma peça só: concatenar com `+` faz o tipo do
-      // select virar string genérica e a inferência do supabase-js desabar.
-      .select(
-        '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome)',
-        { count: 'exact' },
-      )
-      .in('caso_id', ids)
-      // rodada ANTES de ordem: agrupa a edição do parto e a do banho em blocos,
-      // que é como o trabalho se organiza. Ordenar só por `ordem` intercalaria
-      // "Foto parto, Foto banho, Reels parto, Reels banho".
-      // A trilha de acompanhamento é toda rodada 1, então não muda de posição.
-      //
-      // E ESTA ORDEM É O QUE TORNAVA O TRUNCAMENTO TÃO RUIM: cortando pelo fim,
-      // sumia sempre a rodada mais alta — a revisão e o encontro de irmãos.
-      .order('rodada', { ascending: true })
-      .order('ordem', { ascending: true })
-      // E `id` fecha a ordenação. Sem ele, (rodada 1, ordem 4) é o mesmo par
-      // para TODO fechamento do sistema, e o corte de página no meio desse
-      // grupo repetia umas linhas e perdia outras. Ver o bloco acima.
+      .from('quadro_casos')
+      .select('*', { count: 'exact' })
+      .eq('eh_terminal', true)
+      .order('previsao_em', { ascending: true })
       .order('id', { ascending: true })
       .range(de, ate),
   )
 
-  const etapasPorCaso = new Map<string, EtapaQuadro[]>()
-  for (const linha of linhasEtapas) {
-    const etapa = normalizarEtapa(linha)
-    const atuais = etapasPorCaso.get(etapa.casoId)
-    if (atuais) atuais.push(etapa)
-    else etapasPorCaso.set(etapa.casoId, [etapa])
-  }
+  const casos = linhas.map(normalizarCaso)
+  return { casos, etapasPorCaso: await buscarEtapas(casos.map((c) => c.id)) }
+}
 
-  return { casos, etapasPorCaso }
+/**
+ * Só os casos dados, SEM recorte nenhum — quem decide se cada um entra na lista
+ * é quem remenda (atualizar-por-caso.ts). As duas consultas saem juntas: os ids
+ * já são conhecidos, então as etapas não precisam esperar pelos casos.
+ */
+export async function carregarCasos(ids: string[]): Promise<DadosQuadro> {
+  const [linhas, etapasPorCaso] = await Promise.all([
+    buscarTudo((de, ate) =>
+      supabase
+        .from('quadro_casos')
+        .select('*', { count: 'exact' })
+        .in('id', ids)
+        .order('previsao_em', { ascending: true })
+        .order('id', { ascending: true })
+        .range(de, ate),
+    ),
+    buscarEtapas(ids),
+  ])
+
+  return { casos: linhas.map(normalizarCaso), etapasPorCaso }
 }
 
 export function useQuadro() {
@@ -226,6 +318,27 @@ export function useQuadro() {
      * acordar, o canal se reconecta e o próprio Realtime recarrega (ver o
      * `SUBSCRIBED` em useRealtimeQuadro).
      */
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+/**
+ * A ABA CONCLUÍDOS, buscada quando é aberta (18/09/2026).
+ *
+ * Até aqui ela lia do Quadro, e o Quadro carregava o arquivo inteiro para todo
+ * mundo, a cada mudança, para uma aba que quase ninguém abre. O preço de agora é
+ * um instante de "carregando" na primeira abertura.
+ *
+ * SEM `refetchInterval`: quem mantém a aba em dia é o Realtime, remendando caso a
+ * caso (atualizar-por-caso.ts), e uma recarga completa a cada dois minutos seria
+ * justamente o arquivo inteiro. Ao voltar para o aparelho depois de dois minutos,
+ * a busca se refaz sozinha, pela validade.
+ */
+export function useConcluidos(habilitado: boolean) {
+  return useQuery({
+    queryKey: chavesQuadro.concluidos(),
+    queryFn: carregarConcluidos,
+    enabled: habilitado,
     staleTime: 2 * 60 * 1000,
   })
 }

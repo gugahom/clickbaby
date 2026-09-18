@@ -933,6 +933,7 @@ export type Database = {
       }
       quadro_casos: {
         Row: {
+          arquivado: boolean | null
           bebe_nome: string | null
           cor_calendar: string | null
           created_at: string | null

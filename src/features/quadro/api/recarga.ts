@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { chavesQuadro } from './useQuadro'
+import { TETO_DE_CASOS, atualizarCasos } from './atualizar-por-caso'
 
 /**
  * Quanto esperar por mais avisos antes de recarregar.
@@ -12,6 +13,8 @@ import { chavesQuadro } from './useQuadro'
 const ESPERA_MS = 400
 
 let pendente: ReturnType<typeof setTimeout> | null = null
+let recargaCompleta = false
+const casosMudados = new Set<string>()
 
 /**
  * O ÚNICO LUGAR QUE MANDA RECARREGAR O QUADRO (18/09/2026, diagnóstico da
@@ -42,12 +45,47 @@ let pendente: ReturnType<typeof setTimeout> | null = null
  *
  * O preço é o Quadro de quem agiu atualizar ~400ms depois, e não na hora. Na
  * hora nunca foi: a recarga que começava "na hora" levava segundos para voltar.
+ *
+ * DOIS TAMANHOS DE RECARGA (mesmo dia, correção 4). A fila guarda QUAIS casos
+ * mudaram, e quando a espera acaba busca só esses (ver atualizar-por-caso.ts).
+ * A recarga completa continua existindo para o que não diz de que caso se trata
+ * — a reconexão do canal, uma ação sem caso conhecido, uma leva grande do sync —
+ * e ela engole os casos que estavam na fila, porque já os traz.
  */
 export function agendarRecargaDoQuadro(queryClient: QueryClient): void {
+  recargaCompleta = true
+  agendar(queryClient)
+}
+
+/** O caso `casoId` mudou: na fila, junto com o que mais chegar na espera. */
+export function agendarRecargaDoCaso(queryClient: QueryClient, casoId: string): void {
+  casosMudados.add(casoId)
+  agendar(queryClient)
+}
+
+function agendar(queryClient: QueryClient): void {
   if (pendente) clearTimeout(pendente)
   pendente = setTimeout(() => {
     pendente = null
-    void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
-    void queryClient.invalidateQueries({ queryKey: ['historico'] })
+    const ids = [...casosMudados]
+    const completa = recargaCompleta || ids.length > TETO_DE_CASOS
+    recargaCompleta = false
+    casosMudados.clear()
+
+    if (completa) {
+      void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
+      void queryClient.invalidateQueries({ queryKey: ['historico'] })
+      return
+    }
+
+    // A presença recarrega junto: quem está OCUPADA muda quando as etapas
+    // mudam, e a bolinha não pode andar num relógio diferente do card.
+    void queryClient.invalidateQueries({ queryKey: chavesQuadro.atividade() })
+    // O histórico do card aberto: uma ação de outra pessoa é fato novo no log,
+    // e é o que o card deveria mostrar aparecendo. Só o dos casos que mudaram.
+    for (const id of ids) {
+      void queryClient.invalidateQueries({ queryKey: ['historico', id] })
+    }
+    void atualizarCasos(queryClient, ids)
   }, ESPERA_MS)
 }

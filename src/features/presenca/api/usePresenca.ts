@@ -76,14 +76,15 @@ export interface AtividadeDaEquipe {
  * não pega trabalho há mais de um dia, e para essa a resposta ("mais de 24h")
  * não precisa de precisão.
  *
- * A chave começa com `chavesQuadro.todos` de propósito: toda ação do Quadro já
- * invalida essa família, e o Realtime do Quadro também. Sem isso, dar play numa
- * etapa mudaria o card na hora e a bolinha só no próximo intervalo — a mesma
- * informação em dois relógios diferentes.
+ * A chave começa com `chavesQuadro.todos` de propósito: a recarga completa do
+ * Quadro invalida essa família inteira, e a recarga de um caso só (18/09/2026)
+ * invalida esta chave pelo nome — as duas em recarga.ts. Sem isso, dar play
+ * numa etapa mudaria o card na hora e a bolinha só no próximo intervalo — a
+ * mesma informação em dois relógios diferentes.
  */
 export function useAtividadeDaEquipe() {
   return useQuery({
-    queryKey: [...chavesQuadro.todos, 'atividade'],
+    queryKey: chavesQuadro.atividade(),
     // A mesma validade do Quadro, pelo mesmo motivo (18/09/2026): ela recarrega
     // junto com ele a cada mudança — está debaixo da mesma chave de propósito,
     // porque quem está ocupada muda quando as etapas mudam —, e voltar para a
