@@ -696,18 +696,21 @@ export type Database = {
       notificacoes_vistas: {
         Row: {
           created_at: string
+          gerais_limpas_em: string | null
           pessoa_id: string
           updated_at: string
           visto_em: string
         }
         Insert: {
           created_at?: string
+          gerais_limpas_em?: string | null
           pessoa_id: string
           updated_at?: string
           visto_em?: string
         }
         Update: {
           created_at?: string
+          gerais_limpas_em?: string | null
           pessoa_id?: string
           updated_at?: string
           visto_em?: string
@@ -1053,6 +1056,7 @@ export type Database = {
       }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      limpar_notificacoes_gerais: { Args: never; Returns: string }
       marcar_notificacoes_vistas: { Args: never; Returns: string }
       mover_album: {
         Args: {

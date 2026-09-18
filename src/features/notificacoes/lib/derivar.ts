@@ -1,4 +1,4 @@
-import { alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
+import { MINUTOS_IMINENTE, alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
@@ -195,7 +195,18 @@ export function derivarNotificacoes({
         detalhe: caso.maternidadeSigla ?? 'Sem maternidade',
         casoId: caso.id,
         casoNome: nome,
-        em: caso.previsaoEm ?? '',
+        /*
+         * QUANDO O ALERTA NASCEU, e não a hora marcada. A hora marcada está no
+         * FUTURO enquanto o alerta é iminente — e um carimbo futuro faria esta
+         * notificação parecer nova para sempre e escapar de "Limpar gerais",
+         * que esconde o que nasceu ATÉ o instante do clique. Ela nasce quando
+         * entra na janela vermelha: a hora marcada menos a janela.
+         */
+        em: caso.previsaoEm
+          ? new Date(
+              new Date(caso.previsaoEm).getTime() - MINUTOS_IMINENTE * 60_000,
+            ).toISOString()
+          : '',
       })
     }
 

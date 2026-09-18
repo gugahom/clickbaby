@@ -565,6 +565,75 @@
       box-shadow: 0 0 0 2px color-mix(in oklch, var(--atrasado) 30%, transparent);
     }
   }
+
+  /* O SINO CHAMANDO (18/09/2026, pedido do gestor: "coloque um pulse quando
+     tiver notificações para o usuário, deve chamar mais a atenção").
+
+     É o mesmo vermelho e a mesma forma de onda do chamado — as três dizem "tem
+     trabalho seu esperando" —, só que MAIOR (12px contra 6) e num ciclo mais
+     curto. A pílula mora dentro de um card que a pessoa já está olhando; o sino
+     mora no canto da tela, e precisa ser visto por quem NÃO está olhando para
+     ele. Uma onda do tamanho da da pílula, num botão de 44px sobre a faixa
+     escura, passaria despercebida.
+
+     E O SINO BALANÇA: o gesto que todo celular já ensinou a ler como "chegou
+     coisa para você". Um balanço a cada três segundos, e parado no resto do
+     ciclo — balançando sem parar ele viraria enfeite em meio minuto. */
+  .pulso-sino {
+    animation: pulso-sino 1.6s ease-out infinite;
+  }
+
+  .balanco-sino {
+    animation: balanco-sino 3s ease-in-out infinite;
+    /* Gira pela alça, como um sino de verdade — pelo centro ele só tremeria. */
+    transform-origin: 50% 8%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulso-sino {
+      animation: none;
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--atrasado) 45%, transparent);
+    }
+
+    .balanco-sino {
+      animation: none;
+    }
+  }
+}
+
+@keyframes pulso-sino {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--atrasado) 70%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 12px color-mix(in oklch, var(--atrasado) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--atrasado) 0%, transparent);
+  }
+}
+
+@keyframes balanco-sino {
+  0%,
+  70%,
+  100% {
+    rotate: 0deg;
+  }
+  75% {
+    rotate: 16deg;
+  }
+  80% {
+    rotate: -14deg;
+  }
+  85% {
+    rotate: 9deg;
+  }
+  90% {
+    rotate: -6deg;
+  }
+  95% {
+    rotate: 2deg;
+  }
 }
 
 @keyframes pulso-chamado {
