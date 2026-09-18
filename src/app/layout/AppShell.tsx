@@ -15,6 +15,7 @@ import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { useUrlDaFoto } from '@/features/perfil/api/useFotoDePerfil'
 import { usePresenca, useAtividadeDaEquipe } from '@/features/presenca/api/usePresenca'
 import { EquipePresente } from '@/features/presenca/components/EquipePresente'
+import { Sino } from '@/features/notificacoes/components/Sino'
 import { BolinhaDeStatus } from '@/features/presenca/components/BolinhaDeStatus'
 import {
   ROTULO_ESTADO,
@@ -155,6 +156,13 @@ export function AppShell() {
                   : null
               }
             />
+
+            {/* O SINO FICA ENTRE a presença e o chip de conta, que é onde o
+                gestor pediu — e é o lugar em que todo mundo já procura por
+                ele. Ao contrário da presença, ele EXISTE no mobile: quem está
+                no corredor não escolhe a quem passar trabalho, mas precisa
+                saber que uma etapa foi atribuída ao seu nome. */}
+            <Sino />
 
             {pessoa && (
             <Dropdown

@@ -1,4 +1,5 @@
 import { useMemo, useState, type LiHTMLAttributes } from 'react'
+import { useSearchParams } from 'react-router'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
@@ -111,6 +112,47 @@ export function QuadroPage() {
   const [reabrindo, setReabrindo] = useState<CasoQuadro | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
   const reabrirCaso = useReabrirCaso()
+
+  /*
+   * O CASO QUE O SINO MANDOU ABRIR (17/09/2026).
+   *
+   * Vem na URL (`/?caso=<id>`) e não em estado global: é onde o React Router
+   * já guarda "para onde você foi", o botão de voltar funciona de graça, e o
+   * endereço vira algo que uma pessoa pode mandar para outra — "olha este
+   * caso" — sem inventarmos uma tela de caso que não existe.
+   *
+   * Ele NÃO é limpo depois de usado. O anel e o card aberto continuam
+   * enquanto a pessoa estiver ali; sai quando ela navega. Limpar exigiria um
+   * efeito mexendo no histórico durante a renderização, e o ganho seria uma
+   * barra de endereços mais curta.
+   */
+  const casoEmFoco = useSearchParams()[0].get('caso')
+  /*
+   * A ABA SEGUE O CASO EM FOCO. Uma notificação de caso já entregue abre a aba
+   * Entregáveis; de caso encerrado, Concluídos. Sem isto o clique levaria a um
+   * Quadro onde aquele caso não está, que é pior do que não levar a lugar
+   * nenhum.
+   *
+   * Ajuste DURANTE a renderização, que é o padrão que o React documenta para
+   * estado derivado de entrada — e o mesmo que `CampoEstacao` usa. Num efeito,
+   * a tela renderizaria uma vez na aba errada antes de se corrigir.
+   */
+  const [focoAplicado, setFocoAplicado] = useState<string | null>(null)
+  if (casoEmFoco !== null && casoEmFoco !== focoAplicado && data) {
+    setFocoAplicado(casoEmFoco)
+    const alvo = data.casos.find((c) => c.id === casoEmFoco)
+    if (alvo) {
+      setAba(
+        alvo.ehTerminal
+          ? 'concluidos'
+          : alvo.liberadoParaEntregaEm !== null
+            ? 'entregas'
+            : alvo.ehRascunho
+              ? 'rascunhos'
+              : 'lista',
+      )
+    }
+  }
   // Arrastar entre as colunas do modal cai nas MESMAS RPCs do seletor de fase
   // do cartão — o atalho não é um segundo caminho de escrita.
   const moverVideo = useMoverVideoMaster()
@@ -223,8 +265,20 @@ export function QuadroPage() {
   }
 
   const etapasPorCaso = data?.etapasPorCaso ?? SEM_ETAPAS
+
   // O corte por dia NUNCA leva o turno junto — ver `blocosVisiveis`.
-  const mostrados = blocosVisiveis(blocos, diasVisiveis, hoje)
+  // E o dia do caso em foco também não: uma notificação que aponta para um dia
+  // fora do corte levaria a pessoa a um Quadro sem o card dela.
+  const mostrados = (() => {
+    const base = blocosVisiveis(blocos, diasVisiveis, hoje)
+    const doFoco =
+      casoEmFoco === null
+        ? undefined
+        : blocos.find((b) => b.casos.some((c) => c.id === casoEmFoco))
+    if (!doFoco || base.includes(doFoco)) return base
+    // Filtrar sobre `blocos` mantém a ordem crescente sem reordenar nada.
+    return blocos.filter((b) => base.includes(b) || b === doFoco)
+  })()
   const restantes = blocos.length - mostrados.length
 
   /*
@@ -358,11 +412,19 @@ export function QuadroPage() {
                     // escondido dentro de um dia fechado é uma busca que
                     // respondeu e não mostrou; e ligar o modo TV precisa
                     // reaplicar quem abre e quem fecha.
-                    key={`${bloco.dia ?? 'sem-data'}-${buscando}-${emDuasColunas}`}
+                    // `casoEmFoco` entra na chave pelo mesmo motivo que a
+                    // busca: o bloco guarda "aberto" em estado próprio, e o
+                    // dia que recebe o foco precisa nascer aberto de novo.
+                    key={`${bloco.dia ?? 'sem-data'}-${buscando}-${emDuasColunas}-${casoEmFoco ?? ''}`}
                     bloco={bloco}
                     hoje={hoje}
                     etapasPorCaso={etapasPorCaso}
-                    abertoInicialmente={abrePorPadrao(bloco)}
+                    {...(casoEmFoco ? { casoEmFoco } : {})}
+                    abertoInicialmente={
+                      abrePorPadrao(bloco) ||
+                      // O dia do caso em foco abre, seja ele de quando for.
+                      (casoEmFoco !== null && bloco.casos.some((c) => c.id === casoEmFoco))
+                    }
                     compacto={emDuasColunas}
                   />
                 ))}
@@ -767,9 +829,12 @@ export function QuadroPage() {
           // fora da moldura dele, e era a única ação da tela que morava do
           // lado de fora do objeto sobre o qual agia.
           <CasoLinha
-            key={caso.id}
+            // A chave carrega o foco: um card já montado e fechado ignoraria
+            // o `emFoco`, que só vale no nascimento do estado.
+            key={`${caso.id}-${caso.id === casoEmFoco ? 'foco' : ''}`}
             caso={caso}
             etapas={etapasPorCaso.get(caso.id) ?? []}
+            emFoco={caso.id === casoEmFoco}
             onReabrir={(c) => {
               setErroReabrir(null)
               setReabrindo(c)

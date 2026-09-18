@@ -490,3 +490,41 @@ export function IconeCalendario({ className }: PropsIcone) {
     </svg>
   )
 }
+
+/** Sino: o notificador do cabeçalho — ver features/notificacoes. */
+export function IconeSino({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
+  )
+}
+
+/** Relógio: hora marcada chegando ou estourada — ver o sino. */
+export function IconeRelogio({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
