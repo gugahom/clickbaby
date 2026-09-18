@@ -56,8 +56,8 @@ export interface AlertaDeHorario {
 
 /** Âmbar a partir daqui. */
 const MINUTOS_PROXIMO = 60
-/** Vermelho a partir daqui. */
-const MINUTOS_IMINENTE = 30
+/** Vermelho a partir daqui. Exportado para o sino saber quando o alerta nasceu. */
+export const MINUTOS_IMINENTE = 30
 /**
  * Até quanto tempo DEPOIS da hora o alerta continua.
  *

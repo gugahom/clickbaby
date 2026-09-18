@@ -7,9 +7,11 @@
 --   2. A ESCRITA É SÓ PELA RPC, e a RPC não recebe pessoa_id — não há como
 --      marcar o sino de outra pessoa.
 --   3. Chamar duas vezes ATUALIZA, não duplica: é uma linha por pessoa.
+--   4. LIMPAR AS GERAIS (20260918083153) carimba a mesma linha, e marca o sino
+--      como visto junto — quem limpou acabou de olhar.
 
 begin;
-select plan(8);
+select plan(11);
 
 -- =============================================================================
 -- Fixtures: duas pessoas, para o caso negativo da RLS existir de verdade.
@@ -75,6 +77,25 @@ select is(
     where p.nome = 'Sino A'),
   1,
   'W3: e continua sendo UMA linha');
+
+
+select ok(
+  has_function_privilege('authenticated', 'public.limpar_notificacoes_gerais()', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.limpar_notificacoes_gerais()', 'EXECUTE'),
+  'E4: authenticated limpa as gerais; anon não');
+
+select pg_temp.como('sino.a@clickbaby.test');
+select lives_ok(
+  'select public.limpar_notificacoes_gerais()',
+  'W4: a pessoa limpa as próprias notificações gerais');
+reset role;
+
+select ok(
+  (select nv.gerais_limpas_em is not null and nv.gerais_limpas_em = nv.visto_em
+     from public.notificacoes_vistas nv
+     join public.pessoas p on p.id = nv.pessoa_id
+    where p.nome = 'Sino A'),
+  'W5: o carimbo de limpeza entra na MESMA linha, e o sino fica visto junto');
 
 
 -- =============================================================================

@@ -941,6 +941,22 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   piso da seção 6; as classes de animação do exemplo pedem um plugin do Tailwind que não está
   instalado — não errariam, só não animariam —; e os tokens dele (`bg-popover`, `bg-accent`)
   não são os da casa. A animação é do `motion`, que já está no projeto.
+  **AS GERAIS SE LIMPAM; AS "PARA VOCÊ", NÃO** (18/09/2026, pedido do gestor, migration
+  `20260918083153`). As gerais falam do trabalho dos OUTROS, e ficariam acumuladas até outra
+  pessoa agir — a lista viraria o painel da operação inteira. "Limpar gerais" grava um
+  carimbo (`notificacoes_vistas.gerais_limpas_em`) e esconde as gerais nascidas até ali; as de
+  depois aparecem. Carimbo e não lista do que foi limpo: uma tabela de dispensas cresceria
+  para sempre, com linha de notificação que já sumiu. As "para você" continuam saindo só
+  quando o trabalho anda — um botão que as escondesse faria a etapa atribuída parar de chamar
+  sem ninguém dar play. **O carimbo do HORÁRIO é quando o alerta nasceu** (a hora marcada menos
+  a janela vermelha), e não a hora marcada: esta fica no futuro enquanto o alerta é iminente,
+  e ele escaparia da limpeza e contaria como novidade para sempre.
+  **O SINO CHAMA ENQUANTO HOUVER ALGO PARA VOCÊ** (mesmo dia, pedido do gestor: "deve chamar
+  mais a atenção"). O botão fica vermelho sólido, solta a onda do chamado — 12px, o dobro da
+  da pílula, porque o sino mora no canto e precisa ser visto por quem NÃO está olhando para
+  ele — e balança a cada três segundos. Vale enquanto EXISTIR notificação "para você", não só
+  enquanto for nova: é a regra da pílula da atribuída, que pulsa até o play. Abrir o sino não
+  o cala; o trabalho andar, sim. Com o painel aberto ele para de balançar.
 - **A PRESENÇA ABRE UM PAINEL** (17/09/2026, pedido do gestor). A fileira de avatares virou
   GATILHO: o clique abre a lista com todo mundo que está na tela, com estado e frase de
   atividade por extenso, ocupadas primeiro — a pergunta ali é "quem está livre para pegar a

@@ -18,7 +18,11 @@ import { useAuth } from '@/features/auth/contexto'
 import { useQuadro } from '@/features/quadro/api/useQuadro'
 import { formatarDuracao } from '@/lib/formato'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
-import { useMarcarVistas, useVistoEm } from '../api/useNotificacoesVistas'
+import {
+  useLimparGerais,
+  useMarcarVistas,
+  useMarcasDoSino,
+} from '../api/useNotificacoesVistas'
 import { derivarNotificacoes, type Notificacao, type TipoNotificacao } from '../lib/derivar'
 
 /**
@@ -75,15 +79,28 @@ function quandoRelativo(em: string, agora: Date): string | null {
  *
  * TRÊS REGRAS DE COMPORTAMENTO, e elas não mudaram com o visual:
  *
- *   1. O CONTADOR CONTA NOVIDADES, e só as MINHAS pulsam. Ele some quando
- *      não há nada novo — é a "bolinha no momento que o usuário precisa dar
- *      atenção", nas palavras do pedido. Novidade minha (atribuição, rendição,
- *      alteração em trabalho meu) deixa o contador vermelho e com a onda do
- *      chamado; novidade geral acende o contador sem gritar.
+ *   1. O CONTADOR CONTA NOVIDADES. Ele some quando não há nada novo — é a
+ *      "bolinha no momento que o usuário precisa dar atenção", nas palavras
+ *      do pedido.
+ *
+ *      E O SINO CHAMA ENQUANTO HOUVER ALGO PARA VOCÊ (18/09/2026, pedido do
+ *      gestor: "deve chamar mais a atenção"). O botão fica vermelho, solta a
+ *      onda do chamado — maior que a da pílula — e balança de tempos em
+ *      tempos. Isso vale enquanto EXISTIR notificação "para você", e não só
+ *      enquanto ela for nova: é a mesma regra da pílula de quem foi
+ *      atribuída no card, que pulsa até o play. Abrir o sino não o cala; o
+ *      trabalho andar, sim. Com o painel aberto ele para — a pessoa já está
+ *      olhando, e uma onda atrás da lista que ela lê só atrapalha.
  *   2. ABRIR MARCA COMO VISTO, e o item continua listado até o trabalho ser
  *      resolvido (decisão do gestor, 17/09). É por isso que o exemplo tinha
- *      "Marcar todas como lidas" e aqui não tem: abrir já faz isso, e um botão
- *      que nunca aparece não é botão.
+ *      "Marcar todas como lidas" e aqui não tem: abrir já faz isso.
+ *
+ *      AS GERAIS SE LIMPAM; AS "PARA VOCÊ", NÃO (18/09/2026). "Limpar gerais"
+ *      esconde as gerais que existem agora — as que nascerem depois aparecem
+ *      —, porque elas falam do trabalho dos outros e ficariam acumuladas até
+ *      outra pessoa agir. As "para você" continuam saindo só quando o trabalho
+ *      anda: um botão que as escondesse faria a etapa atribuída parar de
+ *      chamar sem ninguém dar play nela. Ver a migration 20260918083153.
  *   3. CLICAR LEVA AO CASO (`/?caso=`), que o Quadro abre e destaca.
  *
  * AS ABAS SÃO "TODAS" E "PARA VOCÊ", e não "Todas" e "Não lidas" como no
@@ -95,8 +112,11 @@ function quandoRelativo(em: string, agora: Date): string | null {
 export function Sino() {
   const { pessoa } = useAuth()
   const { data } = useQuadro()
-  const { data: vistoEm } = useVistoEm()
+  const { data: marcas } = useMarcasDoSino()
+  const vistoEm = marcas?.vistoEm ?? null
+  const geraisLimpasEm = marcas?.geraisLimpasEm ?? null
   const marcar = useMarcarVistas()
+  const limpar = useLimparGerais()
   const navegar = useNavigate()
   const agora = useRelogioDeMinuto()
   const semMovimento = useReducedMotion()
@@ -136,19 +156,28 @@ export function Sino() {
     pessoaId: pessoa?.id ?? null,
     papel: pessoa?.papelSistema ?? 'operador',
     agora,
-  })
+  }).filter(
+    // "Limpar gerais" esconde as gerais nascidas ATÉ o clique. Uma geral sem
+    // carimbo conhecido ('') conta como antiga e sai junto — ela não tem como
+    // provar que nasceu depois.
+    (n) => n.familia === 'minha' || geraisLimpasEm === null || n.em > geraisLimpasEm,
+  )
 
   const ehNova = (n: Notificacao, marca: string | null) => marca === null || n.em > marca
-  const novas = lista.filter((n) => ehNova(n, vistoEm ?? null))
+  const novas = lista.filter((n) => ehNova(n, vistoEm))
   const novidadeMinha = novas.some((n) => n.familia === 'minha')
   const minhas = lista.filter((n) => n.familia === 'minha')
+  const gerais = lista.length - minhas.length
   const visiveis = aba === 'minhas' ? minhas : lista
+  // O sino CHAMA enquanto houver algo para mim — e não enquanto eu estiver com
+  // a lista aberta na frente, que é quando a onda só atrapalharia a leitura.
+  const chamando = minhas.length > 0 && !aberto
 
   function alternar() {
     const indo = !aberto
     setAberto(indo)
     if (!indo) return
-    setVistoAntes(vistoEm ?? null)
+    setVistoAntes(vistoEm)
     // Só escreve quando há o que marcar: uma RPC por clique num sino sem
     // novidade seria escrita à toa a cada curiosidade.
     if (novas.length > 0) marcar.mutate()
@@ -170,28 +199,41 @@ export function Sino() {
         aria-expanded={aberto}
         aria-controls={idPainel}
         aria-haspopup="dialog"
-        aria-label={
-          novas.length === 0
-            ? `Notificações: ${lista.length === 0 ? 'nada pedindo atenção' : `${lista.length}, nenhuma nova`}`
-            : `Notificações: ${novas.length} ${novas.length === 1 ? 'nova' : 'novas'}${novidadeMinha ? ', com algo para você' : ''}`
-        }
-        // O BOTÃO COM BORDA do exemplo, com 44px e não 40: o piso de toque
-        // da seção 6 vale no cabeçalho também — é o sino que a pessoa aperta
-        // de pé, no corredor. Sobre a faixa escura a borda e o fundo são
-        // translúcidos, como os outros controles dela.
-        className="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-white/25 bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+        aria-label={`Notificações: ${
+          lista.length === 0
+            ? 'nada pedindo atenção'
+            : [
+                minhas.length > 0 ? `${minhas.length} para você` : null,
+                novas.length > 0 ? `${novas.length} ${novas.length === 1 ? 'nova' : 'novas'}` : null,
+                `${lista.length} no total`,
+              ]
+                .filter(Boolean)
+                .join(', ')
+        }`}
+        className={clsx(
+          // O BOTÃO COM BORDA do exemplo, com 44px e não 40: o piso de toque
+          // da seção 6 vale no cabeçalho também — é o sino que a pessoa aperta
+          // de pé, no corredor.
+          'relative inline-flex size-11 cursor-pointer items-center justify-center rounded-md border text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none',
+          minhas.length > 0
+            ? // VERMELHO SÓLIDO quando há trabalho meu: é a cor do chamado no
+              // card (a pílula da atribuída, o aviso), e a única coisa sólida
+              // na faixa escura — o olho vai nela primeiro.
+              'border-atrasado bg-atrasado hover:bg-atrasado/90'
+            : 'border-white/25 bg-white/10 hover:bg-white/20',
+          chamando && 'pulso-sino',
+        )}
       >
-        <IconeSino className="size-[18px]" />
+        <IconeSino className={clsx('size-[18px]', chamando && 'balanco-sino')} />
 
         {novas.length > 0 && (
           <span
             className={clsx(
-              'absolute -top-2 left-full inline-flex min-w-5 -translate-x-1/2 items-center justify-center rounded-full px-1 text-[11px] leading-5 font-bold tabular-nums ring-2 ring-black/30',
-              // O PULSO É DO CHAMADO, e a classe é a mesma da pílula de quem
-              // foi atribuída e do aviso do card (`.pulso-chamado`): as três
-              // dizem "precisa de alguém agora" e não podem ter três
-              // linguagens diferentes. Novidade GERAL acende sem gritar.
-              novidadeMinha ? 'pulso-chamado bg-atrasado text-white' : 'bg-white text-marca-forte',
+              // BRANCO SEMPRE: o botão já é o vermelho quando há algo para
+              // você, e um contador vermelho em cima dele sumiria. A cor do
+              // NÚMERO diz de quem é a novidade.
+              'absolute -top-2 left-full inline-flex min-w-5 -translate-x-1/2 items-center justify-center rounded-full bg-white px-1 text-[11px] leading-5 font-bold tabular-nums ring-2 ring-black/30',
+              novidadeMinha ? 'text-atrasado' : 'text-marca-forte',
             )}
           >
             {novas.length > 99 ? '99+' : novas.length}
@@ -236,12 +278,34 @@ export function Sino() {
                   )}
                 </AbaDoSino>
               </div>
+
+              {/* O LUGAR DO "MARCAR TODAS" DO EXEMPLO, com o gesto que esta caixa
+                  de entrada precisa: limpar o que é dos outros. Só aparece
+                  quando há o que limpar, e só na aba em que elas estão. O alvo
+                  de 44px vem do retângulo invisível, como nas abas. */}
+              {aba === 'todas' && gerais > 0 && (
+                <button
+                  type="button"
+                  onClick={() => limpar.mutate()}
+                  disabled={limpar.isPending}
+                  className={
+                    "relative cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground hover:underline disabled:opacity-60 " +
+                    "before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-['']"
+                  }
+                >
+                  {limpar.isPending ? 'Limpando…' : 'Limpar gerais'}
+                </button>
+              )}
             </div>
 
             <div className="max-h-80 overflow-y-auto">
               {visiveis.length === 0 ? (
                 <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  {aba === 'minhas' ? 'Nada esperando por você.' : 'Nada pedindo atenção agora.'}
+                  {aba === 'minhas'
+                    ? 'Nada esperando por você.'
+                    : geraisLimpasEm
+                      ? 'Nada novo desde que você limpou.'
+                      : 'Nada pedindo atenção agora.'}
                 </div>
               ) : (
                 visiveis.slice(0, TETO).map((n) => {

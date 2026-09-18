@@ -111,6 +111,8 @@ const RPCS_TRANSICAO = {
   // A marca do sino (20260917215442). Sem argumento de propósito: ela só
   // marca o sino de quem chama. Para o visitante, nem isso.
   marcar_notificacoes_vistas: {},
+  // Limpar as gerais do sino (20260918083153). Mesma forma: sem argumento.
+  limpar_notificacoes_gerais: {},
   // Devolve o vídeo ou o Foto/Livro para a fase de alteração (20260916215022).
   // Quem alcançasse isto poria trabalho entregue de volta na fila alheia.
   pedir_alteracao_da_etapa: {
