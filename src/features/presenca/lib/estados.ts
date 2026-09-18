@@ -1,3 +1,5 @@
+import { formatarDuracao } from '@/lib/formato'
+
 /**
  * OS ESTADOS DE PRESENÇA, e a razão de serem tão poucos.
  *
@@ -108,6 +110,60 @@ export function estadoVisivel(
  * perguntar, e não vira número guardado em lugar nenhum.
  */
 export const MINUTOS_ATE_MARCAR_PARADA = 60
+
+/**
+ * A FRASE DE ATIVIDADE, nos três estados.
+ *
+ * O mesmo dado — quando a pessoa tocou trabalho pela última vez — responde a
+ * três perguntas diferentes, e dizer a mesma coisa nos três seria desperdiçar
+ * a única informação que a linha tem:
+ *
+ *   OCUPADA    o carimbo é o início do que ela está fazendo agora.
+ *   DISPONÍVEL o carimbo é o fim do que ela fez por último — e é aqui que mora
+ *              a marca de "parada", que foi o que o gestor pediu.
+ *   AUSENTE    ela avisou que saiu; cobrar tempo parado de quem avisou seria
+ *              transformar um aviso em falta.
+ *
+ * SEM CARIMBO NENHUM é caso à parte e merece frase própria: "não pegou nada
+ * hoje" é diferente de "parada há 24h", e a segunda seria invenção — a janela
+ * da consulta é de um dia (ver `useAtividadeDaEquipe`).
+ *
+ * Mora aqui, e não no componente, desde 17/09/2026: ela era do cartão de hover
+ * e havia uma SEGUNDA versão resumida na fileira de avatares. As duas diziam a
+ * mesma coisa com palavras diferentes sobre o mesmo carimbo — agora o painel e
+ * o rótulo de acessibilidade leem a mesma função.
+ */
+export function fraseDeAtividade(
+  estado: EstadoVisivel,
+  ultimaAtividade: string | undefined,
+  agora?: Date,
+): string {
+  const horas = horasParada(ultimaAtividade, agora)
+
+  if (estado === 'ocupada') {
+    return horas === null ? 'Trabalhando agora' : `Trabalhando há ${formatarDuracao(horas)}`
+  }
+
+  if (estado === 'ausente') {
+    return horas === null
+      ? 'Fora do posto'
+      : `Fora do posto · trabalhou há ${formatarDuracao(horas)}`
+  }
+
+  if (horas === null) return 'Sem pegar trabalho hoje'
+  return estaParada(ultimaAtividade, agora)
+    ? `Sem pegar trabalho há ${formatarDuracao(horas)}`
+    : `Pegou trabalho há ${formatarDuracao(horas)}`
+}
+
+/** Disponível HÁ TEMPO DEMAIS — a bolinha vazada. */
+export function estaParada(ultimaAtividade: string | undefined, agora?: Date): boolean {
+  const horas = horasParada(ultimaAtividade, agora)
+  // Sem carimbo nenhum na janela de 24h também é estar parada: ela não pegou
+  // nada hoje, que é a versão mais forte do mesmo fato.
+  if (horas === null) return true
+  return horas * 60 >= MINUTOS_ATE_MARCAR_PARADA
+}
 
 /** Há quantas HORAS a pessoa não pega trabalho. `null` = não dá para saber. */
 export function horasParada(
