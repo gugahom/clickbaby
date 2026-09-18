@@ -84,7 +84,11 @@ export interface AtividadeDaEquipe {
 export function useAtividadeDaEquipe() {
   return useQuery({
     queryKey: [...chavesQuadro.todos, 'atividade'],
-    staleTime: 30 * 1000,
+    // A mesma validade do Quadro, pelo mesmo motivo (18/09/2026): ela recarrega
+    // junto com ele a cada mudança — está debaixo da mesma chave de propósito,
+    // porque quem está ocupada muda quando as etapas mudam —, e voltar para a
+    // aba não precisa repetir a busca a cada 30 segundos.
+    staleTime: 2 * 60 * 1000,
     queryFn: async (): Promise<AtividadeDaEquipe> => {
       const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 

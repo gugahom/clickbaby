@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { chavesQuadro } from './useQuadro'
+import { agendarRecargaDoQuadro } from './recarga'
 
 export interface EdicaoDoCaso {
   casoId: string
@@ -54,9 +54,8 @@ export function useEditarCaso() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
-      void queryClient.invalidateQueries({ queryKey: ['historico'] })
-    },
+    // Na fila compartilhada com o Realtime, como toda ação do Quadro: o UPDATE
+    // em `casos` volta como aviso, e recarregar aqui E lá dobrava o trabalho.
+    onSuccess: () => agendarRecargaDoQuadro(queryClient),
   })
 }

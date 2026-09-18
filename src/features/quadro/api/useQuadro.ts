@@ -209,5 +209,23 @@ export function useQuadro() {
      * precisa ser buscada, e ao voltar o TanStack refaz a busca sozinho.
      */
     refetchInterval: 2 * 60 * 1000,
+    /*
+     * VOLTAR PARA A ABA NÃO RECARREGA A CADA 30 SEGUNDOS (18/09/2026).
+     *
+     * O padrão global é `refetchOnWindowFocus` com 30s de validade, e no
+     * celular — que troca de app e bloqueia a tela o tempo todo — isso virava
+     * uma recarga do Quadro inteiro a cada desbloqueio. Foi um dos
+     * multiplicadores da lentidão de 18/09: 1.300 recargas completas por dia.
+     *
+     * Com a mesma validade do laço de segurança, a volta só recarrega se os
+     * dados tiverem mais de dois minutos — e dado recente é o normal, porque
+     * toda mudança já recarrega pelo Realtime. Invalidar ignora a validade,
+     * então o Realtime e as ações continuam recarregando na hora.
+     *
+     * O celular que passou horas no bolso ganha a recarga do mesmo jeito: ao
+     * acordar, o canal se reconecta e o próprio Realtime recarrega (ver o
+     * `SUBSCRIBED` em useRealtimeQuadro).
+     */
+    staleTime: 2 * 60 * 1000,
   })
 }

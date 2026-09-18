@@ -114,9 +114,10 @@ function nomeDaEtapa(etapa: EtapaQuadro): string {
 /**
  * O CARIMBO DE "QUANDO ISTO COMEÇOU".
  *
- * `atualizadoEm` da etapa é aproximado (qualquer escrita o move) e é o melhor
- * que o cliente tem: `eventos`, que teria o instante exato, só é legível por
- * adm — e o sino é de todo mundo. Sem carimbo nenhum, a notificação conta como
+ * `atualizadoEm` da etapa é aproximado (qualquer escrita o move), e basta:
+ * `eventos` teria o instante exato — e é legível por toda pessoa ativa desde
+ * 25/08 —, mas custaria uma consulta a mais a cada recarga do Quadro por uma
+ * precisão que o sino não usa. Sem carimbo nenhum, a notificação conta como
  * ANTIGA: é melhor deixar de pulsar por algo novo do que pulsar para sempre
  * por algo que ninguém consegue silenciar.
  */

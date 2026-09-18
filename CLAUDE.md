@@ -516,6 +516,15 @@ Três armadilhas, todas já verificadas na prática:
 3. **Funções de trigger não exigem `EXECUTE`** de quem dispara o trigger.
    `set_updated_at` e `gerar_caso_etapas` ficam fechadas e os triggers funcionam.
 
+**HELPER DE RLS VAI DENTRO DE `(select ...)`** (18/09/2026, diagnóstico do Quadro lento,
+migration `20260918085454`). `using (eh_pessoa_ativa())` faz o Postgres chamar a função em
+CADA LINHA de cada varredura — no plano, `Filter: eh_pessoa_ativa()` em seis lugares da
+consulta do Quadro, cada chamada lendo o JWT e buscando em `pessoas`. Medido: 4x mais lento
+(11ms sem RLS, 44ms com ela). `using ((select public.eh_pessoa_ativa()))` vira um InitPlan e
+roda UMA vez por consulta. As duas formas dão o mesmo resultado, então nenhum teste de
+permissão pega a regressão — quem pega é `rls_uma_vez_por_consulta.test.sql`, que falha se
+alguma policy chamar os helpers sem o `select` em volta.
+
 **RPC `SECURITY DEFINER` que não valida o chamador precisa do `EXECUTE` fechado.**
 É o caso de `sync_upsert_caso`, que roda sem usuário logado e por isso não pode
 checar `auth.uid()` — só `service_role`. E atenção: `drop function` + `create
@@ -567,6 +576,16 @@ Rode as duas **depois de todo `db push` que toque schema**.
   sempre, e só decide entre linhas que já eram indistinguíveis na tela. A deduplicação
   dentro de `buscarTudo` é cinto de segurança e não devolve a linha perdida — o servidor
   nunca a mandou.
+- **O QUADRO RECARREGA POR UM LUGAR SÓ: `agendarRecargaDoQuadro`** (`api/recarga.ts`,
+  18/09/2026). Ações e Realtime entram na mesma espera de 400ms, e o eco da própria ação vira
+  uma recarga só. Antes, cada ação recarregava no sucesso E no eco do Realtime — o Quadro
+  inteiro duas vezes por toque, e foi um dos multiplicadores da lentidão de 18/09 (ver a
+  dívida "O Quadro baixa o histórico inteiro"). **Não chame `invalidateQueries(['quadro'])`
+  direto** numa ação nova: ela volta a dobrar. E NÃO troque a fila por "ignorar o aviso se já
+  houver recarga em andamento": aquela recarga pode ter lido o banco antes da mudança de outra
+  pessoa, e o aviso engolido deixaria a tela errada até a rede de segurança de 2 minutos.
+  A consulta do Quadro tem validade de 2 minutos (`staleTime`), para voltar à aba não
+  recarregar a cada 30 segundos — o que, no celular, era a cada desbloqueio.
 - Mutações que representam transição de estado chamam RPC, nunca `.update()` direto.
 - Realtime via canais do Supabase no Quadro e na Fila.
 - Mobile-first. O layout desktop é a adaptação, não o contrário.
@@ -923,8 +942,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   — o caso não tem tela, ele tem um lugar DENTRO do Quadro —, e de brinde o endereço vira
   algo que uma pessoa manda para outra.
   **O CARIMBO DE NOVIDADE é `caso_etapas.updated_at`**, aproximado de propósito: ele diz
-  "esta etapa mudou", não "foi atribuída às 14h". O exato viria de `eventos`, que só adm pode
-  ler (policy `eventos_select_adm`) — e o sino é de todo mundo.
+  "esta etapa mudou", não "foi atribuída às 14h". O exato viria de `eventos` — legível por
+  toda pessoa ativa desde 25/08 (`20260825020122`; este parágrafo dizia "só adm", e estava
+  errado) —, mas custaria uma consulta a mais a cada recarga do Quadro por uma precisão que o
+  sino não usa.
   **Fica fora, por ora:** push no celular com o app fechado (pede service worker, VAPID e uma
   Edge Function — e cuidado de LGPD, porque o texto passaria pelo serviço do Google/Apple com
   nome de mãe e bebê dentro), som e vibração.
@@ -1469,6 +1490,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   gestor; quando ganhar poderes próprios, muda `papel_sistema`, não o modelo.
 
 ### Dívidas abertas, em ordem de dor
+
+0. **O Quadro baixa o histórico INTEIRO a cada mudança** (medido em 18/09/2026, quando uma
+   pausa de 96ms levou 7 segundos para aparecer). `carregarQuadro` busca TODOS os casos e TODAS
+   as etapas — 266 casos e 1.431 etapas no dia, dos quais 239 casos já encerrados ou
+   cancelados —, e todo navegador aberto faz isso a cada aviso do Realtime, de qualquer pessoa.
+   Isolada, a consulta leva 44ms; em uso real levava 1,26s de média, com picos de 8s, porque
+   dezenas de cópias dela disputavam um banco de 60 conexões. Em 30 dias foram 38.866 recargas
+   completas: 13,7 das 20,2 horas de trabalho do banco. **E a conta cresce sozinha** — ~135
+   casos por mês, para sempre, em toda tela.
+   Aliviado em 18/09 com três correções (recarga única, validade de 2 minutos, RLS uma vez por
+   consulta). A correção de verdade é ATUALIZAR SÓ O QUE MUDOU: o aviso do Realtime traz o id
+   do caso, e o Quadro busca aquele caso — pela view, sob RLS, sem ler o payload (as duas razões
+   de `useRealtimeQuadro` continuam valendo) — em vez do universo.
 
 1. **Editar o próprio perfil, e a senha inicial que ninguém é obrigado a trocar.**
    A tela de Conta troca a senha, e só. Faltam três coisas, cada uma com um motivo

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
-import { chavesQuadro } from './useQuadro'
+import { agendarRecargaDoQuadro } from './recarga'
 import type { FaseAlbum, FaseVideoMaster } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
@@ -37,10 +37,13 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
       // despesas e o histórico. Esquecer o histórico o deixava congelado por
       // 30s (o staleTime global) — a pessoa agia e o log não mostrava a própria
       // ação.
-      void queryClient.invalidateQueries({ queryKey: chavesQuadro.todos })
+      //
+      // O QUADRO E O HISTÓRICO ENTRAM NA FILA COMPARTILHADA com o Realtime
+      // (18/09/2026): recarregar aqui E no eco do Realtime fazia quem agia
+      // baixar o Quadro inteiro duas vezes por toque. Ver recarga.ts.
+      agendarRecargaDoQuadro(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
       void queryClient.invalidateQueries({ queryKey: ['despesas'] })
-      void queryClient.invalidateQueries({ queryKey: ['historico'] })
     },
   })
 }
