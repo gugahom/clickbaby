@@ -288,6 +288,10 @@ console.log(`Sondando ${alvo.url} como anon…\n`)
  */
 const FORMA = {
   despesas_por_caso: { chave: 'caso_id', coluna: 'total', valor: 0 },
+  // Uma linha por PESSOA: a chave é pessoa_id, e não há `id`. Sem esta forma a
+  // sonda recebia 42703 (coluna inexistente), que o Postgres devolve ANTES de
+  // olhar permissão — e não dizia nada sobre o visitante ser barrado.
+  notificacoes_vistas: { chave: 'pessoa_id' },
 }
 
 for (const { nome, view } of TABELAS) {
