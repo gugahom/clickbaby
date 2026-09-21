@@ -1026,6 +1026,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   aparecia sem ser editável),
   **dispensar** (não vai acontecer) e **acrescentar** fora do pacote — inclusive
   `encontro_irmaos`, `saida_uti` e `alta`, que nenhum pacote traz de fábrica.
+  **A RENDIÇÃO SE TIRA** (21/09/2026, pedido do gestor). O menu da etapa ganha "Tirar
+  rendição de X" quando há uma combinada. O banco sempre soube — `planejar_rendicao` com
+  pessoa nula apaga o plano e grava `rendicao_cancelada` —, faltava a porta: a tela só
+  deixava TROCAR quem assume.
 - **Seções laterais**: REELS, MASTER e UTI. O **vídeo horizontal do MASTER** tem fluxo
   próprio de 4 fases (Editando · Alterações · Pronto para entrega · Enviado/finalizado),
   trazido do Trello da equipe. O vídeo NÃO se opera pelo card — só pela seção; foto e o
@@ -1227,11 +1231,22 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   de editar tem a URL na mão —, e a operação mostrou o contrário: a etapa ficava presa esperando
   um endereço que muitas vezes ainda não existia, e quem ENVIA o caso é quem confere os links de
   qualquer forma. A equipe pediu a trava no envio, e foi o gestor que trouxe o pedido.
-  **O que segura o envio agora** (`DialogoConfirmarEntrega`): o LINK PRINCIPAL — Google fora do
-  BIRTH, CADEADO nos dois BIRTH. Faltando, a linha da caixa diz "Falta este link para enviar" e o
-  "Adicionar link" o registra ali mesmo; o botão Enviar só acende com ele. O WeTransfer continua
-  SEM trava. O botão "Enviar para Entregáveis" do card deixou de exigir link para abrir —
-  exigir ali prenderia a pessoa fora do único diálogo que pede o link.
+  **O que segura o envio agora** (`DialogoConfirmarEntrega`): TODO link do pacote (21/09/2026,
+  pedido do gestor). De 15/09 a 21/09 só o LINK PRINCIPAL travava — Google fora do BIRTH,
+  CADEADO nos dois BIRTH — e o WeTransfer era uma caixa marcável sem link nenhum: o caso ia
+  para Entregáveis com um endereço de dois, e a caixa afirmava "WeTransfer completo" sobre um
+  WeTransfer que não existia. O argumento de então era "um caso sem WeTransfer existe"; o gestor
+  disse que não existe, em nenhum pacote. **Os links por pacote:** Google + WeTransfer na
+  maioria; **Google + WeTransfer + CADEADO em BASIC e STANDARD** (`COM_CADEADO`, os dois
+  NOMEADOS — BASIC + REELS e BASIC REELS ficam com dois; no remoto, nenhum BASIC REELS enviado
+  desde 11/09 levou cadeado, e BASIC e STANDARD levaram em metade, que é a metade que o pedido
+  fecha); só o CADEADO nos dois BIRTH. Faltando algum, a linha da caixa diz "Falta este link para
+  enviar" (ou "para confirmar", na aba Entregáveis) e o "Adicionar link" o registra ali mesmo; o
+  botão só acende com todos. O botão "Enviar para Entregáveis" do card deixou de exigir link
+  para abrir — exigir ali prenderia a pessoa fora do único diálogo que pede o link.
+  **O banco continua mais frouxo** (ao menos um entregável), e isso é deliberado: o diálogo é
+  mais estrito que o banco, nunca mais frouxo, e os dois únicos caminhos até
+  `liberar_para_entrega` e `confirmar_entrega` passam por ele.
   A trava do banco não mudou: `liberar_para_entrega` e `confirmar_entrega` exigem ao menos um
   entregável, e a do diálogo é mais estrita do que ela, nunca mais frouxa.
   **Saíram** `lib/links-da-conclusao.ts`, `DialogoConcluirComLinks` e o hook da conclusão com
@@ -1265,11 +1280,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   e abrir de novo — e quem faz isso três vezes, na quarta marca sem olhar. Faltando o link
   daquele tipo, um "Adicionar link" ali mesmo o registra por `registrar_entregavel`, com o
   tipo da própria caixa.
-  **A CAIXA NÃO ESPERA PELO LINK.** Marcar continua sendo gesto humano de conferência:
-  travar a caixa em "existe entregável deste tipo" deixaria impossível enviar um caso sem
-  WeTransfer, e a trava de verdade — ao menos um entregável — já está no banco, onde ela não
-  diverge da tela. Quem espera pelo link, desde 15/09/2026, é o BOTÃO — e só pelo link
-  principal (ver "O LINK DE ENTREGA É COBRADO NO ENVIO", acima).
+  **A CAIXA ESPERA PELO LINK** (21/09/2026 — até essa data não esperava, e o motivo era poder
+  enviar caso sem WeTransfer, que o gestor disse não existir). Marcar continua sendo gesto
+  humano de conferência — o link existir não marca nada sozinho —, mas não se confere o que não
+  existe: sem link daquele tipo a caixa fica apagada. Uma caixa marcada cujo link é apagado com
+  o diálogo aberto deixa de contar.
   A pílula da aba ganha o **anel verde girando** quando há fila — o mesmo recurso do vídeo
   parado na seção REELS (`.anel-alerta`), ali em vermelho porque é prazo correndo, aqui em
   verde porque é trabalho pronto esperando alguém. Sem fila ele some; se girasse sempre não

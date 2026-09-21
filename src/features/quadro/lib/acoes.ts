@@ -502,10 +502,10 @@ const NAO_SEGURAM_A_ENTREGA: ReadonlySet<EtapaTipo> = new Set(['edicao_video', '
  * texto sobre um caso que não é dele.
  *
  * O LINK NÃO ESTÁ AQUI (15/09/2026). Até esta data o botão ficava apagado sem
- * entregável; agora quem cobra o link principal é o diálogo de envio
- * (`DialogoConfirmarEntrega`), que deixa registrá-lo ali mesmo. Travar o botão
- * por falta de link prenderia a pessoa do lado de fora do único lugar que pede
- * o link.
+ * entregável; agora quem cobra os links — TODOS os do pacote, desde 21/09 — é
+ * o diálogo de envio (`DialogoConfirmarEntrega`), que deixa registrá-los ali
+ * mesmo. Travar o botão por falta de link prenderia a pessoa do lado de fora do
+ * único lugar que pede o link.
  *
  * Não pede papel: qualquer pessoa ativa envia. Quem CONFIRMA é que é o ADM.
  */
