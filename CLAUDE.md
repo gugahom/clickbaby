@@ -1193,6 +1193,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   cor da marca (o verde diz "fechar o caso", e o caso pode estar encerrado há semanas). A
   contagem e o anel da aba somam os dois. O sino avisa atendimento e adm com o mesmo tipo da
   entrega de caso.
+- **A FICHA DO CARTÃO** (21/09/2026, pedido do gestor: "abrir esse card como num ClickUp ou
+  Trello"). Nas seções MASTER e FOTO/LIVRO o NOME do caso no cartão é um botão que abre a ficha
+  (`FichaDaEdicao`, sobre `ModalAmplo` no tamanho `ficha`): os controles do cartão no alto, a
+  aprovação do fotolivro (capa em tamanho de ver, link para copiar, quem mandou e quando), os
+  pedidos do cliente por extenso, os links do caso, os detalhes da etapa (com quem está, quem
+  assume, estação, prazos) e o histórico do caso. **Nada ali é um segundo caminho:** os
+  controles são os mesmos do cartão (`controlesDoMaster`/`controlesDoFotolivro` na QuadroPage
+  servem os dois), a lista de links e o histórico são os do card do Quadro. A ficha guarda só
+  os ids e relê o caso a cada render, então acompanha o Realtime. O nome como botão não
+  atrapalha o arrastar: gesto começado num controle não arrasta, e o resto do cartão continua
+  arrastável. O histórico ganhou frase para os eventos do fotolivro ("Moveu o Foto/Livro
+  para…", "Mandou para aprovação", "Enviou a prova ao cliente").
 - **PRAZO E PEDIDOS NO CARTÃO DE EDIÇÃO** (16/09/2026, pedido do gestor). Ao lado da fase, duas
   pastilhas novas no vídeo e no fotolivro:
   **PRAZO** (`PrazoDaEtapa`) é a "Data Entrega" do Trello deles: um `datetime-local` que grava

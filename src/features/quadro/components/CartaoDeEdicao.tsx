@@ -53,6 +53,14 @@ interface PropsCartaoDeEdicao {
    * precisar saber o que é um kanban.
    */
   raiz?: LiHTMLAttributes<HTMLLIElement>
+  /**
+   * ABRE A FICHA do cartão (21/09/2026, pedido do gestor: "abrir esse card como
+   * num ClickUp ou Trello"). Presente, o NOME vira o botão que abre — ver
+   * FichaDaEdicao. Por ser botão, o arrastar da visão por fase o ignora (um
+   * gesto começado num controle não arrasta), e o resto do cartão continua
+   * arrastável.
+   */
+  onAbrir?: () => void
   onErro: (mensagem: string | null) => void
 }
 
@@ -95,6 +103,7 @@ export function CartaoDeEdicao({
   acoesAbaixo = false,
   rotuloObservacao = 'Observação',
   raiz,
+  onAbrir,
   onErro,
 }: PropsCartaoDeEdicao) {
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
@@ -123,9 +132,20 @@ export function CartaoDeEdicao({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-bold tracking-tight">
-            {titulo}
-          </span>
+          {onAbrir ? (
+            <button
+              type="button"
+              onClick={onAbrir}
+              title="Abrir a ficha"
+              className="-my-3 min-h-11 min-w-0 flex-1 cursor-pointer truncate text-left text-sm font-bold tracking-tight underline-offset-2 hover:text-marca hover:underline"
+            >
+              {titulo}
+            </button>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-sm font-bold tracking-tight">
+              {titulo}
+            </span>
+          )}
           {/* O SELO NA LINHA DO NOME, e não por rodada.
           
               Quem varre a seção pergunta "este caso está andando ou parado?",
