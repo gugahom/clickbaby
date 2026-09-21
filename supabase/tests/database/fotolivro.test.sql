@@ -154,13 +154,21 @@ select ok(
 
 -- =============================================================================
 -- C. A fase terminal conclui a etapa
+--
+-- Desde 20260921202848 "entregue" é CONFIRMAÇÃO do atendimento ou adm, e só a
+-- partir de "Pronto para entrega" — a editora leva até lá, o ADM confirma. As
+-- recusas estão em fotolivro_aprovacao_e_entrega.test.sql.
 -- =============================================================================
 
 select pg_temp.como('editora.album@clickbaby.test');
+select public.mover_album(pg_temp.album('Mae Fotolivro'), 'pronto_para_entrega');
+reset role;
+
+select pg_temp.como('atendimento.album@clickbaby.test');
 select lives_ok(
   format($$ select public.mover_album(%L::uuid, 'entregue') $$,
          pg_temp.album('Mae Fotolivro')),
-  'C0: move para entregue'
+  'C0: o atendimento confirma a entrega do que está pronto'
 );
 reset role;
 

@@ -6,18 +6,187 @@ import { formatarDataHora, rotularDia } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeDesfazer } from '@/components/ui/icones'
-import { useConfirmarEntrega, useDevolverParaOQuadro, useEntregaveis } from '../api/useAcoes'
+import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
+import {
+  useConfirmarEntrega,
+  useDevolverParaOQuadro,
+  useEntregaveis,
+  useMarcarFotolivroEnviado,
+  useMoverAlbum,
+  useUrlDaCapa,
+} from '../api/useAcoes'
 import { podeConfirmarEntrega, podeEncerrarCaso } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { Entregaveis } from './Entregaveis'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
+/**
+ * UM FOTO/LIVRO ESPERANDO O ADM (21/09/2026, pedido do gestor). São duas
+ * passagens pela aba, e o `momento` diz qual:
+ *   aprovacao — a PROVA, para mandar ao cliente. Sai com "Enviado ao cliente";
+ *               na seção o cartão continua em "Aguardando aprovação".
+ *   entrega   — o LIVRO PRONTO. Sai com "Confirmar entrega", que conclui a
+ *               etapa e tira o cartão da seção.
+ */
+export interface FotolivroNaEntrega {
+  caso: CasoQuadro
+  etapa: EtapaQuadro
+  momento: 'aprovacao' | 'entrega'
+}
+
 interface PropsEntregasPainel {
   /** Casos ENVIADOS e ainda abertos, na ordem em que foram enviados. */
   entregas: CasoQuadro[]
+  /** Os Foto/Livros esperando o ADM — ver FotolivroNaEntrega. */
+  fotolivros: FotolivroNaEntrega[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   hoje: string
+}
+
+/**
+ * UMA LINHA DE FOTO/LIVRO. Marcada como tal com todas as letras — o pedido foi
+ * "lá é sinalizado como foto livro" —, e com a cor da marca em vez do verde dos
+ * casos: o verde diz "trabalho pronto para fechar o caso", e aqui o caso pode
+ * estar encerrado há semanas.
+ *
+ * Na aprovação a CAPA e o LINK ficam à vista, pela mesma razão dos links do
+ * caso: quem manda ao cliente precisa ver o que está mandando.
+ */
+function LinhaDoFotolivro({
+  item,
+  confirma,
+  onErro,
+}: {
+  item: FotolivroNaEntrega
+  confirma: boolean
+  onErro: (mensagem: string | null) => void
+}) {
+  const { caso, etapa, momento } = item
+  const marcar = useMarcarFotolivroEnviado()
+  const mover = useMoverAlbum()
+  const [confirmando, setConfirmando] = useState(false)
+  const [falhouCopiar, setFalhouCopiar] = useState(false)
+  const { data: capa } = useUrlDaCapa(momento === 'aprovacao' ? etapa.fotolivroCapa : null)
+
+  const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+  const botaoForte =
+    'superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110'
+
+  return (
+    <li className="rounded-cartao border border-marca/25 bg-marca-suave px-3 py-3 shadow-cartao md:px-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-marca px-2 py-0.5 text-[11px] font-bold text-white">
+              Foto/Livro
+            </span>
+            <span className="truncate font-semibold">{titulo}</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {momento === 'aprovacao'
+              ? 'Prova pronta: mandar ao cliente para aprovação.'
+              : 'Livro pronto: confirmar quando for entregue à família.'}
+            {caso.pacoteNome ? ` · ${caso.pacoteNome}` : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          {!confirma ? (
+            <span className="text-xs font-medium text-muted-foreground">aguardando o ADM</span>
+          ) : momento === 'aprovacao' ? (
+            <Botao
+              onClick={() => {
+                onErro(null)
+                marcar
+                  .mutateAsync({ casoEtapaId: etapa.id })
+                  .catch((e) => onErro(mensagemDeErro(e)))
+              }}
+              disabled={marcar.isPending}
+              className={botaoForte}
+            >
+              <IconeCheck className="size-4" />
+              Enviado ao cliente
+            </Botao>
+          ) : (
+            <Botao
+              onClick={() => {
+                onErro(null)
+                setConfirmando(true)
+              }}
+              disabled={mover.isPending}
+              className={botaoForte}
+            >
+              <IconeCheck className="size-4" />
+              Confirmar entrega
+            </Botao>
+          )}
+        </div>
+      </div>
+
+      {momento === 'aprovacao' && (
+        <div className="mt-3 flex flex-wrap items-start gap-3 border-t border-marca/20 pt-3">
+          {capa && (
+            <a href={capa} target="_blank" rel="noreferrer" className="flex-shrink-0">
+              <img
+                src={capa}
+                alt="Capa do Foto/Livro"
+                className="h-24 w-auto rounded-md border border-border object-contain"
+              />
+            </a>
+          )}
+          {etapa.fotolivroLink && (
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold">Link para o cliente</p>
+              <div className="flex items-center gap-1">
+                {/* rel="noreferrer": o link é credencial de acesso à prova da
+                    família, e sem isto viaja no cabeçalho Referer. */}
+                <a
+                  href={etapa.fotolivroLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1 truncate text-sm text-marca underline underline-offset-2"
+                >
+                  {etapa.fotolivroLink}
+                </a>
+                <BotaoCopiar texto={etapa.fotolivroLink} onFalha={() => setFalhouCopiar(true)} />
+              </div>
+              {falhouCopiar && (
+                <p className="text-xs text-muted-foreground">
+                  Não deu para copiar. Selecione o link e copie à mão.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {confirmando && (
+        <Dialogo
+          titulo="Confirmar a entrega do Foto/Livro?"
+          rotuloConfirmar={mover.isPending ? 'Confirmando…' : 'Confirmar entrega'}
+          ocupado={mover.isPending}
+          erro={null}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={() => {
+            mover.mutateAsync({ casoEtapaId: etapa.id, fase: 'entregue' }).then(
+              () => setConfirmando(false),
+              (e) => {
+                setConfirmando(false)
+                onErro(mensagemDeErro(e))
+              },
+            )
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo}. O Foto/Livro fica como entregue e sai da seção. Se a família
+            pedir alteração depois, o caminho é “Pedir alteração no Foto/Livro”,
+            na linha da etapa dentro do card.
+          </p>
+        </Dialogo>
+      )}
+    </li>
+  )
 }
 
 /**
@@ -195,7 +364,7 @@ function LinhaDeEntrega({
  * o trabalho ainda está acontecendo; aqui o trabalho acabou e o que importa é
  * quem está esperando há mais tempo. Quem chegou primeiro é atendido primeiro.
  */
-export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasPainel) {
+export function EntregasPainel({ entregas, fotolivros, etapasPorCaso, hoje }: PropsEntregasPainel) {
   const { pessoa } = useAuth()
   const papel = pessoa?.papelSistema ?? 'operador'
 
@@ -205,7 +374,7 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
 
   const confirma = podeEncerrarCaso(papel)
 
-  if (entregas.length === 0) {
+  if (entregas.length === 0 && fotolivros.length === 0) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
         <h2 className="font-semibold">Nenhum caso esperando entrega</h2>
@@ -219,16 +388,18 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
 
   return (
     <div className="p-3 md:p-4">
-      <p className="mb-3 text-sm text-muted-foreground">
-        {confirma
-          ? 'Casos com o trabalho concluído, enviados por quem editou. Confira os links e confirme a entrega — o caso encerra e não há como desfazer.'
-          : 'Casos com o trabalho concluído, esperando a entrega à família. Quem confirma é o ADM ou a gestão.'}
-      </p>
-
       {erro && (
         <div className="mb-3">
           <Alerta>{erro}</Alerta>
         </div>
+      )}
+
+      {entregas.length > 0 && (
+        <p className="mb-3 text-sm text-muted-foreground">
+          {confirma
+            ? 'Casos com o trabalho concluído, enviados por quem editou. Confira os links e confirme a entrega — o caso encerra e não há como desfazer.'
+            : 'Casos com o trabalho concluído, esperando a entrega à família. Quem confirma é o ADM ou a gestão.'}
+        </p>
       )}
 
       <ul className="space-y-2">
@@ -248,6 +419,25 @@ export function EntregasPainel({ entregas, etapasPorCaso, hoje }: PropsEntregasP
           />
         ))}
       </ul>
+
+      {/* O FOTO/LIVRO DEPOIS DOS CASOS, com título próprio: a pergunta de quem
+          abre a aba é "o que eu entrego", e os dois respondem — mas o caso fecha
+          um atendimento, e o livro é um objeto que anda sozinho pela esteira. */}
+      {fotolivros.length > 0 && (
+        <section className={entregas.length > 0 ? 'mt-6' : undefined}>
+          <h2 className="mb-2 text-sm font-bold">Foto/Livro</h2>
+          <ul className="space-y-2">
+            {fotolivros.map((item) => (
+              <LinhaDoFotolivro
+                key={`${item.etapa.id}-${item.momento}`}
+                item={item}
+                confirma={confirma}
+                onErro={setErro}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {confirmando && (
         <DialogoConfirmarEntrega

@@ -19,7 +19,7 @@
 -- `comprovantes` continuam sem nenhuma — portanto negados.
 
 begin;
-select plan(13);
+select plan(15);
 
 
 -- =============================================================================
@@ -92,13 +92,15 @@ select ok(
   'avatares é PRIVADO — o retrato também só sai por URL assinada'
 );
 
--- SÓ QUATRO, e todas nomeadas. Uma policy a mais aqui é uma porta que ninguém
+-- SÓ SEIS, e todas nomeadas. Uma policy a mais aqui é uma porta que ninguém
 -- discutiu; contar sem nomear deixaria trocar uma pela outra em silêncio.
+-- Eram quatro (as do avatar) até 21/09/2026, quando a CAPA DO FOTOLIVRO abriu a
+-- primeira porta em `midias` — ver a migration 20260921202848.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects'),
-  4,
-  'exatamente quatro policies em storage.objects — as do avatar, e nada além'
+  6,
+  'exatamente seis policies em storage.objects — as do avatar e as da capa do fotolivro'
 );
 
 select set_eq(
@@ -108,21 +110,42 @@ select set_eq(
     'avatares_leitura_equipe',
     'avatares_upload_proprio',
     'avatares_troca_propria',
-    'avatares_remocao_propria'
+    'avatares_remocao_propria',
+    'midias_fotolivro_leitura',
+    'midias_fotolivro_upload'
   ],
-  'as quatro são as do avatar, pelo nome'
+  'as seis, pelo nome'
 );
 
--- O ponto do arquivo, na forma que importa agora: `midias` e `comprovantes`
--- continuam sem policy, e portanto negados. Foto e vídeo de parto não foram
--- abertos de carona com o retrato.
+-- O ponto do arquivo, na forma que importa agora: `comprovantes` continua sem
+-- policy, e `midias` só abre a pasta `fotolivro/`. Toda policy que menciona
+-- `midias` precisa mencionar a pasta também — foto e vídeo de parto, no resto
+-- do bucket, não foram abertos de carona com a capa.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects'
-      and (qual::text like '%midias%' or with_check::text like '%midias%'
-        or qual::text like '%comprovantes%' or with_check::text like '%comprovantes%')),
+      and (qual::text like '%comprovantes%' or with_check::text like '%comprovantes%')),
   0,
-  'NENHUMA policy menciona midias ou comprovantes — os dois seguem negando tudo'
+  'NENHUMA policy menciona comprovantes — segue negando tudo'
+);
+
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and (coalesce(qual::text, '') || coalesce(with_check::text, '')) like '%midias%'
+      and (coalesce(qual::text, '') || coalesce(with_check::text, '')) not like '%fotolivro%'),
+  0,
+  'toda policy de midias está presa à pasta fotolivro/ — o resto do bucket segue negado'
+);
+
+-- E as duas de `midias` são só leitura e upload: sem UPDATE e sem DELETE,
+-- ninguém troca nem apaga a capa que outra pessoa mandou.
+select set_eq(
+  $$ select cmd::text from pg_policies
+      where schemaname = 'storage' and tablename = 'objects'
+        and policyname like 'midias_%' $$,
+  array['SELECT', 'INSERT'],
+  'midias só tem leitura e upload — nada de troca nem remoção'
 );
 
 
@@ -143,7 +166,7 @@ select is(
     where schemaname = 'storage' and tablename = 'objects'
       and 'anon' = any(roles)),
   0,
-  'NENHUMA policy de storage.objects alcança anon — as quatro são só para authenticated'
+  'NENHUMA policy de storage.objects alcança anon — todas são só para authenticated'
 );
 
 

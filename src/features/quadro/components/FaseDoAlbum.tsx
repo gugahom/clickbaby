@@ -5,15 +5,15 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeDispensar } from '@/components/ui/icones'
 import { useDispensarEtapa, useMoverAlbum } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
-import { CONFIRMAR_FIM_DO_ALBUM } from '../lib/fim-da-edicao'
 import {
   ESTILO_FASE_ALBUM,
   FASES_ALBUM_NA_TELA,
-  FASE_ALBUM_FINAL,
+  FASE_ALBUM_APROVACAO,
   ROTULO_FASE_ALBUM,
   type EtapaQuadro,
   type FaseAlbum,
 } from '../types'
+import { DialogoAprovacaoDoFotolivro } from './DialogoAprovacaoDoFotolivro'
 
 /**
  * A FASE DO FOTOLIVRO — o segundo quadro do Trello, sem virar um Trello.
@@ -30,16 +30,15 @@ import {
  * para onde ele vai agora". A fase é uma pílula na linha, e trocá-la é abrir a
  * lista: dois toques, em qualquer aparelho.
  *
- * NOVE FASES DESDE 16/09/2026 (pedido do gestor), e não dez: "Pronto para
- * entrega" e "Entregue / finalizado" eram redundantes — a mesma queixa que ele
- * fez do vídeo. Ficou UMA fase final, com o rótulo "Pronto para entrega" e o
- * valor `entregue` no banco (é ele que `mover_album` traduz para etapa
- * concluída). Diferente do vídeo, ela NÃO pede link: o fotolivro é objeto
- * físico, entregue na mão da família — não há endereço para colar.
+ * O FIM NÃO SE ESCOLHE AQUI (21/09/2026, pedido do gestor). A última fase do
+ * seletor é "Pronto para entrega", e ela NÃO conclui: o fotolivro vai para
+ * Entregáveis e fica esperando a Morgana confirmar a entrega do livro — é a
+ * confirmação que conclui a etapa e tira o cartão da seção. Entre 16/09 e 21/09
+ * escolher "Pronto para entrega" concluía na hora; ver FASES_ALBUM_NA_TELA.
  *
- * Ela PERGUNTA antes, porque é o fim: com ela a etapa conclui e o cartão sai da
- * seção. Voltar é o "Pedir alteração no Foto/Livro" da linha da etapa no card,
- * que devolve o fotolivro para "Pedido de alterações" sem reabrir o caso.
+ * "AGUARDANDO APROVAÇÃO" ABRE UM DIÁLOGO: a capa e o link que a Morgana manda
+ * ao cliente são obrigatórios para entrar nela (decisão do gestor), e o banco
+ * recusa sem os dois. Ver DialogoAprovacaoDoFotolivro.
  *
  * A LISTA INTEIRA, NOS DOIS SENTIDOS. Um álbum volta de "Aprovado" para "Pedido
  * de alterações" quando a família muda de ideia depois de aprovar, e isso não é
@@ -56,15 +55,18 @@ const DISPENSAR = 'dispensar'
 
 export function FaseDoAlbum({
   etapa,
+  nomeDoCaso,
   onErro,
 }: {
   etapa: EtapaQuadro
+  /** Para o diálogo de aprovação dizer de que família é o livro. */
+  nomeDoCaso: string
   onErro: (mensagem: string | null) => void
 }) {
   const mover = useMoverAlbum()
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
-  const [finalizando, setFinalizando] = useState(false)
+  const [aprovando, setAprovando] = useState(false)
   const atual = etapa.faseAlbum
 
   function mudarFase(fase: FaseAlbum) {
@@ -95,10 +97,9 @@ export function FaseDoAlbum({
             setDispensando(true)
             return
           }
-          // A fase FINAL pergunta antes: ela conclui a etapa e tira o cartão da
-          // seção, e é a única da lista que não tem volta por ela mesma.
-          if (item.id === FASE_ALBUM_FINAL) {
-            setFinalizando(true)
+          // A aprovação pede capa e link antes — ver DialogoAprovacaoDoFotolivro.
+          if (item.id === FASE_ALBUM_APROVACAO) {
+            setAprovando(true)
             return
           }
           mudarFase(item.id as FaseAlbum)
@@ -135,21 +136,12 @@ export function FaseDoAlbum({
         }
       />
 
-      {finalizando && (
-        <Dialogo
-          titulo={CONFIRMAR_FIM_DO_ALBUM.titulo}
-          rotuloConfirmar={
-            mover.isPending ? 'Salvando…' : CONFIRMAR_FIM_DO_ALBUM.rotuloConfirmar
-          }
-          ocupado={mover.isPending}
-          onCancelar={() => setFinalizando(false)}
-          onConfirmar={() => {
-            mudarFase(FASE_ALBUM_FINAL)
-            setFinalizando(false)
-          }}
-        >
-          <p className="text-sm text-muted-foreground">{CONFIRMAR_FIM_DO_ALBUM.texto}</p>
-        </Dialogo>
+      {aprovando && (
+        <DialogoAprovacaoDoFotolivro
+          etapa={etapa}
+          nomeDoCaso={nomeDoCaso}
+          onFechar={() => setAprovando(false)}
+        />
       )}
 
       {dispensando && (

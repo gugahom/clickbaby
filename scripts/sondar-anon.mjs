@@ -119,6 +119,17 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',
   },
+  // O Foto/Livro em aprovação (20260921202848). Quem alcançasse a primeira
+  // apontaria a prova de uma família para um link qualquer; a segunda tiraria
+  // o livro da fila do ADM sem ninguém ter mandado.
+  enviar_fotolivro_para_aprovacao: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_link: 'https://sonda.test',
+    p_capa: 'fotolivro/sonda.png',
+  },
+  marcar_fotolivro_enviado: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+  },
   // Despesas: quem alcançasse estas RPCs lançaria ou apagaria gasto de
   // qualquer caso, e o relatório do financeiro somaria o que ele quisesse.
   registrar_despesa: {
