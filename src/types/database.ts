@@ -1057,6 +1057,10 @@ export type Database = {
         Returns: string
       }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      confirmar_entrega_do_video: {
+        Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
       devolver_para_o_quadro: {
         Args: { p_caso_id: string; p_motivo: string }
@@ -1074,8 +1078,12 @@ export type Database = {
         Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
         Returns: undefined
       }
-      finalizar_video_master: {
-        Args: { p_caso_etapa_id: string; p_url: string }
+      enviar_video_para_entrega: {
+        Args: {
+          p_caso_etapa_id: string
+          p_link_video: string
+          p_link_wetransfer: string
+        }
         Returns: undefined
       }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
@@ -1271,6 +1279,7 @@ export type Database = {
         | "reels"
         | "album"
         | "video"
+        | "video_wetransfer"
       turno: "diurno" | "noturno" | "comercial"
     }
     CompositeTypes: {
@@ -1474,6 +1483,7 @@ export const Constants = {
         "reels",
         "album",
         "video",
+        "video_wetransfer",
       ],
       turno: ["diurno", "noturno", "comercial"],
     },

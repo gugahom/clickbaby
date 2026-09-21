@@ -345,16 +345,31 @@ export function useMoverVideoMaster() {
 }
 
 /**
- * FINALIZA o vídeo do MASTER com o link, numa transação só (migration
- * 20260916180834).
+ * TERMINA A EDIÇÃO DO VÍDEO DO MASTER (migration 20260921211604).
  *
- * "Pronto para entrega" e "Enviado / finalizado" eram duas fases para o mesmo
- * momento. Agora são uma, e ela cobra o endereço: sem link o vídeo não termina,
- * pelo mesmo motivo que o envio para Entregáveis cobra o link do Google.
+ * Os dois links que o gestor exige — o do vídeo e o WeTransfer — e a ida para
+ * "Pronto para entrega", numa transação só. O vídeo NÃO conclui: fica na seção
+ * e aparece em Entregáveis, e só a confirmação da Morgana o tira de lá. Até
+ * 21/09 havia `finalizar_video_master`, que pedia um link só e concluía na hora.
  */
-export function useFinalizarVideoMaster() {
-  return useAcaoDoQuadro<{ casoEtapaId: string; url: string }>(({ casoEtapaId, url }) =>
-    chamar('finalizar_video_master', { p_caso_etapa_id: casoEtapaId, p_url: url }),
+export function useEnviarVideoParaEntrega() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; linkVideo: string; linkWetransfer: string }>(
+    ({ casoEtapaId, linkVideo, linkWetransfer }) =>
+      chamar('enviar_video_para_entrega', {
+        p_caso_etapa_id: casoEtapaId,
+        p_link_video: linkVideo.trim(),
+        p_link_wetransfer: linkWetransfer.trim(),
+      }),
+  )
+}
+
+/**
+ * A MORGANA CONFIRMA A ENTREGA DO VÍDEO, em Entregáveis: a etapa conclui, os
+ * dois links viram confirmados, e o cartão sai da seção MASTER.
+ */
+export function useConfirmarEntregaDoVideo() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('confirmar_entrega_do_video', { p_caso_etapa_id: casoEtapaId }),
   )
 }
 

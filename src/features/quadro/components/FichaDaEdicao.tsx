@@ -79,6 +79,17 @@ export function FichaDaEdicao({
           <div className="min-w-0 space-y-6">
             {tipo === 'fotolivro' && <AprovacaoDoFotolivro etapa={etapa} />}
 
+            {/* O VÍDEO TERMINADO espera em Entregáveis (21/09/2026) — a ficha
+                diz onde ele está, e os dois links estão em "Links do caso". */}
+            {tipo === 'master' && etapa.status === 'pronto_para_entrega' && (
+              <Bloco titulo="Entrega">
+                <p className="text-sm font-medium">
+                  Edição finalizada. O vídeo está na aba Entregáveis, esperando o ADM
+                  confirmar a entrega — os links estão em “Links do caso”, logo abaixo.
+                </p>
+              </Bloco>
+            )}
+
             <Bloco titulo="Pedidos do cliente">
               {etapa.observacao ? (
                 <p className="rounded-md border-l-[3px] border-atencao bg-atencao/12 px-3 py-2 text-sm whitespace-pre-line">

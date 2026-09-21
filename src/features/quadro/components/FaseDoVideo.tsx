@@ -3,13 +3,9 @@ import clsx from 'clsx'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeCheck, IconeDispensar } from '@/components/ui/icones'
-import {
-  useDispensarEtapa,
-  useFinalizarVideoMaster,
-  useMoverVideoMaster,
-} from '../api/useAcoes'
+import { useDispensarEtapa, useMoverVideoMaster } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
-import { CONFIRMAR_FIM_DO_VIDEO } from '../lib/fim-da-edicao'
+import { DialogoFinalizarVideo } from './DialogoFinalizarVideo'
 import {
   FASES_VIDEO_NA_TELA,
   FASE_VIDEO_FINAL,
@@ -49,10 +45,12 @@ import {
  * segunda coluna só afirmava que alguém tinha mandado o link, que é justamente
  * o que ninguém registrava.
  *
- * Agora "Pronto para entrega" É o fim, e ele cobra o LINK do vídeo — a mesma
- * troca que o envio para Entregáveis faz com o link do Google. Com o link, a
- * etapa conclui e o cartão sai da seção (`finalizar_video_master`, migration
- * 20260916180834, que faz as duas coisas na mesma transação).
+ * "PRONTO PARA ENTREGA" É TERMINAR A EDIÇÃO, e não o fim (21/09/2026, pedido do
+ * gestor). Escolhê-lo abre o pedido dos DOIS links — o do vídeo e o WeTransfer
+ * (DialogoFinalizarVideo) —, e o vídeo vai para Entregáveis, sinalizado como
+ * VÍDEO. Ele FICA na seção, em pronto, até a Morgana confirmar a entrega; é a
+ * confirmação que conclui a etapa e tira o cartão daqui. De 16/09 a 21/09 esta
+ * escolha pedia um link só e concluía na hora.
  *
  * NOS DOIS SENTIDOS, e a lista inteira sempre visível. Um vídeo volta de
  * ALTERAÇÕES para EDITANDO, e um vídeo FINALIZADO volta para ALTERAÇÕES quando
@@ -74,18 +72,18 @@ const DISPENSAR = 'dispensar'
 
 export function FaseDoVideo({
   etapa,
+  nomeDoCaso,
   onErro,
 }: {
   etapa: EtapaQuadro
+  /** Para o diálogo de finalizar dizer de que família é o vídeo. */
+  nomeDoCaso: string
   onErro: (mensagem: string | null) => void
 }) {
   const mover = useMoverVideoMaster()
-  const finalizar = useFinalizarVideoMaster()
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
-  const [link, setLink] = useState('')
-  const [erroDialogo, setErroDialogo] = useState<string | null>(null)
   const atual = faseDoVideo(etapa.status)
 
   return (
@@ -101,12 +99,11 @@ export function FaseDoVideo({
             setDispensando(true)
             return
           }
-          // A FASE FINAL não é uma fase que se escolhe: escolhê-la é
-          // finalizar, e finalizar cobra o link.
+          // PRONTO não é uma fase que se escolhe: escolhê-la é terminar a
+          // edição, e terminar cobra os dois links. Já em pronto, reafirmar não
+          // faz nada — o vídeo está esperando o ADM.
           if (item.id === FASE_VIDEO_FINAL) {
-            setErroDialogo(null)
-            setLink('')
-            setFinalizando(true)
+            if (etapa.status !== FASE_VIDEO_FINAL) setFinalizando(true)
             return
           }
           mover
@@ -152,40 +149,11 @@ export function FaseDoVideo({
       />
 
       {finalizando && (
-        <Dialogo
-          titulo={CONFIRMAR_FIM_DO_VIDEO.titulo}
-          rotuloConfirmar={
-            finalizar.isPending ? 'Finalizando…' : CONFIRMAR_FIM_DO_VIDEO.rotuloConfirmar
-          }
-          confirmarDesabilitado={link.trim() === ''}
-          ocupado={finalizar.isPending}
-          erro={erroDialogo}
-          onCancelar={() => setFinalizando(false)}
-          onConfirmar={() => {
-            setErroDialogo(null)
-            finalizar
-              .mutateAsync({ casoEtapaId: etapa.id, url: link.trim() })
-              .then(
-                () => setFinalizando(false),
-                (e) => setErroDialogo(mensagemDeErro(e)),
-              )
-          }}
-        >
-          <p className="text-sm text-muted-foreground">{CONFIRMAR_FIM_DO_VIDEO.texto}</p>
-
-          <label className="block">
-            <span className="text-sm font-medium">{CONFIRMAR_FIM_DO_VIDEO.campo.rotulo}</span>
-            <input
-              type="url"
-              inputMode="url"
-              autoFocus
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder={CONFIRMAR_FIM_DO_VIDEO.campo.placeholder}
-              className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background px-3 text-base"
-            />
-          </label>
-        </Dialogo>
+        <DialogoFinalizarVideo
+          etapa={etapa}
+          nomeDoCaso={nomeDoCaso}
+          onFechar={() => setFinalizando(false)}
+        />
       )}
 
       {dispensando && (
@@ -223,9 +191,8 @@ export function FaseDoVideo({
  * A cor diz em que pé está, e reusa os tokens que já significam isso na tela.
  *
  * PRONTO PARA ENTREGA usa `--pronto`, o token que o Quadro já usa para o caso
- * que terminou o trabalho e espera uma pessoa. Ele só aparece em vídeo antigo:
- * desde 16/09/2026 a tela não escreve mais essa fase — quem passa por "pronto
- * para entrega" já sai finalizado, com o link.
+ * que terminou o trabalho e espera uma pessoa — e desde 21/09/2026 é exatamente
+ * isso: o vídeo terminado, em Entregáveis, esperando a Morgana.
  */
 const ESTILO_FASE: Record<FaseVideoMaster, string> = {
   em_andamento: 'bg-andamento/12 text-andamento-tinta',

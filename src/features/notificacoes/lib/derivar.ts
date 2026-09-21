@@ -332,6 +332,26 @@ export function derivarNotificacoes({
         }
       }
 
+      // O VÍDEO DO MASTER TERMINADO (21/09/2026), em Entregáveis esperando o
+      // ADM confirmar a entrega. Mesmo tipo da entrega do caso e do fotolivro.
+      if (
+        etapa.tipo === 'edicao_video' &&
+        etapa.status === 'pronto_para_entrega' &&
+        ehAdmOuAtendimento(papel)
+      ) {
+        lista.push({
+          id: `video-entrega:${etapa.id}`,
+          tipo: 'entrega',
+          familia: 'geral',
+          peso: ORDEM.entrega,
+          titulo: 'Vídeo do MASTER pronto para entregar',
+          detalhe: 'Na aba Entregáveis',
+          casoId: caso.id,
+          casoNome: nome,
+          em: quando(etapa),
+        })
+      }
+
       // EDIÇÃO LIBERADA QUE NINGUÉM PEGOU — o anel vermelho da seção REELS.
       // Só edição: em campo, "pendente" é o estado normal de quem ainda vai
       // acontecer, e o alerta de horário já cobre a hora marcada.

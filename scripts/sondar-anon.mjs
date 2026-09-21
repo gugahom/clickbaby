@@ -102,11 +102,16 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_fase: null,
   },
-  // Finaliza o vídeo do MASTER e grava um link de entrega (20260916180834).
-  // Quem alcançasse isto poria endereço de galeria em caso alheio.
-  finalizar_video_master: {
+  // O vídeo do MASTER por Entregáveis (20260921211604; substituiu
+  // finalizar_video_master). Quem alcançasse a primeira poria endereço de
+  // galeria em caso alheio; a segunda daria por entregue um vídeo alheio.
+  enviar_video_para_entrega: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
-    p_url: 'https://sonda.test',
+    p_link_video: 'https://sonda.test',
+    p_link_wetransfer: 'https://sonda.test',
+  },
+  confirmar_entrega_do_video: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
   // A marca do sino (20260917215442). Sem argumento de propósito: ela só
   // marca o sino de quem chama. Para o visitante, nem isso.

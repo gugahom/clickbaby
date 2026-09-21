@@ -176,7 +176,7 @@ select lives_ok(
          (select ce.id from public.caso_etapas ce
             join public.casos c on c.id = ce.caso_id
            where c.mae_nome = 'Mae Master Video' and ce.tipo = 'edicao_video'),
-         'pronto_para_entrega'),
+         'em_alteracao'),
   'VM5: dá para mover a fase do vídeo mesmo com o caso encerrado'
 );
 
