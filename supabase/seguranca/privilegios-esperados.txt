@@ -21,10 +21,12 @@ GRANT ALL ON FUNCTION public.dispensar_etapa(p_caso_etapa_id uuid, p_motivo text
 GRANT ALL ON FUNCTION public.eh_adm() TO authenticated;
 GRANT ALL ON FUNCTION public.eh_atendimento() TO authenticated;
 GRANT ALL ON FUNCTION public.eh_pessoa_ativa() TO authenticated;
+GRANT ALL ON FUNCTION public.enviar_fotolivro_para_aprovacao(p_caso_etapa_id uuid, p_link text, p_capa text) TO authenticated;
 GRANT ALL ON FUNCTION public.finalizar_video_master(p_caso_etapa_id uuid, p_url text) TO authenticated;
 GRANT ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.liberar_para_entrega(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.limpar_notificacoes_gerais() TO authenticated;
+GRANT ALL ON FUNCTION public.marcar_fotolivro_enviado(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.marcar_notificacoes_vistas() TO authenticated;
 GRANT ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) TO authenticated;
@@ -89,12 +91,14 @@ REVOKE ALL ON FUNCTION public.dispensar_etapa(p_caso_etapa_id uuid, p_motivo tex
 REVOKE ALL ON FUNCTION public.eh_adm() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.eh_atendimento() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.eh_pessoa_ativa() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.enviar_fotolivro_para_aprovacao(p_caso_etapa_id uuid, p_link text, p_capa text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.finalizar_video_master(p_caso_etapa_id uuid, p_url text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_caso_etapas() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_segunda_rodada_de_edicao() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.liberar_para_entrega(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.limpar_notificacoes_gerais() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.marcar_fotolivro_enviado(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.marcar_notificacoes_vistas() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) FROM PUBLIC;

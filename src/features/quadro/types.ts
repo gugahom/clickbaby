@@ -172,6 +172,18 @@ export interface EtapaQuadro {
   baixouPorNome: string | null
   uploadPorId: string | null
   uploadPorNome: string | null
+  /**
+   * O FOTOLIVRO EM APROVAÇÃO (21/09/2026). Link da prova que vai ao cliente, e o
+   * CAMINHO da capa no bucket privado `midias` — a imagem se lê por URL
+   * assinada, que não se guarda. Nulos em toda etapa que não seja `album`.
+   */
+  fotolivroLink: string | null
+  fotolivroCapa: string | null
+  /**
+   * Quando a Morgana mandou a prova ao cliente ("Enviado ao cliente", em
+   * Entregáveis). Nulo com a fase em aprovação = o livro está na fila do ADM.
+   */
+  fotolivroEnviadoEm: string | null
 }
 
 /** O que uma carga do Quadro devolve — o Quadro, a aba Concluídos, ou só alguns casos. */
@@ -275,6 +287,9 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     // inicial com esse nome, e a migration 20260915134638 a reaproveitou.
     uploadPorId: linha.subiu_por,
     uploadPorNome: linha.subiu?.nome ?? null,
+    fotolivroLink: linha.fotolivro_link,
+    fotolivroCapa: linha.fotolivro_capa,
+    fotolivroEnviadoEm: linha.fotolivro_enviado_em,
   }
 }
 
@@ -504,20 +519,41 @@ export const FASES_ALBUM = [
 export type FaseAlbum = (typeof FASES_ALBUM)[number]
 
 /**
- * A FASE FINAL DO FOTOLIVRO, e a lista que o seletor mostra (16/09/2026,
- * pedido do gestor).
+ * A LISTA QUE O SELETOR MOSTRA — todas menos `entregue` (21/09/2026, pedido do
+ * gestor).
  *
- * Eram duas fases no fim — "Pronto para entrega" e "Entregue / finalizado" —, e
- * a queixa foi a mesma do vídeo: redundantes. Ficou UMA, com o rótulo "Pronto
- * para entrega" e o valor `entregue` no banco, que é o que `mover_album`
- * traduz para etapa concluída. O valor `pronto_para_entrega` continua no enum
- * (fase de banco não se apaga) e some do seletor.
+ * A história tem duas voltas. Até 16/09 havia "Pronto para entrega" e "Entregue
+ * / finalizado", e o gestor as juntou por redundância: a equipe marcava as duas
+ * no mesmo minuto. Em 21/09 ENTRE as duas passou a existir a conferência em
+ * Entregáveis — o fotolivro pronto vai para lá, e a Morgana confirma a entrega
+ * do livro. Então `pronto_para_entrega` volta a ser fase de verdade (fica
+ * aberta, esperando), e `entregue` deixa de ser fase que se escolhe: é o que a
+ * confirmação em Entregáveis grava (`mover_album` recusa quem não for
+ * atendimento ou adm, e recusa de qualquer fase que não seja a de pronto).
  */
-export const FASE_ALBUM_FINAL: FaseAlbum = 'entregue'
-
 export const FASES_ALBUM_NA_TELA: readonly FaseAlbum[] = FASES_ALBUM.filter(
-  (fase) => fase !== 'pronto_para_entrega',
+  (fase) => fase !== 'entregue',
 )
+
+/**
+ * A fase em que o fotolivro entra só pelo diálogo de capa e link
+ * (`enviar_fotolivro_para_aprovacao`) — pelo seletor, por arrastar e pelo
+ * "concluir" do cartão.
+ */
+export const FASE_ALBUM_APROVACAO: FaseAlbum = 'aguardando_aprovacao'
+
+/**
+ * As fases ANTES da aprovação: nelas o "concluir" do cartão significa "terminei
+ * a diagramação" e abre o envio para aprovação. Depois dela o cartão não
+ * conclui nada — quem anda é a fase, e o fim é a confirmação em Entregáveis.
+ */
+export const FASES_ALBUM_ANTES_DA_APROVACAO = new Set<FaseAlbum>([
+  'aguardando_pagamento',
+  'aguardando_diagramacao',
+  'diagramando',
+  'enviar_para_aprovacao',
+  'pedido_de_alteracoes',
+])
 
 /**
  * Os nomes como estão no Trello deles, não uma tradução nossa.
@@ -536,9 +572,10 @@ export const ROTULO_FASE_ALBUM: Record<FaseAlbum, string> = {
   aprovado: 'Aprovado pelo cliente',
   enviado_grafica: 'Pago e enviado para a gráfica',
   pronto_para_entrega: 'Pronto para entrega',
-  // O FIM, desde 16/09/2026. Mesmo rótulo da fase antiga de propósito: para a
-  // equipe é o mesmo momento, e era a duplicidade que o gestor quis tirar.
-  entregue: 'Pronto para entrega',
+  // O FIM, gravado pela confirmação em Entregáveis (21/09/2026). Entre 16/09 e
+  // 21/09 tinha o mesmo rótulo de "Pronto para entrega", porque as duas eram o
+  // mesmo momento; agora a conferência da Morgana as separa.
+  entregue: 'Entregue',
 }
 
 /**

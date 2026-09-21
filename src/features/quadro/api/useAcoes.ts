@@ -372,6 +372,96 @@ export function useMoverAlbum() {
   )
 }
 
+/** Os formatos da capa: "png simples, podendo até ser um print da tela". */
+export const TIPOS_DA_CAPA = ['image/png', 'image/jpeg', 'image/webp']
+
+/**
+ * 5 MB. O bucket aceita bem mais (é o de vídeo de parto); este teto é da capa,
+ * que é uma imagem só, e existe para recusar antes de subir.
+ */
+export const TAMANHO_MAXIMO_DA_CAPA = 5 * 1024 * 1024
+
+/**
+ * MANDA O FOTOLIVRO PARA APROVAÇÃO DO CLIENTE (migration 20260921202848).
+ *
+ * Dois passos, como a foto de perfil: o ARQUIVO vai direto do navegador para o
+ * bucket privado `midias`, na pasta desta etapa (é o que a policy de upload
+ * confere); o CAMINHO e o link vão pela RPC, que grava os dois e move a fase na
+ * mesma transação.
+ *
+ * `arquivo` nulo reaproveita a capa que já está gravada — é o caminho de volta
+ * depois de um pedido de alterações em que a capa não mudou.
+ *
+ * O NOME DO ARQUIVO LEVA CARIMBO DE TEMPO, pela mesma razão do retrato: um
+ * caminho fixo traria de volta a capa antiga do cache do navegador. A antiga
+ * fica no bucket — sem policy de remoção, ninguém apaga a capa de outra pessoa.
+ */
+export function useEnviarFotolivroParaAprovacao() {
+  return useAcaoDoQuadro<{
+    casoEtapaId: string
+    link: string
+    arquivo: File | null
+    capaAtual: string | null
+  }>(async ({ casoEtapaId, link, arquivo, capaAtual }) => {
+    let capa = capaAtual
+
+    if (arquivo) {
+      if (!TIPOS_DA_CAPA.includes(arquivo.type)) {
+        throw new Error('A capa precisa ser uma imagem PNG, JPG ou WEBP.')
+      }
+      if (arquivo.size > TAMANHO_MAXIMO_DA_CAPA) {
+        throw new Error('A imagem da capa precisa ter no máximo 5 MB.')
+      }
+      const extensao =
+        arquivo.type === 'image/png' ? 'png' : arquivo.type === 'image/webp' ? 'webp' : 'jpg'
+      capa = `fotolivro/${casoEtapaId}/${Date.now()}.${extensao}`
+
+      const { error } = await supabase.storage
+        .from('midias')
+        .upload(capa, arquivo, { contentType: arquivo.type })
+      if (error) throw new Error(`Não foi possível enviar a capa: ${error.message}`)
+    }
+
+    if (!capa) throw new Error('Falta a imagem da capa do Foto/Livro.')
+
+    await chamar('enviar_fotolivro_para_aprovacao', {
+      p_caso_etapa_id: casoEtapaId,
+      p_link: link.trim(),
+      p_capa: capa,
+    })
+  })
+}
+
+/**
+ * "ENVIADO AO CLIENTE" (migration 20260921202848): a Morgana mandou a prova, e o
+ * fotolivro sai de Entregáveis. Na seção ele continua em "Aguardando aprovação".
+ */
+export function useMarcarFotolivroEnviado() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('marcar_fotolivro_enviado', { p_caso_etapa_id: casoEtapaId }),
+  )
+}
+
+/**
+ * A URL assinada da CAPA. Uma hora, como o retrato: a capa tem foto do bebê
+ * (seção 10 do CLAUDE.md), e o link não vale muito se vazar. A query guarda o
+ * resultado por menos que isso, então a URL nunca expira em tela.
+ */
+export function useUrlDaCapa(caminho: string | null) {
+  return useQuery({
+    queryKey: ['capa-do-fotolivro', caminho ?? ''],
+    enabled: Boolean(caminho),
+    staleTime: 55 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from('midias')
+        .createSignedUrl(caminho as string, 60 * 60)
+      if (error) throw error
+      return data.signedUrl
+    },
+  })
+}
+
 /**
  * PEDIDO DE ALTERAÇÃO do vídeo ou do Foto/Livro (migration 20260916215022).
  *

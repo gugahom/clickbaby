@@ -310,6 +310,28 @@ export function derivarNotificacoes({
         })
       }
 
+      // O FOTO/LIVRO ESPERANDO O ADM (21/09/2026) — as duas passagens por
+      // Entregáveis: a prova para mandar ao cliente, e o livro pronto. Mesmo
+      // tipo da entrega do caso: é o mesmo trabalho, na mesma aba, do mesmo papel.
+      if (etapa.tipo === 'album' && ehAdmOuAtendimento(papel)) {
+        const paraAprovar =
+          etapa.faseAlbum === 'aguardando_aprovacao' && etapa.fotolivroEnviadoEm === null
+        const pronto = etapa.faseAlbum === 'pronto_para_entrega'
+        if (paraAprovar || pronto) {
+          lista.push({
+            id: `fotolivro-${paraAprovar ? 'aprovacao' : 'entrega'}:${etapa.id}`,
+            tipo: 'entrega',
+            familia: 'geral',
+            peso: ORDEM.entrega,
+            titulo: paraAprovar ? 'Foto/Livro para mandar ao cliente' : 'Foto/Livro pronto para entregar',
+            detalhe: 'Na aba Entregáveis',
+            casoId: caso.id,
+            casoNome: nome,
+            em: quando(etapa),
+          })
+        }
+      }
+
       // EDIÇÃO LIBERADA QUE NINGUÉM PEGOU — o anel vermelho da seção REELS.
       // Só edição: em campo, "pendente" é o estado normal de quem ainda vai
       // acontecer, e o alerta de horário já cobre a hora marcada.

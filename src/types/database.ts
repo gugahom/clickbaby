@@ -46,6 +46,10 @@ export type Database = {
           created_at: string
           estacao: string | null
           fase_album: Database["public"]["Enums"]["fase_album"] | null
+          fotolivro_capa: string | null
+          fotolivro_enviado_em: string | null
+          fotolivro_enviado_por: string | null
+          fotolivro_link: string | null
           id: string
           iniciado_em: string | null
           observacao: string | null
@@ -73,6 +77,10 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fotolivro_capa?: string | null
+          fotolivro_enviado_em?: string | null
+          fotolivro_enviado_por?: string | null
+          fotolivro_link?: string | null
           id?: string
           iniciado_em?: string | null
           observacao?: string | null
@@ -100,6 +108,10 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fotolivro_capa?: string | null
+          fotolivro_enviado_em?: string | null
+          fotolivro_enviado_por?: string | null
+          fotolivro_link?: string | null
           id?: string
           iniciado_em?: string | null
           observacao?: string | null
@@ -157,6 +169,13 @@ export type Database = {
             columns: ["caso_id"]
             isOneToOne: false
             referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_fotolivro_enviado_por_fkey"
+            columns: ["fotolivro_enviado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
             referencedColumns: ["id"]
           },
           {
@@ -1051,6 +1070,10 @@ export type Database = {
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
+      enviar_fotolivro_para_aprovacao: {
+        Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
+        Returns: undefined
+      }
       finalizar_video_master: {
         Args: { p_caso_etapa_id: string; p_url: string }
         Returns: undefined
@@ -1058,6 +1081,10 @@ export type Database = {
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       limpar_notificacoes_gerais: { Args: never; Returns: string }
+      marcar_fotolivro_enviado: {
+        Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
       marcar_notificacoes_vistas: { Args: never; Returns: string }
       mover_album: {
         Args: {

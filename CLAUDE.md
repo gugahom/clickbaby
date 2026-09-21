@@ -369,6 +369,8 @@ finalizar_video_master(p_caso_etapa_id, p_url)   -- link + conclusão na mesma t
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
+enviar_fotolivro_para_aprovacao(p_caso_etapa_id, p_link, p_capa) -- capa + link + fase, juntos
+marcar_fotolivro_enviado(p_caso_etapa_id)        -- "Enviado ao cliente"; atendimento/adm
 
 -- pedido de alteração pós-entrega, SÓ das duas com seção própria (ver seção 13)
 pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
@@ -742,6 +744,10 @@ Regras não negociáveis:
   anonimização, não um `delete` direto. Esse fluxo **ainda não existe** — é dívida registrada,
   não implementação pendente de tarefa imediata.
 - Buckets do Storage são **privados**. Comprovantes e mídias só via signed URL de curta duração.
+  **`midias` abriu UMA pasta em 21/09/2026** (`20260921202848`): `fotolivro/`, para a capa do
+  fotolivro, com leitura e upload para pessoa ativa e upload só na pasta de uma etapa que é
+  fotolivro. Sem update nem delete. O resto do bucket — foto e vídeo de parto — segue negado, e
+  `buckets_privados.test.sql` afirma isso por nome.
   Os buckets são **versionados** na migration `20260825062852` — criar bucket pelo painel web
   deixa o local sem ele e transforma "privado" numa configuração que um clique inverte sem
   rastro. `npm run auditar:storage` confere o remoto; o pgTAP falha se algum virar público.
@@ -1149,6 +1155,44 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **NO FOTO/LIVRO, o fim é confirmação simples**, sem link: o fotolivro é objeto físico. São
   nove fases na tela; `pronto_para_entrega` sumiu do seletor e o fim é `entregue`, agora
   rotulado "Pronto para entrega". O valor continua no enum — fase de banco não se apaga.
+  **REVISTO EM 21/09/2026:** o fim do fotolivro voltou a ter duas fases, com a conferência da
+  Morgana no meio — ver "O FOTOLIVRO PASSA POR ENTREGÁVEIS DUAS VEZES", logo abaixo.
+- **O FOTOLIVRO PASSA POR ENTREGÁVEIS DUAS VEZES** (21/09/2026, pedido do gestor, migration
+  `20260921202848`). O fluxo, nas palavras dele: terminada a diagramação, o fotolivro vai para
+  Entregáveis "sinalizado como foto livro, pois a Morgana irá pegar o link e enviar para o
+  cliente"; na seção ele FICA em "Aguardando aprovação"; aprovado, a Morgana segue arrastando
+  (pago, gráfica); dez dias depois vai para "Pronto para entrega" e "mais uma vez vai para
+  Entregáveis". Até aqui o "concluir" do cartão chamava `concluir_etapa` e o livro inteiro
+  acabava — "o card simplesmente se move sozinho" —, e escolher a fase final também concluía.
+  **A APROVAÇÃO EXIGE CAPA E LINK** (decisão do gestor: os dois obrigatórios). A capa é "png
+  simples, podendo até ser um print da tela" — o diálogo (`DialogoAprovacaoDoFotolivro`) aceita
+  arquivo ou Ctrl+V do print. Ela sobe para o bucket privado `midias`, na pasta
+  `fotolivro/<caso_etapa_id>/`, e a etapa guarda só o CAMINHO (`fotolivro_capa`); o link fica em
+  `fotolivro_link`. Colunas próprias, e não um entregável: a prova vai e volta com o cliente, não
+  é o link final da família. Nomes com `fotolivro` porque "álbum" também é a galeria do Google
+  (ver a armadilha acima). `enviar_fotolivro_para_aprovacao` grava os dois e move a fase NA
+  MESMA TRANSAÇÃO, delegando a fase a `mover_album` — e `mover_album` recusa entrar em aprovação
+  sem os dois, para quem não passar pelo diálogo. Os três caminhos da tela abrem o mesmo
+  diálogo: o seletor, o arrastar e o "concluir" do cartão (que, antes da aprovação, passou a ser
+  "terminar a diagramação e mandar para aprovação"; depois dela o cartão não conclui nada).
+  **"ENVIADO AO CLIENTE" TIRA O LIVRO DE ENTREGÁVEIS** (decisão do gestor), e só ele: na seção o
+  cartão continua em "Aguardando aprovação", com a pílula "Enviado ao cliente" no lugar de "Na
+  fila do ADM". `marcar_fotolivro_enviado` é do atendimento ou adm (a Morgana é atendimento) e
+  idempotente. Uma prova NOVA — a volta de um pedido de alterações — zera o carimbo e o livro
+  volta para a fila.
+  **"PRONTO PARA ENTREGA" VOLTOU A SER FASE, e "ENTREGUE" VIROU CONFIRMAÇÃO** (decisão do
+  gestor). Em 16/09 as duas viraram uma só por redundância; agora entre elas existe a
+  conferência. Pronto fica ABERTO (pausada) e aparece em Entregáveis; "Confirmar entrega" ali
+  grava `entregue`, conclui a etapa e tira o cartão da seção. `mover_album` recusa `entregue` de
+  quem não é atendimento ou adm, e de qualquer fase que não seja pronto. O seletor mostra todas
+  as fases menos `entregue`, e o quadro por fase perdeu a coluna de saída do fotolivro.
+  **O banco NÃO recusa `concluir_etapa` no fotolivro**: a tela não o oferece mais, e reescrever
+  a RPC mais usada do sistema por um caminho que nenhuma tela chama não compensava. É o arranjo
+  de sempre, a tela mais estrita que o banco.
+  **A aba Entregáveis** mostra os livros numa seção própria, "Foto/Livro", depois dos casos, em
+  cor da marca (o verde diz "fechar o caso", e o caso pode estar encerrado há semanas). A
+  contagem e o anel da aba somam os dois. O sino avisa atendimento e adm com o mesmo tipo da
+  entrega de caso.
 - **PRAZO E PEDIDOS NO CARTÃO DE EDIÇÃO** (16/09/2026, pedido do gestor). Ao lado da fase, duas
   pastilhas novas no vídeo e no fotolivro:
   **PRAZO** (`PrazoDaEtapa`) é a "Data Entrega" do Trello deles: um `datetime-local` que grava

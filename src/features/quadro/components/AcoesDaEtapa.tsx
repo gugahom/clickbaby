@@ -11,6 +11,15 @@ interface PropsAcoesDaEtapa {
   /** Todas as etapas do caso: a precedência depende delas, não só desta. */
   etapas: EtapaQuadro[]
   onErro: (mensagem: string | null) => void
+  /**
+   * O QUE O "CONCLUIR" FAZ, quando não é concluir a etapa (21/09/2026).
+   *
+   * No Foto/Livro, terminar a diagramação não termina a etapa: manda a prova
+   * para aprovação do cliente (ver DialogoAprovacaoDoFotolivro), e o livro segue
+   * na esteira. `null` esconde o botão — depois da aprovação o cartão não
+   * conclui nada, quem anda é a fase. Ausente, é o concluir de sempre.
+   */
+  concluirComo?: { rotulo: string; aoTocar: () => void } | null
 }
 
 /**
@@ -36,7 +45,7 @@ interface PropsAcoesDaEtapa {
  * a Entregáveis (`DialogoConfirmarEntrega`) — nos dois caminhos de uma vez,
  * porque aqui não há mais nada a pedir.
  */
-export function AcoesDaEtapa({ etapa, etapas, onErro }: PropsAcoesDaEtapa) {
+export function AcoesDaEtapa({ etapa, etapas, onErro, concluirComo }: PropsAcoesDaEtapa) {
   const iniciar = useIniciarEtapa()
   const pausar = usePausarEtapa()
   const concluir = useConcluirEtapa()
@@ -79,15 +88,26 @@ export function AcoesDaEtapa({ etapa, etapas, onErro }: PropsAcoesDaEtapa) {
         </BotaoIcone>
       )}
 
-      <BotaoIcone
-        rotulo="Concluir edição"
-        tom="positivo"
-        disabled={ocupado || !conclusao.habilitada}
-        motivo={conclusao.motivo}
-        onClick={() => executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))}
-      >
-        <IconeCheck className="size-[18px]" />
-      </BotaoIcone>
+      {concluirComo === undefined ? (
+        <BotaoIcone
+          rotulo="Concluir edição"
+          tom="positivo"
+          disabled={ocupado || !conclusao.habilitada}
+          motivo={conclusao.motivo}
+          onClick={() => executar(concluir.mutateAsync({ casoEtapaId: etapa.id }))}
+        >
+          <IconeCheck className="size-[18px]" />
+        </BotaoIcone>
+      ) : concluirComo !== null ? (
+        <BotaoIcone
+          rotulo={concluirComo.rotulo}
+          tom="positivo"
+          disabled={ocupado}
+          onClick={concluirComo.aoTocar}
+        >
+          <IconeCheck className="size-[18px]" />
+        </BotaoIcone>
+      ) : null}
     </div>
   )
 }
