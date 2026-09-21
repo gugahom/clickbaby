@@ -9,6 +9,7 @@ import { IconeDesfazer } from '@/components/ui/icones'
 import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import {
   useConfirmarEntrega,
+  useConfirmarEntregaDoVideo,
   useDevolverParaOQuadro,
   useEntregaveis,
   useMarcarFotolivroEnviado,
@@ -35,13 +36,164 @@ export interface FotolivroNaEntrega {
   momento: 'aprovacao' | 'entrega'
 }
 
+/**
+ * UM VÍDEO DO MASTER ESPERANDO O ADM (21/09/2026, pedido do gestor): terminado,
+ * com o link do vídeo e o WeTransfer, em "Pronto para entrega" na seção.
+ */
+export interface VideoNaEntrega {
+  caso: CasoQuadro
+  etapa: EtapaQuadro
+}
+
 interface PropsEntregasPainel {
   /** Casos ENVIADOS e ainda abertos, na ordem em que foram enviados. */
   entregas: CasoQuadro[]
   /** Os Foto/Livros esperando o ADM — ver FotolivroNaEntrega. */
   fotolivros: FotolivroNaEntrega[]
+  /** Os vídeos do MASTER esperando o ADM — ver VideoNaEntrega. */
+  videos: VideoNaEntrega[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   hoje: string
+}
+
+/**
+ * UMA LINHA DE VÍDEO. "Sinalizado como VÍDEO", nas palavras do gestor, "porque
+ * as fotos já foram entregues e o primeiro card já foi — o que está passando
+ * mais uma vez nos entregáveis é apenas o vídeo. A Morgana precisa ver isso
+ * visualmente." Por isso o selo sólido no alto, a cor própria (o azul do
+ * andamento, nem o verde do caso nem a marca do fotolivro), e a frase dizendo
+ * que as fotos já foram.
+ *
+ * SÓ OS DOIS LINKS DO VÍDEO, e ainda não conferidos: a lista inteira do caso
+ * traria os links das fotos, já entregues — e é justamente a confusão que o
+ * selo existe para evitar.
+ */
+function LinhaDoVideo({
+  item,
+  confirma,
+  onErro,
+}: {
+  item: VideoNaEntrega
+  confirma: boolean
+  onErro: (mensagem: string | null) => void
+}) {
+  const { caso, etapa } = item
+  const { data: links } = useEntregaveis(caso.id, true)
+  const confirmar = useConfirmarEntregaDoVideo()
+  const [confirmando, setConfirmando] = useState(false)
+
+  const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+  const doVideo = (links ?? []).filter(
+    (l) => (l.tipo === 'video' || l.tipo === 'video_wetransfer') && l.confirmado_em === null,
+  )
+
+  return (
+    <li className="rounded-cartao border border-andamento/30 bg-andamento/8 px-3 py-3 shadow-cartao md:px-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-andamento px-2.5 py-0.5 text-[11px] font-extrabold tracking-wide text-white">
+              VÍDEO
+            </span>
+            <span className="truncate font-semibold">{titulo}</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {caso.ehTerminal
+              ? 'As fotos já foram entregues — agora é só o vídeo.'
+              : 'Vídeo do MASTER pronto para entregar.'}
+            {caso.pacoteNome ? ` · ${caso.pacoteNome}` : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          {confirma ? (
+            <Botao
+              onClick={() => {
+                onErro(null)
+                setConfirmando(true)
+              }}
+              disabled={confirmar.isPending}
+              className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
+            >
+              <IconeCheck className="size-4" />
+              Confirmar entrega do vídeo
+            </Botao>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">aguardando o ADM</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 border-t border-andamento/20 pt-3">
+        {links === undefined ? (
+          <p className="text-xs text-muted-foreground">Buscando os links…</p>
+        ) : doVideo.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem links do vídeo.</p>
+        ) : (
+          doVideo.map((link) => (
+            <LinkParaCopiar
+              key={link.id}
+              rotulo={link.tipo === 'video' ? 'Link do vídeo' : 'WeTransfer do vídeo'}
+              url={link.url}
+            />
+          ))
+        )}
+      </div>
+
+      {confirmando && (
+        <Dialogo
+          titulo="Confirmar a entrega do vídeo?"
+          rotuloConfirmar={confirmar.isPending ? 'Confirmando…' : 'Confirmar entrega'}
+          ocupado={confirmar.isPending}
+          erro={null}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={() => {
+            confirmar.mutateAsync({ casoEtapaId: etapa.id }).then(
+              () => setConfirmando(false),
+              (e) => {
+                setConfirmando(false)
+                onErro(mensagemDeErro(e))
+              },
+            )
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo}. O vídeo fica como entregue, os dois links passam a contar como
+            conferidos, e o cartão sai da seção MASTER. Se a família pedir alteração
+            depois, o caminho é “Pedir alteração no vídeo”, na linha da etapa dentro
+            do card.
+          </p>
+        </Dialogo>
+      )}
+    </li>
+  )
+}
+
+/** Um link com rótulo e botão de copiar — o que se manda para a família. */
+function LinkParaCopiar({ rotulo, url }: { rotulo: string; url: string }) {
+  const [falhou, setFalhou] = useState(false)
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-semibold">{rotulo}</p>
+      <div className="flex items-center gap-1">
+        {/* rel="noreferrer": o link é credencial de acesso da família. */}
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="min-w-0 flex-1 truncate text-sm text-marca underline underline-offset-2"
+        >
+          {url}
+        </a>
+        <BotaoCopiar texto={url} onFalha={() => setFalhou(true)} />
+      </div>
+      {falhou && (
+        <p className="text-xs text-muted-foreground">
+          Não deu para copiar. Selecione o link e copie à mão.
+        </p>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -364,7 +516,13 @@ function LinhaDeEntrega({
  * o trabalho ainda está acontecendo; aqui o trabalho acabou e o que importa é
  * quem está esperando há mais tempo. Quem chegou primeiro é atendido primeiro.
  */
-export function EntregasPainel({ entregas, fotolivros, etapasPorCaso, hoje }: PropsEntregasPainel) {
+export function EntregasPainel({
+  entregas,
+  fotolivros,
+  videos,
+  etapasPorCaso,
+  hoje,
+}: PropsEntregasPainel) {
   const { pessoa } = useAuth()
   const papel = pessoa?.papelSistema ?? 'operador'
 
@@ -374,7 +532,7 @@ export function EntregasPainel({ entregas, fotolivros, etapasPorCaso, hoje }: Pr
 
   const confirma = podeEncerrarCaso(papel)
 
-  if (entregas.length === 0 && fotolivros.length === 0) {
+  if (entregas.length === 0 && fotolivros.length === 0 && videos.length === 0) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
         <h2 className="font-semibold">Nenhum caso esperando entrega</h2>
@@ -420,11 +578,24 @@ export function EntregasPainel({ entregas, fotolivros, etapasPorCaso, hoje }: Pr
         ))}
       </ul>
 
+      {/* O VÍDEO DO MASTER, com título próprio, logo depois dos casos: é a
+          segunda entrega de um atendimento cujas fotos já foram. */}
+      {videos.length > 0 && (
+        <section className={entregas.length > 0 ? 'mt-6' : undefined}>
+          <h2 className="mb-2 text-sm font-bold">Vídeo do MASTER</h2>
+          <ul className="space-y-2">
+            {videos.map((item) => (
+              <LinhaDoVideo key={item.etapa.id} item={item} confirma={confirma} onErro={setErro} />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* O FOTO/LIVRO DEPOIS DOS CASOS, com título próprio: a pergunta de quem
           abre a aba é "o que eu entrego", e os dois respondem — mas o caso fecha
           um atendimento, e o livro é um objeto que anda sozinho pela esteira. */}
       {fotolivros.length > 0 && (
-        <section className={entregas.length > 0 ? 'mt-6' : undefined}>
+        <section className={entregas.length > 0 || videos.length > 0 ? 'mt-6' : undefined}>
           <h2 className="mb-2 text-sm font-bold">Foto/Livro</h2>
           <ul className="space-y-2">
             {fotolivros.map((item) => (

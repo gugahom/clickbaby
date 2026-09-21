@@ -27,6 +27,10 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   // meio pelo qual o arquivo viaja muda com o tamanho do vídeo, e o que a
   // lista precisa dizer é O QUE é aquele link.
   video: 'Vídeo',
+  // O arquivo do vídeo para baixar (21/09/2026), cobrado junto do link do vídeo
+  // ao terminar a edição. Tipo próprio para não se confundir com o WeTransfer
+  // das FOTOS, que a conferência do envio do caso exige.
+  video_wetransfer: 'WeTransfer do vídeo',
 }
 
 interface PropsEntregaveis {

@@ -450,11 +450,11 @@ export type FaseVideoMaster = (typeof FASES_VIDEO_MASTER)[number]
  * entrega".
  */
 /**
- * A FASE FINAL DO VÍDEO — a que o seletor não oferece como fase, porque
- * escolhê-la é FINALIZAR: abre o pedido do link e `finalizar_video_master`
- * conclui a etapa. Ela continua nomeada aqui porque é a coluna de saída do
- * quadro por fase, e porque é onde aparece o vídeo ANTIGO que parou neste
- * estado quando ele ainda era de passagem.
+ * "PRONTO PARA ENTREGA" — escolhê-la é TERMINAR A EDIÇÃO: abre o pedido dos dois
+ * links (DialogoFinalizarVideo) e `enviar_video_para_entrega` leva o vídeo para
+ * cá. Desde 21/09/2026 ela NÃO conclui: é a última coluna do quadro por fase, e
+ * o vídeo espera nela até a Morgana confirmar a entrega em Entregáveis. Entre
+ * 16/09 e 21/09 escolhê-la concluía o vídeo na hora, com um link só.
  */
 export const FASE_VIDEO_FINAL: FaseVideoMaster = 'pronto_para_entrega'
 
@@ -470,10 +470,10 @@ export const ROTULO_FASE_VIDEO: Record<FaseVideoMaster, string> = {
   em_andamento: 'Editando',
   em_alteracao: 'Alterações',
   pronto_para_entrega: 'Pronto para entrega',
-  // Desde 16/09/2026 o fim se chama PRONTO PARA ENTREGA: a fase antiga e a
-  // conclusão viraram o mesmo estado, e um vídeo concluído não aparece mais na
-  // seção para ninguém ler dois nomes para a mesma coisa.
-  concluida: 'Pronto para entrega',
+  // O FIM, gravado pela confirmação da entrega em Entregáveis (21/09/2026).
+  // Entre 16/09 e 21/09 tinha o rótulo de pronto, porque os dois eram o mesmo
+  // momento; agora a conferência da Morgana os separa.
+  concluida: 'Entregue',
 }
 
 /**

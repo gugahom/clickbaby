@@ -5,7 +5,6 @@ import { Botao } from '@/components/ui/Botao'
 import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
 import { useConcluidos, useQuadro } from './api/useQuadro'
 import {
-  useFinalizarVideoMaster,
   useMoverAlbum,
   useMoverVideoMaster,
   usePedirAlteracaoDaEtapa,
@@ -36,7 +35,6 @@ import {
 } from './lib/secoes'
 import { ordenarPorUrgencia } from './lib/alerta-horario'
 import { filtrarCasos } from './lib/busca'
-import { CONFIRMAR_FIM_DO_VIDEO } from './lib/fim-da-edicao'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { useTelaLarga } from './lib/useTelaLarga'
 import { useModoTv } from './lib/useModoTv'
@@ -62,7 +60,9 @@ import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import { DialogoAprovacaoDoFotolivro } from './components/DialogoAprovacaoDoFotolivro'
 import { FichaDaEdicao } from './components/FichaDaEdicao'
-import type { FotolivroNaEntrega } from './components/EntregasPainel'
+import { DialogoFinalizarVideo } from './components/DialogoFinalizarVideo'
+import { AtribuicaoDaSecao } from './components/AtribuicaoDaSecao'
+import type { FotolivroNaEntrega, VideoNaEntrega } from './components/EntregasPainel'
 import type { BlocoDia, CasoQuadro } from './types'
 import {
   FASES_ALBUM_ANTES_DA_APROVACAO,
@@ -117,6 +117,12 @@ export function QuadroPage() {
   // O fotolivro que está indo para aprovação pelo arrastar ou pelo "concluir"
   // do cartão — o seletor de fase abre o mesmo diálogo por conta própria.
   const [aprovandoFotolivro, setAprovandoFotolivro] = useState<{
+    etapa: EtapaQuadro
+    caso: CasoQuadro
+  } | null>(null)
+  // O vídeo que está terminando a edição pelo arrastar ou pelo ✓ do cartão —
+  // o seletor de fase abre o mesmo diálogo por conta própria.
+  const [finalizandoVideo, setFinalizandoVideo] = useState<{
     etapa: EtapaQuadro
     caso: CasoQuadro
   } | null>(null)
@@ -189,7 +195,6 @@ export function QuadroPage() {
   // Arrastar entre as colunas do modal cai nas MESMAS RPCs do seletor de fase
   // do cartão — o atalho não é um segundo caminho de escrita.
   const moverVideo = useMoverVideoMaster()
-  const finalizarVideo = useFinalizarVideoMaster()
   const moverAlbum = useMoverAlbum()
   const pedirAlteracao = usePedirAlteracaoDaEtapa()
 
@@ -211,6 +216,7 @@ export function QuadroPage() {
     emMaster,
     emFotolivro,
     fotolivrosNaEntrega,
+    videosNaEntrega,
     totalAbertos,
     totalGeral,
   } = useMemo(() => {
@@ -291,6 +297,18 @@ export function QuadroPage() {
                   : [],
             ),
         ),
+      /*
+       * O VÍDEO DO MASTER EM ENTREGÁVEIS (21/09/2026, pedido do gestor): o vídeo
+       * terminado, com os dois links, esperando a Morgana confirmar a entrega.
+       * Na seção ele fica em "Pronto para entrega" até lá.
+       */
+      videosNaEntrega: casos
+        .filter((c) => c.statusOperacional !== 'cancelado')
+        .flatMap((caso): VideoNaEntrega[] =>
+          (etapas.get(caso.id) ?? [])
+            .filter((e) => e.tipo === 'edicao_video' && e.status === FASE_VIDEO_FINAL)
+            .map((etapa) => ({ caso, etapa })),
+        ),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
       // O denominador do "3 de 88". Sem ele a busca diria "3 casos" e não
       // haveria como saber se sobrou pouco por filtro ou por dia vazio. Corta
@@ -323,9 +341,9 @@ export function QuadroPage() {
   }
 
   const etapasPorCaso = data?.etapasPorCaso ?? SEM_ETAPAS
-  // A aba conta os casos E os Foto/Livros que esperam o ADM — os dois são
-  // "alguém precisa entregar", e o anel verde gira para os dois.
-  const naEntrega = entregas.length + fotolivrosNaEntrega.length
+  // A aba conta os casos, os Foto/Livros e os vídeos que esperam o ADM — todos
+  // são "alguém precisa entregar", e o anel verde gira para todos.
+  const naEntrega = entregas.length + fotolivrosNaEntrega.length + videosNaEntrega.length
   // Os cartões de Concluídos leem as etapas do ARQUIVO, que é a consulta deles.
   // O mapa do Quadro fica de reserva para o que está nos dois lugares — o
   // MASTER encerrado com o vídeo ainda aberto.
@@ -587,10 +605,34 @@ export function QuadroPage() {
       {/* PRAZO e PEDIDOS entram ao lado da fase (16/09/2026, pedido do
           gestor): a data combinada para ESTE vídeo, e o que a família pediu
           — prints, link de música. Ver PrazoDaEtapa e PedidosDaEtapa. */}
+      <AtribuicaoDaSecao etapa={etapa} onErro={onErro} />
       <PrazoDaEtapa etapa={etapa} onErro={onErro} />
       <PedidosDaEtapa etapa={etapa} onErro={onErro} />
-      <FaseDoVideo etapa={etapa} onErro={onErro} />
-      <AcoesDaEtapa etapa={etapa} etapas={etapasPorCaso.get(caso.id) ?? []} onErro={onErro} />
+      <FaseDoVideo etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+      {/* EM PRONTO O VÍDEO ESTÁ EM ENTREGÁVEIS (21/09/2026): parado aqui,
+          esperando a Morgana confirmar a entrega — a pílula diz onde ele está. */}
+      {etapa.status === FASE_VIDEO_FINAL && (
+        <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
+          Em Entregáveis
+        </span>
+      )}
+      <AcoesDaEtapa
+        etapa={etapa}
+        etapas={etapasPorCaso.get(caso.id) ?? []}
+        onErro={onErro}
+        /* TERMINAR A EDIÇÃO COBRA OS DOIS LINKS (21/09/2026). Era um
+           `concluir_etapa` direto, sem link e sem Entregáveis — foi assim que a
+           maioria dos vídeos concluiu sem link nenhum. Em pronto o cartão não
+           conclui nada: o fim é a confirmação da entrega. */
+        concluirComo={
+          etapa.status === FASE_VIDEO_FINAL
+            ? null
+            : {
+                rotulo: 'Finalizar a edição e mandar para Entregáveis',
+                aoTocar: () => setFinalizandoVideo({ etapa, caso }),
+              }
+        }
+      />
     </>
   )
 
@@ -599,50 +641,51 @@ export function QuadroPage() {
     etapa: EtapaQuadro,
     onErro: (mensagem: string | null) => void,
   ) => (
-        <>
-          <PrazoDaEtapa etapa={etapa} onErro={onErro} />
-          <PedidosDaEtapa etapa={etapa} onErro={onErro} />
-          <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
-          {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
-              passam por Entregáveis o cartão fica parado aqui, e sem esta pílula
-              a seção não diria se a prova já foi mandada ao cliente ou ainda
-              espera o ADM — que é exatamente a pergunta de quem cobra. */}
-          {etapa.faseAlbum === FASE_ALBUM_APROVACAO && (
-            <span
-              className={clsx(
-                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
-                etapa.fotolivroEnviadoEm
-                  ? 'bg-muted text-muted-foreground'
-                  : 'bg-atencao/15 text-atencao-tinta',
-              )}
-            >
-              {etapa.fotolivroEnviadoEm ? 'Enviado ao cliente' : 'Na fila do ADM'}
-            </span>
+    <>
+      <AtribuicaoDaSecao etapa={etapa} onErro={onErro} />
+      <PrazoDaEtapa etapa={etapa} onErro={onErro} />
+      <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+      <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+      {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
+          passam por Entregáveis o cartão fica parado aqui, e sem esta pílula
+          a seção não diria se a prova já foi mandada ao cliente ou ainda
+          espera o ADM — que é exatamente a pergunta de quem cobra. */}
+      {etapa.faseAlbum === FASE_ALBUM_APROVACAO && (
+        <span
+          className={clsx(
+            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
+            etapa.fotolivroEnviadoEm
+              ? 'bg-muted text-muted-foreground'
+              : 'bg-atencao/15 text-atencao-tinta',
           )}
-          {etapa.faseAlbum === 'pronto_para_entrega' && (
-            <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
-              Em Entregáveis
-            </span>
-          )}
-          <AcoesDaEtapa
-            etapa={etapa}
-            etapas={etapasPorCaso.get(caso.id) ?? []}
-            onErro={onErro}
-            /* TERMINAR A DIAGRAMAÇÃO MANDA PARA APROVAÇÃO (21/09/2026). Era um
-               `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
-               card simplesmente se move sozinho". Depois da aprovação o cartão
-               não conclui nada: quem anda é a fase, e o fim é a confirmação da
-               entrega em Entregáveis. */
-            concluirComo={
-              etapa.faseAlbum === null || FASES_ALBUM_ANTES_DA_APROVACAO.has(etapa.faseAlbum)
-                ? {
-                    rotulo: 'Terminar a diagramação e mandar para aprovação',
-                    aoTocar: () => setAprovandoFotolivro({ etapa, caso }),
-                  }
-                : null
-            }
-          />
-        </>
+        >
+          {etapa.fotolivroEnviadoEm ? 'Enviado ao cliente' : 'Na fila do ADM'}
+        </span>
+      )}
+      {etapa.faseAlbum === 'pronto_para_entrega' && (
+        <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
+          Em Entregáveis
+        </span>
+      )}
+      <AcoesDaEtapa
+        etapa={etapa}
+        etapas={etapasPorCaso.get(caso.id) ?? []}
+        onErro={onErro}
+        /* TERMINAR A DIAGRAMAÇÃO MANDA PARA APROVAÇÃO (21/09/2026). Era um
+           `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
+           card simplesmente se move sozinho". Depois da aprovação o cartão
+           não conclui nada: quem anda é a fase, e o fim é a confirmação da
+           entrega em Entregáveis. */
+        concluirComo={
+          etapa.faseAlbum === null || FASES_ALBUM_ANTES_DA_APROVACAO.has(etapa.faseAlbum)
+            ? {
+                rotulo: 'Terminar a diagramação e mandar para aprovação',
+                aoTocar: () => setAprovandoFotolivro({ etapa, caso }),
+              }
+            : null
+        }
+      />
+    </>
   )
 
   /*
@@ -820,27 +863,15 @@ export function QuadroPage() {
   }))
 
   /*
-   * AS COLUNAS, E A DE SAÍDA (16/09/2026).
-   *
-   * As fases do seletor mais uma coluna FINAL, que é onde o trabalho acaba. Ela
-   * vive vazia — quem chega ali conclui a etapa e sai da seção —, e existe por
-   * dois motivos: é o alvo de quem arrasta para finalizar, e é onde aparece o
-   * vídeo ANTIGO parado em "pronto para entrega", da época em que essa fase era
-   * um estado de passagem. Sem ela aquele vídeo caía em "Sem fase", com a
-   * pílula dizendo "Pronto para entrega" logo abaixo — a coluna e o cartão
-   * discordando na mesma tela.
-   *
-   * Soltar nela PERGUNTA antes, e no vídeo pede o link: é o mesmo diálogo do
-   * seletor, com o mesmo texto (ver CONFIRMAR_FIM_DO_VIDEO).
+   * AS COLUNAS DO MASTER, SEM SAÍDA (21/09/2026). "Pronto para entrega" é a
+   * última coluna e SEGURA o cartão: o vídeo terminado espera nela, em
+   * Entregáveis, até a Morgana confirmar a entrega — é a confirmação que o tira
+   * da seção. De 16/09 a 21/09 ela era coluna de saída: soltar ali pedia um link
+   * e concluía o vídeo na hora. Soltar nela agora abre o pedido dos dois links.
    */
   const colunasMaster: ColunaDaSecao[] = [
     ...FASES_VIDEO_NA_TELA.map((fase) => ({ id: fase, rotulo: ROTULO_FASE_VIDEO[fase] })),
-    {
-      id: FASE_VIDEO_FINAL,
-      rotulo: ROTULO_FASE_VIDEO[FASE_VIDEO_FINAL],
-      confirmacao: CONFIRMAR_FIM_DO_VIDEO,
-      terminal: true,
-    },
+    { id: FASE_VIDEO_FINAL, rotulo: ROTULO_FASE_VIDEO[FASE_VIDEO_FINAL] },
   ]
   // SEM COLUNA DE SAÍDA NO FOTO/LIVRO (21/09/2026): "Pronto para entrega" é a
   // última coluna e SEGURA o cartão até a Morgana confirmar a entrega em
@@ -856,19 +887,19 @@ export function QuadroPage() {
    * alerta da seção: o arrastar não é um segundo caminho de escrita, é outra
    * mão no mesmo caminho.
    */
-  const soltarNoMaster = async (casoId: string, fase: string, valor?: string) => {
+  const soltarNoMaster = async (casoId: string, fase: string) => {
     const video = videosMasterAbertos(etapasPorCaso.get(casoId) ?? [])[0]
     if (!video) return false
     setErroMaster(null)
+    // PRONTO pede os dois links antes: o cartão não muda de coluna agora, e sim
+    // quando o diálogo gravar — o remendo do Quadro o leva para lá.
+    if (fase === FASE_VIDEO_FINAL) {
+      const caso = emMaster.find((c) => c.id === casoId)
+      if (caso && video.status !== FASE_VIDEO_FINAL) setFinalizandoVideo({ etapa: video, caso })
+      return false
+    }
     try {
-      if (fase === FASE_VIDEO_FINAL) {
-        // A coluna final EXIGE o link, e o diálogo já não deixa confirmar sem
-        // ele — esta guarda é para o caso de alguém mudar aquele contrato.
-        if (!valor) return false
-        await finalizarVideo.mutateAsync({ casoEtapaId: video.id, url: valor })
-      } else {
-        await moverVideo.mutateAsync({ casoEtapaId: video.id, fase: fase as FaseVideoMaster })
-      }
+      await moverVideo.mutateAsync({ casoEtapaId: video.id, fase: fase as FaseVideoMaster })
       return true
     } catch (e) {
       setErroMaster(mensagemDeErro(e))
@@ -1201,6 +1232,7 @@ export function QuadroPage() {
             <EntregasPainel
               entregas={entregas}
               fotolivros={fotolivrosNaEntrega}
+              videos={videosNaEntrega}
               etapasPorCaso={etapasPorCaso}
               hoje={hoje}
             />
@@ -1334,6 +1366,14 @@ export function QuadroPage() {
           />
         )
       })()}
+
+      {finalizandoVideo && (
+        <DialogoFinalizarVideo
+          etapa={finalizandoVideo.etapa}
+          nomeDoCaso={nomeDoCaso(finalizandoVideo.caso)}
+          onFechar={() => setFinalizandoVideo(null)}
+        />
+      )}
 
       {aprovandoFotolivro && (
         <DialogoAprovacaoDoFotolivro

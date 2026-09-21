@@ -1,4 +1,11 @@
-import { ROTULO_ETAPA, ROTULO_FASE_ALBUM, type EtapaTipo, type FaseAlbum } from '../types'
+import {
+  ROTULO_ETAPA,
+  ROTULO_FASE_ALBUM,
+  ROTULO_FASE_VIDEO,
+  type EtapaTipo,
+  type FaseAlbum,
+  type FaseVideoMaster,
+} from '../types'
 
 export interface EventoHistorico {
   id: string
@@ -181,6 +188,33 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         tom: para === 'entregue' ? 'marco' : 'normal',
       }
     }
+
+    // O VÍDEO DO MASTER (21/09/2026), pela mesma razão do fotolivro: a ficha da
+    // seção mostra este histórico, e o vídeo é o que mais se move nela.
+    case 'video_master_movido': {
+      const para = texto(evento.payload, 'para')
+      const rotulo =
+        para && para in ROTULO_FASE_VIDEO ? ROTULO_FASE_VIDEO[para as FaseVideoMaster] : null
+      return {
+        ...base,
+        acao: rotulo ? `Moveu o vídeo para “${rotulo}”` : 'Moveu o vídeo',
+        tom: para === 'concluida' ? 'marco' : 'normal',
+      }
+    }
+
+    case 'video_enviado_para_entrega':
+      return {
+        ...base,
+        acao: 'Finalizou a edição do vídeo e mandou para Entregáveis',
+        tom: 'marco',
+      }
+
+    case 'video_entregue':
+      return { ...base, acao: 'Confirmou a entrega do vídeo', tom: 'marco' }
+
+    // O caminho antigo (16/09 a 21/09/2026), que concluía o vídeo na hora.
+    case 'video_master_finalizado':
+      return { ...base, acao: 'Finalizou o vídeo', tom: 'marco' }
 
     case 'fotolivro_para_aprovacao':
       return { ...base, acao: 'Mandou o Foto/Livro para aprovação, com capa e link', tom: 'marco' }

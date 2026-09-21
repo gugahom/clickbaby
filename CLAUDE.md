@@ -365,7 +365,8 @@ planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 
 -- fluxo do vídeo horizontal do MASTER (2 fases na tela + o fim; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
-finalizar_video_master(p_caso_etapa_id, p_url)   -- link + conclusão na mesma transação
+enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2 links + pronto; NÃO conclui
+confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
@@ -1128,18 +1129,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   kanbans"). Só na visão POR FASE, e só no MOUSE: o arrastar nativo do HTML não existe no
   toque, e é o gesto mais difícil de acertar com uma mão num corredor (seção 6). **O SELETOR
   DE FASE DO CARTÃO CONTINUA SENDO O CAMINHO**, e é o único que funciona no celular e por
-  teclado — arrastar é atalho, e cai nas MESMAS RPCs (`mover_video_master`, `mover_album`,
-  `finalizar_video_master`), com o mesmo erro no mesmo alerta. Dois detalhes que não são
+  teclado — arrastar é atalho, e cai nas MESMAS RPCs e nos MESMOS diálogos do seletor
+  (`mover_video_master`, `mover_album`, e os diálogos de terminar o vídeo e de mandar o
+  fotolivro para aprovação), com o mesmo erro no mesmo alerta. Dois detalhes que não são
   capricho: um gesto começado num CONTROLE (o seletor, o campo do PC) não arrasta o cartão —
   quem sabe onde a mão caiu é o `mousedown`, e ele grava isso num `data-` do próprio nó —, e
   **"Sem fase" NÃO RECEBE cartão**, porque não existe RPC que APAGUE a fase de um trabalho, e
   oferecer um alvo que o banco recusa ensina a duvidar do quadro.
-  **A COLUNA FINAL É DE SAÍDA e vive vazia:** quem chega nela conclui a etapa e sai da seção.
-  Ela existe por dois motivos — é o alvo de quem arrasta para terminar (perguntando antes, e
-  pedindo o link no vídeo, com o MESMO texto do seletor: `lib/fim-da-edicao.ts`), e é onde
-  aparece o vídeo ANTIGO parado em "pronto para entrega", de quando essa fase era de
-  passagem. Sem ela aquele vídeo caía em "Sem fase" com a pílula dizendo "Pronto para
-  entrega" logo abaixo: a coluna e o cartão discordando na mesma tela.
+  **NÃO HÁ MAIS COLUNA DE SAÍDA** (21/09/2026). De 16/09 a 21/09 a última coluna concluía a
+  etapa ao receber o cartão; desde que o vídeo e o fotolivro passam por Entregáveis, a última
+  coluna ("Pronto para entrega") SEGURA o cartão até a Morgana confirmar a entrega lá. Soltar
+  nela, no vídeo, abre o pedido dos dois links; em "Aguardando aprovação", no fotolivro, o de
+  capa e link.
 - **O FIM DO VÍDEO E DO FOTO/LIVRO VIROU UM ESTADO SÓ** (16/09/2026, pedido do gestor,
   migration `20260916180834`). "Pronto para entrega" e "Enviado / finalizado" eram
   redundantes — a equipe marcava os dois no mesmo minuto, e o segundo só afirmava que
@@ -1152,11 +1153,48 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   e o que a lista precisa dizer é O QUE é aquele link). O seletor passa a ter duas fases
   (Editando, Alterações) mais o fim; `mover_video_master` continua aceitando 'concluida',
   porque a regra comercial vive na tela.
+  **REVISTO EM 21/09/2026:** o vídeo também passou a ter a conferência da Morgana entre o fim
+  da edição e a entrega, com DOIS links — ver "O VÍDEO DO MASTER PASSA POR ENTREGÁVEIS", logo
+  abaixo. `finalizar_video_master` saiu.
   **NO FOTO/LIVRO, o fim é confirmação simples**, sem link: o fotolivro é objeto físico. São
   nove fases na tela; `pronto_para_entrega` sumiu do seletor e o fim é `entregue`, agora
   rotulado "Pronto para entrega". O valor continua no enum — fase de banco não se apaga.
   **REVISTO EM 21/09/2026:** o fim do fotolivro voltou a ter duas fases, com a conferência da
   Morgana no meio — ver "O FOTOLIVRO PASSA POR ENTREGÁVEIS DUAS VEZES", logo abaixo.
+- **O VÍDEO DO MASTER PASSA POR ENTREGÁVEIS** (21/09/2026, pedido do gestor, migration
+  `20260921211604`). Medido no remoto no dia: 18 vídeos concluídos e só 3 links do tipo
+  `video`. A maioria terminou pelo ✓ do cartão da seção, que chamava `concluir_etapa` direto —
+  sem link e sem ninguém conferir —, e o caminho que pedia link (`finalizar_video_master`)
+  também concluía na hora: "ao concluir no botão de finalizar, o card simplesmente some".
+  **TERMINAR A EDIÇÃO COBRA DOIS LINKS** (decisão do gestor): o do vídeo e o **WeTransfer do
+  vídeo**. O segundo é um tipo de entregável PRÓPRIO (`video_wetransfer`), e não o
+  `wetransfer`: o caso já tem o WeTransfer das FOTOS, e a conferência do envio do caso exige
+  "um wetransfer" — um vídeo terminado antes do envio das fotos satisfaria a caixa com o
+  arquivo errado. `enviar_video_para_entrega` grava os dois e leva o vídeo para "Pronto para
+  entrega" NA MESMA TRANSAÇÃO; os três caminhos da tela — o seletor, o arrastar e o ✓ do
+  cartão, que virou "finalizar a edição" — abrem o mesmo diálogo (`DialogoFinalizarVideo`).
+  **O VÍDEO NÃO SOME: vai para Entregáveis, sinalizado como VÍDEO** — selo sólido, cor
+  própria, e a frase "as fotos já foram entregues — agora é só o vídeo", porque "o que está
+  passando mais uma vez nos entregáveis é apenas o vídeo; a Morgana precisa ver isso
+  visualmente". A linha mostra SÓ os dois links do vídeo. "Confirmar entrega do vídeo"
+  (`confirmar_entrega_do_video`, atendimento ou adm) conclui a etapa, confirma os dois links e
+  tira o cartão da seção. Na seção, em pronto, o cartão mostra "Em Entregáveis".
+  **As travas moram em `mover_video_master`:** pronto exige os dois links ainda não
+  conferidos, e "concluída" só do atendimento ou adm, a partir de pronto. **PRONTO ABRE A
+  PAUSA:** o vídeo esperando o ADM não está sendo editado, e sem isto os dias em Entregáveis
+  entrariam no tempo de edição, que é o número que a empresa usa para cobrar (seção 9).
+  **Versão nova:** depois de um pedido de alteração, terminar de novo cobra um par novo; os
+  links já entregues ficam (são histórico da entrega que aconteceu), e um par ainda não
+  conferido — o vídeo voltou de pronto para editando sem confirmação — é trocado, com a
+  contagem em `links_substituidos` no evento. `concluir_etapa` segue aceitando o vídeo no
+  banco; a tela não o oferece mais.
+- **QUEM EDITA SE ATRIBUI NA PRÓPRIA SEÇÃO** (21/09/2026, pedido do gestor; o Foto/Livro
+  entrou junto, por decisão dele). O vídeo e o fotolivro não se operam pelo card do Quadro,
+  então a coordenação não tinha onde dizer quem pega cada um. `AtribuicaoDaSecao` é uma pílula
+  com o nome de quem está com o trabalho (ou "Atribuir"), no cartão e na ficha, com as MESMAS
+  duas portas do card: antes de começar é atribuir; depois é handoff, com motivo e linha em
+  `handoffs` (invariante 3.2). O seletor de pessoa (`DialogoPessoa`) saiu de `AcoesDoCaso`
+  para ser usado pelos dois.
 - **O FOTOLIVRO PASSA POR ENTREGÁVEIS DUAS VEZES** (21/09/2026, pedido do gestor, migration
   `20260921202848`). O fluxo, nas palavras dele: terminada a diagramação, o fotolivro vai para
   Entregáveis "sinalizado como foto livro, pois a Morgana irá pegar o link e enviar para o
@@ -1347,9 +1385,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   chamaria ninguém.
   A lista é ordenada por **ordem de envio**, não por prazo: prazo é a régua do Quadro, onde
   o trabalho ainda acontece; ali o trabalho acabou e quem espera há mais tempo vem antes.
-  **OS TIPOS DE LINK SÃO SEIS** desde 16/09/2026: Google Photos, WeTransfer, cadeado, reels,
-  Foto/Livro e **Vídeo** — este último nasceu com a finalização do horizontal do MASTER, e é
-  o único que uma RPC registra sozinha (`finalizar_video_master`).
+  **OS TIPOS DE LINK SÃO SETE** desde 21/09/2026: Google Photos, WeTransfer, cadeado, reels,
+  Foto/Livro, **Vídeo** (16/09) e **WeTransfer do vídeo** (21/09). Os dois do vídeo são os
+  únicos que uma RPC registra sozinha (`enviar_video_para_entrega`).
   **O LINK TEM AÇÕES** (07/09/2026): copiar e apagar, na própria linha. O caso que
   motivou é a Morgana abrindo o álbum e sendo a família errada. Copiar existe porque o
   link é para ser MANDADO — selecionar uma URL truncada com o dedo, num link clicável,

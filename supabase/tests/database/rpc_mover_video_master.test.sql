@@ -141,6 +141,14 @@ select is(
 -- 3. O caminho todo até ENVIADO, e a VOLTA (o caso real da alteração)
 -- =============================================================================
 
+-- Desde 20260921211604 "pronto" exige o link do vídeo e o WeTransfer, que
+-- `enviar_video_para_entrega` grava antes. Aqui eles entram direto, para este
+-- arquivo continuar testando só o fluxo de fases (o envio tem teste próprio em
+-- video_master_por_entregaveis.test.sql).
+insert into public.entregaveis (caso_id, tipo, url)
+values ('dddddddd-0000-0000-0000-000000000001', 'video', 'https://video.exemplo/master'),
+       ('dddddddd-0000-0000-0000-000000000001', 'video_wetransfer', 'https://we.tl/master');
+
 set local role authenticated;
 
 select lives_ok(
@@ -157,15 +165,18 @@ select ok(
   'C1: PRONTO ainda não é concluído — sem concluido_em'
 );
 
+-- "Concluída" é a confirmação do atendimento ou adm (20260921211604).
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Atendimento Master'), true);
 set local role authenticated;
 
 select lives_ok(
   format($$ select public.mover_video_master(%L, 'concluida') $$,
          pg_temp.video('dddddddd-0000-0000-0000-000000000001')),
-  'C2: PRONTO -> ENVIADO / FINALIZADO'
+  'C2: PRONTO -> ENTREGUE, pela confirmação do atendimento'
 );
 
 reset role;
+select set_config('request.jwt.claim.sub', (select auth_user_id::text from public.pessoas where nome = 'Editora Master'), true);
 
 select ok(
   (select concluido_em is not null from public.caso_etapas
