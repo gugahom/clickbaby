@@ -522,6 +522,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         if (item.id === 'atribuir') setAtribuirDe(etapa)
                         if (item.id === 'handoff') setHandoffDe(etapa)
                         if (item.id === 'rendicao') setRendicaoDe(etapa)
+                        if (item.id === 'tirar_rendicao') {
+                          executar(
+                            planejarRendicao.mutateAsync({
+                              casoEtapaId: etapa.id,
+                              proximaPessoaId: null,
+                            }),
+                          )
+                        }
                         if (item.id === 'anotar') setAnotarDe(etapa)
                         if (item.id === 'dispensar') {
                           executar(dispensar.mutateAsync({ casoEtapaId: etapa.id }))
@@ -567,6 +575,26 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                           desabilitado: ocupado || !rendicao.habilitada,
                           motivo: rendicao.motivo,
                         },
+                        /* TIRAR A RENDIÇÃO (21/09/2026, pedido do gestor: "não é
+                           possível tirá-la"). O banco sempre soube — nulo em
+                           `planejar_rendicao` apaga o plano e grava
+                           `rendicao_cancelada` —; faltava a porta. Só aparece
+                           com rendição combinada, e sem a trava de responsável
+                           do item acima: para APAGAR um plano não é preciso
+                           ninguém com a etapa, e a RPC também não pede.
+                           Um toque, sem pergunta: desfazer é anunciar de novo. */
+                        ...(etapa.proximoResponsavelId
+                          ? [
+                              {
+                                id: 'tirar_rendicao',
+                                rotulo: etapa.proximoResponsavelNome
+                                  ? `Tirar rendição de ${etapa.proximoResponsavelNome}`
+                                  : 'Tirar rendição',
+                                icone: <IconeRendicao className="size-4" />,
+                                desabilitado: ocupado,
+                              },
+                            ]
+                          : []),
                         /* Sem trava de status: anotar vale ANTES de a etapa
                            começar — é o único momento em que o aviso serve. */
                         {

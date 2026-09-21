@@ -20,24 +20,36 @@ interface ItemDeConferencia {
   rotulo: string
   /**
    * O link que esta caixa confere. É o que aparece embaixo dela — e, quando
-   * não existe, o tipo com que o link novo é registrado ali mesmo.
+   * não existe, o tipo com que o link novo é registrado ali mesmo. Sem um link
+   * deste tipo a caixa não se marca e o caso não sai do diálogo: ver "TODO LINK
+   * SEGURA O ENVIO", logo abaixo.
    */
   tipo: TipoEntregavel
-  /**
-   * `true` = o caso NÃO SAI deste diálogo sem um link deste tipo registrado.
-   * Ver "O LINK PRINCIPAL SEGURA O ENVIO" logo abaixo.
-   */
-  obrigatorio: boolean
 }
 
 /**
- * O QUE SE CONFERE, POR PACOTE (11/09/2026, pedido do gestor).
+ * Os pacotes que entregam TAMBÉM pelo cadeado, além de Google e WeTransfer
+ * (21/09/2026, pedido do gestor: "BASIC E STANDARD precisam de 3 links").
+ *
+ * São os dois NOMEADOS, e não a família BASIC inteira: BASIC + REELS
+ * (`basic-reels-venda`) e BASIC REELS (`basic-reels-contrato`) ficam com Google
+ * e WeTransfer. Conferido no remoto no mesmo dia: dos casos enviados desde
+ * 11/09, nenhum BASIC REELS levou cadeado, e BASIC e STANDARD levaram em metade
+ * — que é a metade que este pedido fecha. Se outro pacote passar a entregar
+ * pelo cadeado, é o slug dele que entra aqui.
+ */
+const COM_CADEADO: ReadonlySet<string> = new Set(['basic', 'standard'])
+
+/**
+ * O QUE SE CONFERE, POR PACOTE (11/09/2026, pedido do gestor; o cadeado de
+ * BASIC e STANDARD entrou em 21/09).
  *
  * NOS PACOTES NORMAIS, DUAS CAIXAS. Fotos e reels viraram UMA: a família
  * recebe os dois no mesmo álbum do Google, e conferir em duas linhas o que
  * mora num endereço só era pedir a mesma verificação duas vezes. A outra é o
  * WeTransfer, que não estava no checklist e é o segundo endereço que a família
- * recebe de verdade.
+ * recebe de verdade. BASIC e STANDARD ganham a TERCEIRA, o cadeado — ver
+ * `COM_CADEADO`.
  *
  * O RÓTULO DA PRIMEIRA DEPENDE DE HAVER REELS, e isso vem de antes: o MASTER
  * perdeu o reels de fábrica em 03/09/2026, e pedir a conferência de um vertical
@@ -50,13 +62,18 @@ interface ItemDeConferencia {
  * formato — o link único de foto+vídeo, o "cadeado" — e é por ele que a
  * entrega acontece.
  *
- * O LINK PRINCIPAL SEGURA O ENVIO (15/09/2026, pedido do gestor). O link de
- * Google — o CADEADO, no BIRTH — era cobrado na conclusão da edição de fotos
- * desde 04/09, e a equipe pediu para ele ser cobrado AQUI: na conclusão a
- * etapa ficava presa esperando um endereço que muitas vezes ainda não existia,
- * e quem envia o caso é quem confere os links de qualquer forma. É a mesma
- * trava, no momento em que ela faz sentido, e vale para TODO pacote. O
- * WeTransfer continua sem trava: um caso sem WeTransfer existe.
+ * TODO LINK SEGURA O ENVIO (21/09/2026, pedido do gestor). Desde 15/09 só o
+ * link PRINCIPAL (Google; cadeado no BIRTH) segurava o botão, e o WeTransfer
+ * era uma caixa marcável sem link nenhum — o caso ia para Entregáveis com um
+ * endereço de dois, e a caixa dizia "WeTransfer completo" sobre um WeTransfer
+ * que não existia. O argumento de então era "um caso sem WeTransfer existe"; o
+ * gestor disse que não existe, em nenhum pacote. Agora cada caixa só se marca
+ * com o seu link registrado, e o botão só acende com TODAS marcadas.
+ *
+ * O BANCO CONTINUA MAIS FROUXO: `liberar_para_entrega` e `confirmar_entrega`
+ * exigem ao menos um entregável. É o arranjo que o projeto já aceitava — o
+ * diálogo é mais estrito que o banco, nunca mais frouxo —, e os dois únicos
+ * caminhos até essas RPCs passam por este diálogo.
  *
  * `pacoteSlug` e não `pacoteNome`: BIRTH e BIRTH+REELS são dois slugs
  * (`birth`, `birth-reels`) que começam pelo mesmo prefixo — comparar o NOME
@@ -67,13 +84,14 @@ function itensDaConferencia(
   caso: CasoQuadro,
   etapas: EtapaQuadro[],
 ): ItemDeConferencia[] {
-  const ehBirth = caso.pacoteSlug?.startsWith('birth') ?? false
-
-  if (ehBirth) {
-    return [
-      { id: 'cadeado_completo', rotulo: 'Link CADEADO completo', tipo: 'cadeado', obrigatorio: true },
-    ]
+  const slug = caso.pacoteSlug ?? ''
+  const cadeado: ItemDeConferencia = {
+    id: 'cadeado_completo',
+    rotulo: 'Link CADEADO completo',
+    tipo: 'cadeado',
   }
+
+  if (slug.startsWith('birth')) return [cadeado]
 
   const temReels = etapas.some((e) => e.tipo === 'reels')
 
@@ -84,14 +102,13 @@ function itensDaConferencia(
         ? 'Fotos e reels completos no Google'
         : 'Fotos completas no Google',
       tipo: 'google_photos',
-      obrigatorio: true,
     },
     {
       id: 'wetransfer_completo',
       rotulo: 'WeTransfer completo',
       tipo: 'wetransfer',
-      obrigatorio: false,
     },
+    ...(COM_CADEADO.has(slug) ? [cadeado] : []),
   ]
 }
 
@@ -132,8 +149,11 @@ interface PropsDialogoConfirmarEntrega {
  * obrigava a fechar o diálogo, procurar o link na lista do card e abrir de
  * novo — e quem faz isso três vezes na quarta marca sem olhar.
  *
- * A CAIXA NÃO ESPERA PELO LINK: marcar continua sendo um gesto humano de
- * conferência. Quem espera pelo link é o BOTÃO, e só pelo principal.
+ * A CAIXA ESPERA PELO LINK (21/09/2026). Marcar continua sendo um gesto
+ * humano de conferência — o link existir não marca nada sozinho —, mas não se
+ * confere o que não existe: sem link daquele tipo, a caixa fica apagada e a
+ * linha diz o que falta. Até esta data só o botão esperava, e só pelo link
+ * principal.
  */
 export function DialogoConfirmarEntrega({
   caso,
@@ -156,9 +176,11 @@ export function DialogoConfirmarEntrega({
 
   // Enquanto os links não chegam, falta tudo: habilitar o botão por um instante
   // e desabilitar logo depois seria um convite a clicar no meio.
-  const faltaLinkObrigatorio = itens.some(
-    (item) => item.obrigatorio && !(links ?? []).some((l) => l.tipo === item.tipo),
-  )
+  const temLink = (item: ItemDeConferencia) =>
+    (links ?? []).some((l) => l.tipo === item.tipo)
+  // Uma caixa marcada cujo link sumiu (apagado no card enquanto o diálogo
+  // estava aberto) deixa de contar: a marca era sobre um link que não existe mais.
+  const conferido = (item: ItemDeConferencia) => conferidos.has(item.id) && temLink(item)
 
   function alternar(id: string) {
     setConferidos((atual) => {
@@ -185,11 +207,7 @@ export function DialogoConfirmarEntrega({
       }
       rotuloConfirmar={modo === 'envio' ? 'Enviar' : 'Confirmar entrega'}
       confirmarDestrutivo={modo === 'confirmacao'}
-      confirmarDesabilitado={
-        links === undefined ||
-        faltaLinkObrigatorio ||
-        itens.some((item) => !conferidos.has(item.id))
-      }
+      confirmarDesabilitado={links === undefined || itens.some((item) => !conferido(item))}
       ocupado={ocupado}
       erro={erro}
       onCancelar={onCancelar}
@@ -211,7 +229,8 @@ export function DialogoConfirmarEntrega({
             item={item}
             links={(links ?? []).filter((l) => l.tipo === item.tipo)}
             carregando={links === undefined}
-            marcado={conferidos.has(item.id)}
+            marcado={conferido(item)}
+            gesto={modo === 'envio' ? 'enviar' : 'confirmar'}
             onAlternar={() => alternar(item.id)}
           />
         ))}
@@ -268,6 +287,7 @@ function ItemConferido({
   links,
   carregando,
   marcado,
+  gesto,
   onAlternar,
 }: {
   casoId: string
@@ -275,8 +295,11 @@ function ItemConferido({
   links: EntregavelResumo[]
   carregando: boolean
   marcado: boolean
+  /** O que o botão do diálogo faz — é o que a linha diz que está faltando para. */
+  gesto: 'enviar' | 'confirmar'
   onAlternar: () => void
 }) {
+  const semLink = !carregando && links.length === 0
   const registrar = useRegistrarEntregavel()
   const [adicionando, setAdicionando] = useState(false)
   const [url, setUrl] = useState('')
@@ -297,12 +320,22 @@ function ItemConferido({
     <li>
       {/* min-h-11: a linha inteira é o alvo de toque (seção 6 do CLAUDE.md),
           não só o quadrado de 16px do checkbox. */}
-      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted">
+      {/* Apagada enquanto o link não existe — ver "A CAIXA ESPERA PELO LINK".
+          `carregando` também trava: marcar no instante antes de o link chegar
+          seria conferir no escuro. */}
+      <label
+        className={
+          carregando || semLink
+            ? 'flex min-h-11 cursor-not-allowed items-center gap-2.5 rounded-md px-1 text-sm font-medium text-muted-foreground'
+            : 'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm font-medium transition-colors hover:bg-muted'
+        }
+      >
         <input
           type="checkbox"
           checked={marcado}
+          disabled={carregando || semLink}
           onChange={onAlternar}
-          className="size-5 flex-shrink-0 rounded border-border accent-marca"
+          className="size-5 flex-shrink-0 rounded border-border accent-marca disabled:opacity-50"
         />
         {item.rotulo}
       </label>
@@ -347,17 +380,11 @@ function ItemConferido({
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            {/* O link que segura o envio diz isso com todas as letras: um
-                "Sem link ainda" neutro ao lado de um botão Enviar apagado deixa
-                a pessoa procurando o que falta. */}
-            <span
-              className={
-                item.obrigatorio
-                  ? 'text-xs font-semibold text-atencao-tinta'
-                  : 'text-xs text-muted-foreground'
-              }
-            >
-              {item.obrigatorio ? 'Falta este link para enviar.' : 'Sem link ainda.'}
+            {/* Todo link segura o botão, e a linha diz isso com todas as
+                letras: um "Sem link ainda" neutro ao lado de um botão apagado
+                deixa a pessoa procurando o que falta. */}
+            <span className="text-xs font-semibold text-atencao-tinta">
+              Falta este link para {gesto}.
             </span>
             <button
               type="button"
