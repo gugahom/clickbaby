@@ -1,4 +1,4 @@
-import { ROTULO_ETAPA, type EtapaTipo } from '../types'
+import { ROTULO_ETAPA, ROTULO_FASE_ALBUM, type EtapaTipo, type FaseAlbum } from '../types'
 
 export interface EventoHistorico {
   id: string
@@ -168,6 +168,25 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         ...(motivo ? { detalhe: motivo } : {}),
       }
     }
+
+    // O FOTO/LIVRO (21/09/2026). A ficha da seção mostra este histórico em
+    // destaque, e "fase do album movida" cru ali seria o evento mais comum da
+    // tela falando a língua do banco.
+    case 'fase_do_album_movida': {
+      const para = texto(evento.payload, 'para')
+      const rotulo = para && para in ROTULO_FASE_ALBUM ? ROTULO_FASE_ALBUM[para as FaseAlbum] : null
+      return {
+        ...base,
+        acao: rotulo ? `Moveu o Foto/Livro para “${rotulo}”` : 'Moveu o Foto/Livro',
+        tom: para === 'entregue' ? 'marco' : 'normal',
+      }
+    }
+
+    case 'fotolivro_para_aprovacao':
+      return { ...base, acao: 'Mandou o Foto/Livro para aprovação, com capa e link', tom: 'marco' }
+
+    case 'fotolivro_enviado_ao_cliente':
+      return { ...base, acao: 'Enviou a prova do Foto/Livro ao cliente', tom: 'marco' }
 
     default:
       // Evento novo no backend: aparece feio, mas aparece.

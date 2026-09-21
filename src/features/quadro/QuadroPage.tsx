@@ -61,6 +61,7 @@ import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
 import { DialogoAprovacaoDoFotolivro } from './components/DialogoAprovacaoDoFotolivro'
+import { FichaDaEdicao } from './components/FichaDaEdicao'
 import type { FotolivroNaEntrega } from './components/EntregasPainel'
 import type { BlocoDia, CasoQuadro } from './types'
 import {
@@ -118,6 +119,12 @@ export function QuadroPage() {
   const [aprovandoFotolivro, setAprovandoFotolivro] = useState<{
     etapa: EtapaQuadro
     caso: CasoQuadro
+  } | null>(null)
+  // A ficha do cartão do MASTER ou do Foto/Livro — ver FichaDaEdicao.
+  const [ficha, setFicha] = useState<{
+    casoId: string
+    etapaId: string
+    tipo: 'master' | 'fotolivro'
   } | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
   const reabrirCaso = useReabrirCaso()
@@ -565,6 +572,92 @@ export function QuadroPage() {
     />
   ))
 
+  /*
+   * OS CONTROLES DO MASTER E DO FOTO/LIVRO, num lugar só (21/09/2026). O cartão
+   * da seção e a FICHA (FichaDaEdicao) mostram exatamente os mesmos — a ficha
+   * só os põe numa tela maior. `onErro` é de quem mostra: o alerta da seção no
+   * cartão, o da própria ficha nela.
+   */
+  const controlesDoMaster = (
+    caso: CasoQuadro,
+    etapa: EtapaQuadro,
+    onErro: (mensagem: string | null) => void,
+  ) => (
+    <>
+      {/* PRAZO e PEDIDOS entram ao lado da fase (16/09/2026, pedido do
+          gestor): a data combinada para ESTE vídeo, e o que a família pediu
+          — prints, link de música. Ver PrazoDaEtapa e PedidosDaEtapa. */}
+      <PrazoDaEtapa etapa={etapa} onErro={onErro} />
+      <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+      <FaseDoVideo etapa={etapa} onErro={onErro} />
+      <AcoesDaEtapa etapa={etapa} etapas={etapasPorCaso.get(caso.id) ?? []} onErro={onErro} />
+    </>
+  )
+
+  const controlesDoFotolivro = (
+    caso: CasoQuadro,
+    etapa: EtapaQuadro,
+    onErro: (mensagem: string | null) => void,
+  ) => (
+        <>
+          <PrazoDaEtapa etapa={etapa} onErro={onErro} />
+          <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+          <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+          {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
+              passam por Entregáveis o cartão fica parado aqui, e sem esta pílula
+              a seção não diria se a prova já foi mandada ao cliente ou ainda
+              espera o ADM — que é exatamente a pergunta de quem cobra. */}
+          {etapa.faseAlbum === FASE_ALBUM_APROVACAO && (
+            <span
+              className={clsx(
+                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
+                etapa.fotolivroEnviadoEm
+                  ? 'bg-muted text-muted-foreground'
+                  : 'bg-atencao/15 text-atencao-tinta',
+              )}
+            >
+              {etapa.fotolivroEnviadoEm ? 'Enviado ao cliente' : 'Na fila do ADM'}
+            </span>
+          )}
+          {etapa.faseAlbum === 'pronto_para_entrega' && (
+            <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
+              Em Entregáveis
+            </span>
+          )}
+          <AcoesDaEtapa
+            etapa={etapa}
+            etapas={etapasPorCaso.get(caso.id) ?? []}
+            onErro={onErro}
+            /* TERMINAR A DIAGRAMAÇÃO MANDA PARA APROVAÇÃO (21/09/2026). Era um
+               `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
+               card simplesmente se move sozinho". Depois da aprovação o cartão
+               não conclui nada: quem anda é a fase, e o fim é a confirmação da
+               entrega em Entregáveis. */
+            concluirComo={
+              etapa.faseAlbum === null || FASES_ALBUM_ANTES_DA_APROVACAO.has(etapa.faseAlbum)
+                ? {
+                    rotulo: 'Terminar a diagramação e mandar para aprovação',
+                    aoTocar: () => setAprovandoFotolivro({ etapa, caso }),
+                  }
+                : null
+            }
+          />
+        </>
+  )
+
+  /*
+   * A FICHA ABERTA guarda só os ids: o caso e a etapa são lidos do Quadro a cada
+   * render, para a ficha acompanhar o Realtime como o cartão acompanha. Se o
+   * caso sair do Quadro (arquivou), a ficha some junto.
+   */
+  const abrirFicha = (
+    caso: CasoQuadro,
+    etapa: EtapaQuadro | undefined,
+    tipo: 'master' | 'fotolivro',
+  ) => {
+    if (etapa) setFicha({ casoId: caso.id, etapaId: etapa.id, tipo })
+  }
+
   const cartaoMaster = (caso: CasoQuadro, raiz?: LiHTMLAttributes<HTMLLIElement>) => (
     <CartaoDeEdicao
       key={caso.id}
@@ -597,21 +690,7 @@ export function QuadroPage() {
        * quem manda é a fase. É o certo — nesses dois estados o vídeo não está
        * sendo editado, está esperando alguém de fora.
        */
-      acoesDaLinha={(etapa) => (
-        <>
-          {/* PRAZO e PEDIDOS entram ao lado da fase (16/09/2026, pedido do
-              gestor): a data combinada para ESTE vídeo, e o que a família pediu
-              — prints, link de música. Ver PrazoDaEtapa e PedidosDaEtapa. */}
-          <PrazoDaEtapa etapa={etapa} onErro={setErroMaster} />
-          <PedidosDaEtapa etapa={etapa} onErro={setErroMaster} />
-          <FaseDoVideo etapa={etapa} onErro={setErroMaster} />
-          <AcoesDaEtapa
-            etapa={etapa}
-            etapas={etapasPorCaso.get(caso.id) ?? []}
-            onErro={setErroMaster}
-          />
-        </>
-      )}
+      acoesDaLinha={(etapa) => controlesDoMaster(caso, etapa, setErroMaster)}
       // A linha já diz a fase por extenso; um selo repetindo em outras
       // palavras logo acima seria ruído.
       comSelo={false}
@@ -619,6 +698,7 @@ export function QuadroPage() {
       // `acoesAbaixo` em CartaoDeEdicao.
       acoesAbaixo
       rotuloObservacao="Pedidos do cliente"
+      onAbrir={() => abrirFicha(caso, videosMasterAbertos(etapasPorCaso.get(caso.id) ?? [])[0], 'master')}
       onErro={setErroMaster}
     />
   )
@@ -648,55 +728,11 @@ export function QuadroPage() {
       // etapa tem no card, e ler dois nomes para a mesma coisa foi exatamente
       // o que o gestor pediu para acabar em 10/09.
       rotularLinha={() => 'Foto/Livro'}
-      acoesDaLinha={(etapa) => (
-        <>
-          <PrazoDaEtapa etapa={etapa} onErro={setErroFotolivro} />
-          <PedidosDaEtapa etapa={etapa} onErro={setErroFotolivro} />
-          <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={setErroFotolivro} />
-          {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
-              passam por Entregáveis o cartão fica parado aqui, e sem esta pílula
-              a seção não diria se a prova já foi mandada ao cliente ou ainda
-              espera o ADM — que é exatamente a pergunta de quem cobra. */}
-          {etapa.faseAlbum === FASE_ALBUM_APROVACAO && (
-            <span
-              className={clsx(
-                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
-                etapa.fotolivroEnviadoEm
-                  ? 'bg-muted text-muted-foreground'
-                  : 'bg-atencao/15 text-atencao-tinta',
-              )}
-            >
-              {etapa.fotolivroEnviadoEm ? 'Enviado ao cliente' : 'Na fila do ADM'}
-            </span>
-          )}
-          {etapa.faseAlbum === 'pronto_para_entrega' && (
-            <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
-              Em Entregáveis
-            </span>
-          )}
-          <AcoesDaEtapa
-            etapa={etapa}
-            etapas={etapasPorCaso.get(caso.id) ?? []}
-            onErro={setErroFotolivro}
-            /* TERMINAR A DIAGRAMAÇÃO MANDA PARA APROVAÇÃO (21/09/2026). Era um
-               `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
-               card simplesmente se move sozinho". Depois da aprovação o cartão
-               não conclui nada: quem anda é a fase, e o fim é a confirmação da
-               entrega em Entregáveis. */
-            concluirComo={
-              etapa.faseAlbum === null || FASES_ALBUM_ANTES_DA_APROVACAO.has(etapa.faseAlbum)
-                ? {
-                    rotulo: 'Terminar a diagramação e mandar para aprovação',
-                    aoTocar: () => setAprovandoFotolivro({ etapa, caso }),
-                  }
-                : null
-            }
-          />
-        </>
-      )}
+      acoesDaLinha={(etapa) => controlesDoFotolivro(caso, etapa, setErroFotolivro)}
       comSelo={false}
       acoesAbaixo
       rotuloObservacao="Pedidos do cliente"
+      onAbrir={() => abrirFicha(caso, albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0], 'fotolivro')}
       onErro={setErroFotolivro}
     />
   )
@@ -1277,6 +1313,27 @@ export function QuadroPage() {
           </>
         )}
       </div>
+
+      {(() => {
+        if (!ficha) return null
+        const caso = data?.casos.find((c) => c.id === ficha.casoId)
+        const etapa = etapasPorCaso.get(ficha.casoId)?.find((e) => e.id === ficha.etapaId)
+        if (!caso || !etapa) return null
+        return (
+          <FichaDaEdicao
+            caso={caso}
+            etapa={etapa}
+            tipo={ficha.tipo}
+            hoje={hoje}
+            controles={(onErro) =>
+              ficha.tipo === 'master'
+                ? controlesDoMaster(caso, etapa, onErro)
+                : controlesDoFotolivro(caso, etapa, onErro)
+            }
+            onFechar={() => setFicha(null)}
+          />
+        )
+      })()}
 
       {aprovandoFotolivro && (
         <DialogoAprovacaoDoFotolivro

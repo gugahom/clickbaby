@@ -176,7 +176,7 @@ async function buscarEtapas(ids: string[]): Promise<Map<string, EtapaQuadro[]>> 
           // precisa ser um literal de uma peça só: concatenar com `+` faz o tipo
           // do select virar string genérica e a inferência do supabase-js desabar.
           .select(
-            '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome)',
+            '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome), fotolivro_enviado:pessoas!caso_etapas_fotolivro_enviado_por_fkey(nome)',
             { count: 'exact' },
           )
           .in('caso_id', lote)

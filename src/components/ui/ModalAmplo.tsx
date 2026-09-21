@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import clsx from 'clsx'
 import { BotaoIcone } from './BotaoIcone'
 import { IconeX } from './icones'
 
@@ -10,6 +11,13 @@ interface PropsModalAmplo {
   acoes?: ReactNode
   onFechar: () => void
   children: ReactNode
+  /**
+   * `tela` (o padrão) é a seção inteira, quase a janela toda. `ficha` é UM
+   * cartão aberto — a ficha do MASTER e do FOTO/LIVRO (21/09/2026) —, mais
+   * estreita e da altura do conteúdo: uma ficha esticada até o fim da tela seria
+   * um vão branco embaixo de quatro blocos.
+   */
+  tamanho?: 'tela' | 'ficha'
 }
 
 /**
@@ -30,7 +38,14 @@ interface PropsModalAmplo {
  * com `display: none`, e um `flex` do Tailwind ganharia dela: por um quadro,
  * antes do `showModal()`, o modal apareceria solto no meio da página.
  */
-export function ModalAmplo({ titulo, subtitulo, acoes, onFechar, children }: PropsModalAmplo) {
+export function ModalAmplo({
+  titulo,
+  subtitulo,
+  acoes,
+  onFechar,
+  children,
+  tamanho = 'tela',
+}: PropsModalAmplo) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -46,7 +61,12 @@ export function ModalAmplo({ titulo, subtitulo, acoes, onFechar, children }: Pro
         e.preventDefault()
         onFechar()
       }}
-      className="m-auto h-[calc(100dvh-2rem)] w-[min(90rem,calc(100vw-2rem))] overflow-hidden rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm open:flex open:flex-col"
+      className={clsx(
+        'm-auto overflow-hidden rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm open:flex open:flex-col',
+        tamanho === 'tela'
+          ? 'h-[calc(100dvh-2rem)] w-[min(90rem,calc(100vw-2rem))]'
+          : 'max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100vw-2rem))]',
+      )}
     >
       <header className="flex flex-shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-acento-suave px-4 py-3 md:px-5">
         <div className="min-w-0 flex-1">

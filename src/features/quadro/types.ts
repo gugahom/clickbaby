@@ -184,6 +184,8 @@ export interface EtapaQuadro {
    * Entregáveis). Nulo com a fase em aprovação = o livro está na fila do ADM.
    */
   fotolivroEnviadoEm: string | null
+  /** Quem mandou — a ficha do Foto/Livro diz "enviado por Morgana". */
+  fotolivroEnviadoPorNome: string | null
 }
 
 /** O que uma carga do Quadro devolve — o Quadro, a aba Concluídos, ou só alguns casos. */
@@ -256,6 +258,7 @@ type LinhaEtapaComResponsavel = LinhaEtapa & {
   proximo_responsavel: { nome: string } | null
   baixou: { nome: string } | null
   subiu: { nome: string } | null
+  fotolivro_enviado: { nome: string } | null
 }
 
 export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
@@ -290,6 +293,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     fotolivroLink: linha.fotolivro_link,
     fotolivroCapa: linha.fotolivro_capa,
     fotolivroEnviadoEm: linha.fotolivro_enviado_em,
+    fotolivroEnviadoPorNome: linha.fotolivro_enviado?.nome ?? null,
   }
 }
 
