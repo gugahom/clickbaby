@@ -9,6 +9,7 @@ import { IconeDesfazer } from '@/components/ui/icones'
 import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import {
   useConfirmarEntrega,
+  useRegistrarTermo,
   useConfirmarEntregaDoVideo,
   useDevolverParaOQuadro,
   useEntregaveis,
@@ -527,6 +528,7 @@ export function EntregasPainel({
   const papel = pessoa?.papelSistema ?? 'operador'
 
   const confirmar = useConfirmarEntrega()
+  const registrarTermo = useRegistrarTermo()
   const [confirmando, setConfirmando] = useState<CasoQuadro | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -615,13 +617,24 @@ export function EntregasPainel({
           caso={confirmando}
           modo="confirmacao"
           etapas={etapasPorCaso.get(confirmando.id) ?? []}
-          ocupado={confirmar.isPending}
+          ocupado={confirmar.isPending || registrarTermo.isPending}
           erro={erro}
           onCancelar={() => setConfirmando(null)}
-          onConfirmar={() => {
+          /* DUAS CHAMADAS, e não uma transação só. São dois fatos
+             independentes: o termo é a leitura de um contrato, e vale com o
+             caso encerrado ou não — tanto que se corrige depois pelo menu do
+             cartão. Se a segunda falhar, o termo fica gravado num caso ainda
+             aberto, que é um estado certo; o diálogo segue aberto com o erro.
+             O termo vem primeiro justamente por isso: a ordem inversa
+             encerraria o caso e poderia deixá-lo sem a resposta. */
+          onConfirmar={(termo) => {
             setErro(null)
-            confirmar
-              .mutateAsync({ casoId: confirmando.id })
+            const casoId = confirmando.id
+            ;(termo === null
+              ? Promise.resolve()
+              : registrarTermo.mutateAsync({ casoId, termo })
+            )
+              .then(() => confirmar.mutateAsync({ casoId }))
               .then(() => setConfirmando(null))
               .catch((e) => setErro(mensagemDeErro(e)))
           }}

@@ -12,8 +12,10 @@ import {
   type TipoEntregavel,
 } from '../api/useAcoes'
 import { DialogoDespesa } from './DespesasDoCaso'
+import { SeletorDeTermo } from './SeletorDeTermo'
+import { termoSugerido } from '../lib/termo'
 import { mensagemDeErro } from '../lib/erros'
-import type { CasoQuadro, EtapaQuadro } from '../types'
+import type { CasoQuadro, EtapaQuadro, TermoStatus } from '../types'
 
 interface ItemDeConferencia {
   id: string
@@ -126,7 +128,12 @@ interface PropsDialogoConfirmarEntrega {
   ocupado: boolean
   erro: string | null
   onCancelar: () => void
-  onConfirmar: () => void
+  /**
+   * O termo vem junto porque a confirmação o exige — ver "O TERMO ENTRA NA
+   * CONFIRMAÇÃO", abaixo. No modo ENVIO ele é sempre nulo: quem envia é quem
+   * editou, e o contrato não é assunto dela.
+   */
+  onConfirmar: (termo: TermoStatus | null) => void
 }
 
 /**
@@ -168,6 +175,11 @@ export function DialogoConfirmarEntrega({
   const { data: links } = useEntregaveis(caso.id, true)
 
   const [conferidos, setConferidos] = useState<Set<string>>(new Set())
+  // O BIRTH já abre marcado como "sem contrato" — ver termoSugerido. Um caso
+  // que já tem resposta (corrigindo um engano, ou reconfirmando) abre nela.
+  const [termo, setTermo] = useState<TermoStatus | null>(
+    caso.termoStatus ?? termoSugerido(caso.pacoteSlug),
+  )
   const { data: despesas } = useDespesas(caso.id, true)
   const [lancandoDespesa, setLancandoDespesa] = useState(false)
 
@@ -207,11 +219,15 @@ export function DialogoConfirmarEntrega({
       }
       rotuloConfirmar={modo === 'envio' ? 'Enviar' : 'Confirmar entrega'}
       confirmarDestrutivo={modo === 'confirmacao'}
-      confirmarDesabilitado={links === undefined || itens.some((item) => !conferido(item))}
+      confirmarDesabilitado={
+        links === undefined ||
+        itens.some((item) => !conferido(item)) ||
+        (modo === 'confirmacao' && termo === null)
+      }
       ocupado={ocupado}
       erro={erro}
       onCancelar={onCancelar}
-      onConfirmar={onConfirmar}
+      onConfirmar={() => onConfirmar(modo === 'confirmacao' ? termo : null)}
     >
       <p className="text-sm text-muted-foreground">
         {caso.maeNome}
@@ -235,6 +251,31 @@ export function DialogoConfirmarEntrega({
           />
         ))}
       </ul>
+
+      {/* O TERMO ENTRA NA CONFIRMAÇÃO (22/09/2026, pedido do gestor), e só nela.
+
+          É a coluna TERMO da planilha de atendimento, e quem a fecha é a
+          Morgana — a mesma pessoa que confirma a entrega, no mesmo minuto em
+          que está com o contrato da família. No ENVIO ele não aparece: quem
+          envia é quem acabou de editar, e responder pelo contrato não é
+          trabalho dela.
+
+          TRAVA O BOTÃO (decisão do gestor), ao contrário das despesas logo
+          abaixo: o campo existe para a mídia filtrar depois, e um filtro cheio
+          de "não informado" não responde nada. O BANCO NÃO TRAVA —
+          `confirmar_entrega` encerra sem termo, como sempre; é o arranjo de
+          sempre, a tela mais estrita que o banco. */}
+      {modo === 'confirmacao' && (
+        <section className="rounded-md border border-border px-3 py-2.5">
+          <SeletorDeTermo
+            valor={termo}
+            onEscolher={setTermo}
+            {...(termoSugerido(caso.pacoteSlug) !== null && caso.termoStatus === null
+              ? { sugerido: 'BIRTH é vendido depois do parto e não tem contrato — troque se este teve.' }
+              : {})}
+          />
+        </section>
+      )}
 
       {/* AS DESPESAS APARECEM NA HORA DE ENVIAR (14/09/2026, pedido do gestor).
           Quem lança o gasto é quem trabalhou no caso, e este é o último momento

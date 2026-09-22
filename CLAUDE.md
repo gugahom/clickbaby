@@ -377,6 +377,7 @@ marcar_fotolivro_enviado(p_caso_etapa_id)        -- "Enviado ao cliente"; atendi
 pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
 
 -- caso
+registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
@@ -398,8 +399,9 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 ```
 
-**Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` e `termo_status`
-continuam por UPDATE direto de adm — ver a dívida no fim da seção 13.
+**Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` continua por UPDATE
+direto de adm — ver a dívida no fim da seção 13. `termo_status` SAIU do UPDATE direto em
+22/09/2026, quando ganhou `registrar_termo`: metade daquela dívida está fechada.
 
 RLS deve **negar** UPDATE direto do cliente nas colunas que essas funções controlam. Se a
 policy permite o update direto, a invariante não existe.
@@ -1530,6 +1532,32 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   a faixa abre, e "Excluir aviso" no menu da etapa. É `anotar_etapa` com texto em branco — o
   banco sempre apagou assim, e o texto antigo fica em `observacao_removida`. Antes a única
   porta era apagar o texto à mão em "Editar aviso".
+- **O TERMO DE USO DE IMAGEM** (22/09/2026, pedido do gestor, migration `20260922183631`).
+  É a coluna TERMO da planilha de atendimento, e responde uma pergunta da MÍDIA da empresa:
+  dá para usar as fotos deste parto num post? A escolha está no contrato de cada família,
+  quem a fecha é a Morgana, e por isso a pergunta mora no diálogo de **confirmar a entrega**
+  — o último gesto dela sobre o caso. **São três respostas**: Assinado, Ass pendente e Sem
+  contrato, que já existiam no enum `termo_status` desde o schema inicial, sem nenhuma tela
+  que as escrevesse.
+  **TRAVA O BOTÃO de confirmar** (decisão do gestor), ao contrário do bloco de despesas do
+  mesmo diálogo: o campo existe para a mídia FILTRAR depois, e um filtro cheio de "não
+  informado" não responde nada. O banco não trava — `confirmar_entrega` encerra sem termo,
+  como sempre; é o arranjo de sempre, a tela mais estrita que o banco. São DUAS chamadas e
+  não uma transação: termo e encerramento são fatos independentes (a resposta vale com o caso
+  aberto ou fechado), e o termo vai primeiro para o caso não encerrar sem ele.
+  **NULO É "NINGUÉM PERGUNTOU AINDA"**, e foi por isso que a coluna deixou de ser NOT NULL:
+  ela nascia `pendente` por padrão e nenhuma tela jamais a escreveu, então o primeiro filtro
+  da mídia leria "ASS PENDENTE" em toda a história da empresa. O backfill zerou só o valor
+  padrão. Nos Concluídos, caso sem resposta **não mostra selo** — e o menu do cartão tem
+  "Termo de imagem" para responder depois, que é também a porta da correção: a resposta é
+  dada no mesmo minuto do encerramento, e `registrar_termo` aceita caso em qualquer estado
+  justamente para um engano não ficar trancado.
+  **BIRTH ABRE MARCADO COMO "SEM CONTRATO"** — são vendidos depois do parto e não têm
+  contrato assinado —, marcado e não travado: um BIRTH que virou venda com contrato existe.
+  **QUEM RESPONDEU E QUANDO FICA EM `eventos`** (`termo_registrado`, com o valor anterior), e
+  não em colunas novas: append-only, uma correção não apaga a resposta de hoje. O quarto
+  valor do enum, `nao_aplicavel`, a RPC RECUSA — valor de enum não se apaga, e uma quarta
+  resposta que ninguém sabe ler acabaria no filtro da mídia como "talvez".
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e
@@ -1664,8 +1692,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 3. **Produtividade ainda não tem tela.** O dado está em `eventos` desde o primeiro dia; a
    Equipe só mostra a agregação simples de `caso_etapas` (em mãos agora, concluídas em 30
    dias), feita no cliente.
-4. **`atualizar_situacao_clinica` e `termo_status` sem RPC.** Continuam por UPDATE direto
-   de adm. Quando ganharem RPC, revogar o privilégio de coluna — não basta parar de usar.
+4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto
+   de adm. Quando ganhar RPC, revogar o privilégio de coluna — não basta parar de usar.
+   `termo_status` era a outra metade e fechou em 22/09/2026 (`registrar_termo`, migration
+   `20260922183631`): a RPC nasceu e o `revoke update (termo_status)` veio na mesma
+   migration, que é o par que esta dívida pede.
 5. **`npm run auditar:privilegios` não cobre `service_role`.** Existe divergência conhecida
    (SELECT em `casos` no remoto e não no local). Não é exploração, mas é a mesma classe de
    divergência que **já mordeu três vezes** — a terceira em 02/09/2026, quando

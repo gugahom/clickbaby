@@ -20,6 +20,8 @@ import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { IconeCaneta, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
 import { Dropdown, type ItemDropdown } from '@/components/ui/Dropdown'
+import { DialogoTermo } from './DialogoTermo'
+import { SeloDoTermo } from './SeloDoTermo'
 
 /** A espinha usa cor crua porque também recebe a cor do Calendar, que é hex. */
 const CorDoAlerta: Record<NivelAlerta, string> = {
@@ -73,6 +75,7 @@ export function CasoLinha({
     raiz.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [emFoco])
   const [editando, setEditando] = useState(false)
+  const [registrandoTermo, setRegistrandoTermo] = useState(false)
   const [descartando, setDescartando] = useState(false)
   const [erroDescarte, setErroDescarte] = useState<string | null>(null)
   const idPainel = useId()
@@ -212,6 +215,18 @@ export function CasoLinha({
     // Para fotógrafa o item NÃO EXISTE (15/09/2026, pedido do gestor) — e não
     // apagado, como era: cancelar é decisão de quem não é fotógrafa, e um item
     // destrutivo cinza no menu de todo rascunho só ensinava a desconfiar dele.
+    /* O TERMO se responde aqui fora da entrega (22/09/2026): casos que
+       encerraram antes da pergunta existir, e correção de engano. Mesmo par de
+       papéis que confirma a entrega — é a leitura de um contrato comercial. */
+    ...(podeEncerrarCaso(papel) && !caso.ehRascunho
+      ? [
+          {
+            id: 'termo',
+            rotulo: caso.termoStatus ? 'Trocar o termo de imagem' : 'Termo de imagem',
+            icone: <IconeCaneta className="size-4" />,
+          },
+        ]
+      : []),
     ...(caso.ehRascunho && !caso.ehTerminal && podeEncerrarCaso(papel)
       ? [
           {
@@ -493,6 +508,7 @@ export function CasoLinha({
 
                       O CHIP DE DESPESAS SAIU daqui no mesmo pedido: o gasto
                       fica na lista do card aberto e na tela de Despesas. */}
+                  {caso.ehTerminal && <SeloDoTermo termo={caso.termoStatus} />}
                   {caso.ehTerminal && caso.nascimentoConcluidoEm && (
                     <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground">
                       Nasceu {formatarData(caso.nascimentoConcluidoEm)}
@@ -606,6 +622,7 @@ export function CasoLinha({
             onEscolher={(item) => {
               if (item.id === 'editar') setEditando(true)
               if (item.id === 'reabrir') onReabrir?.(caso)
+              if (item.id === 'termo') setRegistrandoTermo(true)
               if (item.id === 'restaurar') {
                 setErroRestauracao(null)
                 setMotivoRestauracao('')
@@ -634,6 +651,10 @@ export function CasoLinha({
       )}
 
       {editando && <EditarCasoDialogo caso={caso} onFechar={() => setEditando(false)} />}
+
+      {registrandoTermo && (
+        <DialogoTermo caso={caso} onFechar={() => setRegistrandoTermo(false)} />
+      )}
 
       {descartando && (
         <Dialogo
