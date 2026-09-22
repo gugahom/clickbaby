@@ -18,6 +18,11 @@ export type ResultadoParseEvento =
       bebe: string;
       pacote_bruto: string | null;
       maternidade_sigla: string | null;
+      /**
+       * O título traz o adicional CLICK HOME — o ensaio newborn na casa da
+       * família, feito 10 a 12 dias depois da entrega (22/09/2026).
+       */
+      click_home: boolean;
     }
   | { tipo: "ignorar" };
 
@@ -139,8 +144,26 @@ function extrairMaternidadeDoFim(
   return null;
 }
 
+// CLICK HOME é ADICIONAL, não pacote — ele aparece GRUDADO num pacote no
+// título ("STANDARD + CLICK HOME"), e é assim que a equipe vende: o ensaio
+// newborn vai junto com o pacote do parto.
+//
+// Por isso ele sai do texto ANTES de qualquer coisa, virando uma bandeira: a
+// lista de pacotes canônicos casa por IGUALDADE, então "STANDARD + CLICK HOME"
+// não bate com nada e o caso virava RASCUNHO PENDENTE — que é o que acontecia
+// até aqui, e o motivo de o parser nunca ter enxergado o produto.
+//
+// O separador é opcional e pode ser "+" ou "-", porque as duas grafias existem
+// na agenda; \s* entre as palavras cobre "CLICKHOME" digitado junto.
+const CLICK_HOME = /\s*[-+]?\s*CLICK\s*HOME\b/i;
+
 export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
   let texto = titulo.trim();
+
+  const clickHome = CLICK_HOME.test(texto);
+  if (clickHome) {
+    texto = texto.replace(CLICK_HOME, " ").replace(/\s+/g, " ").trim();
+  }
 
   // O '*' que antecede alguns nomes: significado ainda não confirmado com
   // o cliente (seção 7 do CLAUDE.md). Só removemos pra não atrapalhar o
@@ -181,6 +204,7 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
       bebe,
       pacote_bruto: combinaComPacoteCanonico(pacoteTexto),
       maternidade_sigla: siglaTentativa,
+      click_home: clickHome,
     };
   }
 
@@ -202,6 +226,7 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
           bebe,
           pacote_bruto: pacoteReconhecido,
           maternidade_sigla: siglaTentativa,
+          click_home: clickHome,
         };
       }
     }
@@ -215,6 +240,7 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
       bebe,
       pacote_bruto: pacoteInteiro,
       maternidade_sigla: pacoteInteiro ? null : siglaTentativa,
+      click_home: clickHome,
     };
   }
 
@@ -239,5 +265,6 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
     bebe,
     pacote_bruto: pacoteTexto ? combinaComPacoteCanonico(pacoteTexto) : null,
     maternidade_sigla: siglaTentativa,
+    click_home: clickHome,
   };
 }

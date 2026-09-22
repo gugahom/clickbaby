@@ -6,6 +6,7 @@ import { dataPorExtenso, diasAtras, hojeNoFuso } from '@/lib/formato'
 import { useConcluidos, useQuadro } from './api/useQuadro'
 import {
   useMoverAlbum,
+  useMoverClickHome,
   useMoverVideoMaster,
   usePedirAlteracaoDaEtapa,
   useReabrirCaso,
@@ -27,6 +28,8 @@ import {
   casosComVideoAberto,
   casosComVideoMasterAberto,
   casosComAlbumAberto,
+  casosComClickHomeAberto,
+  ensaiosAbertos,
   reelsAbertosDaSecao,
   videosMasterAbertos,
   albunsAbertos,
@@ -53,6 +56,7 @@ import { EntregasPainel } from './components/EntregasPainel'
 import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { FaseDoAlbum } from './components/FaseDoAlbum'
+import { FaseDoClickHome } from './components/FaseDoClickHome'
 import { PrazoDaEtapa } from './components/PrazoDaEtapa'
 import { PedidosDaEtapa } from './components/PedidosDaEtapa'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
@@ -62,11 +66,20 @@ import { DialogoAprovacaoDoFotolivro } from './components/DialogoAprovacaoDoFoto
 import { FichaDaEdicao } from './components/FichaDaEdicao'
 import { DialogoFinalizarVideo } from './components/DialogoFinalizarVideo'
 import { AtribuicaoDaSecao } from './components/AtribuicaoDaSecao'
-import type { FotolivroNaEntrega, VideoNaEntrega } from './components/EntregasPainel'
+import { DialogoGaleriaDoClickHome } from './components/DialogoGaleriaDoClickHome'
+import type {
+  ClickHomeNaEntrega,
+  FotolivroNaEntrega,
+  VideoNaEntrega,
+} from './components/EntregasPainel'
 import type { BlocoDia, CasoQuadro } from './types'
 import {
   FASES_ALBUM_ANTES_DA_APROVACAO,
   FASES_ALBUM_NA_TELA,
+  FASES_CLICK_HOME_ANTES_DA_ESCOLHA,
+  FASES_CLICK_HOME_NA_TELA,
+  FASE_CLICK_HOME_ESCOLHA,
+  ROTULO_FASE_CLICK_HOME,
   FASES_VIDEO_NA_TELA,
   FASE_ALBUM_APROVACAO,
   FASE_VIDEO_FINAL,
@@ -74,7 +87,7 @@ import {
   ROTULO_FASE_VIDEO,
   faseDoVideo,
 } from './types'
-import type { EtapaQuadro, FaseAlbum, FaseVideoMaster } from './types'
+import type { EtapaQuadro, FaseAlbum, FaseClickHome, FaseVideoMaster } from './types'
 
 /**
  * Aba só existe no mobile. No desktop as duas colunas convivem, porque a
@@ -87,7 +100,7 @@ import type { EtapaQuadro, FaseAlbum, FaseVideoMaster } from './types'
  * `SEM_FAIXA_NO_CARD` (AvisosDoCaso), e pelo mesmo motivo de sempre: são as que
  * têm esteira própria e não seguram o encerramento.
  */
-const TEM_SECAO_PROPRIA = new Set<EtapaTipo>(['edicao_video', 'album'])
+const TEM_SECAO_PROPRIA = new Set<EtapaTipo>(['edicao_video', 'album', 'click_home'])
 
 type Aba =
   | 'lista'
@@ -95,6 +108,7 @@ type Aba =
   | 'reels'
   | 'master'
   | 'fotolivro'
+  | 'clickhome'
   | 'concluidos'
   | 'rascunhos'
   | 'entregas'
@@ -112,6 +126,7 @@ export function QuadroPage() {
   const [erroReels, setErroReels] = useState<string | null>(null)
   const [erroMaster, setErroMaster] = useState<string | null>(null)
   const [erroFotolivro, setErroFotolivro] = useState<string | null>(null)
+  const [erroClickHome, setErroClickHome] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [reabrindo, setReabrindo] = useState<CasoQuadro | null>(null)
   // O fotolivro que está indo para aprovação pelo arrastar ou pelo "concluir"
@@ -126,11 +141,17 @@ export function QuadroPage() {
     etapa: EtapaQuadro
     caso: CasoQuadro
   } | null>(null)
-  // A ficha do cartão do MASTER ou do Foto/Livro — ver FichaDaEdicao.
+  // O ensaio que está indo para a escolha pelo arrastar ou pelo ✓ do cartão —
+  // o seletor de fase abre o mesmo diálogo por conta própria.
+  const [enviandoClickHome, setEnviandoClickHome] = useState<{
+    etapa: EtapaQuadro
+    caso: CasoQuadro
+  } | null>(null)
+  // A ficha do cartão do MASTER, do Foto/Livro ou do Click Home — ver FichaDaEdicao.
   const [ficha, setFicha] = useState<{
     casoId: string
     etapaId: string
-    tipo: 'master' | 'fotolivro'
+    tipo: 'master' | 'fotolivro' | 'click_home'
   } | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
   const reabrirCaso = useReabrirCaso()
@@ -196,6 +217,7 @@ export function QuadroPage() {
   // do cartão — o atalho não é um segundo caminho de escrita.
   const moverVideo = useMoverVideoMaster()
   const moverAlbum = useMoverAlbum()
+  const moverClickHome = useMoverClickHome()
   const pedirAlteracao = usePedirAlteracaoDaEtapa()
 
   const hoje = hojeNoFuso()
@@ -215,7 +237,9 @@ export function QuadroPage() {
     emReels,
     emMaster,
     emFotolivro,
+    emClickHome,
     fotolivrosNaEntrega,
+    ensaiosNaEntrega,
     videosNaEntrega,
     totalAbertos,
     totalGeral,
@@ -277,6 +301,7 @@ export function QuadroPage() {
       emReels: casosComVideoAberto(casos, etapas),
       emMaster: casosComVideoMasterAberto(casos, etapas),
       emFotolivro: casosComAlbumAberto(casos, etapas),
+      emClickHome: casosComClickHomeAberto(casos, etapas),
       /*
        * O FOTO/LIVRO EM ENTREGÁVEIS (21/09/2026, pedido do gestor). Duas
        * passagens: a PROVA para o ADM mandar ao cliente (sai quando ele marca
@@ -307,6 +332,18 @@ export function QuadroPage() {
         .flatMap((caso): VideoNaEntrega[] =>
           (etapas.get(caso.id) ?? [])
             .filter((e) => e.tipo === 'edicao_video' && e.status === FASE_VIDEO_FINAL)
+            .map((etapa) => ({ caso, etapa })),
+        ),
+      /*
+       * O CLICK HOME EM ENTREGÁVEIS (22/09/2026, pedido do gestor): a galeria
+       * de escolha pronta, esperando o ADM mandar à família. Na seção o cartão
+       * fica em "Enviar para escolha" até a confirmação.
+       */
+      ensaiosNaEntrega: casos
+        .filter((c) => c.statusOperacional !== 'cancelado')
+        .flatMap((caso): ClickHomeNaEntrega[] =>
+          (etapas.get(caso.id) ?? [])
+            .filter((e) => e.tipo === 'click_home' && e.faseClickHome === FASE_CLICK_HOME_ESCOLHA)
             .map((etapa) => ({ caso, etapa })),
         ),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
@@ -343,7 +380,11 @@ export function QuadroPage() {
   const etapasPorCaso = data?.etapasPorCaso ?? SEM_ETAPAS
   // A aba conta os casos, os Foto/Livros e os vídeos que esperam o ADM — todos
   // são "alguém precisa entregar", e o anel verde gira para todos.
-  const naEntrega = entregas.length + fotolivrosNaEntrega.length + videosNaEntrega.length
+  const naEntrega =
+    entregas.length +
+    fotolivrosNaEntrega.length +
+    videosNaEntrega.length +
+    ensaiosNaEntrega.length
   // Os cartões de Concluídos leem as etapas do ARQUIVO, que é a consulta deles.
   // O mapa do Quadro fica de reserva para o que está nos dois lugares — o
   // MASTER encerrado com o vídeo ainda aberto.
@@ -689,6 +730,46 @@ export function QuadroPage() {
   )
 
   /*
+   * OS CONTROLES DO CLICK HOME (22/09/2026). Mesmos quatro do fotolivro: quem
+   * está com o ensaio, o prazo combinado com a família, os pedidos dela e a
+   * fase — mais a pílula que diz quando ele está parado em Entregáveis.
+   */
+  const controlesDoClickHome = (
+    caso: CasoQuadro,
+    etapa: EtapaQuadro,
+    onErro: (mensagem: string | null) => void,
+  ) => (
+    <>
+      <AtribuicaoDaSecao etapa={etapa} onErro={onErro} />
+      <PrazoDaEtapa etapa={etapa} onErro={onErro} />
+      <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+      <FaseDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+      {etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA && (
+        <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
+          Em Entregáveis
+        </span>
+      )}
+      <AcoesDaEtapa
+        etapa={etapa}
+        etapas={etapasPorCaso.get(caso.id) ?? []}
+        onErro={onErro}
+        /* O ✓ do cartão é "a galeria está pronta", e abre o pedido do link.
+           Depois da escolha ele não conclui nada: o fim é a confirmação da
+           Morgana em Entregáveis. */
+        concluirComo={
+          etapa.faseClickHome === null ||
+          FASES_CLICK_HOME_ANTES_DA_ESCOLHA.has(etapa.faseClickHome)
+            ? {
+                rotulo: 'Galeria pronta — mandar para escolha',
+                aoTocar: () => setEnviandoClickHome({ etapa, caso }),
+              }
+            : null
+        }
+      />
+    </>
+  )
+
+  /*
    * A FICHA ABERTA guarda só os ids: o caso e a etapa são lidos do Quadro a cada
    * render, para a ficha acompanhar o Realtime como o cartão acompanha. Se o
    * caso sair do Quadro (arquivou), a ficha some junto.
@@ -696,7 +777,7 @@ export function QuadroPage() {
   const abrirFicha = (
     caso: CasoQuadro,
     etapa: EtapaQuadro | undefined,
-    tipo: 'master' | 'fotolivro',
+    tipo: 'master' | 'fotolivro' | 'click_home',
   ) => {
     if (etapa) setFicha({ casoId: caso.id, etapaId: etapa.id, tipo })
   }
@@ -839,6 +920,29 @@ export function QuadroPage() {
   const CRITERIO_FOTOLIVRO =
     'Foto/Livro do pagamento à entrega. Segue depois do caso encerrar.'
   const CRITERIO_UTI = 'Fora do dia e com o prazo de entrega congelado.'
+  const CRITERIO_CLICK_HOME =
+    'Ensaio newborn em casa, da edição à escolha da família. Acontece depois da entrega.'
+
+  const cartaoClickHome = (caso: CasoQuadro, raiz?: LiHTMLAttributes<HTMLLIElement>) => (
+    <CartaoDeEdicao
+      key={caso.id}
+      {...(raiz ? { raiz } : {})}
+      caso={caso}
+      hoje={hoje}
+      etapas={etapasPorCaso.get(caso.id) ?? []}
+      daSecao={ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])}
+      rotularLinha={() => 'Click Home'}
+      acoesDaLinha={(etapa) => controlesDoClickHome(caso, etapa, setErroClickHome)}
+      comSelo={false}
+      acoesAbaixo
+      rotuloObservacao="Pedidos do cliente"
+      onAbrir={() =>
+        abrirFicha(caso, ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])[0], 'click_home')
+      }
+      onErro={setErroClickHome}
+    />
+  )
+  const conteudoClickHome = emClickHome.map((caso) => cartaoClickHome(caso))
 
   /*
    * MASTER E FOTO/LIVRO EM MODAL (15/09/2026). Cada cartão vai junto com a FASE
@@ -861,6 +965,11 @@ export function QuadroPage() {
     fase: albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseAlbum ?? null,
     cartao: (raiz) => cartaoFotolivro(caso, raiz),
   }))
+  const itensClickHome: ItemDaSecao[] = emClickHome.map((caso) => ({
+    id: caso.id,
+    fase: ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseClickHome ?? null,
+    cartao: (raiz) => cartaoClickHome(caso, raiz),
+  }))
 
   /*
    * AS COLUNAS DO MASTER, SEM SAÍDA (21/09/2026). "Pronto para entrega" é a
@@ -879,6 +988,12 @@ export function QuadroPage() {
   const colunasFotolivro: ColunaDaSecao[] = FASES_ALBUM_NA_TELA.map((fase) => ({
     id: fase,
     rotulo: ROTULO_FASE_ALBUM[fase],
+  }))
+  // Sem coluna de saída aqui também: "Enviar para escolha" segura o cartão até
+  // a confirmação em Entregáveis.
+  const colunasClickHome: ColunaDaSecao[] = FASES_CLICK_HOME_NA_TELA.map((fase) => ({
+    id: fase,
+    rotulo: ROTULO_FASE_CLICK_HOME[fase],
   }))
 
   /*
@@ -923,6 +1038,25 @@ export function QuadroPage() {
       return true
     } catch (e) {
       setErroFotolivro(mensagemDeErro(e))
+      return false
+    }
+  }
+
+  const soltarNoClickHome = async (casoId: string, fase: string) => {
+    const ensaio = ensaiosAbertos(etapasPorCaso.get(casoId) ?? [])[0]
+    if (!ensaio) return false
+    setErroClickHome(null)
+    // A escolha pede o link da galeria antes — mesmo arranjo do fotolivro.
+    if (fase === FASE_CLICK_HOME_ESCOLHA) {
+      const caso = emClickHome.find((c) => c.id === casoId)
+      if (caso) setEnviandoClickHome({ etapa: ensaio, caso })
+      return false
+    }
+    try {
+      await moverClickHome.mutateAsync({ casoEtapaId: ensaio.id, fase: fase as FaseClickHome })
+      return true
+    } catch (e) {
+      setErroClickHome(mensagemDeErro(e))
       return false
     }
   }
@@ -972,6 +1106,18 @@ export function QuadroPage() {
       erro={erroFotolivro}
     >
       {conteudoFotolivro}
+    </PainelLateral>
+  )
+
+  const painelClickHome = (
+    <PainelLateral
+      titulo="Click Home"
+      quantidade={emClickHome.length}
+      criterio={CRITERIO_CLICK_HOME}
+      vazio="Nenhum Click Home em produção."
+      erro={erroClickHome}
+    >
+      {conteudoClickHome}
     </PainelLateral>
   )
 
@@ -1177,6 +1323,9 @@ export function QuadroPage() {
           <BotaoAba ativa={aba === 'fotolivro'} onClick={() => setAba('fotolivro')}>
             Foto/Livro ({emFotolivro.length})
           </BotaoAba>
+          <BotaoAba ativa={aba === 'clickhome'} onClick={() => setAba('clickhome')}>
+            Click Home ({emClickHome.length})
+          </BotaoAba>
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
           </BotaoAba>
@@ -1232,6 +1381,7 @@ export function QuadroPage() {
             <EntregasPainel
               entregas={entregas}
               fotolivros={fotolivrosNaEntrega}
+              ensaios={ensaiosNaEntrega}
               videos={videosNaEntrega}
               etapasPorCaso={etapasPorCaso}
               hoje={hoje}
@@ -1322,6 +1472,20 @@ export function QuadroPage() {
                   onMoverFase={soltarNoFotolivro}
                   chaveModo="fotolivro"
                 />
+                {/* CLICK HOME por último: o ensaio acontece 10 a 12 dias DEPOIS
+                    da entrega, então ele é o que menos corre. */}
+                <SecaoEmModal
+                  titulo="Click Home"
+                  quantidade={emClickHome.length}
+                  criterio={CRITERIO_CLICK_HOME}
+                  vazio="Nenhum Click Home em produção."
+                  erro={erroClickHome}
+                  onLimparErro={() => setErroClickHome(null)}
+                  itens={itensClickHome}
+                  colunas={colunasClickHome}
+                  onMoverFase={soltarNoClickHome}
+                  chaveModo="clickhome"
+                />
                 <PainelDobravel
                   titulo="UTI"
                   quantidade={naUti.length}
@@ -1341,6 +1505,7 @@ export function QuadroPage() {
               {aba === 'reels' && painelReels}
               {aba === 'master' && painelMaster}
               {aba === 'fotolivro' && painelFotolivro}
+              {aba === 'clickhome' && painelClickHome}
             </div>
           </>
         )}
@@ -1360,7 +1525,9 @@ export function QuadroPage() {
             controles={(onErro) =>
               ficha.tipo === 'master'
                 ? controlesDoMaster(caso, etapa, onErro)
-                : controlesDoFotolivro(caso, etapa, onErro)
+                : ficha.tipo === 'fotolivro'
+                  ? controlesDoFotolivro(caso, etapa, onErro)
+                  : controlesDoClickHome(caso, etapa, onErro)
             }
             onFechar={() => setFicha(null)}
           />
@@ -1380,6 +1547,14 @@ export function QuadroPage() {
           etapa={aprovandoFotolivro.etapa}
           nomeDoCaso={nomeDoCaso(aprovandoFotolivro.caso)}
           onFechar={() => setAprovandoFotolivro(null)}
+        />
+      )}
+
+      {enviandoClickHome && (
+        <DialogoGaleriaDoClickHome
+          etapa={enviandoClickHome.etapa}
+          nomeDoCaso={nomeDoCaso(enviandoClickHome.caso)}
+          onFechar={() => setEnviandoClickHome(null)}
         />
       )}
 

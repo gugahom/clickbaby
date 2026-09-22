@@ -286,6 +286,27 @@ async function processarEvento(
     throw new Error(`sync_upsert_caso falhou: ${error.message}`);
   }
 
+  // O ADICIONAL CLICK HOME (22/09/2026), numa chamada à parte e SÓ quando o
+  // título o traz. Chamada separada de propósito: um parâmetro novo em
+  // `sync_upsert_caso` criaria uma segunda assinatura e deixaria a chamada
+  // ambígua para a versão anterior desta função — que roda a cada 25 segundos
+  // e é o intake principal do sistema. O preço aqui é uma ida a mais ao banco
+  // em uma minoria dos eventos; o de lá seria o sync parado entre o push da
+  // migration e o deploy.
+  //
+  // Erro NÃO derruba o evento: o caso já foi criado/atualizado, e a marca
+  // entra no próximo ciclo (a RPC é idempotente). Perder o caso por causa do
+  // adicional seria trocar o principal pelo acessório.
+  if (resultadoParse.click_home) {
+    const { error: erroClickHome } = await supabase.rpc("sync_marcar_click_home", {
+      p_google_event_id: evento.id,
+    });
+
+    if (erroClickHome) {
+      console.error(`sync_marcar_click_home falhou: ${erroClickHome.message}`);
+    }
+  }
+
   return acao as string;
 }
 

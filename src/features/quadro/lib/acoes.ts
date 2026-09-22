@@ -490,7 +490,14 @@ export function podeConfirmarEntrega(
  * discordando, sem erro em lugar nenhum. A próxima etapa que entrar nesta
  * regra muda aqui e nas duas RPCs, ou em nenhum dos três.
  */
-const NAO_SEGURAM_A_ENTREGA: ReadonlySet<EtapaTipo> = new Set(['edicao_video', 'album'])
+const NAO_SEGURAM_A_ENTREGA: ReadonlySet<EtapaTipo> = new Set([
+  'edicao_video',
+  'album',
+  // O ensaio Click Home (22/09/2026) é a TERCEIRA, e a mais evidente das três:
+  // ele acontece 10 a 12 dias DEPOIS da entrega do pacote. Espelha o
+  // `not in` das duas RPCs (migration 20260922212901).
+  'click_home',
+])
 
 /**
  * ENVIAR o caso para a aba Entregáveis.

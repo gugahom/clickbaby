@@ -1066,4 +1066,5 @@ function pontoEtapa(etapa: EtapaQuadro): string {
 const SECAO_DA_ETAPA: Partial<Record<EtapaTipo, string>> = {
   edicao_video: 'Master',
   album: 'Foto/Livro',
+  click_home: 'Click Home',
 }

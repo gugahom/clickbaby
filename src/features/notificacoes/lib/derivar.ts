@@ -93,7 +93,7 @@ const ORDEM: Record<TipoNotificacao, number> = {
  * um vídeo de dez dias úteis tocando o sino ensinaria a equipe a ignorá-lo.
  * A lista é a mesma de `SEM_FAIXA_NO_CARD` e de `SECAO_DA_ETAPA`.
  */
-const SEM_AVISO = new Set<EtapaTipo>(['edicao_video', 'album'])
+const SEM_AVISO = new Set<EtapaTipo>(['edicao_video', 'album', 'click_home'])
 
 /** Papéis que recebem o trabalho de ADM: conferir entrega e resolver rascunho. */
 function ehAdmOuAtendimento(papel: string): boolean {
@@ -345,6 +345,27 @@ export function derivarNotificacoes({
           familia: 'geral',
           peso: ORDEM.entrega,
           titulo: 'Vídeo do MASTER pronto para entregar',
+          detalhe: 'Na aba Entregáveis',
+          casoId: caso.id,
+          casoNome: nome,
+          em: quando(etapa),
+        })
+      }
+
+      // O CLICK HOME COM A GALERIA PRONTA (22/09/2026), esperando o ADM mandar
+      // o link à família. Mesmo tipo dos outros dois: é o mesmo trabalho, na
+      // mesma aba, do mesmo papel.
+      if (
+        etapa.tipo === 'click_home' &&
+        etapa.faseClickHome === 'enviar_para_escolha' &&
+        ehAdmOuAtendimento(papel)
+      ) {
+        lista.push({
+          id: `click-home-entrega:${etapa.id}`,
+          tipo: 'entrega',
+          familia: 'geral',
+          peso: ORDEM.entrega,
+          titulo: 'Galeria do Click Home para mandar à família',
           detalhe: 'Na aba Entregáveis',
           casoId: caso.id,
           casoNome: nome,

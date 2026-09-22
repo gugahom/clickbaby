@@ -17,7 +17,7 @@ import { ROTULO_ETAPA, rotuloDaRodada, type EtapaQuadro, type EtapaTipo } from '
  * As duas são as mesmas de `SECAO_DA_ETAPA` (AcoesDoCaso), e pelo mesmo motivo:
  * são as que se operam fora do card.
  */
-const SEM_FAIXA_NO_CARD = new Set<EtapaTipo>(['edicao_video', 'album'])
+const SEM_FAIXA_NO_CARD = new Set<EtapaTipo>(['edicao_video', 'album', 'click_home'])
 
 interface PropsAvisosDoCaso {
   etapas: EtapaQuadro[]

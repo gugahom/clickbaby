@@ -42,6 +42,7 @@ Deno.test("exemplo real 1: sem dash, maternidade embutida, BIRTH+REELS reconheci
       bebe: "ALICE",
       pacote_bruto: "BIRTH+REELS",
       maternidade_sigla: "GNDI",
+      click_home: false,
     },
     "THAYANE/ALICE BIRTH+REELS GNDI",
   );
@@ -56,6 +57,7 @@ Deno.test("exemplo real 2: dash único, sem maternidade", () => {
       bebe: "JOAQUIM",
       pacote_bruto: "BABY REELS",
       maternidade_sigla: null,
+      click_home: false,
     },
     "KEVELYN/JOAQUIM - BABY REELS",
   );
@@ -70,6 +72,7 @@ Deno.test("exemplo real 3: asterisco, bebê de nome composto, dois dashes", () =
       bebe: "MARIA LUIZA",
       pacote_bruto: "BASIC",
       maternidade_sigla: "HSC",
+      click_home: false,
     },
     "*JENNIE/MARIA LUIZA - BASIC - HSC",
   );
@@ -89,6 +92,7 @@ Deno.test("asterisco é removido e não aparece em mae nem em nenhum outro campo
       bebe: "PEDRO",
       pacote_bruto: "STANDARD",
       maternidade_sigla: "CWB",
+      click_home: false,
     },
     "*ANA/PEDRO - STANDARD - CWB",
   );
@@ -137,6 +141,7 @@ Deno.test("pacote desconhecido -> pacote_bruto null, mãe/bebê preservados", ()
       bebe: "LUCAS",
       pacote_bruto: null,
       maternidade_sigla: null,
+      click_home: false,
     },
     "CARLA/LUCAS - PACOTE INEXISTENTE",
   );
@@ -164,6 +169,7 @@ Deno.test("sem maternidade -> maternidade_sigla null", () => {
       bebe: "NOAH",
       pacote_bruto: "MASTER",
       maternidade_sigla: null,
+      click_home: false,
     },
     "BIA/NOAH - MASTER",
   );
@@ -305,6 +311,7 @@ Deno.test("reconhece BRIGIDA embutida sem dash, exemplo real de título", () => 
       bebe: "ALICE",
       pacote_bruto: "BIRTH+REELS",
       maternidade_sigla: "GNDI",
+      click_home: false,
     },
     "mesmo título do exemplo do CLAUDE.md, com BRIGIDA no lugar de GNDI",
   );
@@ -342,7 +349,7 @@ Deno.test("espaços extras ao redor de mãe/bebê são removidos", () => {
 Deno.test("maternidade nova em segmento próprio", () => {
   assertEqual(
     parseEventoCalendar("ANA/PEDRO - BABY REELS - ROCIO"),
-    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "ROCIO" },
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "ROCIO", click_home: false },
     "ROCIO como segmento próprio",
   );
 });
@@ -350,7 +357,7 @@ Deno.test("maternidade nova em segmento próprio", () => {
 Deno.test("LUIZA DE MARILAC como segmento inteiro", () => {
   assertEqual(
     parseEventoCalendar("ANA/PEDRO - BABY REELS - LUIZA DE MARILAC"),
-    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC" },
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC", click_home: false },
     "nome de três palavras em segmento próprio",
   );
 });
@@ -362,7 +369,7 @@ Deno.test("LUIZA DE MARILAC como segmento inteiro", () => {
 Deno.test("LUIZA DE MARILAC embutida no segmento do pacote", () => {
   assertEqual(
     parseEventoCalendar("ANA/PEDRO - BABY REELS LUIZA DE MARILAC"),
-    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC" },
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BABY REELS", maternidade_sigla: "MARILAC", click_home: false },
     "nome de três palavras embutido",
   );
 });
@@ -370,7 +377,7 @@ Deno.test("LUIZA DE MARILAC embutida no segmento do pacote", () => {
 Deno.test("MARILAC sozinho continua valendo", () => {
   assertEqual(
     parseEventoCalendar("ANA/PEDRO - BASIC MARILAC"),
-    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BASIC", maternidade_sigla: "MARILAC" },
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BASIC", maternidade_sigla: "MARILAC", click_home: false },
     "forma curta",
   );
 });
@@ -379,7 +386,7 @@ Deno.test("MACK e MACKENZIE apontam para a mesma sigla", () => {
   for (const forma of ["MACK", "MACKENZIE"]) {
     assertEqual(
       parseEventoCalendar(`ANA/PEDRO - STANDARD ${forma}`),
-      { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "STANDARD", maternidade_sigla: "MACKENZIE" },
+      { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "STANDARD", maternidade_sigla: "MACKENZIE", click_home: false },
       `duas formas, uma sigla: ${forma}`,
     );
   }
@@ -389,7 +396,75 @@ Deno.test("MACK e MACKENZIE apontam para a mesma sigla", () => {
 Deno.test("maternidade nova sem hífen no título", () => {
   assertEqual(
     parseEventoCalendar("ANA/PEDRO BIRTH+REELS ROCIO"),
-    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BIRTH+REELS", maternidade_sigla: "ROCIO" },
+    { tipo: "caso", mae: "ANA", bebe: "PEDRO", pacote_bruto: "BIRTH+REELS", maternidade_sigla: "ROCIO", click_home: false },
     "caminho sem hífen",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// CLICK HOME — o adicional do ensaio newborn (22/09/2026).
+//
+// Até aqui estes títulos viravam RASCUNHO PENDENTE: "STANDARD + CLICK HOME"
+// não é igual a nenhum pacote canônico, e o parser (corretamente) não chuta.
+// Agora o adicional sai do texto e vira bandeira, e o pacote volta a casar.
+// ---------------------------------------------------------------------------
+
+Deno.test("click home: sufixo com '+' não estraga o pacote", () => {
+  assertEqual(
+    parseEventoCalendar("JULIANA/PEDRO - STANDARD + CLICK HOME - HSC"),
+    {
+      tipo: "caso",
+      mae: "JULIANA",
+      bebe: "PEDRO",
+      pacote_bruto: "STANDARD",
+      maternidade_sigla: "HSC",
+      click_home: true,
+    },
+    "JULIANA/PEDRO - STANDARD + CLICK HOME - HSC",
+  );
+});
+
+Deno.test("click home: com '-' como separador, e maternidade embutida", () => {
+  assertEqual(
+    parseEventoCalendar("BIANCA/THEODORO BABY REELS - CLICK HOME GNDI"),
+    {
+      tipo: "caso",
+      mae: "BIANCA",
+      bebe: "THEODORO",
+      pacote_bruto: "BABY REELS",
+      maternidade_sigla: "GNDI",
+      click_home: true,
+    },
+    "BIANCA/THEODORO BABY REELS - CLICK HOME GNDI",
+  );
+});
+
+Deno.test("click home: minúsculas e colado contam igual", () => {
+  assertEqual(
+    parseEventoCalendar("ANA/LIZ - MASTER+clickhome"),
+    {
+      tipo: "caso",
+      mae: "ANA",
+      bebe: "LIZ",
+      pacote_bruto: "MASTER",
+      maternidade_sigla: null,
+      click_home: true,
+    },
+    "ANA/LIZ - MASTER+clickhome",
+  );
+});
+
+Deno.test("click home: título sem o adicional continua sem a bandeira", () => {
+  const r = parseEventoCalendar("KEVELYN/JOAQUIM - BABY REELS");
+  if (r.tipo !== "caso" || r.click_home !== false) {
+    throw new Error("BABY REELS sozinho não pode acender o Click Home");
+  }
+});
+
+Deno.test("click home: evento sem '/' segue ignorado, com ou sem o adicional", () => {
+  assertEqual(
+    parseEventoCalendar("REUNIAO CLICK HOME"),
+    { tipo: "ignorar" },
+    "REUNIAO CLICK HOME",
   );
 });

@@ -36,7 +36,7 @@ export function FichaDaEdicao({
   caso: CasoQuadro
   /** A etapa da seção — o vídeo horizontal ou o fotolivro. */
   etapa: EtapaQuadro
-  tipo: 'master' | 'fotolivro'
+  tipo: 'master' | 'fotolivro' | 'click_home'
   hoje: string
   /** Fase, prazo, pedidos e play/concluir — os mesmos do cartão. */
   controles: (onErro: (mensagem: string | null) => void) => ReactNode
@@ -48,7 +48,13 @@ export function FichaDaEdicao({
   return (
     <ModalAmplo
       tamanho="ficha"
-      titulo={tipo === 'master' ? 'Vídeo do MASTER' : 'Foto/Livro'}
+      titulo={
+        tipo === 'master'
+          ? 'Vídeo do MASTER'
+          : tipo === 'fotolivro'
+            ? 'Foto/Livro'
+            : 'Click Home'
+      }
       subtitulo={
         <div className="mt-0.5">
           <p className="truncate text-lg font-extrabold tracking-tight">{nome}</p>
@@ -81,6 +87,18 @@ export function FichaDaEdicao({
 
             {/* O VÍDEO TERMINADO espera em Entregáveis (21/09/2026) — a ficha
                 diz onde ele está, e os dois links estão em "Links do caso". */}
+            {/* O ENSAIO esperando a família escolher (22/09/2026) — a ficha
+                diz onde ele está, e o link está em "Links do caso". */}
+            {tipo === 'click_home' && etapa.faseClickHome === 'enviar_para_escolha' && (
+              <Bloco titulo="Escolha da família">
+                <p className="text-sm font-medium">
+                  Galeria pronta. O ensaio está na aba Entregáveis, esperando o ADM
+                  mandar o link para a família escolher as fotos — ele está em “Links
+                  do caso”, logo abaixo.
+                </p>
+              </Bloco>
+            )}
+
             {tipo === 'master' && etapa.status === 'pronto_para_entrega' && (
               <Bloco titulo="Entrega">
                 <p className="text-sm font-medium">
