@@ -40,6 +40,15 @@ const ROTULO_MOMENTO: Record<MomentoDespesa, string> = {
 }
 
 const TIPOS: TipoDespesa[] = ['uber_ida', 'uber_volta', 'refeicao', 'outro']
+
+/**
+ * A REFEIÇÃO TEM VALOR FIXO (21/09/2026, pedido do gestor): R$ 35, sem campo
+ * para digitar. É ajuda de custo de valor combinado, não reembolso de nota — e
+ * um campo aberto ali só servia para cada uma lançar um número diferente.
+ * A trava é da TELA; o banco segue aceitando qualquer valor positivo, como os
+ * lançamentos antigos precisam.
+ */
+const VALOR_DA_REFEICAO = 35
 const MOMENTOS: MomentoDespesa[] = ['parto', 'substituicao', 'fechamento']
 
 /**
@@ -248,7 +257,8 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
   const [descricao, setDescricao] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
-  const valor = paraNumero(valorTexto)
+  const refeicao = tipo === 'refeicao'
+  const valor = refeicao ? VALOR_DA_REFEICAO : paraNumero(valorTexto)
   const precisaDescricao = tipo === 'outro' && descricao.trim() === ''
   const nomeEscolhido =
     (pessoas ?? []).find((p) => p.id === pessoaId)?.nome ?? 'Escolher pessoa'
@@ -296,26 +306,38 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
         </div>
       </div>
 
-      <label className="block">
-        <span className="text-sm font-medium">Valor</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          autoFocus
-          value={valorTexto}
-          onChange={(e) => setValorTexto(e.target.value)}
-          placeholder="24,90"
-          className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background px-3 text-base tabular-nums"
-        />
-        {/* A confirmação do que o sistema ENTENDEU do que foi digitado. Vírgula
-            e ponto chegam misturados, e ver "R$ 24,90" antes de salvar é o que
-            pega o zero a mais na hora, não no fim do mês. */}
-        <span className="mt-1 block text-xs text-muted-foreground">
-          {valor === null
-            ? 'Só números. Vírgula para os centavos.'
-            : `Vai entrar como ${formatarMoeda(valor)}.`}
-        </span>
-      </label>
+      {refeicao ? (
+        <div>
+          <span className="text-sm font-medium">Valor</span>
+          <p className="mt-1.5 flex min-h-12 items-center rounded-md border border-border bg-muted px-3 text-base font-semibold tabular-nums">
+            {formatarMoeda(VALOR_DA_REFEICAO)}
+          </p>
+          <span className="mt-1 block text-xs text-muted-foreground">
+            A refeição tem valor fixo.
+          </span>
+        </div>
+      ) : (
+        <label className="block">
+          <span className="text-sm font-medium">Valor</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            autoFocus
+            value={valorTexto}
+            onChange={(e) => setValorTexto(e.target.value)}
+            placeholder="24,90"
+            className="mt-1.5 min-h-12 w-full rounded-md border border-border bg-background px-3 text-base tabular-nums"
+          />
+          {/* A confirmação do que o sistema ENTENDEU do que foi digitado. Vírgula
+              e ponto chegam misturados, e ver "R$ 24,90" antes de salvar é o que
+              pega o zero a mais na hora, não no fim do mês. */}
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {valor === null
+              ? 'Só números. Vírgula para os centavos.'
+              : `Vai entrar como ${formatarMoeda(valor)}.`}
+          </span>
+        </label>
+      )}
 
       <div>
         <span className="text-sm font-medium">De quem foi</span>
