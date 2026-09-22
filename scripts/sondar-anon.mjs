@@ -165,6 +165,12 @@ const RPCS_TRANSICAO = {
     p_campo: null,
     p_valor: null,
   },
+  // Termo de uso de imagem (20260922183631). Quem alcançasse esta RPC diria
+  // que a família autorizou o uso das fotos do parto dela num post.
+  registrar_termo: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_termo: null,
+  },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

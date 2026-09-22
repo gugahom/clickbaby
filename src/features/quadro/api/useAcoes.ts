@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
 import { casoDaEtapa } from './atualizar-por-caso'
-import type { FaseAlbum, FaseVideoMaster } from '../types'
+import type { FaseAlbum, FaseVideoMaster, TermoStatus } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -182,6 +182,17 @@ export function useTransferirEtapa() {
 export function useConfirmarEntrega() {
   return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
     chamar('confirmar_entrega', { p_caso_id: casoId }),
+  )
+}
+
+/**
+ * O termo de uso de imagem (22/09/2026). Atendimento ou adm, em caso de
+ * qualquer estado: a resposta é dada ao confirmar a entrega e se corrige
+ * depois, inclusive num caso já encerrado. Ver lib/termo.ts.
+ */
+export function useRegistrarTermo() {
+  return useAcaoDoQuadro<{ casoId: string; termo: TermoStatus }>(({ casoId, termo }) =>
+    chamar('registrar_termo', { p_caso_id: casoId, p_termo: termo }),
   )
 }
 

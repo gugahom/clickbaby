@@ -8,6 +8,7 @@ export type StatusEtapa = Database['public']['Enums']['status_etapa']
 export type StatusOperacional = Database['public']['Enums']['status_operacional']
 export type StatusEntrega = Database['public']['Enums']['status_entrega']
 export type SituacaoClinica = Database['public']['Enums']['situacao_clinica']
+export type TermoStatus = Database['public']['Enums']['termo_status']
 
 /**
  * O gerador de tipos marca TODA coluna de view como nullable — o Postgres não
@@ -29,6 +30,12 @@ export interface CasoQuadro {
   situacaoClinica: SituacaoClinica
   statusOperacional: StatusOperacional
   statusEntrega: StatusEntrega
+  /**
+   * O termo de uso de imagem (22/09/2026). NULO é "ninguém respondeu ainda" —
+   * a pergunta nasceu no diálogo de confirmar a entrega, e os casos anteriores
+   * a ela nunca a receberam. Ver lib/termo.ts.
+   */
+  termoStatus: TermoStatus | null
   /** Os ids existiam na view e não eram lidos. O editor de cadastro precisa
       deles para pré-selecionar o valor atual nos seletores. */
   pacoteId: string | null
@@ -229,6 +236,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     maternidadeId: linha.maternidade_id,
     maternidadeNome: linha.maternidade_nome,
     maternidadeSigla: linha.maternidade_sigla,
+    termoStatus: linha.termo_status,
     nascimentoConcluidoEm: linha.nascimento_concluido_em,
     venceEm: linha.vence_em,
     faltaPacote: linha.falta_pacote ?? false,

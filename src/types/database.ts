@@ -221,7 +221,7 @@ export type Database = {
           situacao_clinica: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega: Database["public"]["Enums"]["status_entrega"]
           status_operacional: Database["public"]["Enums"]["status_operacional"]
-          termo_status: Database["public"]["Enums"]["termo_status"]
+          termo_status: Database["public"]["Enums"]["termo_status"] | null
           updated_at: string
           uti_acumulada: string
           uti_desde: string | null
@@ -245,7 +245,7 @@ export type Database = {
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
-          termo_status?: Database["public"]["Enums"]["termo_status"]
+          termo_status?: Database["public"]["Enums"]["termo_status"] | null
           updated_at?: string
           uti_acumulada?: string
           uti_desde?: string | null
@@ -269,7 +269,7 @@ export type Database = {
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
           status_operacional?: Database["public"]["Enums"]["status_operacional"]
-          termo_status?: Database["public"]["Enums"]["termo_status"]
+          termo_status?: Database["public"]["Enums"]["termo_status"] | null
           updated_at?: string
           uti_acumulada?: string
           uti_desde?: string | null
@@ -1162,6 +1162,13 @@ export type Database = {
           p_campo: Database["public"]["Enums"]["campo_material"]
           p_caso_etapa_id: string
           p_valor: string
+        }
+        Returns: undefined
+      }
+      registrar_termo: {
+        Args: {
+          p_caso_id: string
+          p_termo: Database["public"]["Enums"]["termo_status"]
         }
         Returns: undefined
       }

@@ -5,7 +5,9 @@ import {
   type EtapaTipo,
   type FaseAlbum,
   type FaseVideoMaster,
+  type TermoStatus,
 } from '../types'
+import { ROTULO_TERMO } from './termo'
 
 export interface EventoHistorico {
   id: string
@@ -218,6 +220,19 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
 
     case 'fotolivro_para_aprovacao':
       return { ...base, acao: 'Mandou o Foto/Livro para aprovação, com capa e link', tom: 'marco' }
+
+    // O termo de uso de imagem (22/09/2026). O rótulo do valor vem de
+    // ROTULO_TERMO, e não de uma segunda tabela de nomes aqui.
+    case 'termo_registrado': {
+      const termo = texto(evento.payload, 'termo')
+      return {
+        ...base,
+        acao: termo
+          ? `Registrou o termo de imagem: ${ROTULO_TERMO[termo as TermoStatus] ?? termo}`
+          : 'Registrou o termo de imagem',
+        tom: 'sistema',
+      }
+    }
 
     case 'fotolivro_enviado_ao_cliente':
       return { ...base, acao: 'Enviou a prova do Foto/Livro ao cliente', tom: 'marco' }
