@@ -365,7 +365,7 @@ export function derivarNotificacoes({
           tipo: 'entrega',
           familia: 'geral',
           peso: ORDEM.entrega,
-          titulo: 'Galeria do Click Home para mandar à família',
+          titulo: 'Galeria do New Born para mandar à família',
           detalhe: 'Na aba Entregáveis',
           casoId: caso.id,
           casoNome: nome,

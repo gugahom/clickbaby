@@ -5,12 +5,12 @@ import { mensagemDeErro } from '../lib/erros'
 import type { EtapaQuadro } from '../types'
 
 /**
- * MANDAR O CLICK HOME PARA A ESCOLHA DA FAMÍLIA (22/09/2026, pedido do gestor).
+ * MANDAR O NEW BORN PARA A ESCOLHA DA FAMÍLIA (22/09/2026, pedido do gestor).
  *
  * É a porta da fase "Enviar para escolha", e a mesma pelos três caminhos: o
  * seletor de fase, o arrastar no quadro por fase e o ✓ do cartão. Pede o LINK
  * da galeria — é o endereço que a família abre para escolher as fotos do
- * ensaio —, e o ensaio vai para Entregáveis, sinalizado como CLICK HOME.
+ * ensaio —, e o ensaio vai para Entregáveis, sinalizado como NEW BORN.
  *
  * Ele NÃO sai da seção agora: sai quando a Morgana confirmar. Mesmo arranjo do
  * vídeo e do fotolivro, e pelo mesmo motivo — o link que ninguém registra é o
@@ -31,7 +31,7 @@ export function DialogoGaleriaDoClickHome({
 
   return (
     <Dialogo
-      titulo="Mandar o Click Home para escolha"
+      titulo="Mandar o New Born para escolha"
       rotuloConfirmar={enviar.isPending ? 'Enviando…' : 'Mandar para Entregáveis'}
       confirmarDesabilitado={link.trim() === ''}
       ocupado={enviar.isPending}

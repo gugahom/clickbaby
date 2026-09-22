@@ -16,7 +16,7 @@ import {
 import { DialogoGaleriaDoClickHome } from './DialogoGaleriaDoClickHome'
 
 /**
- * A FASE DO CLICK HOME — as cinco colunas do quadro do ensaio newborn
+ * A FASE DO NEW BORN — as cinco colunas do quadro do ensaio newborn
  * (22/09/2026, pedido do gestor).
  *
  * Mesmo desenho da fase do vídeo e do fotolivro, e pelo mesmo motivo: a
@@ -59,8 +59,8 @@ export function FaseDoClickHome({
         className="min-w-0"
         rotulo={
           atual
-            ? `Fase do Click Home: ${ROTULO_FASE_CLICK_HOME[atual]}`
-            : 'Definir a fase do Click Home'
+            ? `Fase do New Born: ${ROTULO_FASE_CLICK_HOME[atual]}`
+            : 'Definir a fase do New Born'
         }
         {...(atual ? { selecionado: atual } : {})}
         desabilitado={mover.isPending}
@@ -85,7 +85,7 @@ export function FaseDoClickHome({
           })),
           {
             id: DISPENSAR,
-            rotulo: 'Este caso não tem Click Home',
+            rotulo: 'Este caso não tem New Born',
             icone: <IconeDispensar className="size-4" />,
             destrutivo: true,
           },
@@ -115,8 +115,8 @@ export function FaseDoClickHome({
 
       {dispensando && (
         <Dialogo
-          titulo="Este caso não tem Click Home?"
-          rotuloConfirmar={dispensar.isPending ? 'Dispensando…' : 'Dispensar o Click Home'}
+          titulo="Este caso não tem New Born?"
+          rotuloConfirmar={dispensar.isPending ? 'Dispensando…' : 'Dispensar o New Born'}
           confirmarDestrutivo
           ocupado={dispensar.isPending}
           onCancelar={() => setDispensando(false)}
@@ -125,7 +125,7 @@ export function FaseDoClickHome({
             dispensar
               .mutateAsync({
                 casoEtapaId: etapa.id,
-                motivo: 'Caso não tem Click Home — etapa criada por engano.',
+                motivo: 'Caso não tem New Born — etapa criada por engano.',
               })
               .then(
                 () => setDispensando(false),

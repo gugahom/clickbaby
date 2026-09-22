@@ -238,7 +238,7 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
 
     // O ensaio Click Home (22/09/2026).
     case 'click_home_do_contrato':
-      return { ...base, acao: 'Contrato inclui o ensaio Click Home', tom: 'sistema' }
+      return { ...base, acao: 'Contrato inclui o ensaio New Born', tom: 'sistema' }
 
     case 'fase_do_click_home_movida': {
       const para = texto(evento.payload, 'para')
@@ -248,16 +248,16 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
           : null
       return {
         ...base,
-        acao: rotulo ? `Moveu o Click Home para “${rotulo}”` : 'Moveu o Click Home',
+        acao: rotulo ? `Moveu o New Born para “${rotulo}”` : 'Moveu o New Born',
         tom: para === 'finalizado' ? 'marco' : 'normal',
       }
     }
 
     case 'click_home_para_escolha':
-      return { ...base, acao: 'Mandou a galeria do Click Home para escolha', tom: 'marco' }
+      return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
 
     case 'click_home_entregue':
-      return { ...base, acao: 'Finalizou o Click Home', tom: 'marco' }
+      return { ...base, acao: 'Finalizou o New Born', tom: 'marco' }
 
     case 'fotolivro_enviado_ao_cliente':
       return { ...base, acao: 'Enviou a prova do Foto/Livro ao cliente', tom: 'marco' }

@@ -1285,8 +1285,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **SÓ MARCA, NUNCA DESMARCA:** tirar o sufixo do título não desfaz um ensaio que pode já ter
   sido fotografado. Quem precisa desfazer usa "Este caso não tem Click Home" no seletor, que
   dispensa a etapa.
-  **O NOME NA TELA É "CLICK HOME"** — a palavra que está no título que a equipe digita —,
-  embora a empresa chame o produto de newborn ao falar dele.
+  **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
+  **na agenda continua "CLICK HOME"** — é a grafia que a equipe digita no título e a que o
+  parser procura. Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:
+  mesmo arranjo de `album`/"Foto/Livro" e de `operador`/"Fotógrafo(a)". Ao mexer nisto, não
+  troque as menções ao TÍTULO DO EVENTO — ali "CLICK HOME" é literal.
 - **A FICHA DO CARTÃO** (21/09/2026, pedido do gestor: "abrir esse card como num ClickUp ou
   Trello"). Nas seções MASTER e FOTO/LIVRO o NOME do caso no cartão é um botão que abre a ficha
   (`FichaDaEdicao`, sobre `ModalAmplo` no tamanho `ficha`): os controles do cartão no alto, a

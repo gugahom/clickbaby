@@ -34,7 +34,7 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   // A galeria de escolha do ensaio newborn (22/09/2026): é por ela que a
   // família escolhe as fotos do Click Home. Tipo próprio porque não é o álbum
   // do parto — são dois endereços, em dois momentos.
-  click_home: 'Galeria do Click Home',
+  click_home: 'Galeria do New Born',
 }
 
 interface PropsEntregaveis {

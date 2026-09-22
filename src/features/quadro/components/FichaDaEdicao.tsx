@@ -53,7 +53,7 @@ export function FichaDaEdicao({
           ? 'Vídeo do MASTER'
           : tipo === 'fotolivro'
             ? 'Foto/Livro'
-            : 'Click Home'
+            : 'New Born'
       }
       subtitulo={
         <div className="mt-0.5">

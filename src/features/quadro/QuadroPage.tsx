@@ -931,7 +931,7 @@ export function QuadroPage() {
       hoje={hoje}
       etapas={etapasPorCaso.get(caso.id) ?? []}
       daSecao={ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])}
-      rotularLinha={() => 'Click Home'}
+      rotularLinha={() => 'New Born'}
       acoesDaLinha={(etapa) => controlesDoClickHome(caso, etapa, setErroClickHome)}
       comSelo={false}
       acoesAbaixo
@@ -1111,10 +1111,10 @@ export function QuadroPage() {
 
   const painelClickHome = (
     <PainelLateral
-      titulo="Click Home"
+      titulo="New Born"
       quantidade={emClickHome.length}
       criterio={CRITERIO_CLICK_HOME}
-      vazio="Nenhum Click Home em produção."
+      vazio="Nenhum New Born em produção."
       erro={erroClickHome}
     >
       {conteudoClickHome}
@@ -1324,7 +1324,7 @@ export function QuadroPage() {
             Foto/Livro ({emFotolivro.length})
           </BotaoAba>
           <BotaoAba ativa={aba === 'clickhome'} onClick={() => setAba('clickhome')}>
-            Click Home ({emClickHome.length})
+            New Born ({emClickHome.length})
           </BotaoAba>
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
@@ -1475,10 +1475,10 @@ export function QuadroPage() {
                 {/* CLICK HOME por último: o ensaio acontece 10 a 12 dias DEPOIS
                     da entrega, então ele é o que menos corre. */}
                 <SecaoEmModal
-                  titulo="Click Home"
+                  titulo="New Born"
                   quantidade={emClickHome.length}
                   criterio={CRITERIO_CLICK_HOME}
-                  vazio="Nenhum Click Home em produção."
+                  vazio="Nenhum New Born em produção."
                   erro={erroClickHome}
                   onLimparErro={() => setErroClickHome(null)}
                   itens={itensClickHome}

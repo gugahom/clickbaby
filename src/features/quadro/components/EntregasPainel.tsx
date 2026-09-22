@@ -48,7 +48,7 @@ export interface VideoNaEntrega {
 }
 
 /**
- * UM ENSAIO CLICK HOME ESPERANDO O ADM (22/09/2026): a galeria de escolha está
+ * UM ENSAIO NEW BORN ESPERANDO O ADM (22/09/2026): a galeria de escolha está
  * pronta, e alguém precisa mandar o link para a família escolher as fotos.
  */
 export interface ClickHomeNaEntrega {
@@ -63,7 +63,7 @@ interface PropsEntregasPainel {
   fotolivros: FotolivroNaEntrega[]
   /** Os vídeos do MASTER esperando o ADM — ver VideoNaEntrega. */
   videos: VideoNaEntrega[]
-  /** Os ensaios Click Home esperando o ADM — ver ClickHomeNaEntrega. */
+  /** Os ensaios New Born esperando o ADM — ver ClickHomeNaEntrega. */
   ensaios: ClickHomeNaEntrega[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   hoje: string
@@ -183,7 +183,7 @@ function LinhaDoVideo({
 }
 
 /**
- * UMA LINHA DE CLICK HOME (22/09/2026). Selo próprio, pelo mesmo motivo do
+ * UMA LINHA DE NEW BORN (22/09/2026). Selo próprio, pelo mesmo motivo do
  * vídeo: o que está passando por Entregáveis aqui não é o caso nem o livro — é
  * a galeria do ensaio newborn, e quem entrega precisa ver isso de relance.
  *
@@ -215,7 +215,7 @@ function LinhaDoClickHome({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-marca px-2.5 py-0.5 text-[11px] font-extrabold tracking-wide text-white">
-              CLICK HOME
+              NEW BORN
             </span>
             <span className="truncate font-semibold">{titulo}</span>
           </div>
@@ -236,7 +236,7 @@ function LinhaDoClickHome({
               className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
             >
               <IconeCheck className="size-4" />
-              Finalizar o Click Home
+              Finalizar o New Born
             </Botao>
           ) : (
             <span className="text-xs font-medium text-muted-foreground">aguardando o ADM</span>
@@ -258,7 +258,7 @@ function LinhaDoClickHome({
 
       {confirmando && (
         <Dialogo
-          titulo="Finalizar o Click Home?"
+          titulo="Finalizar o New Born?"
           rotuloConfirmar={confirmar.isPending ? 'Finalizando…' : 'Finalizar'}
           ocupado={confirmar.isPending}
           erro={null}
@@ -275,7 +275,7 @@ function LinhaDoClickHome({
         >
           <p className="text-sm text-muted-foreground">
             {titulo}. O ensaio fica como finalizado, o link da galeria passa a contar
-            como conferido, e o cartão sai da seção Click Home.
+            como conferido, e o cartão sai da seção New Born.
           </p>
         </Dialogo>
       )}
@@ -739,7 +739,7 @@ export function EntregasPainel({
               : undefined
           }
         >
-          <h2 className="mb-2 text-sm font-bold">Click Home</h2>
+          <h2 className="mb-2 text-sm font-bold">New Born</h2>
           <ul className="space-y-2">
             {ensaios.map((item) => (
               <LinhaDoClickHome

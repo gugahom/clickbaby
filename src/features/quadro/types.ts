@@ -145,7 +145,7 @@ export interface EtapaQuadro {
    * mantém as duas em acordo é a RPC `mover_album`, que escreve as duas juntas.
    */
   faseAlbum: FaseAlbum | null
-  /** Onde o ensaio Click Home está na esteira (22/09/2026). */
+  /** Onde o ensaio New Born está na esteira (22/09/2026). */
   faseClickHome: FaseClickHome | null
   /**
    * Hora combinada para ESTA etapa — banho e fechamento, marcados com a
@@ -391,9 +391,11 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   // fotos no álbum"). São duas coisas diferentes, e trocar aquelas por
   // "Foto/Livro" produziria frases erradas. Só a ETAPA e o ENTREGÁVEL mudaram.
   album: 'Foto/Livro',
-  // O ensaio newborn na casa da família (22/09/2026). O nome é o da agenda,
-  // onde ele aparece como "+ CLICK HOME" grudado no pacote.
-  click_home: 'Click Home',
+  // O ensaio newborn na casa da família (22/09/2026). NA TELA é "New Born",
+  // como o gestor pediu; NA AGENDA ele aparece como "+ CLICK HOME" grudado no
+  // pacote, e é essa grafia que o parser procura. Os dois nomes são a mesma
+  // coisa — mesmo arranjo de `album`/"Foto/Livro".
+  click_home: 'New Born',
   // Só existem via "acrescentar etapa" (31/08/2026) — nenhum pacote as
   // inclui de fábrica. Ver migration 20260831133153.
   encontro_irmaos: 'Encontro de irmãos',
