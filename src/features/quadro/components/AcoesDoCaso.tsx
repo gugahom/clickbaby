@@ -21,8 +21,10 @@ import {
   IconeAdicionar,
   IconeAviso,
   IconeReabrir,
+  IconeLixeira,
 } from '@/components/ui/icones'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
+import { DialogoExcluirAviso } from './DialogoExcluirAviso'
 import { DialogoPessoa } from './DialogoPessoa'
 import { CampoEstacao } from './CampoEstacao'
 import { MaterialDoAcompanhamento } from './MaterialDoAcompanhamento'
@@ -122,6 +124,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
   const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
   const [anotarDe, setAnotarDe] = useState<EtapaQuadro | null>(null)
+  const [excluirAvisoDe, setExcluirAvisoDe] = useState<EtapaQuadro | null>(null)
   const [observacaoDe, setObservacaoDe] = useState<EtapaQuadro | null>(null)
 
   const iniciar = useIniciarEtapa()
@@ -531,6 +534,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                           )
                         }
                         if (item.id === 'anotar') setAnotarDe(etapa)
+                        if (item.id === 'excluir_aviso') setExcluirAvisoDe(etapa)
                         if (item.id === 'dispensar') {
                           executar(dispensar.mutateAsync({ casoEtapaId: etapa.id }))
                         }
@@ -603,6 +607,19 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                           icone: <IconeNota className="size-4" />,
                           desabilitado: ocupado,
                         },
+                        /* EXCLUIR O AVISO (21/09/2026, pedido do gestor). Antes
+                           só dava apagando o texto em "Editar aviso". */
+                        ...(etapa.observacao
+                          ? [
+                              {
+                                id: 'excluir_aviso',
+                                rotulo: 'Excluir aviso',
+                                icone: <IconeLixeira className="size-4" />,
+                                destrutivo: true,
+                                desabilitado: ocupado,
+                              },
+                            ]
+                          : []),
                         /* DISPENSAR por último, e em vermelho. É a única do
                            menu que REMOVE trabalho do checklist, e a que
                            destrava o encerramento de um caso — o mesmo peso
@@ -850,6 +867,14 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
               () => setAnotarDe(null),
             )
           }
+        />
+      )}
+
+      {excluirAvisoDe && (
+        <DialogoExcluirAviso
+          etapa={excluirAvisoDe}
+          nomeDaEtapa={ROTULO_ETAPA[excluirAvisoDe.tipo]}
+          onFechar={() => setExcluirAvisoDe(null)}
         />
       )}
 

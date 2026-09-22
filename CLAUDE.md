@@ -1433,6 +1433,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   grade não cresce, e o terceiro deslocamento não teria onde entrar.
   Tipos: `uber_ida`, `uber_volta`, `refeicao` e `outro` — este exige descrição, por
   constraint, senão vira linha que ninguém confere depois.
+  **A REFEIÇÃO É R$ 35 FIXOS** (21/09/2026, pedido do gestor): escolhido o tipo, o diálogo
+  mostra o valor e não abre campo. A trava é da TELA (`VALOR_DA_REFEICAO` em
+  `DespesasDoCaso`); o banco segue aceitando qualquer valor positivo.
   **O "MOMENTO" É RÓTULO, NÃO ETAPA** (parto · substituição · fechamento, opcional). Amarrar
   a despesa a uma linha de `caso_etapas` seria mais bonito e quebraria na SUBSTITUIÇÃO, que
   é handoff e não etapa — não existe `caso_etapas` para "a Thalia rendeu a Sarah às 4h".
@@ -1472,9 +1475,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **CANCELADOS ENTRAM NO RELATÓRIO**, com selo: é o gasto que não virou atendimento, e o
   que o financeiro mais precisa conseguir achar. Casos SEM gasto não entram — o relatório
   é de despesa, não de zeros.
-  **O GASTO FICA EXPLÍCITO EM DOIS MOMENTOS.** No card, o chip "Despesas R$ X" aparece em
-  qualquer estado quando há valor, e "Sem despesas" só em caso encerrado ou cancelado —
-  num caso em andamento seria um lembrete permanente de algo que talvez nem aconteça. E no
+  **O GASTO FICA EXPLÍCITO NO CARD ABERTO E NO ENVIO.** De 14/09 a 21/09/2026 o card FECHADO
+  também tinha um chip ("Despesas R$ X", ou "Sem despesas" nos terminados); saiu a pedido do
+  gestor — o gasto fica na lista de baixo, no card aberto, e na tela de Despesas. No lugar,
+  nos CONCLUÍDOS, o card fechado mostra **"Nasceu dd/mm/aaaa"** (`nascimento_concluido_em`),
+  que ele quer à vista "até no futuro para filtros". E no
   diálogo de ENVIO (e de confirmação), um bloco mostra o que foi lançado, com atalho para
   lançar ali: é o último momento em que quem trabalhou lembra do Uber daquela madrugada.
   **O bloco NÃO TRAVA o envio** — despesa não é status do caso (invariante 3.5) e nem todo
@@ -1521,6 +1526,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   não pulsa: ele já é a resposta ao chamado.
   **Três vermelhos no card, separados pela FORMA:** horário estourando pinta o cartão inteiro
   e gira o anel da borda; a atribuída é pílula com iniciais; o aviso é pílula com megafone.
+- **O AVISO SE EXCLUI** (21/09/2026, pedido do gestor): lixeira em cada aviso do diálogo que
+  a faixa abre, e "Excluir aviso" no menu da etapa. É `anotar_etapa` com texto em branco — o
+  banco sempre apagou assim, e o texto antigo fica em `observacao_removida`. Antes a única
+  porta era apagar o texto à mão em "Editar aviso".
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
-import { IconeAviso, IconeOlho } from '@/components/ui/icones'
+import { BotaoIcone } from '@/components/ui/BotaoIcone'
+import { IconeAviso, IconeLixeira, IconeOlho } from '@/components/ui/icones'
+import { DialogoExcluirAviso } from './DialogoExcluirAviso'
 import { ROTULO_ETAPA, rotuloDaRodada, type EtapaQuadro, type EtapaTipo } from '../types'
 
 /**
@@ -69,6 +71,7 @@ interface PropsAvisosDoCaso {
  */
 export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
   const [aberto, setAberto] = useState(false)
+  const [excluindo, setExcluindo] = useState<EtapaQuadro | null>(null)
 
   const avisos = etapas.filter(
     (e) =>
@@ -153,16 +156,41 @@ export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
             {avisos.map((etapa) => (
               <li
                 key={etapa.id}
-                className="rounded-md border-l-4 border-atrasado bg-atrasado/10 px-3 py-2"
+                className="flex items-start gap-2 rounded-md border-l-4 border-atrasado bg-atrasado/10 py-2 pr-1 pl-3"
               >
-                <p className="rotulo-sobrescrito text-atrasado">{nomeDaEtapa(etapa)}</p>
-                <p className="mt-0.5 text-base font-semibold whitespace-pre-line text-foreground">
-                  {etapa.observacao}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="rotulo-sobrescrito text-atrasado">{nomeDaEtapa(etapa)}</p>
+                  <p className="mt-0.5 text-base font-semibold whitespace-pre-line text-foreground">
+                    {etapa.observacao}
+                  </p>
+                </div>
+                {/* Excluir mora AQUI, onde o aviso é lido por extenso: é quem
+                    acabou de cumpri-lo que sabe que ele pode sair. */}
+                <BotaoIcone
+                  rotulo={`Excluir o aviso de ${nomeDaEtapa(etapa)}`}
+                  tom="pendencia"
+                  onClick={() => setExcluindo(etapa)}
+                >
+                  <IconeLixeira className="size-4" />
+                </BotaoIcone>
               </li>
             ))}
           </ul>
         </Dialogo>
+      )}
+
+      {/* Irmão do diálogo dos avisos, e não filho: um <dialog> aberto por
+          cima do outro entra no topo da pilha sozinho. */}
+      {excluindo && (
+        <DialogoExcluirAviso
+          etapa={excluindo}
+          nomeDaEtapa={nomeDaEtapa(excluindo)}
+          onFechar={() => {
+            // Era o último aviso? A faixa vai sumir; o diálogo dela sai junto.
+            if (avisos.length <= 1) setAberto(false)
+            setExcluindo(null)
+          }}
+        />
       )}
     </>
   )
