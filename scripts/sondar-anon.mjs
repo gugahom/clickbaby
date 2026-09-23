@@ -171,6 +171,20 @@ const RPCS_TRANSICAO = {
     p_caso_id: '00000000-0000-0000-0000-000000000000',
     p_termo: null,
   },
+  // O ensaio Click Home (20260922212901). Quem alcançasse estas RPCs moveria a
+  // esteira do ensaio e publicaria uma galeria no nome da família.
+  mover_click_home: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_fase: null,
+  },
+  enviar_click_home_para_escolha: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_link: 'https://sonda.test',
+  },
+  confirmar_entrega_do_click_home: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+  },
+  sync_marcar_click_home: { p_google_event_id: 'sonda' },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

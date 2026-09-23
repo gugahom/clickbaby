@@ -1,6 +1,11 @@
 import { podeIniciar } from './acoes'
 import { rascunhoDescartado } from './agrupar-por-dia'
-import { FASES_ALBUM, type CasoQuadro, type EtapaQuadro } from '../types'
+import {
+  FASES_ALBUM,
+  FASES_CLICK_HOME,
+  type CasoQuadro,
+  type EtapaQuadro,
+} from '../types'
 
 /**
  * As seções laterais são VISÕES FILTRADAS, não estados novos.
@@ -343,6 +348,57 @@ function posicaoNaEsteira(
   const album = albunsAbertos(etapasPorCaso.get(caso.id) ?? [])[0]
   if (!album || album.faseAlbum === null) return -1
   return FASES_ALBUM.indexOf(album.faseAlbum)
+}
+
+/**
+ * O ENSAIO CLICK HOME ainda por fazer (22/09/2026).
+ *
+ * Mesmo critério do fotolivro e do vídeo: a pergunta da seção é "que ensaio há
+ * para tocar". E o mesmo gate — por TIPO DE ETAPA, não por pacote: o adicional
+ * chega pelo título do Calendar em qualquer pacote, e também entra à mão por
+ * `adicionar_etapa`.
+ *
+ * SEM O `podeIniciar` do álbum: o ensaio nasce com fase nula e a primeira coisa
+ * que a seção faz é mostrá-lo. A precedência por ordem o poria atrás de todo o
+ * resto do caso — e ele acontece DEPOIS da entrega, com tudo já concluído ou
+ * não, o que faria o cartão sumir justamente quando o trabalho começa.
+ */
+export function ensaiosAbertos(etapas: EtapaQuadro[]): EtapaQuadro[] {
+  return etapas
+    .filter((e) => e.tipo === 'click_home')
+    .filter((e) => e.status !== 'dispensada' && e.status !== 'concluida')
+}
+
+/** O ensaio que sobrevive à entrega das fotos — ele acontece 10 a 12 dias depois. */
+export function temClickHomePendente(etapas: EtapaQuadro[]): boolean {
+  return etapas.some(
+    (e) => e.tipo === 'click_home' && e.status !== 'concluida' && e.status !== 'dispensada',
+  )
+}
+
+export function casosComClickHomeAberto(
+  casos: CasoQuadro[],
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+): CasoQuadro[] {
+  return casos
+    .filter((caso) => {
+      // Encerrado fica; cancelado sai — `mover_click_home` recusa cancelado, e
+      // mostrar o cartão seria oferecer botão que o banco nega.
+      if (caso.statusOperacional === 'cancelado') return false
+      return ensaiosAbertos(etapasPorCaso.get(caso.id) ?? []).length > 0
+    })
+    // Pela esteira, como o fotolivro: o prazo do pacote é do parto e venceu
+    // antes de o ensaio existir. Sem fase declarada vai para o topo.
+    .sort((a, b) => posicaoNoEnsaio(a, etapasPorCaso) - posicaoNoEnsaio(b, etapasPorCaso))
+}
+
+function posicaoNoEnsaio(
+  caso: CasoQuadro,
+  etapasPorCaso: Map<string, EtapaQuadro[]>,
+): number {
+  const ensaio = ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])[0]
+  if (!ensaio || ensaio.faseClickHome === null) return -1
+  return FASES_CLICK_HOME.indexOf(ensaio.faseClickHome)
 }
 
 /**

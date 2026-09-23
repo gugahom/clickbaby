@@ -1,9 +1,11 @@
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
+  ROTULO_FASE_CLICK_HOME,
   ROTULO_FASE_VIDEO,
   type EtapaTipo,
   type FaseAlbum,
+  type FaseClickHome,
   type FaseVideoMaster,
   type TermoStatus,
 } from '../types'
@@ -233,6 +235,29 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         tom: 'sistema',
       }
     }
+
+    // O ensaio Click Home (22/09/2026).
+    case 'click_home_do_contrato':
+      return { ...base, acao: 'Contrato inclui o ensaio New Born', tom: 'sistema' }
+
+    case 'fase_do_click_home_movida': {
+      const para = texto(evento.payload, 'para')
+      const rotulo =
+        para && para in ROTULO_FASE_CLICK_HOME
+          ? ROTULO_FASE_CLICK_HOME[para as FaseClickHome]
+          : null
+      return {
+        ...base,
+        acao: rotulo ? `Moveu o New Born para “${rotulo}”` : 'Moveu o New Born',
+        tom: para === 'finalizado' ? 'marco' : 'normal',
+      }
+    }
+
+    case 'click_home_para_escolha':
+      return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
+
+    case 'click_home_entregue':
+      return { ...base, acao: 'Finalizou o New Born', tom: 'marco' }
 
     case 'fotolivro_enviado_ao_cliente':
       return { ...base, acao: 'Enviou a prova do Foto/Livro ao cliente', tom: 'marco' }

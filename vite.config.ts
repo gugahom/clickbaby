@@ -107,8 +107,18 @@ export default defineConfig(({ command, mode }) => {
     console.log(`[clickbaby] build apontando para ${new URL(env.VITE_SUPABASE_URL!).host}`)
   }
 
+  // PORT MANDA, QUANDO VEM (22/09/2026). O Vite ignora essa variavel sozinho --
+  // ela e convencao de CRA --, e quem a define e quem hospeda o dev server (o
+  // painel do Claude Code, por exemplo) esperando que ele obedeca. Sem isto o
+  // Vite via a 5173 ocupada, pulava para a 5174 por conta propria, e quem
+  // chamou ficava batendo numa porta vazia. Sem PORT, nada muda.
+  const porta = Number(process.env.PORT)
+
   return {
     base: BASE,
+    ...(Number.isInteger(porta) && porta > 0
+      ? { server: { port: porta, strictPort: true } }
+      : {}),
     build: {
       outDir: 'dist/quadro',
       emptyOutDir: true,

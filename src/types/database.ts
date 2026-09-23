@@ -46,6 +46,7 @@ export type Database = {
           created_at: string
           estacao: string | null
           fase_album: Database["public"]["Enums"]["fase_album"] | null
+          fase_click_home: Database["public"]["Enums"]["fase_click_home"] | null
           fotolivro_capa: string | null
           fotolivro_enviado_em: string | null
           fotolivro_enviado_por: string | null
@@ -77,6 +78,9 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fase_click_home?:
+            | Database["public"]["Enums"]["fase_click_home"]
+            | null
           fotolivro_capa?: string | null
           fotolivro_enviado_em?: string | null
           fotolivro_enviado_por?: string | null
@@ -108,6 +112,9 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fase_click_home?:
+            | Database["public"]["Enums"]["fase_click_home"]
+            | null
           fotolivro_capa?: string | null
           fotolivro_enviado_em?: string | null
           fotolivro_enviado_por?: string | null
@@ -204,6 +211,7 @@ export type Database = {
       casos: {
         Row: {
           bebe_nome: string | null
+          click_home: boolean
           cor_calendar: string | null
           created_at: string
           criado_por: string | null
@@ -228,6 +236,7 @@ export type Database = {
         }
         Insert: {
           bebe_nome?: string | null
+          click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
@@ -252,6 +261,7 @@ export type Database = {
         }
         Update: {
           bebe_nome?: string | null
+          click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
@@ -1057,6 +1067,10 @@ export type Database = {
         Returns: string
       }
       confirmar_entrega: { Args: { p_caso_id: string }; Returns: undefined }
+      confirmar_entrega_do_click_home: {
+        Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
       confirmar_entrega_do_video: {
         Args: { p_caso_etapa_id: string }
         Returns: undefined
@@ -1074,6 +1088,10 @@ export type Database = {
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
+      enviar_click_home_para_escolha: {
+        Args: { p_caso_etapa_id: string; p_link: string }
+        Returns: undefined
+      }
       enviar_fotolivro_para_aprovacao: {
         Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
         Returns: undefined
@@ -1098,6 +1116,13 @@ export type Database = {
         Args: {
           p_caso_etapa_id: string
           p_fase: Database["public"]["Enums"]["fase_album"]
+        }
+        Returns: undefined
+      }
+      mover_click_home: {
+        Args: {
+          p_caso_etapa_id: string
+          p_fase: Database["public"]["Enums"]["fase_click_home"]
         }
         Returns: undefined
       }
@@ -1193,6 +1218,10 @@ export type Database = {
         Args: { p_google_event_id: string; p_motivo?: string }
         Returns: string
       }
+      sync_marcar_click_home: {
+        Args: { p_google_event_id: string }
+        Returns: string
+      }
       sync_upsert_caso: {
         Args: {
           p_bebe_nome: string
@@ -1233,6 +1262,7 @@ export type Database = {
         | "encontro_irmaos"
         | "saida_uti"
         | "alta"
+        | "click_home"
       fase_album:
         | "aguardando_pagamento"
         | "aguardando_diagramacao"
@@ -1244,6 +1274,12 @@ export type Database = {
         | "enviado_grafica"
         | "pronto_para_entrega"
         | "entregue"
+      fase_click_home:
+        | "aguardando_edicao"
+        | "editando"
+        | "criar_galeria"
+        | "enviar_para_escolha"
+        | "finalizado"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       papel_sistema:
         | "operador"
@@ -1287,6 +1323,7 @@ export type Database = {
         | "album"
         | "video"
         | "video_wetransfer"
+        | "click_home"
       turno: "diurno" | "noturno" | "comercial"
     }
     CompositeTypes: {
@@ -1431,6 +1468,7 @@ export const Constants = {
         "encontro_irmaos",
         "saida_uti",
         "alta",
+        "click_home",
       ],
       fase_album: [
         "aguardando_pagamento",
@@ -1443,6 +1481,13 @@ export const Constants = {
         "enviado_grafica",
         "pronto_para_entrega",
         "entregue",
+      ],
+      fase_click_home: [
+        "aguardando_edicao",
+        "editando",
+        "criar_galeria",
+        "enviar_para_escolha",
+        "finalizado",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       papel_sistema: [
@@ -1491,6 +1536,7 @@ export const Constants = {
         "album",
         "video",
         "video_wetransfer",
+        "click_home",
       ],
       turno: ["diurno", "noturno", "comercial"],
     },

@@ -11,6 +11,7 @@ import {
   useConfirmarEntrega,
   useRegistrarTermo,
   useConfirmarEntregaDoVideo,
+  useConfirmarEntregaDoClickHome,
   useDevolverParaOQuadro,
   useEntregaveis,
   useMarcarFotolivroEnviado,
@@ -46,6 +47,15 @@ export interface VideoNaEntrega {
   etapa: EtapaQuadro
 }
 
+/**
+ * UM ENSAIO NEW BORN ESPERANDO O ADM (22/09/2026): a galeria de escolha está
+ * pronta, e alguém precisa mandar o link para a família escolher as fotos.
+ */
+export interface ClickHomeNaEntrega {
+  caso: CasoQuadro
+  etapa: EtapaQuadro
+}
+
 interface PropsEntregasPainel {
   /** Casos ENVIADOS e ainda abertos, na ordem em que foram enviados. */
   entregas: CasoQuadro[]
@@ -53,6 +63,8 @@ interface PropsEntregasPainel {
   fotolivros: FotolivroNaEntrega[]
   /** Os vídeos do MASTER esperando o ADM — ver VideoNaEntrega. */
   videos: VideoNaEntrega[]
+  /** Os ensaios New Born esperando o ADM — ver ClickHomeNaEntrega. */
+  ensaios: ClickHomeNaEntrega[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   hoje: string
 }
@@ -163,6 +175,107 @@ function LinhaDoVideo({
             conferidos, e o cartão sai da seção MASTER. Se a família pedir alteração
             depois, o caminho é “Pedir alteração no vídeo”, na linha da etapa dentro
             do card.
+          </p>
+        </Dialogo>
+      )}
+    </li>
+  )
+}
+
+/**
+ * UMA LINHA DE NEW BORN (22/09/2026). Selo próprio, pelo mesmo motivo do
+ * vídeo: o que está passando por Entregáveis aqui não é o caso nem o livro — é
+ * a galeria do ensaio newborn, e quem entrega precisa ver isso de relance.
+ *
+ * SÓ O LINK DA GALERIA, e ainda não conferido: a lista inteira do caso traria
+ * os links do parto, entregues semanas antes.
+ */
+function LinhaDoClickHome({
+  item,
+  confirma,
+  onErro,
+}: {
+  item: ClickHomeNaEntrega
+  confirma: boolean
+  onErro: (mensagem: string | null) => void
+}) {
+  const { caso, etapa } = item
+  const { data: links } = useEntregaveis(caso.id, true)
+  const confirmar = useConfirmarEntregaDoClickHome()
+  const [confirmando, setConfirmando] = useState(false)
+
+  const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
+  const daGaleria = (links ?? []).filter(
+    (l) => l.tipo === 'click_home' && l.confirmado_em === null,
+  )
+
+  return (
+    <li className="rounded-cartao border border-marca/30 bg-marca-suave/60 px-3 py-3 shadow-cartao md:px-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-marca px-2.5 py-0.5 text-[11px] font-extrabold tracking-wide text-white">
+              NEW BORN
+            </span>
+            <span className="truncate font-semibold">{titulo}</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Galeria pronta — mande o link para a família escolher as fotos do ensaio.
+            {caso.pacoteNome ? ` · ${caso.pacoteNome}` : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          {confirma ? (
+            <Botao
+              onClick={() => {
+                onErro(null)
+                setConfirmando(true)
+              }}
+              disabled={confirmar.isPending}
+              className="superficie-acento border-0 font-bold text-white shadow-cartao-alto hover:brightness-110"
+            >
+              <IconeCheck className="size-4" />
+              Finalizar o New Born
+            </Botao>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">aguardando o ADM</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 border-t border-marca/20 pt-3">
+        {links === undefined ? (
+          <p className="text-xs text-muted-foreground">Buscando o link…</p>
+        ) : daGaleria.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem link da galeria.</p>
+        ) : (
+          daGaleria.map((link) => (
+            <LinkParaCopiar key={link.id} rotulo="Galeria de escolha" url={link.url} />
+          ))
+        )}
+      </div>
+
+      {confirmando && (
+        <Dialogo
+          titulo="Finalizar o New Born?"
+          rotuloConfirmar={confirmar.isPending ? 'Finalizando…' : 'Finalizar'}
+          ocupado={confirmar.isPending}
+          erro={null}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={() => {
+            confirmar.mutateAsync({ casoEtapaId: etapa.id }).then(
+              () => setConfirmando(false),
+              (e) => {
+                setConfirmando(false)
+                onErro(mensagemDeErro(e))
+              },
+            )
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {titulo}. O ensaio fica como finalizado, o link da galeria passa a contar
+            como conferido, e o cartão sai da seção New Born.
           </p>
         </Dialogo>
       )}
@@ -521,6 +634,7 @@ export function EntregasPainel({
   entregas,
   fotolivros,
   videos,
+  ensaios,
   etapasPorCaso,
   hoje,
 }: PropsEntregasPainel) {
@@ -534,7 +648,12 @@ export function EntregasPainel({
 
   const confirma = podeEncerrarCaso(papel)
 
-  if (entregas.length === 0 && fotolivros.length === 0 && videos.length === 0) {
+  if (
+    entregas.length === 0 &&
+    fotolivros.length === 0 &&
+    videos.length === 0 &&
+    ensaios.length === 0
+  ) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
         <h2 className="font-semibold">Nenhum caso esperando entrega</h2>
@@ -603,6 +722,28 @@ export function EntregasPainel({
             {fotolivros.map((item) => (
               <LinhaDoFotolivro
                 key={`${item.etapa.id}-${item.momento}`}
+                item={item}
+                confirma={confirma}
+                onErro={setErro}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ensaios.length > 0 && (
+        <section
+          className={
+            entregas.length > 0 || videos.length > 0 || fotolivros.length > 0
+              ? 'mt-6'
+              : undefined
+          }
+        >
+          <h2 className="mb-2 text-sm font-bold">New Born</h2>
+          <ul className="space-y-2">
+            {ensaios.map((item) => (
+              <LinhaDoClickHome
+                key={item.etapa.id}
                 item={item}
                 confirma={confirma}
                 onErro={setErro}

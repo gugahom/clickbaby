@@ -203,10 +203,19 @@ se o caso tem um `encontro_irmaos`, não trocar o número por outro chute.
   `saida_uti` e `alta` continuam FORA da lista: o pedido nomeou uma etapa. Se derem o mesmo
   problema, a correção é acrescentar o slug — nunca deduzir "toda etapa fora de pacote",
   que é uma regra que ninguém deu.
-- **EVENTO, NEWBORN e combinações ("OUTROS")** ainda não estão no seed. Estratégia definida:
-  quando um produto novo (ex: NEWBORN) ou combinação virar recorrente, cadastra-se como um
-  **pacote próprio** com suas etapas — a trigger de geração lida com ele igual aos demais,
-  sem mudança de modelo. Não há composição de múltiplos pacotes num caso.
+- **O NEWBORN É O "CLICK HOME", E ELE É ADICIONAL — NÃO PACOTE** (22/09/2026, decisão do
+  gestor). Na agenda ele vem GRUDADO num pacote de parto: "STANDARD + CLICK HOME". Como
+  pacote, cada combinação vendida viraria uma linha nova no cadastro (BABY REELS + CLICK
+  HOME, MASTER + CLICK HOME, …) e a mesma família acabaria com dois casos ou com o pacote
+  errado. Então ele é uma ETAPA do mesmo caso (`click_home`, ordem 12, trilha edição), com
+  seção própria como o vídeo do MASTER e o Foto/Livro — ver a seção 13. O ensaio acontece na
+  CASA da família, 10 a 12 dias depois da entrega do pacote.
+  Isto REVISA a estratégia escrita aqui até 22/09 ("quando um produto novo virar recorrente,
+  cadastra-se como pacote próprio"), que continua valendo para produto que SUBSTITUI o
+  pacote — EVENTO e as combinações "OUTROS" seguem esperando decisão do dono. O que mudou é
+  que o NEWBORN não substitui nada: ele se soma.
+  **Não há composição de múltiplos pacotes num caso**, e isto continua verdade: o adicional
+  não é um pacote, é uma etapa.
 - **SLA:** 48h na maioria; BIRTH e BIRTH + REELS em 24h; MASTER e MASTER + ÁLBUM em
   **10 dias úteis** (conferido com o gestor em 27/08/2026, no lugar dos 7 dias corridos
   provisórios). Dia útil não cabe num `interval`, então esses dois usam
@@ -305,9 +314,10 @@ ter passado por entrega.
 Constraint de banco (`casos_status_terminal_valido`) já aplica essa regra — não a duplique
 como validação de aplicação que pode divergir da constraint.
 
-**DUAS ETAPAS NÃO SEGURAM O ENCERRAMENTO:** `edicao_video` (desde 20260903153101) e
-`album` (desde 20260910150425). As duas têm fluxo próprio numa seção lateral, levam semanas,
-e sobrevivem à entrega das fotos. Toda outra etapa continua tendo que estar concluída ou
+**TRÊS ETAPAS NÃO SEGURAM O ENCERRAMENTO:** `edicao_video` (desde 20260903153101),
+`album` (desde 20260910150425) e `click_home` (desde 20260922212901). As três têm fluxo
+próprio numa seção lateral, levam semanas, e sobrevivem à entrega das fotos — o ensaio Click
+Home acontece 10 a 12 dias DEPOIS dela. Toda outra etapa continua tendo que estar concluída ou
 dispensada, e o caso continua exigindo ao menos um entregável.
 
 **Regra de visibilidade do Quadro:** um dia só sai da tela quando **todos** os casos daquele
@@ -368,6 +378,11 @@ mover_video_master(p_caso_etapa_id, p_fase)
 enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2 links + pronto; NÃO conclui
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
+-- esteira do ensaio CLICK HOME (5 fases; ver seção 13)
+mover_click_home(p_caso_etapa_id, p_fase)        -- escreve fase E status juntos
+enviar_click_home_para_escolha(p_caso_etapa_id, p_link) -- link da galeria + fase
+confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm
+
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
 enviar_fotolivro_para_aprovacao(p_caso_etapa_id, p_link, p_capa) -- capa + link + fase, juntos
@@ -397,6 +412,7 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
+sync_marcar_click_home(p_google_event_id)               -- o "+ CLICK HOME" do título
 ```
 
 **Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` continua por UPDATE
@@ -1233,6 +1249,47 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   cor da marca (o verde diz "fechar o caso", e o caso pode estar encerrado há semanas). A
   contagem e o anel da aba somam os dois. O sino avisa atendimento e adm com o mesmo tipo da
   entrega de caso.
+- **A SEÇÃO CLICK HOME** (22/09/2026, pedido do gestor, migrations `20260922212852` e
+  `20260922212901`). O ensaio newborn na casa da família ganhou o mesmo arranjo do vídeo e do
+  fotolivro — cartão na coluna da direita, seletor de fase, play/pause, ficha, quadro por
+  fase com arrastar — a partir do terceiro quadro do Trello deles.
+  **CINCO FASES, as colunas que ele mandou:** Aguardando edição · Editando · Criar galeria
+  online · Enviar para escolha · Finalizado. Não há fase antes delas (decisão dele): o cartão
+  nasce em "aguardando edição", com o ensaio já fotografado. **DUAS são trabalho** — editando
+  e criar galeria viram `em_andamento`; as outras são espera e viram `pausada`, para o ciclo
+  medir trabalho e não calendário.
+  **O FIM PASSA POR ENTREGÁVEIS**, como os outros dois: "Enviar para escolha" exige o LINK da
+  galeria (`enviar_click_home_para_escolha`, tipo de entregável próprio `click_home`), o
+  cartão aparece na aba com selo CLICK HOME, e "Finalizado" é a confirmação da Morgana ali
+  (`confirmar_entrega_do_click_home`, atendimento ou adm). Sem isso o link da galeria seria de
+  novo o que ninguém registra — foi o que aconteceu com o vídeo até 21/09.
+  **ELE NÃO SEGURA O ENCERRAMENTO** — a TERCEIRA exceção, ao lado de `edicao_video` e `album`,
+  e a mais evidente das três: o ensaio acontece 10 a 12 dias DEPOIS da entrega. A lista tem
+  espelho na tela (`NAO_SEGURAM_A_ENTREGA`) e nas duas RPCs, e muda nos três ou em nenhum.
+  A regra do ARQUIVO (`quadro_casos.arquivado`) também o nomeia: sem isso um caso encerrado
+  com o ensaio pela frente sairia da carga e o cartão sumiria da seção.
+  **COMO ELE CHEGA:** o título do evento do PARTO traz o sufixo, e é o único lugar — **não
+  existe um segundo evento no Calendar** quando a sessão é marcada (confirmado com o gestor);
+  a data combinada entra pelo prazo do cartão (`agendar_etapa`). O parser tira "CLICK HOME" do
+  texto e devolve uma bandeira, e por isso o pacote volta a casar — até aqui "STANDARD + CLICK
+  HOME" não era igual a pacote nenhum e o caso virava RASCUNHO PENDENTE, que é o motivo de o
+  produto nunca ter aparecido. A Edge Function chama `sync_marcar_click_home` À PARTE, e não
+  um parâmetro novo em `sync_upsert_caso`: acrescentar argumento cria segunda assinatura e
+  deixa a chamada ambígua para a versão anterior da função, que roda a cada 25 segundos.
+  **A COLUNA `casos.click_home` É A MEMÓRIA DO SYNC**, e a etapa é a verdade da tela. Ela
+  existe porque o rascunho pendente chega SEM pacote: criar a etapa ali faria
+  `gerar_caso_etapas` ver "este caso já tem etapa" na confirmação e nunca gerar as do pacote —
+  a guarda dela é exatamente essa. Pela mesma razão a trigger se chama
+  `gerar_etapa_do_click_home`: triggers disparam em ORDEM ALFABÉTICA, e `gerar_caso_…` precisa
+  vir antes.
+  **SÓ MARCA, NUNCA DESMARCA:** tirar o sufixo do título não desfaz um ensaio que pode já ter
+  sido fotografado. Quem precisa desfazer usa "Este caso não tem Click Home" no seletor, que
+  dispensa a etapa.
+  **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
+  **na agenda continua "CLICK HOME"** — é a grafia que a equipe digita no título e a que o
+  parser procura. Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:
+  mesmo arranjo de `album`/"Foto/Livro" e de `operador`/"Fotógrafo(a)". Ao mexer nisto, não
+  troque as menções ao TÍTULO DO EVENTO — ali "CLICK HOME" é literal.
 - **A FICHA DO CARTÃO** (21/09/2026, pedido do gestor: "abrir esse card como num ClickUp ou
   Trello"). Nas seções MASTER e FOTO/LIVRO o NOME do caso no cartão é um botão que abre a ficha
   (`FichaDaEdicao`, sobre `ModalAmplo` no tamanho `ficha`): os controles do cartão no alto, a
@@ -1749,10 +1806,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
    para o caso. Se vier, tem que ser campo PRÓPRIO (`observacao_calendar`), separado da
    observação interna — senão o sync sobrescreve o que a equipe escreveu.
-12. **Parser: NEWBORN e combinações "OUTROS" não são pacotes.** Os 4 rascunhos pendentes
-    que sobraram esperam decisão do dono sobre cadastro e padronização de título, não
-    código. Não melhore o parser por heurística — é o "assumir quando ambíguo" que a
-    seção 7 proíbe.
+12. **Parser: EVENTO e combinações "OUTROS" não são pacotes.** Os rascunhos pendentes que
+    sobraram esperam decisão do dono sobre cadastro e padronização de título, não código.
+    Não melhore o parser por heurística — é o "assumir quando ambíguo" que a seção 7 proíbe.
+    O NEWBORN saiu desta lista em 22/09/2026: ele é o "CLICK HOME", virou ADICIONAL (uma
+    etapa do mesmo caso) e o parser passou a lê-lo. Os rascunhos que eram dele se resolvem
+    confirmando o pacote — a etapa nasce junto.
 
 ### Fora do escopo, mapeado
 

@@ -31,6 +31,10 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   // ao terminar a edição. Tipo próprio para não se confundir com o WeTransfer
   // das FOTOS, que a conferência do envio do caso exige.
   video_wetransfer: 'WeTransfer do vídeo',
+  // A galeria de escolha do ensaio newborn (22/09/2026): é por ela que a
+  // família escolhe as fotos do Click Home. Tipo próprio porque não é o álbum
+  // do parto — são dois endereços, em dois momentos.
+  click_home: 'Galeria do New Born',
 }
 
 interface PropsEntregaveis {

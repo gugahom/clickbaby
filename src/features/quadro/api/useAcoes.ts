@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
 import { casoDaEtapa } from './atualizar-por-caso'
-import type { FaseAlbum, FaseVideoMaster, TermoStatus } from '../types'
+import type { FaseAlbum, FaseClickHome, FaseVideoMaster, TermoStatus } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -190,6 +190,34 @@ export function useConfirmarEntrega() {
  * qualquer estado: a resposta é dada ao confirmar a entrega e se corrige
  * depois, inclusive num caso já encerrado. Ver lib/termo.ts.
  */
+/**
+ * A esteira do ensaio Click Home (22/09/2026). Escreve fase e status juntos,
+ * como `mover_album` — ver a migration 20260922212901.
+ */
+export function useMoverClickHome() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseClickHome }>(
+    ({ casoEtapaId, fase }) =>
+      chamar('mover_click_home', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
+  )
+}
+
+/** O link da galeria e a fase, na mesma transação. Qualquer pessoa ativa. */
+export function useEnviarClickHomeParaEscolha() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; link: string }>(({ casoEtapaId, link }) =>
+    chamar('enviar_click_home_para_escolha', {
+      p_caso_etapa_id: casoEtapaId,
+      p_link: link.trim(),
+    }),
+  )
+}
+
+/** A confirmação da Morgana em Entregáveis: finaliza o ensaio e confirma o link. */
+export function useConfirmarEntregaDoClickHome() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('confirmar_entrega_do_click_home', { p_caso_etapa_id: casoEtapaId }),
+  )
+}
+
 export function useRegistrarTermo() {
   return useAcaoDoQuadro<{ casoId: string; termo: TermoStatus }>(({ casoId, termo }) =>
     chamar('registrar_termo', { p_caso_id: casoId, p_termo: termo }),

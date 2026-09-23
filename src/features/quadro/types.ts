@@ -145,6 +145,8 @@ export interface EtapaQuadro {
    * mantém as duas em acordo é a RPC `mover_album`, que escreve as duas juntas.
    */
   faseAlbum: FaseAlbum | null
+  /** Onde o ensaio New Born está na esteira (22/09/2026). */
+  faseClickHome: FaseClickHome | null
   /**
    * Hora combinada para ESTA etapa — banho e fechamento, marcados com a
    * família depois do parto. Data PLANEJADA, a única que a invariante 3.4
@@ -285,6 +287,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     concluidoEm: linha.concluido_em,
     pausadoEm: linha.pausado_em,
     faseAlbum: linha.fase_album,
+    faseClickHome: linha.fase_click_home,
     previsaoEm: linha.previsao_em,
     estacao: linha.estacao,
     atualizadoEm: linha.updated_at,
@@ -388,6 +391,11 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   // fotos no álbum"). São duas coisas diferentes, e trocar aquelas por
   // "Foto/Livro" produziria frases erradas. Só a ETAPA e o ENTREGÁVEL mudaram.
   album: 'Foto/Livro',
+  // O ensaio newborn na casa da família (22/09/2026). NA TELA é "New Born",
+  // como o gestor pediu; NA AGENDA ele aparece como "+ CLICK HOME" grudado no
+  // pacote, e é essa grafia que o parser procura. Os dois nomes são a mesma
+  // coisa — mesmo arranjo de `album`/"Foto/Livro".
+  click_home: 'New Born',
   // Só existem via "acrescentar etapa" (31/08/2026) — nenhum pacote as
   // inclui de fábrica. Ver migration 20260831133153.
   encontro_irmaos: 'Encontro de irmãos',
@@ -631,6 +639,69 @@ export const FASES_DE_ESPERA_EXTERNA = new Set<FaseAlbum>([
   'aguardando_aprovacao',
   'enviado_grafica',
 ])
+
+/**
+ * O CLICK HOME — o ensaio newborn na casa da família (22/09/2026, pedido do
+ * gestor). As cinco colunas do quadro dele, na ordem da esteira.
+ *
+ * Ele é vendido GRUDADO num pacote de parto ("STANDARD + CLICK HOME" na
+ * agenda) e acontece 10 a 12 dias depois da entrega — por isso é etapa do
+ * mesmo caso, com seção própria, e não um pacote à parte.
+ */
+export const FASES_CLICK_HOME = [
+  'aguardando_edicao',
+  'editando',
+  'criar_galeria',
+  'enviar_para_escolha',
+  'finalizado',
+] as const
+
+export type FaseClickHome = (typeof FASES_CLICK_HOME)[number]
+
+/**
+ * O que o seletor mostra: todas menos `finalizado`, pela mesma razão do
+ * `entregue` do fotolivro — o fim não se escolhe, ele é o que a confirmação da
+ * Morgana em Entregáveis grava.
+ */
+export const FASES_CLICK_HOME_NA_TELA: readonly FaseClickHome[] =
+  FASES_CLICK_HOME.filter((fase) => fase !== 'finalizado')
+
+/** A fase em que o ensaio entra só pelo diálogo do link da galeria. */
+export const FASE_CLICK_HOME_ESCOLHA: FaseClickHome = 'enviar_para_escolha'
+
+/**
+ * As fases ANTES da escolha: nelas o "concluir" do cartão significa "a galeria
+ * está pronta" e abre o pedido do link. Depois dela o cartão não conclui nada.
+ */
+export const FASES_CLICK_HOME_ANTES_DA_ESCOLHA = new Set<FaseClickHome>([
+  'aguardando_edicao',
+  'editando',
+  'criar_galeria',
+])
+
+export const ROTULO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
+  aguardando_edicao: 'Aguardando edição',
+  editando: 'Editando',
+  criar_galeria: 'Criar galeria online',
+  enviar_para_escolha: 'Enviar para escolha',
+  finalizado: 'Finalizado',
+}
+
+/** Mesma gramática de cor do fotolivro: de quem é a bola, não o quanto falta. */
+export const ESTILO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
+  aguardando_edicao: 'bg-atencao/15 text-atencao-tinta',
+  editando: 'bg-andamento/12 text-andamento-tinta',
+  criar_galeria: 'bg-andamento/12 text-andamento-tinta',
+  // Esperando a família escolher: bola de fora, cor neutra.
+  enviar_para_escolha: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+  finalizado: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+}
+
+/** Esperando a família — a seção não cobra o que não depende da equipe. */
+export const FASES_CLICK_HOME_DE_ESPERA_EXTERNA = new Set<FaseClickHome>([
+  'enviar_para_escolha',
+])
+
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {
   aguardando: 'Aguardando',
