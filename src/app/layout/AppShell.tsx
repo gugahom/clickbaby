@@ -97,7 +97,10 @@ export function AppShell() {
   return (
     <div className="flex h-full flex-col">
       <header className="superficie-cabecalho flex-shrink-0 text-white">
-        <div className="flex items-center justify-between gap-3 px-3 py-3 md:px-5">
+        {/* `relative`: no celular é ESTA linha que posiciona o painel do sino,
+            para ele encostar nas margens da tela em vez de sair pela esquerda.
+            Ver o comentário em Sino.tsx. */}
+        <div className="relative flex items-center justify-between gap-3 px-3 py-3 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
             {/* `clara` e não `preta`: a mesma silhueta, invertida. */}
             <Logo variante="clara" className="h-7 max-w-[9.5rem] md:h-8 md:max-w-[12rem]" prioridade />
