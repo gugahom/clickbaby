@@ -176,11 +176,22 @@ function AprovacaoDoFotolivro({ etapa }: { etapa: EtapaQuadro }) {
             (capa ? (
               // Clicar abre a capa inteira noutra aba — a URL é assinada e
               // expira em uma hora, então não há o que vazar por muito tempo.
-              <a href={capa} target="_blank" rel="noreferrer" className="flex-shrink-0">
+              // `min-w-0` e `max-w-full`: a capa é uma imagem QUALQUER — um
+              // print da tela do editor, quase sempre deitado. Com altura
+              // limitada e largura livre, uma imagem 3:1 virava 768px de
+              // largura, estourava a coluna e era desenhada POR CIMA do
+              // histórico, à direita (visto na tela em 24/09/2026). Agora ela
+              // cabe na coluna, e quem quiser vê-la inteira abre noutra aba.
+              <a
+                href={capa}
+                target="_blank"
+                rel="noreferrer"
+                className="block min-w-0 max-w-full shrink"
+              >
                 <img
                   src={capa}
                   alt="Capa do Foto/Livro"
-                  className="max-h-64 w-auto rounded-md border border-border object-contain"
+                  className="max-h-64 w-auto max-w-full rounded-md border border-border object-contain"
                 />
               </a>
             ) : (

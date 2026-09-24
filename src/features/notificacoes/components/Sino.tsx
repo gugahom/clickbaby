@@ -192,7 +192,23 @@ export function Sino() {
   }
 
   return (
-    <div ref={caixa} className="relative flex-shrink-0">
+    /*
+     * `sm:relative`, e não `relative` sempre (24/09/2026, o painel aparecia
+     * CORTADO no celular).
+     *
+     * O painel abre com `right-0` — alinhado à direita de quem o posiciona — e
+     * tem a largura da tela menos as margens. Ancorado NO BOTÃO, a borda direita
+     * dele caía onde o sino termina, ~60px antes da borda da tela, e a esquerda
+     * saía para fora: as primeiras letras de cada linha ficavam cortadas ("o/Livro
+     * voltou para alteração").
+     *
+     * Sem `relative` aqui, quem posiciona passa a ser o CABEÇALHO (a linha que
+     * tem `relative` no AppShell): `right-0` vira a margem direita da tela e
+     * `top-full` vira a base do cabeçalho — o painel encosta nas duas margens,
+     * que é o que a largura já pressupunha. No desktop nada muda: a partir de
+     * `sm` o botão volta a ser a âncora.
+     */
+    <div ref={caixa} className="flex-shrink-0 sm:relative">
       <button
         type="button"
         onClick={alternar}
@@ -261,7 +277,11 @@ export function Sino() {
               semMovimento ? { duration: 0 } : { type: 'spring', bounce: 0.15, duration: 0.28 }
             }
             style={{ transformOrigin: 'top right' }}
-            className="absolute top-full right-0 z-50 mt-2 w-[min(380px,calc(100vw-1.5rem))] overflow-hidden rounded-md border border-border bg-card text-foreground shadow-cartao-alto"
+            // `right-3` no celular: ali quem posiciona é o cabeçalho inteiro, e
+            // o zero cravaria o painel na borda da tela enquanto a largura já
+            // desconta as duas margens. A partir de `sm` a âncora volta a ser o
+            // botão, e o zero é o alinhamento certo.
+            className="absolute top-full right-3 z-50 mt-2 w-[min(380px,calc(100vw-1.5rem))] overflow-hidden rounded-md border border-border bg-card text-foreground shadow-cartao-alto sm:right-0"
           >
             {/* ABAS NO TOPO, como no exemplo. */}
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
