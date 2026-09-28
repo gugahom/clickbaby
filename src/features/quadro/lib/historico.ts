@@ -236,6 +236,10 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
       }
     }
 
+    // A avaliação da família (28/09/2026): o caso sai de "Avaliação interna".
+    case 'avaliacao_registrada':
+      return { ...base, acao: 'Registrou a avaliação da família', tom: 'marco' }
+
     // O ensaio Click Home (22/09/2026).
     case 'click_home_do_contrato':
       return { ...base, acao: 'Contrato inclui o ensaio New Born', tom: 'sistema' }

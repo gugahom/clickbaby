@@ -210,11 +210,14 @@ export type Database = {
       }
       casos: {
         Row: {
+          avaliacao_em: string | null
+          avaliacao_por: string | null
           bebe_nome: string | null
           click_home: boolean
           cor_calendar: string | null
           created_at: string
           criado_por: string | null
+          encerrado_em: string | null
           google_calendar_event_id: string | null
           id: string
           liberado_para_entrega_em: string | null
@@ -235,11 +238,14 @@ export type Database = {
           uti_desde: string | null
         }
         Insert: {
+          avaliacao_em?: string | null
+          avaliacao_por?: string | null
           bebe_nome?: string | null
           click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
+          encerrado_em?: string | null
           google_calendar_event_id?: string | null
           id?: string
           liberado_para_entrega_em?: string | null
@@ -260,11 +266,14 @@ export type Database = {
           uti_desde?: string | null
         }
         Update: {
+          avaliacao_em?: string | null
+          avaliacao_por?: string | null
           bebe_nome?: string | null
           click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
+          encerrado_em?: string | null
           google_calendar_event_id?: string | null
           id?: string
           liberado_para_entrega_em?: string | null
@@ -285,6 +294,13 @@ export type Database = {
           uti_desde?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "casos_avaliacao_por_fkey"
+            columns: ["avaliacao_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "casos_criado_por_fkey"
             columns: ["criado_por"]
@@ -963,12 +979,14 @@ export type Database = {
       quadro_casos: {
         Row: {
           arquivado: boolean | null
+          avaliacao_em: string | null
           bebe_nome: string | null
           cor_calendar: string | null
           created_at: string | null
           dia: string | null
           eh_rascunho: boolean | null
           eh_terminal: boolean | null
+          encerrado_em: string | null
           etapas_concluidas: number | null
           etapas_total: number | null
           falta_maternidade: boolean | null
@@ -1159,6 +1177,7 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
         Returns: undefined
       }
+      registrar_avaliacao: { Args: { p_caso_id: string }; Returns: undefined }
       registrar_despesa: {
         Args: {
           p_caso_id: string

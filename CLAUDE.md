@@ -393,6 +393,7 @@ pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabr
 
 -- caso
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
+registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
@@ -1626,6 +1627,40 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   não em colunas novas: append-only, uma correção não apaga a resposta de hoje. O quarto
   valor do enum, `nao_aplicavel`, a RPC RECUSA — valor de enum não se apaga, e uma quarta
   resposta que ninguém sabe ler acabaria no filtro da mídia como "talvez".
+- **A AVALIAÇÃO DA FAMÍLIA, E OS CONCLUÍDOS EM TRÊS COLUNAS** (28/09/2026, pedido do gestor,
+  migration `20260928153831`). A operação já fazia isto numa planilha à parte: quinze dias
+  depois de entregar, alguém procura a família caso a caso e pede a avaliação. A aba passou a
+  mostrar esse caminho — **Entregues · Avaliação interna · Concluídos** —, e com isso ela
+  deixou de ser arquivo morto e virou FILA DE TRABALHO.
+  **A PASSAGEM DOS 15 DIAS É UMA CONTA, NÃO UM JOB.** Nada no banco muda quando o prazo vence:
+  a coluna é derivada de `casos.encerrado_em` na hora de desenhar (`lib/avaliacao.ts`), e o
+  relógio de minuto do Quadro faz o cartão atravessar sozinho. Um cron que movesse casos
+  criaria um estado guardado que pode discordar do calendário — a mesma razão pela qual o sino
+  não tem tabela de notificações.
+  **`encerrado_em` FALTAVA DESDE SEMPRE:** o sistema sabia que o caso encerrou, não QUANDO —
+  só varrendo `eventos`. Agora `confirmar_entrega` o carimba, e o backfill o reconstruiu do
+  evento `entrega_confirmada` (caindo para a confirmação dos links e, em último caso, para
+  `updated_at`).
+  **SAIR DA COLUNA DO MEIO É UM BOTÃO** — "Avaliação feita", dentro do cartão e só nessa
+  coluna (`registrar_avaliacao`, atendimento ou adm, idempotente, com evento). Os 15 dias são
+  regra de TELA: o banco recusa só o que não faz sentido em prazo nenhum (caso aberto,
+  cancelado, avaliação repetida).
+  **ENTREGA NOVA ZERA A AVALIAÇÃO**, e a limpeza mora dentro de `confirmar_entrega`, ao lado
+  do carimbo — é a lição da 20260909145223: quem ESCREVE numa coluna nova é fácil de achar,
+  quem deveria LIMPÁ-LA não. Um caso reaberto e reentregue tem quinze dias novos.
+  **O HISTÓRICO INTEIRO NASCEU NA TERCEIRA COLUNA** (decisão desta migration): o backfill deu
+  `avaliacao_em = encerrado_em` aos casos que já eram terminais, com **`avaliacao_por` NULO**,
+  que se lê como "veio do histórico, ninguém marcou isto". Sem isso, centenas de casos antigos
+  cairiam de uma vez em "Avaliação interna", como se todos precisassem de uma ligação que a
+  planilha já resolveu.
+  **CANCELADO VAI DIRETO PARA "CONCLUÍDOS"** (decisão do gestor): contrato que caiu não tem
+  família para avaliar.
+  **E A ABA FICOU RESTRITA** ao mesmo par de papéis — atendimento e adm, ou seja, todo papel
+  menos `operador` (`podeVerConcluidos`). Isso NÃO fere a invariante 3.1, que proíbe filtrar
+  TRABALHO por tipo de pessoa: é permissão de tela por papel administrativo, como a Equipe
+  (gestão) e as Despesas (financeiro). E é regra de TELA — a RLS de `casos` não mudou, o
+  arquivo continua legível; quem não vê a aba também não o BAIXA, o que de quebra tira uma
+  consulta de ~200 casos do celular da fotógrafa.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e
