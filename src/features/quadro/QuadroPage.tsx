@@ -7,6 +7,7 @@ import { useConcluidos, useQuadro } from './api/useQuadro'
 import {
   useMoverAlbum,
   useMoverClickHome,
+  useRegistrarAvaliacao,
   useMoverVideoMaster,
   usePedirAlteracaoDaEtapa,
   useReabrirCaso,
@@ -15,6 +16,15 @@ import {
 } from './api/useAcoes'
 import { useRealtimeQuadro } from './api/useRealtimeQuadro'
 import { mensagemDeErro } from './lib/erros'
+import {
+  colunaDoConcluido,
+  EXPLICACAO_DA_COLUNA,
+  ROTULO_DA_COLUNA,
+  type ColunaDoConcluido,
+} from './lib/avaliacao'
+import { Alerta } from '@/components/ui/Alerta'
+import { useAuth } from '@/features/auth/contexto'
+import { podeVerConcluidos } from './lib/acoes'
 import {
   DIAS_INICIAIS,
   DIAS_POR_PAGINA,
@@ -118,6 +128,14 @@ const SEM_ETAPAS: Map<string, EtapaQuadro[]> = new Map()
 
 export function QuadroPage() {
 
+  /*
+   * A ABA CONCLUÍDOS É DO ADM (28/09/2026, pedido do gestor). Ela deixou de ser
+   * arquivo morto e virou a FILA DA AVALIAÇÃO — trabalho de quem liga para a
+   * família, não de quem fotografa. Ver `podeVerConcluidos`.
+   */
+  const { pessoa } = useAuth()
+  const veConcluidos = podeVerConcluidos(pessoa?.papelSistema ?? 'operador')
+
   const [aba, setAba] = useState<Aba>('lista')
   const [diasVisiveis, setDiasVisiveis] = useState(DIAS_INICIAIS)
   const { data, isPending, error } = useQuadro()
@@ -154,6 +172,8 @@ export function QuadroPage() {
     tipo: 'master' | 'fotolivro' | 'click_home'
   } | null>(null)
   const [erroReabrir, setErroReabrir] = useState<string | null>(null)
+  const registrarAvaliacao = useRegistrarAvaliacao()
+  const [erroAvaliacao, setErroAvaliacao] = useState<string | null>(null)
   const reabrirCaso = useReabrirCaso()
 
   /*
@@ -193,13 +213,15 @@ export function QuadroPage() {
    * está no Quadro só pode apontar para o arquivo, e a aba certa só se sabe
    * depois de procurá-lo lá.
    */
-  const focoNoArquivo = focoPendente && data !== undefined && alvoDoFoco === null
-  const doArquivo = useConcluidos(aba === 'concluidos' || focoNoArquivo)
+  // Quem não vê a aba também não busca o arquivo: sem a tela, os ~200 casos
+  // terminais seriam uma consulta para não desenhar nada.
+  const focoNoArquivo = focoPendente && data !== undefined && alvoDoFoco === null && veConcluidos
+  const doArquivo = useConcluidos((aba === 'concluidos' || focoNoArquivo) && veConcluidos)
 
   if (focoPendente && alvoDoFoco) {
     setFocoAplicado(casoEmFoco)
     setAba(
-      alvoDoFoco.ehTerminal
+      alvoDoFoco.ehTerminal && veConcluidos
         ? 'concluidos'
         : alvoDoFoco.liberadoParaEntregaEm !== null
           ? 'entregas'
@@ -211,7 +233,9 @@ export function QuadroPage() {
     // Procurado no arquivo. Se nem lá estiver — link velho, rascunho
     // descartado —, a tela fica onde está, como antes.
     setFocoAplicado(casoEmFoco)
-    if (doArquivo.data?.casos.some((c) => c.id === casoEmFoco)) setAba('concluidos')
+    if (veConcluidos && doArquivo.data?.casos.some((c) => c.id === casoEmFoco)) {
+      setAba('concluidos')
+    }
   }
   // Arrastar entre as colunas do modal cai nas MESMAS RPCs do seletor de fase
   // do cartão — o atalho não é um segundo caminho de escrita.
@@ -1121,6 +1145,58 @@ export function QuadroPage() {
     </PainelLateral>
   )
 
+  /*
+   * OS CONCLUÍDOS EM TRÊS COLUNAS (28/09/2026, pedido do gestor): Entregues ·
+   * Avaliação interna · Concluídos. É a planilha de pós-entrega deles virando
+   * tela — quinze dias depois de entregar, alguém procura a família e pede a
+   * avaliação.
+   *
+   * A COLUNA É CALCULADA NA HORA (ver lib/avaliacao.ts): nada no banco muda
+   * quando o prazo vence, e `agora` já bate de minuto em minuto no Quadro — um
+   * caso atravessa para a coluna do meio sozinho, sem ninguém recarregar.
+   */
+  const cartaoConcluido = (caso: CasoQuadro, coluna: ColunaDoConcluido) => (
+    // O botão solto de reabrir saiu daqui e virou item do menu do próprio
+    // cartão — ver CasoLinha. Ele pendurava abaixo do cartão, fora da moldura
+    // dele, e era a única ação da tela que morava do lado de fora do objeto
+    // sobre o qual agia.
+    <CasoLinha
+      // A chave carrega o foco: um card já montado e fechado ignoraria o
+      // `emFoco`, que só vale no nascimento do estado.
+      key={`${caso.id}-${caso.id === casoEmFoco ? 'foco' : ''}`}
+      caso={caso}
+      etapas={etapasDoConcluido(caso.id)}
+      emFoco={caso.id === casoEmFoco}
+      onReabrir={(c) => {
+        setErroReabrir(null)
+        setReabrindo(c)
+      }}
+      /* O botão só existe na coluna do meio: é lá que a ligação acontece. Nas
+         outras ele seria uma porta para um trabalho que ainda não chegou (nos
+         Entregues) ou que já terminou (nos Concluídos). */
+      {...(coluna === 'avaliacao'
+        ? {
+            avaliacao: {
+              ocupado: registrarAvaliacao.isPending,
+              aoMarcar: () => {
+                setErroAvaliacao(null)
+                registrarAvaliacao
+                  .mutateAsync({ casoId: caso.id })
+                  .catch((e) => setErroAvaliacao(mensagemDeErro(e)))
+              },
+            },
+          }
+        : {})}
+    />
+  )
+
+  const porColuna: Record<ColunaDoConcluido, CasoQuadro[]> = {
+    entregues: [],
+    avaliacao: [],
+    concluidos: [],
+  }
+  for (const caso of concluidos) porColuna[colunaDoConcluido(caso, agora)].push(caso)
+
   const listaConcluidos =
     concluidos.length === 0 ? (
       <Aviso
@@ -1133,25 +1209,41 @@ export function QuadroPage() {
         Casos encerrados e cancelados aparecem aqui.
       </Aviso>
     ) : (
-      <div className="space-y-2 p-3 md:p-4">
-        {concluidos.map((caso) => (
-          // O botão solto de reabrir saiu daqui e virou item do menu do
-          // próprio cartão — ver CasoLinha. Ele pendurava abaixo do cartão,
-          // fora da moldura dele, e era a única ação da tela que morava do
-          // lado de fora do objeto sobre o qual agia.
-          <CasoLinha
-            // A chave carrega o foco: um card já montado e fechado ignoraria
-            // o `emFoco`, que só vale no nascimento do estado.
-            key={`${caso.id}-${caso.id === casoEmFoco ? 'foco' : ''}`}
-            caso={caso}
-            etapas={etapasDoConcluido(caso.id)}
-            emFoco={caso.id === casoEmFoco}
-            onReabrir={(c) => {
-              setErroReabrir(null)
-              setReabrindo(c)
-            }}
-          />
-        ))}
+      <div className="p-3 md:p-4">
+        {erroAvaliacao && (
+          <div className="mb-3">
+            <Alerta onFechar={() => setErroAvaliacao(null)}>{erroAvaliacao}</Alerta>
+          </div>
+        )}
+
+        {/* TRÊS COLUNAS no PC, três BLOCOS empilhados no celular: a ordem é a
+            mesma, e no telefone uma coluna de 120px não caberia sem cortar o
+            nome da família. */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {(['entregues', 'avaliacao', 'concluidos'] as const).map((coluna) => (
+            <section key={coluna} className="min-w-0">
+              <header className="mb-2 flex items-baseline gap-2">
+                <h2 className="text-sm font-bold">{ROTULO_DA_COLUNA[coluna]}</h2>
+                <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                  {porColuna[coluna].length}
+                </span>
+              </header>
+              <p className="mb-2 text-xs text-muted-foreground">
+                {EXPLICACAO_DA_COLUNA[coluna]}
+              </p>
+
+              {porColuna[coluna].length === 0 ? (
+                <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                  Nenhum caso aqui.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {porColuna[coluna].map((caso) => cartaoConcluido(caso, coluna))}
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
       </div>
     )
 
@@ -1267,12 +1359,14 @@ export function QuadroPage() {
             >
               Rascunhos
             </BotaoAba>
-            <BotaoAba
-              ativa={aba === 'concluidos'}
-              onClick={() => setAba('concluidos')}
-            >
-              Concluídos
-            </BotaoAba>
+            {veConcluidos && (
+              <BotaoAba
+                ativa={aba === 'concluidos'}
+                onClick={() => setAba('concluidos')}
+              >
+                Concluídos
+              </BotaoAba>
+            )}
           </div>
         </div>
 
@@ -1344,9 +1438,11 @@ export function QuadroPage() {
           >
             Rascunhos
           </BotaoAba>
-          <BotaoAba ativa={aba === 'concluidos'} onClick={() => setAba('concluidos')}>
-            Concluídos
-          </BotaoAba>
+          {veConcluidos && (
+            <BotaoAba ativa={aba === 'concluidos'} onClick={() => setAba('concluidos')}>
+              Concluídos
+            </BotaoAba>
+          )}
         </div>
       </header>
 

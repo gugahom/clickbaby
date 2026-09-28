@@ -18,7 +18,8 @@ import { ResumoDasTrilhas, TrilhasDoCaso } from './TrilhasDoCaso'
 import { AvisosDoCaso } from './AvisosDoCaso'
 import { EditarCasoDialogo } from './EditarCasoDialogo'
 import { Dialogo } from '@/components/ui/Dialogo'
-import { IconeCaneta, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
+import { Botao } from '@/components/ui/Botao'
+import { IconeCaneta, IconeCheck, IconeMais, IconeReabrir, IconeX } from '@/components/ui/icones'
 import { Dropdown, type ItemDropdown } from '@/components/ui/Dropdown'
 import { DialogoTermo } from './DialogoTermo'
 import { SeloDoTermo } from './SeloDoTermo'
@@ -46,6 +47,12 @@ interface PropsCasoLinha {
    */
   compacto?: boolean
   /**
+   * A AVALIAÇÃO DA FAMÍLIA (28/09/2026), na coluna "Avaliação interna" da aba
+   * Concluídos. Ausente nas outras colunas e nas outras abas: o botão só existe
+   * onde a ação faz sentido.
+   */
+  avaliacao?: { ocupado: boolean; aoMarcar: () => void } | undefined
+  /**
    * O caso que o SINO mandou abrir (17/09/2026). Nasce expandido e se puxa
    * para o meio da tela — clicar numa notificação e cair num Quadro onde o
    * card está em algum lugar lá embaixo, fechado, seria informar sem resolver.
@@ -57,6 +64,7 @@ export function CasoLinha({
   caso,
   etapas,
   onReabrir,
+  avaliacao,
   compacto = false,
   emFoco = false,
 }: PropsCasoLinha) {
@@ -734,6 +742,23 @@ export function CasoLinha({
           visível, aberto ou fechado. Um aviso que só aparecesse ao expandir o
           caso não seria visto na TV, que é onde ele precisa ser visto. */}
       <AvisosDoCaso etapas={etapas} />
+
+      {/* A AVALIAÇÃO FICA DENTRO DO CARTÃO, e FORA do <button> do cabeçalho:
+          botão dentro de botão não é HTML válido, e pendurá-lo abaixo do cartão
+          repetiria o defeito que o "reabrir" solto tinha — a única ação da tela
+          morando do lado de fora do objeto sobre o qual age. */}
+      {avaliacao && (
+        <div className="border-t border-border px-3 py-2 md:px-4">
+          <Botao
+            onClick={avaliacao.aoMarcar}
+            disabled={avaliacao.ocupado}
+            className="w-full justify-center font-bold"
+          >
+            <IconeCheck className="size-4" />
+            {avaliacao.ocupado ? 'Registrando…' : 'Avaliação feita'}
+          </Botao>
+        </div>
+      )}
 
       <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
         {/* O que o resumo compacto deixou de fora volta AQUI, antes do

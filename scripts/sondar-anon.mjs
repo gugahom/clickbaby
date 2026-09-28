@@ -185,6 +185,9 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
   sync_marcar_click_home: { p_google_event_id: 'sonda' },
+  // A avaliação da família (20260928153831). Quem alcançasse esta RPC daria
+  // por encerrado o pós-entrega de qualquer caso, sem ninguém ligar.
+  registrar_avaliacao: { p_caso_id: '00000000-0000-0000-0000-000000000000' },
   iniciar_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   concluir_etapa: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

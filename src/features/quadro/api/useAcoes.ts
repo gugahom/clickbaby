@@ -218,6 +218,16 @@ export function useConfirmarEntregaDoClickHome() {
   )
 }
 
+/**
+ * A AVALIAÇÃO DA FAMÍLIA (28/09/2026): o caso sai de "Avaliação interna" e vai
+ * para "Concluídos". Atendimento ou adm — ver a migration 20260928153831.
+ */
+export function useRegistrarAvaliacao() {
+  return useAcaoDoQuadro<{ casoId: string }>(({ casoId }) =>
+    chamar('registrar_avaliacao', { p_caso_id: casoId }),
+  )
+}
+
 export function useRegistrarTermo() {
   return useAcaoDoQuadro<{ casoId: string; termo: TermoStatus }>(({ casoId, termo }) =>
     chamar('registrar_termo', { p_caso_id: casoId, p_termo: termo }),

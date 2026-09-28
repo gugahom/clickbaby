@@ -36,6 +36,29 @@ export function podeEncerrarCaso(papelSistema: string): boolean {
 }
 
 /**
+ * A ABA CONCLUÍDOS É DO ADM (28/09/2026, pedido do gestor: "a tela de
+ * concluídos deve ser escondida para as FOTÓGRAFAS").
+ *
+ * É o mesmo par de sempre — atendimento e adm, ou seja, todo papel menos
+ * `operador` —, e é o par certo porque a aba deixou de ser um arquivo morto:
+ * ela virou a FILA DA AVALIAÇÃO, trabalho de quem liga para a família.
+ *
+ * ISTO NÃO FERE A INVARIANTE 3.1. O que ela proíbe é filtrar TRABALHO por tipo
+ * de pessoa — "mostre só as fotógrafas", barrar alguém de uma etapa. Aqui é
+ * permissão de TELA por papel administrativo, que é exatamente para o que
+ * `papel_sistema` existe: a Equipe já é só da gestão e as Despesas são do
+ * financeiro.
+ *
+ * E É REGRA DE TELA, não de dado: o arquivo continua legível por qualquer
+ * pessoa ativa (a RLS de `casos` não mudou), como acontece com as despesas. Se
+ * um dia o conteúdo precisar ser secreto de verdade, o lugar é a policy — não
+ * esconder a aba.
+ */
+export function podeVerConcluidos(papelSistema: string): boolean {
+  return podeEncerrarCaso(papelSistema)
+}
+
+/**
  * Editar o cadastro do caso — mãe, bebê, pacote, maternidade.
  *
  * Espelha a policy `casos_update_adm`, que exige `eh_adm()`. Não é uma

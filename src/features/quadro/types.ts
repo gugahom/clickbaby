@@ -36,6 +36,13 @@ export interface CasoQuadro {
    * a ela nunca a receberam. Ver lib/termo.ts.
    */
   termoStatus: TermoStatus | null
+  /**
+   * Quando a entrega foi confirmada (28/09/2026). É daqui que saem os 15 dias
+   * da avaliação da família — ver `colunaDoConcluido` em lib/avaliacao.ts.
+   */
+  encerradoEm: string | null
+  /** Quando a avaliação da família foi registrada; nulo enquanto não foi. */
+  avaliacaoEm: string | null
   /** Os ids existiam na view e não eram lidos. O editor de cadastro precisa
       deles para pré-selecionar o valor atual nos seletores. */
   pacoteId: string | null
@@ -239,6 +246,8 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     maternidadeNome: linha.maternidade_nome,
     maternidadeSigla: linha.maternidade_sigla,
     termoStatus: linha.termo_status,
+    encerradoEm: linha.encerrado_em,
+    avaliacaoEm: linha.avaliacao_em,
     nascimentoConcluidoEm: linha.nascimento_concluido_em,
     venceEm: linha.vence_em,
     faltaPacote: linha.falta_pacote ?? false,
