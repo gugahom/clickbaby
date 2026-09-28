@@ -77,15 +77,20 @@ export function BarraLateral({ destinos }: { destinos: Destino[] }) {
                 // sem texto nenhum, não explicam o que separam. Animada junto, a
                 // lista cresce com a barra e não pula — e fechada os ícones
                 // ficam numa coluna contínua.
-                // O ESPAÇO EXTRA VAI ACIMA DO RÓTULO ("de uma afastada de
-                // operação e gestão, tá muito colado", 28/09/2026). Ele mora
-                // na ALTURA desta caixa — que é 0 com a barra fechada — em vez
-                // de numa margem do grupo: assim o respiro aparece junto com os
-                // nomes, e a coluna de ícones não estufa quando não há texto
-                // nenhum para separar. `items-end` joga a folga para cima, que
-                // é o lado onde ela faz falta: um título de seção pertence ao
-                // que vem DEPOIS dele.
-                <div className="flex h-0 items-end overflow-hidden px-3 transition-[height] duration-200 group-focus-within:h-10 group-hover:h-10 motion-reduce:transition-none">
+                // O RESPIRO DOS DOIS LADOS DO RÓTULO (28/09/2026, em duas
+                // voltas do gestor: "tá muito colado" e, depois, "preciso que a
+                // PÍLULA dê uma afastada dos títulos"). O `pb-3` separa o
+                // título do item que vem abaixo dele; o que sobra da altura cai
+                // acima, pelo `items-end`, e separa o título do grupo anterior.
+                //
+                // TUDO ISSO MORA NA ALTURA DESTA CAIXA, que é 0 com a barra
+                // fechada — e não em margens dos itens. O `pb` também só existe
+                // aberto: `height: 0` NÃO engole o padding (o border-box o
+                // conta por fora do zero), e cada grupo estufaria a coluna de
+                // ícones em 12px sem nada para mostrar. Assim o respiro aparece
+                // junto com os nomes, e a coluna de ícones não estufa por causa
+                // de um texto que ninguém está vendo.
+                <div className="flex h-0 items-end overflow-hidden px-3 pb-0 transition-[height,padding] duration-200 group-focus-within:h-11 group-focus-within:pb-3 group-hover:h-11 group-hover:pb-3 motion-reduce:transition-none">
                   <RotuloQueSome className="rotulo-sobrescrito text-white/45">
                     {ROTULO_DO_GRUPO[grupo]}
                   </RotuloQueSome>
