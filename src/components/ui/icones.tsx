@@ -558,49 +558,6 @@ export function IconeRelatorio({ className }: PropsIcone) {
   )
 }
 
-/**
- * Os dois lados do interruptor da barra lateral. São ícones SEPARADOS e não um
- * espelhado por CSS: virar o desenho levaria a coluna da barra para o lado
- * errado, e a coluna é justamente o que diz que aquilo é uma barra lateral.
- */
-export function IconeRecolherBarra({ className }: PropsIcone) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M9 4v16" />
-      <path d="m16 10-2 2 2 2" />
-    </svg>
-  )
-}
-
-export function IconeExpandirBarra({ className }: PropsIcone) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M9 4v16" />
-      <path d="m14 10 2 2-2 2" />
-    </svg>
-  )
-}
-
 /** Sino: o notificador do cabeçalho — ver features/notificacoes. */
 export function IconeSino({ className }: PropsIcone) {
   return (

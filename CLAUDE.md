@@ -1798,13 +1798,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   relatórios e calendário estão na fila —, porque uma fileira de palavras no alto compete
   com o cabeçalho, que já tem marca, presença, sino e conta. A barra cresce para BAIXO, que
   é a direção em que sobra espaço.
-  **RECOLHIDA POR PADRÃO (3.5rem), e abre sozinha no ponteiro ou no foco.** Aberta ela
-  custaria 13rem da largura do Quadro, que é a tela mais apertada do sistema (a coluna
-  lateral de 30rem e o modo TV já disputaram cada pixel). **E abre POR CIMA:** a largura
-  reservada é sempre a da recolhida, e quem cresce é o painel flutuante — empurrar
-  recalcularia o layout do Quadro a cada passagem de mouse. Quem quiser os nomes o tempo
-  todo fixa a barra, e a escolha fica no `localStorage` do aparelho (`useBarraFixa`,
-  preferência de UI, não dado de domínio).
+  **SEMPRE ESTREITA (3.5rem), e abre sozinha no ponteiro ou no foco.** Aberta ela custaria
+  13rem da largura do Quadro, que é a tela mais apertada do sistema (a coluna lateral de
+  30rem e o modo TV já disputaram cada pixel). **E abre POR CIMA:** a largura reservada é
+  sempre a estreita, e quem cresce é o painel flutuante — empurrar recalcularia o layout do
+  Quadro a cada passagem de mouse.
+  **NÃO HÁ BOTÃO DE FIXAR.** Houve, entre as duas primeiras versões, e o gestor o tirou
+  depois de usar ("totalmente inútil"). Ele estava certo: com a barra abrindo no caminho do
+  mouse, fixá-la só trocava 3.5rem de largura permanente por nomes que já apareciam quando
+  se precisava deles. Se um dia alguém pedir a barra travada aberta, o caminho é uma
+  preferência de aparelho como o modo TV — não um botão dentro dela.
   **A FAIXA DO CELULAR CONTINUA EXISTINDO, e isso não é detalhe:** é ela o caminho de volta
   da tela de Perfil. Prender quem opera numa tela sem saída foi o defeito corrigido em
   03/09/2026, e esconder a navegação do celular o recriaria. Barra lateral no toque não
@@ -1816,12 +1819,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   nenhuma: espaço permanente para um item só é moldura vazia.
   **"PAINEL" VIROU "QUADRO"**: a barra apontava para a mesma tela com outro nome, e com
   ícone ao lado a discordância ficaria pior — nenhum desenho representa "Painel".
-  **A BARRA TEM CABEÇALHO E SEÇÕES**, no esqueleto do componente que o gestor mandou: o
-  interruptor de recolher no topo (visível SEMPRE, inclusive recolhido — é a única porta
-  para fixar a barra), e os destinos agrupados em **Operação** e **Gestão**, com os rótulos
-  abrindo junto com a largura. Reservar a altura do rótulo na barra recolhida evitaria o
-  salto e criaria um defeito pior: buracos entre ícones que, sem texto, não dizem o que
-  separam. Os rótulos só aparecem quando há mais de um grupo.
+  **OS DESTINOS SÃO AGRUPADOS** em **Operação** e **Gestão**, no esqueleto do componente que
+  o gestor mandou, com os rótulos abrindo junto com a largura. Reservar a altura do rótulo
+  na barra estreita evitaria o salto e criaria um defeito pior: buracos entre ícones que,
+  sem texto, não dizem o que separam. Os rótulos só aparecem quando há mais de um grupo.
+  **AS PÍLULAS TÊM 36px**, e não os 44 do primeiro desenho ("as pílulas estão muuuito
+  gordas"): o piso de 44px da seção 6 é do DEDO no corredor, e esta barra só existe no
+  computador — a mesma distinção que a faixa da navegação já fazia. Com texto de 14px, 44
+  deixava um vão vazio em cima e embaixo que engordava a pílula sem acrescentar alvo
+  aproveitável.
   **FEITO COM AS PEÇAS DA CASA**, como o sino em 18/09: o exemplo trazia cinco pacotes novos
   (framer-motion, @base-ui/react, tailwind-merge, @tabler/icons-react, clsx) e nenhum entrou
   — `clsx` já está aqui, o `motion` do projeto É o framer-motion, os ícones são nossos, e
