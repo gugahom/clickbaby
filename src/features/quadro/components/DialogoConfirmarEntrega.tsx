@@ -180,7 +180,9 @@ export function DialogoConfirmarEntrega({
   const [termo, setTermo] = useState<TermoStatus | null>(
     caso.termoStatus ?? termoSugerido(caso.pacoteSlug),
   )
-  const { data: despesas } = useDespesas(caso.id, true)
+  // Só no ENVIO: na confirmação o bloco de despesas não existe mais, e buscar
+  // a lista para não desenhar nada seria uma consulta a cada diálogo aberto.
+  const { data: despesas } = useDespesas(caso.id, modo === 'envio')
   const [lancandoDespesa, setLancandoDespesa] = useState(false)
 
   const totalDespesas = (despesas ?? []).reduce((soma, d) => soma + d.valor, 0)
@@ -277,14 +279,21 @@ export function DialogoConfirmarEntrega({
         </section>
       )}
 
-      {/* AS DESPESAS APARECEM NA HORA DE ENVIAR (14/09/2026, pedido do gestor).
-          Quem lança o gasto é quem trabalhou no caso, e este é o último momento
-          em que ela está com ele na mão — depois de enviar, o card sai do
-          Quadro e o Uber daquela madrugada vira lembrança.
+      {/* AS DESPESAS APARECEM NA HORA DE ENVIAR (14/09/2026, pedido do gestor),
+          E SÓ NELA (28/09/2026, pedido do gestor).
+
+          Quem lança o gasto é quem trabalhou no caso, e o envio é o último
+          momento em que ela está com ele na mão — depois disso o card sai do
+          Quadro e o Uber daquela madrugada vira lembrança. Na CONFIRMAÇÃO quem
+          está lendo é o ADM, que não esteve no atendimento e não tem o que
+          lançar ali: o bloco só alongava o diálogo em que ele confere links e
+          responde o termo. O gasto continua no card aberto e na tela de
+          Despesas, que é onde o financeiro o recolhe.
 
           NÃO TRAVA NADA. Despesa não é status do caso (invariante 3.5), e nem
           todo atendimento tem gasto: travar o envio em "tem despesa" obrigaria
           a inventar uma para quem foi de carro próprio. */}
+      {modo === 'envio' && (
       <section className="rounded-md border border-border px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">Despesas do caso</span>
@@ -296,9 +305,7 @@ export function DialogoConfirmarEntrega({
           {despesas === undefined
             ? 'Vendo o que foi lançado…'
             : qtdDespesas === 0
-              ? modo === 'envio'
-                ? 'Nenhuma despesa lançada. Se teve Uber ou refeição neste atendimento, lance antes de enviar.'
-                : 'Nenhuma despesa lançada neste caso.'
+              ? 'Nenhuma despesa lançada. Se teve Uber ou refeição neste atendimento, lance antes de enviar.'
               : `${qtdDespesas} ${qtdDespesas === 1 ? 'lançamento' : 'lançamentos'} neste caso.`}
         </p>
         <button
@@ -309,6 +316,7 @@ export function DialogoConfirmarEntrega({
           Lançar despesa
         </button>
       </section>
+      )}
     </Dialogo>
     </>
   )
