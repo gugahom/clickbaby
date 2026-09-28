@@ -483,6 +483,7 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
   /features
     /quadro          hoje é praticamente o app inteiro
     /auth
+    /relatorios      a aba vazia (28/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -1815,10 +1816,30 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   nenhuma: espaço permanente para um item só é moldura vazia.
   **"PAINEL" VIROU "QUADRO"**: a barra apontava para a mesma tela com outro nome, e com
   ícone ao lado a discordância ficaria pior — nenhum desenho representa "Painel".
+  **A BARRA TEM CABEÇALHO E SEÇÕES**, no esqueleto do componente que o gestor mandou: o
+  interruptor de recolher no topo (visível SEMPRE, inclusive recolhido — é a única porta
+  para fixar a barra), e os destinos agrupados em **Operação** e **Gestão**, com os rótulos
+  abrindo junto com a largura. Reservar a altura do rótulo na barra recolhida evitaria o
+  salto e criaria um defeito pior: buracos entre ícones que, sem texto, não dizem o que
+  separam. Os rótulos só aparecem quando há mais de um grupo.
+  **FEITO COM AS PEÇAS DA CASA**, como o sino em 18/09: o exemplo trazia cinco pacotes novos
+  (framer-motion, @base-ui/react, tailwind-merge, @tabler/icons-react, clsx) e nenhum entrou
+  — `clsx` já está aqui, o `motion` do projeto É o framer-motion, os ícones são nossos, e
+  `twMerge` resolve um problema que não temos. **A pílula ativa DESLIZANTE ficou de fora por
+  uma medida:** o projeto carrega `domAnimation`, e animação de layout (`layoutId`) exige
+  trocar para `domMax` — uns 10kB em todo carregamento, no 4G do corredor, por um deslize
+  que ninguém pediu.
   **O INTERRUPTOR DO MODO TV SUBIU PARA O CABEÇALHO**, ao lado da presença e da conta: ele
   nunca foi navegação (ajusta a TELA em que se está), e sozinho na antiga faixa deixaria
-  uma barra de 44px com um botão no canto. **No modo TV a barra some** — aquela tela é para
-  ser lida de longe, não operada, e os 3.5rem fazem falta nas duas colunas.
+  uma barra de 44px com um botão no canto.
+  **A BARRA E O MODO TV COEXISTEM** (correção do gestor no mesmo dia: "eles preferem o modo
+  de visualização do modo TV"). A primeira versão escondia a barra ali, supondo que o modo
+  só vive na TV da sala — e a suposição estava errada: é a visualização que a gestão usa no
+  dia a dia, então esconder a barra tirava a navegação justamente de quem navega. A conta de
+  espaço fecha: em 1280px o modo TV já encolhe a coluna lateral para 18rem e sobram ~496px
+  por coluna; a barra recolhida leva 56px disso (468) e, fixa, 208 (392) — ambos acima dos
+  356px que motivaram aquele ajuste. O grid do Quadro é `minmax(0,1fr)`: ele se mede pelo
+  espaço que recebe, não pela janela.
   A superfície é `--gradiente-barra`: a ponta AZUL do gradiente do cabeçalho, descendo e
   escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
   conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
@@ -1836,6 +1857,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `on delete restrict` — quem já trabalhou sai da operação, não do cadastro. O botão de
   excluir só aparece para quem nunca tocou em nada, e o banco recusa o resto.
   Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
+- **Relatórios** (`/quadro/relatorios`), só para `gestao`, **VAZIA de propósito**
+  (28/09/2026, pedido do gestor: "já pode criar a aba de relatório MAS SEM NADA NELA POR
+  ENQUANTO"). A aba existe para a navegação nova ter para onde crescer; o que falta não é
+  dado — `eventos` é append-only desde o primeiro dia e já guarda até o tempo em cada fase
+  do trabalho de campo — é o ACORDO sobre o que medir. As métricas da ficha da Equipe foram
+  removidas em 03/09 por essa mesma razão, e recolocá-las aqui por conta própria refaria a
+  decisão dele. A tela diz que está vazia em voz alta, em vez de fingir que carrega.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha

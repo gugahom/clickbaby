@@ -7,6 +7,7 @@ import { DespesasPage } from '@/features/despesas/DespesasPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
 import { EquipePage } from '@/features/equipe/EquipePage'
+import { RelatoriosPage } from '@/features/relatorios/RelatoriosPage'
 import { PerfilPage } from '@/features/perfil/PerfilPage'
 
 /**
@@ -46,7 +47,13 @@ export const router = createBrowserRouter(
               // As telas da gestão vivem atrás de RotaDeGestao. Ela é a
               // navegação, não a segurança — ver o comentário lá.
               element: <RotaDeGestao />,
-              children: [{ path: 'equipe', element: <EquipePage /> }],
+              children: [
+                { path: 'equipe', element: <EquipePage /> },
+                // A tela nasceu VAZIA a pedido do gestor (28/09/2026): a aba
+                // existe para as telas novas terem onde chegar, e o que ela
+                // mede ainda não foi combinado — ver RelatoriosPage.
+                { path: 'relatorios', element: <RelatoriosPage /> },
+              ],
             },
             {
               // O recolhimento de despesas é do financeiro E da gestão —

@@ -284,14 +284,20 @@ export function AppShell() {
         largura dela e cresce por cima quando o ponteiro chega — ver
         `BarraLateral`.
 
-        NO MODO TV ELA SOME. Aquela tela é para ser LIDA de longe, não operada:
-        ninguém navega numa TV pendurada na sala, e os 3.5rem dela fazem falta
-        num layout de duas colunas que já foi calibrado no limite (ver o
-        histórico do modo TV na seção 13). Quem liga e desliga o modo é o
-        interruptor do cabeçalho, que continua à vista.
+        A BARRA E O MODO TV COEXISTEM (28/09/2026, correção do gestor: "eles
+        preferem o modo de visualização do modo TV"). A primeira versão escondia
+        a barra no modo TV, supondo que ele só vive na TV da sala — e a suposição
+        estava errada: é a visualização que a gestão usa no dia a dia, então
+        escondê-la tirava a navegação justamente de quem navega.
+
+        A conta de espaço fecha. Em 1280px o modo TV já encolhe a coluna lateral
+        para 18rem, sobrando ~496px por coluna; a barra recolhida leva 56px
+        dessa sobra (468 por coluna) e, fixa, 208 (392) — ambos acima dos 356px
+        que motivaram aquele ajuste. E o grid do Quadro é `minmax(0,1fr)`: ele
+        se mede pelo espaço que recebe, não pela janela.
       */}
       <div className="flex min-h-0 flex-1">
-        {temNavegacao && !modoTv && <BarraLateral destinos={destinos} />}
+        {temNavegacao && <BarraLateral destinos={destinos} />}
 
         <main className="min-w-0 flex-1">
           <Outlet />
