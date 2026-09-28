@@ -1,10 +1,12 @@
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
+  ROTULO_FASE_CAMPO,
   ROTULO_FASE_CLICK_HOME,
   ROTULO_FASE_VIDEO,
   type EtapaTipo,
   type FaseAlbum,
+  type FaseCampo,
   type FaseClickHome,
   type FaseVideoMaster,
   type TermoStatus,
@@ -239,6 +241,20 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
     // A avaliação da família (28/09/2026): o caso sai de "Avaliação interna".
     case 'avaliacao_registrada':
       return { ...base, acao: 'Registrou a avaliação da família', tom: 'marco' }
+
+    // A fase do trabalho de campo (28/09/2026). Tom normal: declarar que se
+    // está a caminho ou no CCO é o trabalho andando, não um marco do caso — o
+    // marco continua sendo a etapa concluir.
+    case 'fase_de_campo_registrada': {
+      const fase = texto(evento.payload, 'fase')
+      const rotulo =
+        fase && fase in ROTULO_FASE_CAMPO ? ROTULO_FASE_CAMPO[fase as FaseCampo] : null
+      return {
+        ...base,
+        acao: rotulo ? `Marcou a fase: ${rotulo}` : 'Marcou a fase do trabalho',
+        tom: 'normal',
+      }
+    }
 
     // O ensaio Click Home (22/09/2026).
     case 'click_home_do_contrato':

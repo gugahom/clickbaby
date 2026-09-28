@@ -27,6 +27,7 @@ import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { DialogoExcluirAviso } from './DialogoExcluirAviso'
 import { DialogoPessoa } from './DialogoPessoa'
 import { CampoEstacao } from './CampoEstacao'
+import { FaseDeCampo } from './FaseDeCampo'
 import { MaterialDoAcompanhamento } from './MaterialDoAcompanhamento'
 import { PilulaAtribuida } from './PilulaAtribuida'
 import { BotaoNovaDespesa, DespesasDoCaso } from './DespesasDoCaso'
@@ -71,6 +72,7 @@ import { mensagemDeErro } from '../lib/erros'
 import { Entregaveis } from './Entregaveis'
 import {
   ROTULO_ETAPA,
+  ROTULO_FASE_CAMPO,
   rotuloDaRodada,
   ROTULO_STATUS_ETAPA,
   type CasoQuadro,
@@ -293,6 +295,26 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
                         {etapa.responsavelNome && <span>· {etapa.responsavelNome}</span>}
                       </>
                     )}
+                    {/* A FASE DO TRABALHO DE CAMPO (28/09/2026, pedido do
+                        gestor), colada no status — foi onde ele pediu ("junto
+                        ao status atual"), e é a leitura certa: o status diz se
+                        o trabalho acontece, a fase diz em que pé ele está.
+
+                        Aqui, e não no espaço do material do acompanhamento:
+                        aquele bloco se esconde sozinho em tela estreita, e
+                        quem declara a fase é justamente quem está no corredor
+                        com o celular na mão.
+
+                        RESOLVIDA, vira texto. A etapa concluída não ganha
+                        seletor: a linha dela fica só com o desfazer, e um
+                        engano se corrige reabrindo — que é o caminho de
+                        qualquer coisa registrada errada num trabalho que
+                        terminou. */}
+                    {encerrada
+                      ? etapa.faseCampo && (
+                          <span>· {ROTULO_FASE_CAMPO[etapa.faseCampo]}</span>
+                        )
+                      : <FaseDeCampo etapa={etapa} onErro={setErro} />}
                     {etapa.proximoResponsavelNome && (
                       <span className="rounded bg-marca-suave px-1.5 py-0.5 font-medium text-marca">
                         rende para {etapa.proximoResponsavelNome}

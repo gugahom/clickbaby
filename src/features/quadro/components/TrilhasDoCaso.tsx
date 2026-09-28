@@ -11,6 +11,7 @@ import {
 } from '../lib/faixas'
 import {
   ROTULO_ETAPA,
+  ROTULO_FASE_CAMPO_CURTO,
   rotuloDaRodada,
   type EtapaQuadro,
   type StatusEtapa,
@@ -242,6 +243,16 @@ function Etapa({
         )}
       </span>
 
+      {/* A FASE DO TRABALHO DE CAMPO (28/09/2026), logo depois do nome: juntos
+          eles formam a frase que o gestor quer ler de longe — "Nascimento ·
+          Cuidados". Herda a cor da pílula (`bg-current/12`) em vez de ter a
+          sua: a cor ali já é do status, e uma segunda competiria com ela. */}
+      {etapa.faseCampo && (
+        <span className="truncate rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold">
+          {ROTULO_FASE_CAMPO_CURTO[etapa.faseCampo]}
+        </span>
+      )}
+
       <ResponsavelDaEtapa etapa={etapa} larguraMaxima="max-w-[8rem]" />
 
       {decorrido && (
@@ -262,11 +273,20 @@ function Etapa({
  *
  * Desconta a pausa acumulada, pela mesma razão que o tempo de ciclo desconta:
  * o intervalo em que ninguém trabalhou não é tempo de trabalho.
+ *
+ * COM FASE DECLARADA, O RELÓGIO É DA FASE (28/09/2026, decisão do gestor). O
+ * número colado em "Nascimento" era a soma de admissão, parto e cuidados, e
+ * lido de longe virava um parto de quatro horas — foi essa leitura que ele
+ * pediu para consertar. O total da etapa não se perde: continua no detalhe do
+ * caso e em `eventos`, que é de onde os relatórios tiram a conta.
  */
 function tempoDecorrido(etapa: EtapaQuadro, agora: Date): string | null {
-  if (etapa.status !== 'em_andamento' || !etapa.iniciadoEm) return null
+  if (etapa.status !== 'em_andamento') return null
 
-  const ms = agora.getTime() - new Date(etapa.iniciadoEm).getTime()
+  const desde = etapa.faseCampoEm ?? etapa.iniciadoEm
+  if (!desde) return null
+
+  const ms = agora.getTime() - new Date(desde).getTime()
   const minutos = Math.floor(ms / 60_000)
   if (minutos < 1) return 'agora'
   if (minutos < 60) return `${minutos}min`
@@ -500,6 +520,15 @@ function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] 
               ? rotuloDaRodada(atual.tipo, atual.rodada)
               : ROTULO_ETAPA[atual.tipo]}
           </span>
+          {/* A FASE TAMBÉM NO MODO TV (28/09/2026). Aqui ela é o ponto: o
+              pedido nasceu de a gestão olhar a tela da sala e não saber em que
+              pé o trabalho estava. O resumo compacto mostra a etapa ATUAL de
+              cada faixa, e é justamente dela que a pergunta é feita. */}
+          {atual.faseCampo && (
+            <span className="truncate rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold">
+              {ROTULO_FASE_CAMPO_CURTO[atual.faseCampo]}
+            </span>
+          )}
           <ResponsavelDaEtapa etapa={atual} larguraMaxima="max-w-[7rem]" />
         </span>
       ) : (

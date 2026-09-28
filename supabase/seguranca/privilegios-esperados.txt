@@ -33,6 +33,7 @@ GRANT ALL ON FUNCTION public.marcar_fotolivro_enviado(p_caso_etapa_id uuid) TO a
 GRANT ALL ON FUNCTION public.marcar_notificacoes_vistas() TO authenticated;
 GRANT ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_click_home(p_caso_etapa_id uuid, p_fase public.fase_click_home) TO authenticated;
+GRANT ALL ON FUNCTION public.mover_fase_de_campo(p_caso_etapa_id uuid, p_fase public.fase_de_campo) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_video_master(p_caso_etapa_id uuid, p_fase public.status_etapa) TO authenticated;
 GRANT ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) TO authenticated;
@@ -111,6 +112,7 @@ REVOKE ALL ON FUNCTION public.marcar_fotolivro_enviado(p_caso_etapa_id uuid) FRO
 REVOKE ALL ON FUNCTION public.marcar_notificacoes_vistas() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_click_home(p_caso_etapa_id uuid, p_fase public.fase_click_home) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.mover_fase_de_campo(p_caso_etapa_id uuid, p_fase public.fase_de_campo) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_para_uti(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_video_master(p_caso_etapa_id uuid, p_fase public.status_etapa) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ordem_padrao_da_etapa(p_tipo public.etapa_tipo) FROM PUBLIC;
