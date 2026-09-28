@@ -1822,7 +1822,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **OS DESTINOS SÃO AGRUPADOS** em **Operação** e **Gestão**, no esqueleto do componente que
   o gestor mandou, com os rótulos abrindo junto com a largura. Reservar a altura do rótulo
   na barra estreita evitaria o salto e criaria um defeito pior: buracos entre ícones que,
-  sem texto, não dizem o que separam. Os rótulos só aparecem quando há mais de um grupo.
+  sem texto, não dizem o que separam. Os rótulos só aparecem quando há mais de um grupo, e a
+  FOLGA ENTRE OS GRUPOS mora na altura dessa mesma caixa ("tá muito colado", 28/09/2026):
+  `items-end` joga o espaço para cima do rótulo, que é o lado onde ele faz falta — um título
+  de seção pertence ao que vem depois dele —, e com a barra fechada a caixa tem altura zero,
+  então a coluna de ícones não estufa por causa de um texto que ninguém está vendo.
   **AS PÍLULAS TÊM 36px**, e não os 44 do primeiro desenho ("as pílulas estão muuuito
   gordas"): o piso de 44px da seção 6 é do DEDO no corredor, e esta barra só existe no
   computador — a mesma distinção que a faixa da navegação já fazia. Com texto de 14px, 44

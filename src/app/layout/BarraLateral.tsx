@@ -77,7 +77,15 @@ export function BarraLateral({ destinos }: { destinos: Destino[] }) {
                 // sem texto nenhum, não explicam o que separam. Animada junto, a
                 // lista cresce com a barra e não pula — e fechada os ícones
                 // ficam numa coluna contínua.
-                <div className="flex h-0 items-end overflow-hidden px-3 transition-[height] duration-200 group-focus-within:h-6 group-hover:h-6 motion-reduce:transition-none">
+                // O ESPAÇO EXTRA VAI ACIMA DO RÓTULO ("de uma afastada de
+                // operação e gestão, tá muito colado", 28/09/2026). Ele mora
+                // na ALTURA desta caixa — que é 0 com a barra fechada — em vez
+                // de numa margem do grupo: assim o respiro aparece junto com os
+                // nomes, e a coluna de ícones não estufa quando não há texto
+                // nenhum para separar. `items-end` joga a folga para cima, que
+                // é o lado onde ela faz falta: um título de seção pertence ao
+                // que vem DEPOIS dele.
+                <div className="flex h-0 items-end overflow-hidden px-3 transition-[height] duration-200 group-focus-within:h-10 group-hover:h-10 motion-reduce:transition-none">
                   <RotuloQueSome className="rotulo-sobrescrito text-white/45">
                     {ROTULO_DO_GRUPO[grupo]}
                   </RotuloQueSome>
