@@ -1,6 +1,5 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import clsx from 'clsx'
-import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -23,6 +22,9 @@ import {
   type EstadoDeclarado,
 } from '@/features/presenca/lib/estados'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
+import { destinosDe } from './destinos'
+import { BarraLateral } from './BarraLateral'
+import { FaixaDeNavegacao } from './FaixaDeNavegacao'
 
 /**
  * A faixa da marca — quarta versão, e a primeira que ancora a tela.
@@ -39,18 +41,17 @@ import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
  * para o rosa, ambos escurecidos. Ela não compete com o chão pastel — ela o
  * fecha por cima, como a moldura de um quadro.
  *
- * A NAVEGAÇÃO só aparece para a GESTÃO, a pedido. As telas administrativas
- * vivem ali, e por ora existe uma só — então a barra nasce com "Painel" e
- * nada mais. Um item único não é moldura vazia aqui: ele existe para que a
- * segunda tela tenha onde chegar, e para a gestão ver de imediato que este
- * lugar é dela. Para quem opera, a barra não existe: nada a escolher.
+ * A NAVEGAÇÃO TEM DUAS FORMAS desde 28/09/2026 (pedido do gestor): barra
+ * lateral no computador, faixa horizontal no celular. As duas leem a MESMA
+ * lista (`destinosDe`), porque a alternativa era escrever as regras de papel
+ * duas vezes e ver a próxima tela entrar só numa delas. O porquê de cada forma
+ * está em `BarraLateral` e em `FaixaDeNavegacao`.
  */
 export function AppShell() {
   const { pessoa, sair } = useAuth()
-  const ehGestao = pessoa?.papelSistema === 'gestao'
-  // Quem recolhe as despesas. Espelha RotaDoFinanceiro: um link que a guarda
-  // redirecionaria de volta seria uma porta pintada na parede.
-  const recolheDespesas = ehGestao || pessoa?.papelSistema === 'financeiro'
+  // Para onde esta pessoa pode ir. A lista espelha as guardas de rota — ver
+  // `destinos.ts`.
+  const destinos = destinosDe(pessoa?.papelSistema)
   const telaLarga = useTelaLarga()
   // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
@@ -58,26 +59,21 @@ export function AppShell() {
   const navegar = useNavigate()
 
   /*
-   * QUEM PRECISA DA BARRA.
+   * QUEM PRECISA DE NAVEGAÇÃO.
    *
-   * "Painel" deixou de ser item de gestão (03/09/2026). A regra anterior só
-   * desenhava a faixa para `gestao` — e prendeu quem opera na tela de Perfil:
-   * ela não tem nada além do próprio conteúdo, então a única saída era o botão
-   * de voltar do navegador. Uma tela sem caminho de volta é um beco, e não
-   * importa que o beco seja curto.
+   * Duas condições, e a segunda é uma correção que não se pode perder
+   * (03/09/2026): quem opera só tem o Quadro, e dentro dele não há para onde
+   * ir — mas na tela de Perfil a única saída seria o botão de voltar do
+   * navegador. Uma tela sem caminho de volta é um beco, e não importa que o
+   * beco seja curto.
    *
-   * A barra aparece, então, sempre que houver PARA ONDE IR: fora do Quadro
-   * (voltar), ou para a gestão (as duas telas). Para quem opera dentro do
-   * Quadro ela não aparece — ali não há destino, e uma faixa permanente com um
-   * item só custaria 44px de altura na tela em que altura é o recurso escasso
-   * (seção 6). O botão do modo TV é a única outra coisa que a habita, e traz a
-   * faixa consigo quando cabe.
-   *
-   * Uma vez que a faixa EXISTE, porém, o "Painel" aparece sempre — inclusive
-   * quando quem a trouxe foi o botão do modo TV. Uma barra com o lado esquerdo
-   * vazio parece coisa que não carregou, e a âncora ali não custa nada.
+   * Então: mais de um destino (a gestão e o financeiro, sempre), ou estar FORA
+   * do Quadro (todo mundo, para voltar). Para quem opera dentro do Quadro não
+   * existe navegação nenhuma — nem faixa, nem barra —, porque espaço
+   * permanente para um item só é moldura vazia, e ali cada pixel é do trabalho
+   * (seção 6).
    */
-  const temNavegacao = recolheDespesas || !noQuadro
+  const temNavegacao = destinos.length > 1 || !noQuadro
   const [modoTv, alternarModoTv] = useModoTv()
   const temBotaoTv = telaLarga && noQuadro
   // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
@@ -139,6 +135,47 @@ export function AppShell() {
               meio da faixa, longe do chip — e ali ela lê como outra coisa, não
               como "quem está comigo nesta tela". */}
           <div className="flex flex-shrink-0 items-center gap-3">
+            {/*
+              O INTERRUPTOR DO MODO TV SUBIU PARA CÁ (28/09/2026), quando a
+              navegação desceu para a barra lateral. Ele nunca foi navegação:
+              ajusta a TELA em que se está, como a conta e a presença ao lado —
+              e sozinho na antiga faixa ele deixaria uma barra inteira de 44px
+              com um botão no canto, que lê como algo que não carregou.
+
+              SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px) e só no Quadro: um
+              botão que existe e não faz nada é pior que botão nenhum, e quem
+              apertasse num notebook de 1280px concluiria que a função está
+              quebrada.
+
+              O rótulo diz o DESTINO, não o estado — "Modo TV" é o que acontece
+              ao apertar. Se está ligado, dizem o `aria-pressed`, o
+              preenchimento e a tela inteira em duas colunas.
+            */}
+            {temBotaoTv && (
+              <button
+                type="button"
+                onClick={alternarModoTv}
+                aria-pressed={modoTv}
+                className={clsx(
+                  'inline-flex min-h-10 flex-shrink-0 items-center gap-2 rounded-full pr-3 pl-2.5 text-sm font-semibold transition-colors',
+                  modoTv
+                    ? 'bg-white text-marca-forte hover:bg-white/90'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
+                )}
+              >
+                <IconeMonitor className="size-4" />
+                Modo TV
+                <span
+                  className={clsx(
+                    'text-[11px] font-medium',
+                    modoTv ? 'text-marca-forte/60' : 'text-white/55',
+                  )}
+                >
+                  {modoTv ? 'ligado' : 'desligado'}
+                </span>
+              </button>
+            )}
+
             {/* Quem mais está no Quadro agora — a mesma vizinhança dos
                 colaboradores de uma planilha compartilhada, que foi a
                 referência do gestor. */}
@@ -235,143 +272,31 @@ export function AppShell() {
         </div>
 
         {/*
-          A SEGUNDA FAIXA agora tem dois moradores, e por isso passou a existir
-          também sem a navegação.
-
-          Ela nasceu só para a gestão, com o item "Painel". O interruptor do
-          modo TV veio parar aqui a pedido do gestor, que apontou exatamente
-          este vão vazio à direita — e ele está certo: é a única faixa da tela
-          que existe para ajustar a TELA, não para mostrar caso nenhum.
-
-          Só que prender o interruptor à navegação da gestão o esconderia de
-          todo o resto da equipe, e a TV da sala fica logada no que estiver à
-          mão. Então a faixa passa a aparecer quando há QUALQUER COISA nela: a
-          navegação, o interruptor, ou os dois. Para quem opera num celular,
-          ela continua não existindo.
+          A FAIXA SÓ EXISTE NO CELULAR desde 28/09/2026 — no computador ela deu
+          lugar à barra lateral, logo abaixo. As duas leem a mesma lista de
+          destinos; o porquê de cada forma está nos dois componentes.
         */}
-        {(temNavegacao || temBotaoTv) && (
-          /*
-            A FAIXA GANHOU CHÃO PRÓPRIO (02/09/2026).
-            
-            Ela era transparente sobre o gradiente da marca, e no ponto em que
-            fica o gradiente já clareou — então "Painel" e "Equipe" flutuavam
-            num tom médio, sem nada dizendo que aquilo era uma barra. O gestor
-            leu como apagado, e a leitura está certa: o problema não era a cor
-            do texto, era a ausência de superfície atrás dele.
-            
-            `bg-black/25` escurece o gradiente em vez de pintar por cima. A
-            faixa continua sendo as cores da marca — só que rebaixadas —, e é
-            esse degrau de luminosidade que faz a pílula branca da aba ativa
-            saltar. Trocar por uma cor chapada teria dado o mesmo contraste e
-            cortado a marca ao meio.
-          */
-          <div className="flex items-center gap-1 border-t border-white/10 bg-black/25 px-3 py-2 md:px-5">
-            <nav aria-label="Navegação" className="flex gap-1">
-                {/*
-                  "Painel" deixou de ser um rótulo e virou destino de verdade
-                  (02/09/2026). Ele passou semanas como um <span> pintado de
-                  aba ativa porque não havia segunda tela para ir — e a dívida
-                  #1 do CLAUDE.md descrevia exatamente isso. Com a Equipe, a
-                  barra passa a fazer o que aparentava fazer.
-
-                  `end` no Painel: sem isso o "/" casa com toda rota filha e as
-                  duas abas acendem juntas em /equipe.
-                */}
-                {/* PAINEL É DE TODO MUNDO; Equipe, só da gestão. O Painel não é
-                    tela administrativa — é a tela do trabalho, e quem opera
-                    precisa dela mais que ninguém. Só estava aqui dentro por
-                    acidente de onde a barra nasceu. */}
-                <ItemDeNavegacao para="/" fim>
-                  Painel
-                </ItemDeNavegacao>
-                {ehGestao && <ItemDeNavegacao para="/equipe">Equipe</ItemDeNavegacao>}
-                {/* Despesas é do financeiro e da gestão — quem RECOLHE o gasto.
-                    Quem lança (as funcionárias) lança no card e não precisa
-                    desta porta. */}
-                {recolheDespesas && (
-                  <ItemDeNavegacao para="/despesas">Despesas</ItemDeNavegacao>
-                )}
-            </nav>
-
-            {/*
-              SÓ ONDE O LAYOUT CABE (`telaLarga`, 1536px). Um botão que existe
-              e não faz nada é pior que botão nenhum: quem apertasse num
-              notebook de 1280px concluiria que a função está quebrada.
-
-              O rótulo diz o destino, não o estado — "Modo TV" é o que acontece
-              ao apertar. Se está ligado, dizem o `aria-pressed`, o
-              preenchimento, e a tela inteira em duas colunas.
-            */}
-            {temBotaoTv && (
-              <button
-                type="button"
-                onClick={alternarModoTv}
-                aria-pressed={modoTv}
-                className={clsx(
-                  'ml-auto inline-flex min-h-10 flex-shrink-0 items-center gap-2 rounded-full pr-3 pl-2.5 text-sm font-semibold transition-colors',
-                  modoTv
-                    ? 'bg-white text-marca-forte hover:bg-white/90'
-                    : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
-                )}
-              >
-                <IconeMonitor className="size-4" />
-                Modo TV
-                <span
-                  className={clsx(
-                    'text-[11px] font-medium',
-                    modoTv ? 'text-marca-forte/60' : 'text-white/55',
-                  )}
-                >
-                  {modoTv ? 'ligado' : 'desligado'}
-                </span>
-              </button>
-            )}
-          </div>
-        )}
+        {temNavegacao && <FaixaDeNavegacao destinos={destinos} />}
       </header>
 
-      <main className="min-h-0 flex-1">
-        <Outlet />
-      </main>
-    </div>
-  )
-}
+      {/*
+        O CONTEÚDO E A BARRA dividem a linha de baixo. A barra reserva a
+        largura dela e cresce por cima quando o ponteiro chega — ver
+        `BarraLateral`.
 
-/**
- * Uma aba da navegação da gestão.
- *
- * ATIVA É PÍLULA BRANCA CHEIA; inativa é só texto. O contraste entre as duas
- * precisa ser de MATERIAL e não de tom — numa barra escura, "branco" contra
- * "branco a 70%" some a dois metros, e esta barra vai ficar numa TV. A pílula
- * cheia com sombra responde "você está aqui" de longe, sem ler.
- *
- * O alvo tem 40px de altura dentro de uma faixa que soma 44 com o respiro
- * dela — a régua da seção 6 do CLAUDE.md aplicada onde ela vale, que é o dedo
- * no corredor, não o mouse.
- */
-function ItemDeNavegacao({
-  para,
-  fim = false,
-  children,
-}: {
-  para: string
-  fim?: boolean
-  children: ReactNode
-}) {
-  return (
-    <NavLink
-      to={para}
-      end={fim}
-      className={({ isActive }) =>
-        clsx(
-          'inline-flex min-h-10 items-center rounded-full px-4 text-[0.9375rem] font-bold tracking-tight transition-colors',
-          isActive
-            ? 'bg-white text-marca-forte shadow-sm'
-            : 'text-white/65 hover:bg-white/10 hover:text-white',
-        )
-      }
-    >
-      {children}
-    </NavLink>
+        NO MODO TV ELA SOME. Aquela tela é para ser LIDA de longe, não operada:
+        ninguém navega numa TV pendurada na sala, e os 3.5rem dela fazem falta
+        num layout de duas colunas que já foi calibrado no limite (ver o
+        histórico do modo TV na seção 13). Quem liga e desliga o modo é o
+        interruptor do cabeçalho, que continua à vista.
+      */}
+      <div className="flex min-h-0 flex-1">
+        {temNavegacao && !modoTv && <BarraLateral destinos={destinos} />}
+
+        <main className="min-w-0 flex-1">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   )
 }

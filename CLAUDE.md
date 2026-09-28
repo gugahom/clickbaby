@@ -1791,11 +1791,38 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   baixar o número não bastava — com o painel lateral em 30rem sobravam 356px por coluna e o
   cartão compacto ficava MAIS ALTO que a 1920. Por isso o lateral encolhe para 18rem no modo
   TV abaixo de 1536, e volta aos 30rem acima disso.
-- **Navegação**: a faixa abaixo da marca aparece quando há para onde ir — fora do Quadro
-  (voltar pelo **Painel**, que é de todo mundo) ou para a gestão (Painel + **Equipe**). Quem
-  opera dentro do Quadro não a vê: ali não há destino, e uma faixa permanente custaria 44px
-  de altura onde altura é o recurso escasso. Prender quem opera na tela de Perfil sem
-  caminho de volta foi exatamente o defeito que essa regra corrigiu (03/09/2026).
+- **NAVEGAÇÃO: BARRA LATERAL NO COMPUTADOR, FAIXA NO CELULAR** (28/09/2026, pedido do
+  gestor: "uma sidebar que pode ficar escondida com ícones e os nomes das telas"). A faixa
+  horizontal funcionava com três itens e pararia de funcionar com seis — área comercial,
+  relatórios e calendário estão na fila —, porque uma fileira de palavras no alto compete
+  com o cabeçalho, que já tem marca, presença, sino e conta. A barra cresce para BAIXO, que
+  é a direção em que sobra espaço.
+  **RECOLHIDA POR PADRÃO (3.5rem), e abre sozinha no ponteiro ou no foco.** Aberta ela
+  custaria 13rem da largura do Quadro, que é a tela mais apertada do sistema (a coluna
+  lateral de 30rem e o modo TV já disputaram cada pixel). **E abre POR CIMA:** a largura
+  reservada é sempre a da recolhida, e quem cresce é o painel flutuante — empurrar
+  recalcularia o layout do Quadro a cada passagem de mouse. Quem quiser os nomes o tempo
+  todo fixa a barra, e a escolha fica no `localStorage` do aparelho (`useBarraFixa`,
+  preferência de UI, não dado de domínio).
+  **A FAIXA DO CELULAR CONTINUA EXISTINDO, e isso não é detalhe:** é ela o caminho de volta
+  da tela de Perfil. Prender quem opera numa tela sem saída foi o defeito corrigido em
+  03/09/2026, e esconder a navegação do celular o recriaria. Barra lateral no toque não
+  serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
+  **QUEM VÊ O QUÊ está em `destinosDe` (`app/layout/destinos.ts`), uma tabela só**, lida
+  pelas duas formas: com duas, as regras de papel seriam escritas duas vezes e a próxima
+  tela entraria só numa delas. A lista espelha as guardas de rota — destino que a guarda
+  devolveria é porta pintada na parede. Quem opera dentro do Quadro não vê navegação
+  nenhuma: espaço permanente para um item só é moldura vazia.
+  **"PAINEL" VIROU "QUADRO"**: a barra apontava para a mesma tela com outro nome, e com
+  ícone ao lado a discordância ficaria pior — nenhum desenho representa "Painel".
+  **O INTERRUPTOR DO MODO TV SUBIU PARA O CABEÇALHO**, ao lado da presença e da conta: ele
+  nunca foi navegação (ajusta a TELA em que se está), e sozinho na antiga faixa deixaria
+  uma barra de 44px com um botão no canto. **No modo TV a barra some** — aquela tela é para
+  ser lida de longe, não operada, e os 3.5rem fazem falta nas duas colunas.
+  A superfície é `--gradiente-barra`: a ponta AZUL do gradiente do cabeçalho, descendo e
+  escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
+  conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
+  espremido numa coluna de 3.5rem viraria listra.
 - **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
   **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
   e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem

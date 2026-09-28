@@ -491,6 +491,52 @@ export function IconeCalendario({ className }: PropsIcone) {
   )
 }
 
+/**
+ * Equipe: a tela de CADASTRO das pessoas, e por isso um crachá e não o par de
+ * silhuetas — `IconeRendicao` já usa o par, e ali ele significa "uma pessoa
+ * passa para outra". Dois desenhos iguais com dois sentidos ensinariam que o
+ * ícone não quer dizer nada.
+ */
+export function IconeEquipe({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="10" r="2.2" />
+      <path d="M5.2 16.2a3.8 3.8 0 0 1 6.6 0" />
+      <path d="M15 9.5h4M15 13.5h4" />
+    </svg>
+  )
+}
+
+/** Despesa: a cédula do recolhimento do financeiro — ver features/despesas. */
+export function IconeDespesa({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 12h.01M18 12h.01" />
+    </svg>
+  )
+}
+
 /** Sino: o notificador do cabeçalho — ver features/notificacoes. */
 export function IconeSino({ className }: PropsIcone) {
   return (
