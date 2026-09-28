@@ -1313,7 +1313,12 @@ export type Database = {
         | "aguardando_entrega"
         | "encerrado"
         | "cancelado"
-      termo_status: "assinado" | "pendente" | "sem_contrato" | "nao_aplicavel"
+      termo_status:
+        | "assinado"
+        | "pendente"
+        | "sem_contrato"
+        | "nao_aplicavel"
+        | "nao_autorizado"
       tipo_despesa: "uber_ida" | "uber_volta" | "refeicao" | "outro"
       tipo_entregavel:
         | "google_photos"
@@ -1526,7 +1531,13 @@ export const Constants = {
         "encerrado",
         "cancelado",
       ],
-      termo_status: ["assinado", "pendente", "sem_contrato", "nao_aplicavel"],
+      termo_status: [
+        "assinado",
+        "pendente",
+        "sem_contrato",
+        "nao_aplicavel",
+        "nao_autorizado",
+      ],
       tipo_despesa: ["uber_ida", "uber_volta", "refeicao", "outro"],
       tipo_entregavel: [
         "google_photos",

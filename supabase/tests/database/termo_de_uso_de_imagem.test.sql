@@ -2,12 +2,12 @@
 --
 -- O que este arquivo protege:
 --   A — quem responde é atendimento ou adm, e a resposta fica em eventos.
---   B — as respostas são TRÊS: nulo e `nao_aplicavel` são recusados.
+--   B — as respostas são QUATRO: nulo e `nao_aplicavel` são recusados.
 --   C — a correção depois do encerramento é possível, e guarda o anterior.
 --   D — a coluna saiu do UPDATE direto; quem escreve é a RPC.
 
 begin;
-select plan(13);
+select plan(15);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -95,7 +95,7 @@ select is(
 
 
 -- =============================================================================
--- B. São três respostas
+-- B. São quatro respostas
 -- =============================================================================
 
 select pg_temp.como('atendimento.termo@clickbaby.test');
@@ -103,15 +103,29 @@ select pg_temp.como('atendimento.termo@clickbaby.test');
 select throws_ok(
   format($$ select public.registrar_termo(%L::uuid, null) $$, pg_temp.caso('Mae Termo B')),
   'P0001',
-  'Escolha uma resposta para o termo: assinado, pendente ou sem contrato.',
+  'Escolha uma resposta para o termo: autorizado, não autorizado, ass pendente ou sem contrato.',
   'B1: nulo não é resposta'
 );
 
 select throws_ok(
   format($$ select public.registrar_termo(%L::uuid, 'nao_aplicavel') $$, pg_temp.caso('Mae Termo B')),
   'P0001',
-  'O termo tem três respostas: assinado, pendente ou sem contrato. Quem não tem contrato é "sem contrato".',
-  'B2: o quarto valor do enum não entra na operação'
+  'O termo tem quatro respostas: autorizado, não autorizado, ass pendente ou sem contrato. Quem não tem contrato é "sem contrato".',
+  'B2: nao_aplicavel, que sobrou do schema inicial, não entra na operação'
+);
+
+-- A RECUSA DA FAMÍLIA (28/09/2026). Até aqui ela só tinha onde cair como "ass
+-- pendente", que diz "ainda não chegou" — e é a diferença entre "não respondeu"
+-- e "respondeu que não" que decide se a mídia pode publicar um dia.
+select lives_ok(
+  format($$ select public.registrar_termo(%L::uuid, 'nao_autorizado') $$, pg_temp.caso('Mae Termo B')),
+  'B2b: "não autorizado" é resposta válida'
+);
+
+select is(
+  (select termo_status::text from public.casos where mae_nome = 'Mae Termo B'),
+  'nao_autorizado',
+  'B2c: e fica gravada no caso'
 );
 
 -- O BIRTH é vendido depois do parto e não tem contrato: "sem contrato" é o que

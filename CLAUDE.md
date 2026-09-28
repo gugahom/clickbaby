@@ -1593,12 +1593,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   É a coluna TERMO da planilha de atendimento, e responde uma pergunta da MÍDIA da empresa:
   dá para usar as fotos deste parto num post? A escolha está no contrato de cada família,
   quem a fecha é a Morgana, e por isso a pergunta mora no diálogo de **confirmar a entrega**
-  — o último gesto dela sobre o caso. **São três respostas**: Assinado, Ass pendente e Sem
-  contrato, que já existiam no enum `termo_status` desde o schema inicial, sem nenhuma tela
-  que as escrevesse.
+  — o último gesto dela sobre o caso. **São QUATRO respostas** desde 28/09/2026: Autorizado,
+  Não autorizado, Ass pendente e Sem contrato, em grade de dois por dois (com quatro numa
+  fileira, um `flex-wrap` deixaria três numa linha e uma órfã na outra).
+  **"AUTORIZADO" É O `assinado` DE SEMPRE**, só com outro rótulo — assinar o termo É
+  autorizar, e trocar o identificador reescreveria histórico por uma palavra (mesmo arranjo de
+  `operador`/"Fotógrafo(a)"). **"NÃO AUTORIZADO" (`nao_autorizado`) é o valor novo**
+  (migration `20260928150931`), e ele existe porque a família que RECUSOU só tinha onde cair
+  como "ass pendente", que diz "ainda não chegou": a diferença entre "não respondeu" e
+  "respondeu que não" é a que decide se uma foto pode ser publicada um dia. Com ele, o
+  VERMELHO passou a ser do "não" e **Sem contrato ficou NEUTRO** — ali não há autorização, mas
+  também não há recusa.
   **TRAVA O BOTÃO de confirmar** (decisão do gestor), ao contrário do bloco de despesas do
-  mesmo diálogo: o campo existe para a mídia FILTRAR depois, e um filtro cheio de "não
-  informado" não responde nada. O banco não trava — `confirmar_entrega` encerra sem termo,
+  mesmo diálogo — que, aliás, SAIU da confirmação em 28/09/2026 (pedido do gestor): quem lê
+  ali é o ADM, que não esteve no atendimento e não tem o que lançar, e o bloco só alongava o
+  diálogo em que ele confere links e responde o termo. No ENVIO ele continua, que é o último
+  momento em que quem trabalhou lembra do Uber daquela madrugada. O termo trava: o campo
+  existe para a mídia FILTRAR depois, e um filtro cheio de "não informado" não responde nada. O banco não trava — `confirmar_entrega` encerra sem termo,
   como sempre; é o arranjo de sempre, a tela mais estrita que o banco. São DUAS chamadas e
   não uma transação: termo e encerramento são fatos independentes (a resposta vale com o caso
   aberto ou fechado), e o termo vai primeiro para o caso não encerrar sem ele.
