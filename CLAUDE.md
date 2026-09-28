@@ -391,6 +391,9 @@ marcar_fotolivro_enviado(p_caso_etapa_id)        -- "Enviado ao cliente"; atendi
 -- pedido de alteração pós-entrega, SÓ das duas com seção própria (ver seção 13)
 pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
 
+-- em que pé está o trabalho de campo (28/09/2026; ver seção 13)
+mover_fase_de_campo(p_caso_etapa_id, p_fase)     -- só entrada e nascimento; qualquer pessoa ativa
+
 -- caso
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
@@ -1661,6 +1664,54 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   (gestão) e as Despesas (financeiro). E é regra de TELA — a RLS de `casos` não mudou, o
   arquivo continua legível; quem não vê a aba também não o BAIXA, o que de quebra tira uma
   consulta de ~200 casos do celular da fotógrafa.
+- **AS FASES DO TRABALHO DE CAMPO** (28/09/2026, pedido do gestor, migration
+  `20260928183313`). Duas etapas ganharam um estado interno, "para conhecimento da gestão de
+  que pé está o trabalho sendo realizado, para evitar mostrar 4 horas de nascimento ou algo
+  assim":
+  **ENTRADA** — Deslocamento/recebimento · Aguardando internamento.
+  **NASCIMENTO** — Admissão CCO · Nascimento · Cuidados.
+  **O PROBLEMA ERA DE LEITURA, e era real.** A etapa de nascimento engloba a admissão no
+  centro cirúrgico, o parto e os cuidados com o bebê; na fita isso virava "Nascimento — 4h", e
+  quem lê de longe entende um parto de quatro horas. A etapa sempre mediu bem o TRABALHO e
+  nunca disse nada sobre o PÉ em que ele estava.
+  **NÃO SÃO ETAPAS.** Etapa tem responsável, handoff, relógio de ciclo, precedência e entra no
+  "x de y" do dia. Quebrar o nascimento em três multiplicaria o checklist de todo caso e
+  pediria play/pause dentro de um centro cirúrgico — que é exatamente onde ninguém toca no
+  aparelho. A fase é um ESTADO da etapa, declarado num toque.
+  **NÃO É `situacao_clinica`**, e esta é a confusão a evitar ao mexer aqui: aquela coluna
+  descreve a MÃE (aguardando, internada, indução, trabalho de parto, nasceu, UTI, alta), esta
+  descreve o TRABALHO DA FOTÓGRAFA — deslocamento e admissão no CCO não são estado clínico de
+  ninguém. As duas se encostam em "aguardando internamento", e encosto não é duplicata. O
+  resto vale dizer em voz alta: `situacao_clinica` está morta na prática (300 dos 313 casos no
+  valor padrão, nenhuma tela a escreve — dívida #4), e é esta coluna nova que a operação vai
+  de fato preencher.
+  **A FASE NÃO É O STATUS**, e aqui a diferença é mais forte que no fotolivro: as cinco fases
+  são TODAS trabalho acontecendo. Por isso `mover_fase_de_campo` não toca em `status`,
+  `iniciado_em` nem na pausa — ao contrário de `mover_album` e `mover_click_home`, que escrevem
+  fase e status juntos porque lá a esteira é quase toda espera. Quem diz se há trabalho em
+  curso continua sendo o play/pause.
+  **NÃO NASCE SOZINHA NO PLAY** (decisão do gestor, perguntado): podia — dar play na entrada é
+  quase sempre sair de casa —, e ele preferiu que nada seja afirmado sem gesto humano, como no
+  termo e na avaliação. Etapa iniciada mostra "Definir fase" até alguém dizer a primeira.
+  **O RELÓGIO DA FITA PASSA A SER O DA FASE** (decisão dele) quando há fase declarada: é o
+  número que ele pediu para consertar. O total da etapa não se perde — continua no detalhe do
+  caso e em `eventos`.
+  **QUALQUER PESSOA ATIVA DECLARA**: quem sabe que o bebê nasceu é quem está na sala. Exigir
+  papel poria a coordenação entre o parto e o registro dele. O seletor mora na linha da etapa
+  dentro do card (junto do status, onde ele pediu) e não no espaço do material do
+  acompanhamento, que se esconde em tela estreita — quem marca está no corredor, com o celular.
+  **ONDE APARECE**: na fita do card, no resumo do modo TV (a tela da gestão, que é de onde
+  nasceu o pedido) e na lista de etapas do card aberto. Na fita os rótulos são CURTOS
+  (`ROTULO_FASE_CAMPO_CURTO`) porque a pílula divide a largura com nome, responsável e relógio:
+  "Aguardando", "CCO" e — para não ler "Nascimento · Nascimento" — **"Parto"**. No seletor
+  valem os nomes que o gestor deu.
+  **A MÉTRICA MORA EM `eventos`**: cada mudança grava `fase_de_campo_registrada` com a fase, a
+  anterior e `segundos_na_anterior`, que é o que os relatórios (item 4 da fila) vão somar.
+  `caso_etapas.fase_campo_em` guarda só o começo da fase ATUAL, para a tela não consultar
+  `eventos` a cada recarga do Quadro.
+  **SÓ ESTAS DUAS ETAPAS TÊM FASE.** A lista está na constraint
+  `caso_etapas_fase_campo_valida` e no espelho `FASES_DA_ETAPA` da tela — muda nos dois ou em
+  nenhum. Estender para banho e fechamento é uma regra que ninguém deu.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e
@@ -1796,7 +1847,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    Equipe só mostra a agregação simples de `caso_etapas` (em mãos agora, concluídas em 30
    dias), feita no cliente.
 4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto
-   de adm. Quando ganhar RPC, revogar o privilégio de coluna — não basta parar de usar.
+   de adm, e desde 28/09/2026 vale perguntar se ela deve existir: as fases do trabalho de
+   campo cobrem a pergunta que a operação de fato faz, e esta coluna segue no valor padrão em
+   300 dos 313 casos. Aposentá-la é conversa com o gestor, não limpeza silenciosa — o que ela
+   guarda dos 13 casos escritos é dado de saúde, e apagar isso tem regra própria (seção 10). Quando ganhar RPC, revogar o privilégio de coluna — não basta parar de usar.
    `termo_status` era a outra metade e fechou em 22/09/2026 (`registrar_termo`, migration
    `20260922183631`): a RPC nasceu e o `revoke update (termo_status)` veio na mesma
    migration, que é o par que esta dívida pede.

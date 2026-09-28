@@ -185,6 +185,12 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
   sync_marcar_click_home: { p_google_event_id: 'sonda' },
+  // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC
+  // escreveria no histórico de um parto o pé em que ele estava.
+  mover_fase_de_campo: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_fase: null,
+  },
   // A avaliação da família (20260928153831). Quem alcançasse esta RPC daria
   // por encerrado o pós-entrega de qualquer caso, sem ninguém ligar.
   registrar_avaliacao: { p_caso_id: '00000000-0000-0000-0000-000000000000' },

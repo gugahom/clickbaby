@@ -46,6 +46,8 @@ export type Database = {
           created_at: string
           estacao: string | null
           fase_album: Database["public"]["Enums"]["fase_album"] | null
+          fase_campo: Database["public"]["Enums"]["fase_de_campo"] | null
+          fase_campo_em: string | null
           fase_click_home: Database["public"]["Enums"]["fase_click_home"] | null
           fotolivro_capa: string | null
           fotolivro_enviado_em: string | null
@@ -78,6 +80,8 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fase_campo?: Database["public"]["Enums"]["fase_de_campo"] | null
+          fase_campo_em?: string | null
           fase_click_home?:
             | Database["public"]["Enums"]["fase_click_home"]
             | null
@@ -112,6 +116,8 @@ export type Database = {
           created_at?: string
           estacao?: string | null
           fase_album?: Database["public"]["Enums"]["fase_album"] | null
+          fase_campo?: Database["public"]["Enums"]["fase_de_campo"] | null
+          fase_campo_em?: string | null
           fase_click_home?:
             | Database["public"]["Enums"]["fase_click_home"]
             | null
@@ -1144,6 +1150,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      mover_fase_de_campo: {
+        Args: {
+          p_caso_etapa_id: string
+          p_fase: Database["public"]["Enums"]["fase_de_campo"]
+        }
+        Returns: undefined
+      }
       mover_para_uti: { Args: { p_caso_id: string }; Returns: undefined }
       mover_video_master: {
         Args: {
@@ -1299,6 +1312,12 @@ export type Database = {
         | "criar_galeria"
         | "enviar_para_escolha"
         | "finalizado"
+      fase_de_campo:
+        | "deslocamento_recebimento"
+        | "aguardando_internamento"
+        | "admissao_cco"
+        | "nascimento"
+        | "cuidados"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       papel_sistema:
         | "operador"
@@ -1512,6 +1531,13 @@ export const Constants = {
         "criar_galeria",
         "enviar_para_escolha",
         "finalizado",
+      ],
+      fase_de_campo: [
+        "deslocamento_recebimento",
+        "aguardando_internamento",
+        "admissao_cco",
+        "nascimento",
+        "cuidados",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       papel_sistema: [

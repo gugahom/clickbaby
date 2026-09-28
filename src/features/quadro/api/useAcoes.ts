@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
 import { casoDaEtapa } from './atualizar-por-caso'
-import type { FaseAlbum, FaseClickHome, FaseVideoMaster, TermoStatus } from '../types'
+import type { FaseAlbum, FaseCampo, FaseClickHome, FaseVideoMaster, TermoStatus } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -198,6 +198,19 @@ export function useMoverClickHome() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseClickHome }>(
     ({ casoEtapaId, fase }) =>
       chamar('mover_click_home', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
+  )
+}
+
+/**
+ * EM QUE PÉ ESTÁ O TRABALHO DE CAMPO (28/09/2026) — entrada e nascimento.
+ *
+ * Qualquer pessoa ativa: quem sabe que o bebê nasceu é quem está na sala.
+ * Ao contrário de `mover_album` e `mover_click_home`, esta NÃO escreve status
+ * nenhum — a fase e o play/pause respondem perguntas diferentes.
+ */
+export function useMoverFaseDeCampo() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseCampo }>(({ casoEtapaId, fase }) =>
+    chamar('mover_fase_de_campo', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
   )
 }
 

@@ -155,6 +155,21 @@ export interface EtapaQuadro {
   /** Onde o ensaio New Born está na esteira (22/09/2026). */
   faseClickHome: FaseClickHome | null
   /**
+   * EM QUE PÉ ESTÁ O TRABALHO DE CAMPO (28/09/2026). Só na entrada e no
+   * nascimento, e nula até alguém declarar a primeira — ela não nasce com o
+   * play (decisão do gestor).
+   *
+   * NÃO é o status: as cinco fases são trabalho acontecendo. A fase diz ONDE o
+   * trabalho está; o play/pause continua dizendo SE ele acontece agora.
+   */
+  faseCampo: FaseCampo | null
+  /**
+   * Quando a fase atual começou. É o relógio que a fita mostra ao lado dela, no
+   * lugar do total da etapa — "Nascimento · 4h" lia como um parto de quatro
+   * horas, e era a soma de admissão, parto e cuidados.
+   */
+  faseCampoEm: string | null
+  /**
    * Hora combinada para ESTA etapa — banho e fechamento, marcados com a
    * família depois do parto. Data PLANEJADA, a única que a invariante 3.4
    * permite vir do cliente. É o que alimenta o alerta de aproximação.
@@ -297,6 +312,8 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     pausadoEm: linha.pausado_em,
     faseAlbum: linha.fase_album,
     faseClickHome: linha.fase_click_home,
+    faseCampo: linha.fase_campo,
+    faseCampoEm: linha.fase_campo_em,
     previsaoEm: linha.previsao_em,
     estacao: linha.estacao,
     atualizadoEm: linha.updated_at,
@@ -710,6 +727,89 @@ export const ESTILO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
 export const FASES_CLICK_HOME_DE_ESPERA_EXTERNA = new Set<FaseClickHome>([
   'enviar_para_escolha',
 ])
+
+
+/**
+ * AS FASES DO TRABALHO DE CAMPO (28/09/2026, pedido do gestor).
+ *
+ * "Para evitar mostrar 4 horas de nascimento ou algo assim." A etapa de
+ * nascimento engloba a admissão no centro cirúrgico, o parto e os cuidados com
+ * o bebê — na fita isso virava um número grande colado na palavra "Nascimento",
+ * e quem lia de longe entendia um parto de quatro horas.
+ *
+ * ELA NÃO É O STATUS, e a diferença é mais forte que no fotolivro: as cinco
+ * fases são trabalho acontecendo. Quem diz se há trabalho em curso continua
+ * sendo o play/pause; a fase diz em que pé ele está.
+ */
+export const FASES_DE_CAMPO = [
+  'deslocamento_recebimento',
+  'aguardando_internamento',
+  'admissao_cco',
+  'nascimento',
+  'cuidados',
+] as const
+
+export type FaseCampo = (typeof FASES_DE_CAMPO)[number]
+
+/**
+ * Qual fase é de qual etapa. ESPELHO LITERAL da constraint
+ * `caso_etapas_fase_campo_valida` (migration 20260928183313) — o banco recusa
+ * o que não estiver aqui, e mudar um lado sem o outro produz um seletor que
+ * oferece o que o banco nega.
+ *
+ * Só estas duas etapas têm fase. A tentação de estender para banho e fechamento
+ * vai aparecer; o pedido nomeou duas, e "toda etapa de campo" é uma regra que
+ * ninguém deu — a mesma armadilha de `SEM_PRE_REQUISITO` na seção 2.
+ */
+export const FASES_DA_ETAPA: Partial<Record<EtapaTipo, readonly FaseCampo[]>> = {
+  entrada: ['deslocamento_recebimento', 'aguardando_internamento'],
+  nascimento: ['admissao_cco', 'nascimento', 'cuidados'],
+}
+
+export const ROTULO_FASE_CAMPO: Record<FaseCampo, string> = {
+  deslocamento_recebimento: 'Deslocamento/recebimento',
+  aguardando_internamento: 'Aguardando internamento',
+  admissao_cco: 'Admissão CCO',
+  nascimento: 'Nascimento',
+  cuidados: 'Cuidados',
+}
+
+/**
+ * O que cabe na FITA do card, onde a fase divide a pílula com o nome da etapa,
+ * o responsável e o relógio. Mesmo arranjo de ROTULO_FAIXA_CURTO: o nome
+ * inteiro é do seletor, onde há linha inteira para ele.
+ */
+export const ROTULO_FASE_CAMPO_CURTO: Record<FaseCampo, string> = {
+  ...ROTULO_FASE_CAMPO,
+  deslocamento_recebimento: 'Deslocamento',
+  // "Aguardando" basta ao lado de "Entrada", e o nome inteiro empurrava o
+  // responsável para fora da pílula no celular — ali o nome de quem está na
+  // etapa vale mais que a palavra "internamento", que a etapa já implica.
+  aguardando_internamento: 'Aguardando',
+  // "Admissão" sozinho leria como a admissão no HOSPITAL, que é a fase
+  // anterior — e era o rótulo mais largo da fita, o único que encostava na
+  // borda do cartão no celular. CCO é como a equipe chama o centro cirúrgico.
+  admissao_cco: 'CCO',
+  // "Nascimento · Nascimento" é o que sairia com o rótulo de verdade, e o
+  // chip pararia de informar. PARTO é a palavra que a empresa usa o tempo
+  // todo para o mesmo momento — no seletor, onde não há repetição, continua
+  // "Nascimento", que é o nome que o gestor deu à fase.
+  nascimento: 'Parto',
+}
+
+/**
+ * A cor diz DE QUEM É A BOLA, como no fotolivro: âmbar quando a equipe espera
+ * alguém de fora — o internamento é do hospital e da família —, azul quando o
+ * trabalho está acontecendo. Vale só no seletor do card aberto; na fita a fase
+ * herda a cor do status (`bg-current/12`), para não competir com ele.
+ */
+export const ESTILO_FASE_CAMPO: Record<FaseCampo, string> = {
+  deslocamento_recebimento: 'bg-andamento/12 text-andamento-tinta',
+  aguardando_internamento: 'bg-atencao/15 text-atencao-tinta',
+  admissao_cco: 'bg-andamento/12 text-andamento-tinta',
+  nascimento: 'bg-andamento/12 text-andamento-tinta',
+  cuidados: 'bg-andamento/12 text-andamento-tinta',
+}
 
 
 export const ROTULO_SITUACAO: Record<SituacaoClinica, string> = {
