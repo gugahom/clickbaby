@@ -250,6 +250,19 @@
     oklch(0.36 0.12 355) 100%
   );
 
+  /* A BARRA LATERAL (28/09/2026) desce do canto onde o cabeçalho COMEÇA.
+
+     O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
+     espremido numa coluna de 3.5rem ele viraria listra. Este pega a ponta azul
+     daquele e escurece um pouco descendo, para a barra ler como a continuação
+     do canto superior esquerdo — um L em volta do conteúdo, e não um segundo
+     bloco de cor discutindo com ele. */
+  --gradiente-barra: linear-gradient(
+    180deg,
+    oklch(0.23 0.075 262) 0%,
+    oklch(0.19 0.055 266) 100%
+  );
+
   /* O GRADIENTE DA AÇÃO FINAL — confirmar entrega.
   
      Vem da referência, nas nossas cores: o rosa da marca abrindo para um rosa
@@ -656,6 +669,11 @@
   /* A faixa do cabeçalho. Ver `--gradiente-cabecalho` no topo. */
   .superficie-cabecalho {
     background-image: var(--gradiente-cabecalho);
+  }
+
+  /* A barra lateral da navegação. Ver `--gradiente-barra` no topo. */
+  .superficie-barra {
+    background-image: var(--gradiente-barra);
   }
 
   /* Só o botão de confirmar entrega. Ver `--gradiente-acento`. */

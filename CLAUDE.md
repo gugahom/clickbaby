@@ -483,6 +483,7 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
   /features
     /quadro          hoje é praticamente o app inteiro
     /auth
+    /relatorios      a aba vazia (28/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -1791,11 +1792,79 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   baixar o número não bastava — com o painel lateral em 30rem sobravam 356px por coluna e o
   cartão compacto ficava MAIS ALTO que a 1920. Por isso o lateral encolhe para 18rem no modo
   TV abaixo de 1536, e volta aos 30rem acima disso.
-- **Navegação**: a faixa abaixo da marca aparece quando há para onde ir — fora do Quadro
-  (voltar pelo **Painel**, que é de todo mundo) ou para a gestão (Painel + **Equipe**). Quem
-  opera dentro do Quadro não a vê: ali não há destino, e uma faixa permanente custaria 44px
-  de altura onde altura é o recurso escasso. Prender quem opera na tela de Perfil sem
-  caminho de volta foi exatamente o defeito que essa regra corrigiu (03/09/2026).
+- **NAVEGAÇÃO: BARRA LATERAL NO COMPUTADOR, FAIXA NO CELULAR** (28/09/2026, pedido do
+  gestor: "uma sidebar que pode ficar escondida com ícones e os nomes das telas"). A faixa
+  horizontal funcionava com três itens e pararia de funcionar com seis — área comercial,
+  relatórios e calendário estão na fila —, porque uma fileira de palavras no alto compete
+  com o cabeçalho, que já tem marca, presença, sino e conta. A barra cresce para BAIXO, que
+  é a direção em que sobra espaço.
+  **SEMPRE ESTREITA (3.5rem), e abre sozinha no ponteiro ou no foco.** Aberta ela custaria
+  13rem da largura do Quadro, que é a tela mais apertada do sistema (a coluna lateral de
+  30rem e o modo TV já disputaram cada pixel). **E abre POR CIMA:** a largura reservada é
+  sempre a estreita, e quem cresce é o painel flutuante — empurrar recalcularia o layout do
+  Quadro a cada passagem de mouse.
+  **NÃO HÁ BOTÃO DE FIXAR.** Houve, entre as duas primeiras versões, e o gestor o tirou
+  depois de usar ("totalmente inútil"). Ele estava certo: com a barra abrindo no caminho do
+  mouse, fixá-la só trocava 3.5rem de largura permanente por nomes que já apareciam quando
+  se precisava deles. Se um dia alguém pedir a barra travada aberta, o caminho é uma
+  preferência de aparelho como o modo TV — não um botão dentro dela.
+  **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
+  no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
+  **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
+  fica invisível para as fotógrafas, visto que elas precisam de acesso apenas para a
+  operação"). A condição é uma só — ter mais de um destino —, e vale em TODA tela, inclusive
+  no Perfil, onde até aqui a navegação aparecia só para oferecer a volta.
+  **E O CAMINHO DE VOLTA NÃO SUMIU JUNTO:** a MARCA do cabeçalho virou link para o Quadro. A
+  tela de Perfil sem saída foi um defeito real, corrigido em 03/09/2026, e "beco curto"
+  continua sendo beco; a marca resolve para todo mundo, é o gesto que todo site tem e não
+  custa pixel nenhum de tela. Ao mexer na navegação, este link é a rede — não o tire.
+  Nada disso fere a invariante 3.1: ela proíbe filtrar TRABALHO por tipo de pessoa, e isto é
+  permissão de TELA por papel administrativo, como a Equipe, as Despesas e os Concluídos.
+  Quem opera não perdeu acesso a nada, e a RLS não mudou.
+  **QUEM VÊ O QUÊ está em `destinosDe` (`app/layout/destinos.ts`), uma tabela só**, lida
+  pelas duas formas: com duas, as regras de papel seriam escritas duas vezes e a próxima
+  tela entraria só numa delas. A lista espelha as guardas de rota — destino que a guarda
+  devolveria é porta pintada na parede. Quem opera dentro do Quadro não vê navegação
+  nenhuma: espaço permanente para um item só é moldura vazia.
+  **"PAINEL" VIROU "QUADRO"**: a barra apontava para a mesma tela com outro nome, e com
+  ícone ao lado a discordância ficaria pior — nenhum desenho representa "Painel".
+  **OS DESTINOS SÃO AGRUPADOS** em **Operação** e **Gestão**, no esqueleto do componente que
+  o gestor mandou, com os rótulos abrindo junto com a largura. Reservar a altura do rótulo
+  na barra estreita evitaria o salto e criaria um defeito pior: buracos entre ícones que,
+  sem texto, não dizem o que separam. Os rótulos só aparecem quando há mais de um grupo, e o
+  RESPIRO DOS DOIS LADOS DO RÓTULO mora na altura dessa mesma caixa (28/09/2026, em duas
+  voltas do gestor: "tá muito colado" e "preciso que a PÍLULA dê uma afastada dos títulos"):
+  o `pb-3` separa o título do item abaixo, e o que sobra da altura cai acima pelo
+  `items-end`, separando-o do grupo anterior. Com a barra fechada a caixa tem altura zero —
+  **e o padding também**, porque `height: 0` não engole o `padding` (o border-box o conta por
+  fora do zero) e cada grupo estufaria a coluna de ícones em 12px sem nada para mostrar.
+  **AS PÍLULAS TÊM 36px**, e não os 44 do primeiro desenho ("as pílulas estão muuuito
+  gordas"): o piso de 44px da seção 6 é do DEDO no corredor, e esta barra só existe no
+  computador — a mesma distinção que a faixa da navegação já fazia. Com texto de 14px, 44
+  deixava um vão vazio em cima e embaixo que engordava a pílula sem acrescentar alvo
+  aproveitável.
+  **FEITO COM AS PEÇAS DA CASA**, como o sino em 18/09: o exemplo trazia cinco pacotes novos
+  (framer-motion, @base-ui/react, tailwind-merge, @tabler/icons-react, clsx) e nenhum entrou
+  — `clsx` já está aqui, o `motion` do projeto É o framer-motion, os ícones são nossos, e
+  `twMerge` resolve um problema que não temos. **A pílula ativa DESLIZANTE ficou de fora por
+  uma medida:** o projeto carrega `domAnimation`, e animação de layout (`layoutId`) exige
+  trocar para `domMax` — uns 10kB em todo carregamento, no 4G do corredor, por um deslize
+  que ninguém pediu.
+  **O INTERRUPTOR DO MODO TV SUBIU PARA O CABEÇALHO**, ao lado da presença e da conta: ele
+  nunca foi navegação (ajusta a TELA em que se está), e sozinho na antiga faixa deixaria
+  uma barra de 44px com um botão no canto.
+  **A BARRA E O MODO TV COEXISTEM** (correção do gestor no mesmo dia: "eles preferem o modo
+  de visualização do modo TV"). A primeira versão escondia a barra ali, supondo que o modo
+  só vive na TV da sala — e a suposição estava errada: é a visualização que a gestão usa no
+  dia a dia, então esconder a barra tirava a navegação justamente de quem navega. A conta de
+  espaço fecha: em 1280px o modo TV já encolhe a coluna lateral para 18rem e sobram ~496px
+  por coluna; a barra recolhida leva 56px disso (468) e, fixa, 208 (392) — ambos acima dos
+  356px que motivaram aquele ajuste. O grid do Quadro é `minmax(0,1fr)`: ele se mede pelo
+  espaço que recebe, não pela janela.
+  A superfície é `--gradiente-barra`: a ponta AZUL do gradiente do cabeçalho, descendo e
+  escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
+  conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
+  espremido numa coluna de 3.5rem viraria listra.
 - **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
   **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
   e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
@@ -1809,6 +1878,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `on delete restrict` — quem já trabalhou sai da operação, não do cadastro. O botão de
   excluir só aparece para quem nunca tocou em nada, e o banco recusa o resto.
   Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
+- **Relatórios** (`/quadro/relatorios`), só para `gestao`, **VAZIA de propósito**
+  (28/09/2026, pedido do gestor: "já pode criar a aba de relatório MAS SEM NADA NELA POR
+  ENQUANTO"). A aba existe para a navegação nova ter para onde crescer; o que falta não é
+  dado — `eventos` é append-only desde o primeiro dia e já guarda até o tempo em cada fase
+  do trabalho de campo — é o ACORDO sobre o que medir. As métricas da ficha da Equipe foram
+  removidas em 03/09 por essa mesma razão, e recolocá-las aqui por conta própria refaria a
+  decisão dele. A tela diz que está vazia em voz alta, em vez de fingir que carrega.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
