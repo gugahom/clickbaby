@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Logo } from '@/components/ui/Logo'
@@ -59,21 +59,26 @@ export function AppShell() {
   const navegar = useNavigate()
 
   /*
-   * QUEM PRECISA DE NAVEGAÇÃO.
+   * A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA (28/09/2026, regra do gestor:
+   * "essa sidebar fica invisível para as fotógrafas, visto que elas precisam
+   * de acesso apenas para a operação").
    *
-   * Duas condições, e a segunda é uma correção que não se pode perder
-   * (03/09/2026): quem opera só tem o Quadro, e dentro dele não há para onde
-   * ir — mas na tela de Perfil a única saída seria o botão de voltar do
-   * navegador. Uma tela sem caminho de volta é um beco, e não importa que o
-   * beco seja curto.
+   * A condição é só uma: ter MAIS DE UM destino. Quem tem apenas o Quadro não
+   * vê barra nem faixa em tela nenhuma — nem no Perfil, onde até aqui a
+   * navegação aparecia só para oferecer o caminho de volta.
    *
-   * Então: mais de um destino (a gestão e o financeiro, sempre), ou estar FORA
-   * do Quadro (todo mundo, para voltar). Para quem opera dentro do Quadro não
-   * existe navegação nenhuma — nem faixa, nem barra —, porque espaço
-   * permanente para um item só é moldura vazia, e ali cada pixel é do trabalho
-   * (seção 6).
+   * ESSE CAMINHO DE VOLTA NÃO PODE SUMIR JUNTO, e é o cuidado desta mudança: a
+   * tela de Perfil sem saída foi um defeito real, corrigido em 03/09/2026, e
+   * "beco curto" continua sendo beco. Quem o oferece agora é a MARCA do
+   * cabeçalho, que virou link para o Quadro — o gesto que todo site tem, que
+   * vale para todo mundo e não custa pixel nenhum de tela.
+   *
+   * Isto NÃO fere a invariante 3.1: ela proíbe filtrar TRABALHO por tipo de
+   * pessoa, e aqui é permissão de TELA por papel administrativo, como a Equipe
+   * (gestão), as Despesas (financeiro) e os Concluídos. Quem opera não perde
+   * acesso a nada — as telas da gestão nunca foram dela, e a RLS não mudou.
    */
-  const temNavegacao = destinos.length > 1 || !noQuadro
+  const temNavegacao = destinos.length > 1
   const [modoTv, alternarModoTv] = useModoTv()
   const temBotaoTv = telaLarga && noQuadro
   // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
@@ -98,8 +103,22 @@ export function AppShell() {
             Ver o comentário em Sino.tsx. */}
         <div className="relative flex items-center justify-between gap-3 px-3 py-3 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            {/* `clara` e não `preta`: a mesma silhueta, invertida. */}
-            <Logo variante="clara" className="h-7 max-w-[9.5rem] md:h-8 md:max-w-[12rem]" prioridade />
+            {/*
+              A MARCA LEVA AO QUADRO (28/09/2026). Ela existia como enfeite e
+              agora é o caminho de casa de quem não tem navegação nenhuma — a
+              fotógrafa na tela de Perfil, que antes dependia da faixa. É o
+              gesto que todo site tem, e por isso não precisa ser ensinado.
+
+              `clara` e não `preta`: a mesma silhueta, invertida.
+            */}
+            <NavLink
+              to="/"
+              end
+              aria-label="Ir para o Quadro"
+              className="inline-flex flex-shrink-0 items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <Logo variante="clara" className="h-7 max-w-[9.5rem] md:h-8 md:max-w-[12rem]" prioridade />
+            </NavLink>
 
             {/* Ambiente: evita demonstrar contra o remoto por engano. Sobre a
                 faixa escura, o LOCAL fica em vidro e o REMOTO em vermelho

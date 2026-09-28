@@ -1808,10 +1808,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   mouse, fixá-la só trocava 3.5rem de largura permanente por nomes que já apareciam quando
   se precisava deles. Se um dia alguém pedir a barra travada aberta, o caminho é uma
   preferência de aparelho como o modo TV — não um botão dentro dela.
-  **A FAIXA DO CELULAR CONTINUA EXISTINDO, e isso não é detalhe:** é ela o caminho de volta
-  da tela de Perfil. Prender quem opera numa tela sem saída foi o defeito corrigido em
-  03/09/2026, e esconder a navegação do celular o recriaria. Barra lateral no toque não
-  serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
+  **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
+  no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
+  **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
+  fica invisível para as fotógrafas, visto que elas precisam de acesso apenas para a
+  operação"). A condição é uma só — ter mais de um destino —, e vale em TODA tela, inclusive
+  no Perfil, onde até aqui a navegação aparecia só para oferecer a volta.
+  **E O CAMINHO DE VOLTA NÃO SUMIU JUNTO:** a MARCA do cabeçalho virou link para o Quadro. A
+  tela de Perfil sem saída foi um defeito real, corrigido em 03/09/2026, e "beco curto"
+  continua sendo beco; a marca resolve para todo mundo, é o gesto que todo site tem e não
+  custa pixel nenhum de tela. Ao mexer na navegação, este link é a rede — não o tire.
+  Nada disso fere a invariante 3.1: ela proíbe filtrar TRABALHO por tipo de pessoa, e isto é
+  permissão de TELA por papel administrativo, como a Equipe, as Despesas e os Concluídos.
+  Quem opera não perdeu acesso a nada, e a RLS não mudou.
   **QUEM VÊ O QUÊ está em `destinosDe` (`app/layout/destinos.ts`), uma tabela só**, lida
   pelas duas formas: com duas, as regras de papel seriam escritas duas vezes e a próxima
   tela entraria só numa delas. A lista espelha as guardas de rota — destino que a guarda
