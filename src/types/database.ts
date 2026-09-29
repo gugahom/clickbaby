@@ -68,6 +68,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
           trilha: string | null
           updated_at: string
+          video_nos_links_do_caso_em: string | null
         }
         Insert: {
           atribuido_em?: string | null
@@ -104,6 +105,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
           trilha?: string | null
           updated_at?: string
+          video_nos_links_do_caso_em?: string | null
         }
         Update: {
           atribuido_em?: string | null
@@ -140,6 +142,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["etapa_tipo"]
           trilha?: string | null
           updated_at?: string
+          video_nos_links_do_caso_em?: string | null
         }
         Relationships: [
           {
@@ -1127,6 +1130,10 @@ export type Database = {
         Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
         Returns: undefined
       }
+      enviar_video_nos_links_do_caso: {
+        Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
       enviar_video_para_entrega: {
         Args: {
           p_caso_etapa_id: string
@@ -1155,6 +1162,17 @@ export type Database = {
           p75_min: number
           pessoas: number
           tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }[]
+      }
+      metricas_fases_de_campo: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          etapa_tipo: Database["public"]["Enums"]["etapa_tipo"]
+          etapas: number
+          fase: Database["public"]["Enums"]["fase_de_campo"]
+          media_min: number
+          pessoa_id: string
+          soma_min: number
         }[]
       }
       metricas_por_etapa: {

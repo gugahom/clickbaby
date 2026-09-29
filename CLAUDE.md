@@ -376,6 +376,7 @@ planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 -- fluxo do vídeo horizontal do MASTER (2 fases na tela + o fim; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
 enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2 links + pronto; NÃO conclui
+enviar_video_nos_links_do_caso(p_caso_etapa_id)  -- pronto SEM par novo: o vídeo foi para os links do caso (29/09/2026)
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
 -- esteira do ensaio CLICK HOME (5 fases; ver seção 13)
@@ -418,6 +419,7 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
 metricas_prazo_do_periodo (p_inicio, p_fim)
 metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por dia/bloco/mês/período; com pessoa, a produção dela (29/09/2026)
+metricas_fases_de_campo(p_inicio, p_fim)  -- tempo em cada fase do campo, por pessoa (29/09/2026)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -1217,6 +1219,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   conferido — o vídeo voltou de pronto para editando sem confirmação — é trocado, com a
   contagem em `links_substituidos` no evento. `concluir_etapa` segue aceitando o vídeo no
   banco; a tela não o oferece mais.
+  **SE O CASO JÁ TEM LINKS, O VÍDEO VAI PARA ELES** (29/09/2026, pedido do gestor: "finalizar
+  o master está pedindo links de novo; se já existirem links ele só deve pedir para adicionar
+  o vídeo a esses links"). Medido no remoto no dia: o vídeo MASTER em edição estava num caso
+  que já tinha o álbum do Google e o WeTransfer das fotos, e o diálogo mandava criar outro par.
+  Agora `DialogoFinalizarVideo` mostra os links do caso (os do vídeo de uma entrega anterior
+  primeiro, depois os das fotos — `lib/links-do-video.ts`, espelho da lista do banco) e pede
+  só "Adicionei o vídeo a esses links"; "usar links novos" volta ao par de sempre, que também
+  é o único caminho quando o caso não tem link nenhum. `enviar_video_nos_links_do_caso`
+  carimba `caso_etapas.video_nos_links_do_caso_em` e leva a "pronto" — a trava de
+  `mover_video_master` aceita o par novo OU esse carimbo com o caso tendo link, e nada além.
+  Em Entregáveis, a linha do vídeo mostra os links do caso com "o vídeo foi adicionado aos
+  links que o caso já tinha". QUEM LIMPA o carimbo: voltar a editar e mandar um par novo; a
+  confirmação não limpa, e ele fica como registro de como o vídeo foi entregue.
+  **Isto revisa 21/09 só no "sempre par novo"**: o tipo `video_wetransfer` continua existindo
+  e continua sendo o que o par novo grava.
 - **QUEM EDITA SE ATRIBUI NA PRÓPRIA SEÇÃO** (21/09/2026, pedido do gestor; o Foto/Livro
   entrou junto, por decisão dele). O vídeo e o fotolivro não se operam pelo card do Quadro,
   então a coordenação não tinha onde dizer quem pega cada um. `AtribuicaoDaSecao` é uma pílula
@@ -1814,6 +1831,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   mouse, fixá-la só trocava 3.5rem de largura permanente por nomes que já apareciam quando
   se precisava deles. Se um dia alguém pedir a barra travada aberta, o caminho é uma
   preferência de aparelho como o modo TV — não um botão dentro dela.
+  **A PÁGINA ROLA DENTRO DO `main`, NÃO NA JANELA** (29/09/2026, pedido do gestor: "a
+  sidebar acompanhe quando a página crescer"). Rolando a janela, a fileira da barra tinha a
+  altura da TELA e o conteúdo a ultrapassava: a barra acabava no meio da página e aparecia o
+  fundo embaixo. Com `overflow-y-auto` no `main`, a barra vai sempre até o chão e o cabeçalho
+  fica parado. O Quadro não sentiu — ele já era `h-full` com rolagens próprias. Quem precisar
+  de "rolar a página" rola o `main` (`scrollIntoView` já faz isso sozinho).
   **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
   no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
   **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
@@ -1978,8 +2001,38 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   PESSOAS — três destaques (mais partos, mais edições, melhor prazo) e UMA tabela de KPIs que
   É o ranking: cada coluna ordena, o primeiro toque põe o melhor em cima, empate divide a
   posição, e zero numa coluna de volume não tem posição ("não fez esse tipo de trabalho").
-  Tocar numa pessoa abre TRÊS LINHAS: tempo contra a equipe, registro (relógio aberto,
-  etapas em paralelo) e o resto. Tempo não é coluna.
+  Tempo não é coluna.
+  **TOCAR NUMA PESSOA ABRE O MINI PERFIL** (29/09/2026, pedido do gestor: "com todas as infos
+  que coletamos nos cards (…) quantidade de produção e tempo médio em cada etapa"), no lugar
+  das três linhas de resumo que abriam dentro da tabela. No computador fica AO LADO da tabela,
+  já aberto na primeira pessoa da ordem, com a MESMA ALTURA dela ("os cards devem se igualar
+  em tamanho"); no celular, embaixo e só depois do toque. O × fecha o perfil e a tabela ocupa
+  a largura; tocar em alguém reabre.
+  **A ABA TEM FILTROS PRÓPRIOS** (`AbaPessoas`, pedido do gestor: "datas e etc."): PERÍODO (o
+  mês do topo, os últimos 7 dias, HOJE, ou datas escolhidas — entre 01/10/2026 e hoje; "30
+  dias" saiu por ser redundante com o mês, e o "24h" que o gestor sugeriu virou "Hoje" porque
+  o relatório conta por dia do calendário),
+  TRABALHO (todos, quem fez campo, quem fez edição no período) e BUSCA pelo nome. O período
+  vale para a aba inteira — tabela, destaques e perfil, que diz qual é ("nos últimos 7 dias").
+  Filtrar por trabalho não fere a 3.1: é "quem FEZ edição neste período", lido das etapas
+  concluídas, e a mesma pessoa aparece nos dois se fez as duas coisas. Com período fora de
+  "Mês", o seletor de mês do topo não vale para esta aba. Quatro
+  blocos: os quatro números (partos, edições, prazo, ajustes); PRODUÇÃO POR ETAPA (feitas,
+  tempo médio, média da equipe); FASES DO CAMPO (tempo médio em cada fase, por etapa); e o
+  que mais os cards guardam (material, passagens, atribuições, entregas, termos, avaliações,
+  concluídas por outra pessoa, campo em paralelo — só o que for maior que zero).
+  **TEMPO MÉDIO É MÉDIA**, como ele pediu (`soma_min / medidas`), só das etapas com relógio
+  de verdade; a da equipe é soma sobre soma, que se compõe (mediana não). Na EDIÇÃO, quando
+  parte das etapas não teve relógio, a linha diz "10 de 17 com relógio" — âmbar abaixo de
+  metade; no CAMPO não, porque registrar depois é permitido (seção 9). A comparação com a
+  equipe é neutra, sem cor.
+  **AS FASES DO CAMPO VIRARAM MÉTRICA** (`metricas_fases_de_campo`, migration
+  `20260929092831`), como o pedido que as criou previa. A fase dura da declaração à próxima,
+  ou à conclusão da etapa — e NUNCA passa da conclusão: a primeira versão deixava uma fase
+  declarada depois de concluir esticar a anterior (o parto de 60 min virava 90), e o teste F1
+  pegou. Mesma fase duas vezes na mesma etapa soma; a média é por etapa. Crédito do
+  responsável, piso de 01/10, só gestão. Os dados fictícios ganharam fases em 85% das
+  entradas e nascimentos.
   PADRÕES DE TEMPO — uma linha por etapa: mediana da equipe, padrão em vigor, campo para
   definir (a mediana é a marca-d'água; o número é da gestão).
   A variação só aparece quando o mês anterior tem dado — em outubro de 2026 ele é setembro,

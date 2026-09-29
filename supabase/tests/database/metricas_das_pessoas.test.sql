@@ -15,6 +15,8 @@
 --   S — a SÉRIE da equipe (migrations 20260929053020, 20260929064502 e
 --       20260929073949): os baldes, o piso, o filtro por pessoa, e os mesmos
 --       números das funções que ela chama.
+--   F — as FASES DE CAMPO por pessoa (migration 20260929092831): quanto dura
+--       cada fase, e a fase registrada depois da conclusão não conta.
 
 -- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2029, um mês que nada mais usa. O
 -- seed fictício (`npm run seed:metricas`) enche de OUTUBRO DE 2026 A DEZEMBRO DE
@@ -24,7 +26,7 @@
 -- ou não, um seed antes.
 
 begin;
-select plan(37);
+select plan(40);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -116,6 +118,23 @@ values
    pg_temp.pessoa('Editora B'), 'etapa_reaberta',
    '{"status_anterior": "concluida", "concluido_em_anterior": "2029-02-13T09:02:00-03:00"}', '2029-02-13 09:10-03');
 
+
+-- As fases dos dois partos da A. Um: CCO 30min, parto 60min, cuidados 30min
+-- (até a conclusão, 12h). Dois: CCO 60min, parto 60min — e um "cuidados"
+-- declarado às 13h30, meia hora DEPOIS de o parto ser concluído, que não tem
+-- duração e fica de fora.
+insert into public.eventos (caso_id, caso_etapa_id, pessoa_id, tipo, payload, ocorrido_em)
+select c.id, pg_temp.etapa(c.mae_nome, 'nascimento'), pg_temp.pessoa('Fotografa A'), 'fase_de_campo_registrada',
+       jsonb_build_object('etapa', 'nascimento', 'fase', v.fase), v.quando::timestamptz
+from (values
+  ('Mae ME Um',   'admissao_cco', '2029-02-10 10:00-03'),
+  ('Mae ME Um',   'nascimento',   '2029-02-10 10:30-03'),
+  ('Mae ME Um',   'cuidados',     '2029-02-10 11:30-03'),
+  ('Mae ME Dois', 'admissao_cco', '2029-02-10 11:00-03'),
+  ('Mae ME Dois', 'nascimento',   '2029-02-10 12:00-03'),
+  ('Mae ME Dois', 'cuidados',     '2029-02-10 13:30-03')
+) as v(mae, fase, quando)
+join public.casos c on c.mae_nome = v.mae;
 
 -- =============================================================================
 -- A. Só a gestão lê
@@ -417,6 +436,32 @@ select is(
   '2/' || (select enviados from public.metricas_prazo_do_periodo('2029-02-01', '2029-02-28')),
   'S12: a fotógrafa A tem os dois partos (crédito do responsável), e o prazo continua o da equipe'
 );
+
+select is(
+  (select string_agg(fase || ':' || etapas || ':' || media_min, ',' order by fase)
+     from public.metricas_fases_de_campo('2029-02-01', '2029-02-28')
+    where pessoa_id = pg_temp.pessoa('Fotografa A')),
+  'admissao_cco:2:45.0,nascimento:2:60.0,cuidados:1:30.0',
+  'F1: cada fase dura até a próxima (ou até a conclusão), com média por etapa; a declarada depois de concluir não conta'
+);
+
+select is(
+  (select count(*)::int from public.metricas_fases_de_campo('2029-02-01', '2029-02-28')
+    where pessoa_id = pg_temp.pessoa('Editora B')),
+  0,
+  'F2: quem não fez campo não tem fase'
+);
+reset role;
+
+select pg_temp.como('atendimento.me@clickbaby.test');
+select throws_ok(
+  $$ select * from public.metricas_fases_de_campo('2029-02-01', '2029-02-28') $$,
+  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'F3: as fases também são só da gestão'
+);
+reset role;
+
+select pg_temp.como('gestao.me@clickbaby.test');
 
 select throws_ok(
   $$ select * from public.metricas_serie_da_equipe('2020-01-01', '2026-12-31', 'mes') $$,

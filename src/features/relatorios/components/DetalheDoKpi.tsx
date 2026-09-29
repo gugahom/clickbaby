@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import clsx from 'clsx'
 import { m, useReducedMotion } from 'motion/react'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -16,6 +16,7 @@ import {
   type Janela,
 } from '../lib/metricas'
 import { GraficoDoKpi, type TipoDeGrafico } from './GraficoDoKpi'
+import { Segmentado } from './Segmentado'
 
 /**
  * O KPI ESCOLHIDO, EM GRANDE (29/09/2026, pedido do gestor).
@@ -245,46 +246,6 @@ function Selo({ variacao, contra }: { variacao: Variacao; contra: string }) {
       {variacao.texto}
       <span className="sr-only"> contra {contra}</span>
     </span>
-  )
-}
-
-/**
- * Um controle de duas ou três opções, pequeno: mora no cabeçalho de um cartão,
- * ao lado do título, e as abas grandes da tela (`TrilhoDeAbas`) brigariam com
- * elas.
- */
-function Segmentado<T extends string>({
-  rotulo,
-  opcoes,
-  ativa,
-  onTrocar,
-}: {
-  rotulo: string
-  opcoes: { id: T; conteudo: ReactNode; titulo?: string }[]
-  ativa: T
-  onTrocar: (id: T) => void
-}) {
-  return (
-    <div role="group" aria-label={rotulo} className="inline-flex rounded-full border border-border bg-background p-0.5">
-      {opcoes.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          aria-pressed={ativa === o.id}
-          aria-label={o.titulo}
-          title={o.titulo}
-          onClick={() => onTrocar(o.id)}
-          className={clsx(
-            'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-3 text-xs whitespace-nowrap transition-colors',
-            ativa === o.id
-              ? 'bg-marca font-bold text-white'
-              : 'font-medium text-muted-foreground hover:bg-marca-suave hover:text-marca',
-          )}
-        >
-          {o.conteudo}
-        </button>
-      ))}
-    </div>
   )
 }
 

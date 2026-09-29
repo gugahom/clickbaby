@@ -110,6 +110,9 @@ const RPCS_TRANSICAO = {
     p_link_video: 'https://sonda.test',
     p_link_wetransfer: 'https://sonda.test',
   },
+  // O vídeo nos links que o caso já tem (20260929183438). Quem a alcançasse
+  // mandaria o vídeo de um caso alheio para Entregáveis.
+  enviar_video_nos_links_do_caso: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega_do_video: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
@@ -193,6 +196,7 @@ const RPCS_TRANSICAO = {
   metricas_prazo_do_periodo: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   // A série da equipe (20260929053020), que substituiu as duas semanais.
   metricas_serie_da_equipe: { p_inicio: '2026-10-01', p_fim: '2026-10-31', p_grao: 'bloco', p_pessoa_id: null },
+  metricas_fases_de_campo: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC

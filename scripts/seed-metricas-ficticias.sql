@@ -225,6 +225,34 @@ begin
                iniciado_em = v_ini, concluido_em = v_fim, pausa_acumulada = interval '0'
          where id = v_etapa.id;
 
+        -- AS FASES DO CAMPO (20260928183313), declaradas em 85% das entradas e
+        -- nascimentos — quem registra, registra. Cada fase começa numa fração
+        -- da etapa; a última vai até a conclusão.
+        if v_etapa.tipo in ('entrada', 'nascimento') and v_fim > v_ini and random() < 0.85 then
+          insert into public.eventos (caso_id, caso_etapa_id, pessoa_id, tipo, payload, ocorrido_em)
+          select v_caso, v_etapa.id, v_outro, 'fase_de_campo_registrada',
+                 jsonb_build_object('etapa', v_etapa.tipo, 'fase', f.fase),
+                 v_ini + (v_fim - v_ini) * f.fracao
+          from (
+            select 'deslocamento_recebimento' as fase, 0.0 as fracao where v_etapa.tipo = 'entrada'
+            union all select 'aguardando_internamento', 0.25 + random() * 0.4 where v_etapa.tipo = 'entrada'
+            union all select 'admissao_cco', 0.0 where v_etapa.tipo = 'nascimento'
+            union all select 'nascimento', 0.15 + random() * 0.2 where v_etapa.tipo = 'nascimento'
+            union all select 'cuidados', 0.55 + random() * 0.25 where v_etapa.tipo = 'nascimento'
+          ) as f;
+
+          update public.caso_etapas ce
+             set fase_campo = u.fase::public.fase_de_campo, fase_campo_em = u.ocorrido_em
+            from (
+              select e.payload->>'fase' as fase, e.ocorrido_em
+              from public.eventos e
+              where e.caso_etapa_id = v_etapa.id and e.tipo = 'fase_de_campo_registrada'
+              order by e.ocorrido_em desc
+              limit 1
+            ) as u
+           where ce.id = v_etapa.id;
+        end if;
+
         -- 12% das conclusões de campo são registradas pela gestão, no lugar da
         -- fotógrafa — o jeito certo (o crédito continua dela).
         v_quem_clicou := case when random() < 0.12 then v_gestao else v_outro end;

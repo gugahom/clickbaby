@@ -1,9 +1,10 @@
-import { Fragment, useState } from 'react'
+import { useRef, useState } from 'react'
 import clsx from 'clsx'
-import type { MetricaDaEquipe } from '../api/useMetricas'
+import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa } from '../api/useMetricas'
 import type { LinhaDaPessoa } from '../lib/kpis'
-import { formatarMinutos, primeiroNome } from '../lib/metricas'
+import { primeiroNome } from '../lib/metricas'
 import { Cartao } from './PainelDaEquipe'
+import { PerfilDaPessoa } from './PerfilDaPessoa'
 
 type Coluna = 'partos' | 'edicoes' | 'taxaPrazo' | 'ajustes' | 'dias'
 
@@ -15,25 +16,53 @@ const COLUNAS: { id: Coluna; rotulo: string; so_no_largo?: boolean; menorEMelhor
   { id: 'dias', rotulo: 'Dias', so_no_largo: true },
 ]
 
+const TELA_LARGA = '(min-width: 1280px)'
+
 /**
  * AS PESSOAS — três destaques e UMA tabela de KPIs, que é também o ranking.
  *
  * A primeira versão tinha um ranking por tipo de etapa (com chips, critérios e
  * marcas) e uma ficha individual de cinco cartões. O gestor pediu foco em KPI,
- * e as duas viraram isto: cada coluna é um KPI, tocar no título ordena por
- * ele, e tocar numa pessoa abre três linhas de resumo — sem trocar de tela.
+ * e as duas viraram isto: cada coluna é um KPI e tocar no título ordena por
+ * ele.
  *
- * TEMPO NÃO É COLUNA. Ele entra no resumo, ao lado da mediana da equipe: com
+ * TOCAR NUMA PESSOA ABRE O MINI PERFIL (29/09/2026, pedido do gestor), no lugar
+ * das três linhas de resumo que abriam dentro da tabela. No computador ele fica
+ * AO LADO da tabela, já aberto na primeira pessoa da ordem — o mesmo arranjo do
+ * painel da equipe, que nasce cheio; no celular fica embaixo, e só aparece
+ * depois do toque, que rola até ele. O × do perfil o FECHA (pedido do gestor):
+ * a tabela volta a ocupar a largura toda, e tocar em alguém reabre.
+ *
+ * TABELA E PERFIL TÊM A MESMA ALTURA no computador ("os cards devem se igualar
+ * em tamanho"): as duas colunas esticam até a mais alta, em vez de a tabela
+ * acabar no meio e o perfil seguir sozinho.
+ *
+ * TEMPO NÃO É COLUNA. Ele entra no perfil, ao lado da média da equipe: com
  * metade das edições sem relógio em setembro, ordenar por velocidade premiaria
  * quem não abre o relógio (ver a migration 20260929020655).
  *
  * "NO PRAZO" PEDE AMOSTRA: abaixo de 5 fotos e reels com prazo a célula fica
  * "—" e vai para o fim da ordem. 3 de 3 não é melhor que 18 de 20.
  */
-export function TabelaDePessoas({ linhas, equipe }: { linhas: LinhaDaPessoa[]; equipe: MetricaDaEquipe[] }) {
+export function TabelaDePessoas({
+  linhas,
+  pessoas,
+  porEtapa,
+  fases,
+  rotuloDoPeriodo,
+}: {
+  linhas: LinhaDaPessoa[]
+  pessoas: MetricaPorPessoa[]
+  porEtapa: MetricaPorEtapa[]
+  fases: FaseDaPessoa[]
+  /** Como a frase do perfil termina: "em dezembro de 2027". */
+  rotuloDoPeriodo: string
+}) {
   const [coluna, setColuna] = useState<Coluna>('partos')
   const [crescente, setCrescente] = useState(false)
   const [aberta, setAberta] = useState<string | null>(null)
+  const [fechado, setFechado] = useState(false)
+  const perfil = useRef<HTMLDivElement>(null)
 
   if (linhas.length === 0) {
     return (
@@ -74,52 +103,75 @@ export function TabelaDePessoas({ linhas, equipe }: { linhas: LinhaDaPessoa[]; e
     }
   }
 
-  const medianaDa = (tipo: string) => equipe.find((e) => e.tipo === tipo)?.medianaMin ?? null
+  // Sem toque ainda, o perfil é o da primeira da ordem — e só aparece no
+  // computador. No celular ele mora embaixo da tabela, e abrir sozinho
+  // empurraria a lista para longe de quem ainda não escolheu ninguém.
+  const selecionada = fechado ? undefined : (linhas.find((l) => l.pessoaId === aberta) ?? ordenadas[0])
+  const tocou = aberta !== null && selecionada?.pessoaId === aberta
+
+  function fechar() {
+    setFechado(true)
+    setAberta(null)
+  }
+
+  function abrir(pessoaId: string) {
+    setFechado(false)
+    setAberta(pessoaId)
+    if (!window.matchMedia(TELA_LARGA).matches) {
+      const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      requestAnimationFrame(() =>
+        perfil.current?.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'start' }),
+      )
+    }
+  }
 
   return (
     <div className="space-y-4">
       <Destaques linhas={linhas} />
 
-      <Cartao titulo="Pessoas">
-        <div className="-mx-4 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="w-10 py-2 pl-4 text-center font-semibold">#</th>
-                <th className="py-2 pr-3 font-semibold">Pessoa</th>
-                {COLUNAS.map((c) => (
-                  <th
-                    key={c.id}
-                    aria-sort={coluna === c.id ? (crescente ? 'ascending' : 'descending') : 'none'}
-                    className={clsx('py-2 pr-4 text-right font-semibold', c.so_no_largo && 'hidden sm:table-cell')}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => ordenarPor(c.id)}
-                      className={clsx(
-                        'inline-flex items-center gap-1 rounded hover:text-foreground',
-                        coluna === c.id && 'text-foreground',
-                      )}
+      <div className={clsx('grid gap-4', selecionada && 'xl:grid-cols-[minmax(0,1fr)_30rem]')}>
+        <Cartao titulo="Pessoas" className="h-full">
+          <div className="-mx-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground">
+                  <th className="w-10 py-2 pl-4 text-center font-semibold">#</th>
+                  <th className="py-2 pr-3 font-semibold">Pessoa</th>
+                  {COLUNAS.map((c) => (
+                    <th
+                      key={c.id}
+                      aria-sort={coluna === c.id ? (crescente ? 'ascending' : 'descending') : 'none'}
+                      className={clsx('py-2 pr-4 text-right font-semibold', c.so_no_largo && 'hidden sm:table-cell')}
                     >
-                      {c.rotulo}
-                      <span aria-hidden="true" className={clsx('text-[10px]', coluna !== c.id && 'opacity-0')}>
-                        {crescente ? '▲' : '▼'}
-                      </span>
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ordenadas.map((l, i) => {
-                const expandida = aberta === l.pessoaId
-                return (
-                  <Fragment key={l.pessoaId}>
+                      <button
+                        type="button"
+                        onClick={() => ordenarPor(c.id)}
+                        className={clsx(
+                          'inline-flex items-center gap-1 rounded hover:text-foreground',
+                          coluna === c.id && 'text-foreground',
+                        )}
+                      >
+                        {c.rotulo}
+                        <span aria-hidden="true" className={clsx('text-[10px]', coluna !== c.id && 'opacity-0')}>
+                          {crescente ? '▲' : '▼'}
+                        </span>
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ordenadas.map((l, i) => {
+                  const escolhida = selecionada?.pessoaId === l.pessoaId
+                  return (
                     <tr
-                      onClick={() => setAberta(expandida ? null : l.pessoaId)}
+                      key={l.pessoaId}
+                      onClick={() => abrir(l.pessoaId)}
                       className={clsx(
                         'cursor-pointer border-b border-border tabular-nums transition-colors hover:bg-muted/50',
-                        expandida && 'bg-muted/50',
+                        // A linha escolhida se marca onde o perfil está à vista:
+                        // sempre no computador, e no celular depois do toque.
+                        escolhida && (tocou ? 'bg-marca-suave' : 'xl:bg-marca-suave'),
                       )}
                     >
                       <td className="py-2.5 pl-4 text-center font-bold text-muted-foreground">
@@ -128,11 +180,11 @@ export function TabelaDePessoas({ linhas, equipe }: { linhas: LinhaDaPessoa[]; e
                       <td className="py-2.5 pr-3 font-semibold text-foreground">
                         <button
                           type="button"
-                          aria-expanded={expandida}
+                          aria-pressed={escolhida}
                           className="text-left"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setAberta(expandida ? null : l.pessoaId)
+                            abrir(l.pessoaId)
                           }}
                         >
                           {primeiroNome(l.nome)}
@@ -150,27 +202,29 @@ export function TabelaDePessoas({ linhas, equipe }: { linhas: LinhaDaPessoa[]; e
                         {l.dias}
                       </Celula>
                     </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Cartao>
 
-                    {expandida && (
-                      <tr className="border-b border-border bg-muted/30">
-                        <td />
-                        <td colSpan={6} className="py-3 pr-4 text-xs text-muted-foreground">
-                          <Resumo
-                            linha={l}
-                            fotos={medianaDa('edicao_foto')}
-                            reels={medianaDa('reels')}
-                            parto={medianaDa('nascimento')}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Cartao>
+        {selecionada && (
+          <div
+            ref={perfil}
+            className={clsx('min-w-0 scroll-mt-4', !tocou && 'hidden xl:block')}
+          >
+            <PerfilDaPessoa
+              linha={selecionada}
+              pessoa={pessoas.find((p) => p.pessoaId === selecionada.pessoaId)}
+              porEtapa={porEtapa}
+              fases={fases}
+              rotuloDoPeriodo={rotuloDoPeriodo}
+              onFechar={fechar}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -194,67 +248,6 @@ function Celula({
     >
       {children}
     </td>
-  )
-}
-
-/**
- * O RESUMO DE UMA PESSOA — três linhas, no lugar da ficha de cinco cartões.
- * Tempo ao lado da equipe, a qualidade do registro dela, e o resto numa linha.
- */
-function Resumo({
-  linha,
-  fotos,
-  reels,
-  parto,
-}: {
-  linha: LinhaDaPessoa
-  fotos: number | null
-  reels: number | null
-  parto: number | null
-}) {
-  const tempos = [
-    { rotulo: 'Fotos', dela: linha.tempoFotos, equipe: fotos },
-    { rotulo: 'Reels', dela: linha.tempoReels, equipe: reels },
-    { rotulo: 'Parto', dela: linha.tempoParto, equipe: parto },
-  ].filter((t) => t.dela !== null)
-  const relogio = linha.edicoes > 0 ? linha.edicoesMedidas / linha.edicoes : null
-
-  return (
-    <div className="space-y-1.5">
-      {tempos.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <span className="font-semibold text-foreground">Tempo</span>
-          {tempos.map((t) => (
-            <span key={t.rotulo}>
-              {t.rotulo} <span className="font-bold text-foreground">{formatarMinutos(t.dela)}</span>{' '}
-              <span className="opacity-80">(equipe {formatarMinutos(t.equipe)})</span>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        <span className="font-semibold text-foreground">Registro</span>
-        {relogio !== null ? (
-          <span className={clsx(relogio < 0.5 && 'font-semibold text-atencao-tinta')}>
-            {Math.round(relogio * 100)}% das edições com relógio aberto
-          </span>
-        ) : (
-          <span>sem edições</span>
-        )}
-        {linha.emParalelo > 0 && (
-          <span className="font-semibold text-atencao-tinta">
-            {linha.emParalelo} {linha.emParalelo === 1 ? 'etapa de campo' : 'etapas de campo'} em paralelo
-          </span>
-        )}
-      </div>
-      {linha.materiais + linha.passagens > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <span className="font-semibold text-foreground">Também</span>
-          {linha.materiais > 0 && <span>{linha.materiais} materiais baixados ou subidos</span>}
-          {linha.passagens > 0 && <span>{linha.passagens} passagens de turno</span>}
-        </div>
-      )}
-    </div>
   )
 }
 
