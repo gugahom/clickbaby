@@ -318,7 +318,15 @@ export function AppShell() {
       <div className="flex min-h-0 flex-1">
         {temNavegacao && <BarraLateral destinos={destinos} />}
 
-        <main className="min-w-0 flex-1">
+        {/* A PÁGINA ROLA AQUI DENTRO, e não na janela (29/09/2026, pedido do
+            gestor: "a sidebar acompanhe quando a página crescer"). Rolando a
+            janela, esta fileira tinha a altura da TELA e o conteúdo a
+            ultrapassava — a barra lateral, esticada pela fileira, acabava no
+            meio da página e embaixo dela aparecia o fundo. Com a rolagem no
+            `main`, a fileira é sempre a altura da tela, a barra vai até o chão,
+            e o cabeçalho fica parado de brinde. O Quadro não muda: ele já é
+            `h-full` com rolagens próprias por dentro. */}
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

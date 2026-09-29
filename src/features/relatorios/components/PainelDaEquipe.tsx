@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
+import clsx from 'clsx'
 import { Dropdown } from '@/components/ui/Dropdown'
 import type { ChaveKpi, Kpi } from '../lib/kpis'
 import { CartaoKpi } from './CartaoKpi'
@@ -129,14 +130,16 @@ function Grupo({ titulo, nota, children }: { titulo: string; nota?: string; chil
 export function Cartao({
   titulo,
   acao,
+  className,
   children,
 }: {
   titulo: string
   acao?: ReactNode
+  className?: string
   children: ReactNode
 }) {
   return (
-    <section className="rounded-painel border border-border bg-card p-4">
+    <section className={clsx('rounded-painel border border-border bg-card p-4', className)}>
       <header className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold tracking-tight text-foreground">{titulo}</h2>
         {acao}

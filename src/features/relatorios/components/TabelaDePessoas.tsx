@@ -30,7 +30,12 @@ const TELA_LARGA = '(min-width: 1280px)'
  * das três linhas de resumo que abriam dentro da tabela. No computador ele fica
  * AO LADO da tabela, já aberto na primeira pessoa da ordem — o mesmo arranjo do
  * painel da equipe, que nasce cheio; no celular fica embaixo, e só aparece
- * depois do toque, que rola até ele.
+ * depois do toque, que rola até ele. O × do perfil o FECHA (pedido do gestor):
+ * a tabela volta a ocupar a largura toda, e tocar em alguém reabre.
+ *
+ * TABELA E PERFIL TÊM A MESMA ALTURA no computador ("os cards devem se igualar
+ * em tamanho"): as duas colunas esticam até a mais alta, em vez de a tabela
+ * acabar no meio e o perfil seguir sozinho.
  *
  * TEMPO NÃO É COLUNA. Ele entra no perfil, ao lado da média da equipe: com
  * metade das edições sem relógio em setembro, ordenar por velocidade premiaria
@@ -44,17 +49,19 @@ export function TabelaDePessoas({
   pessoas,
   porEtapa,
   fases,
-  rotuloDoMes,
+  rotuloDoPeriodo,
 }: {
   linhas: LinhaDaPessoa[]
   pessoas: MetricaPorPessoa[]
   porEtapa: MetricaPorEtapa[]
   fases: FaseDaPessoa[]
-  rotuloDoMes: string
+  /** Como a frase do perfil termina: "em dezembro de 2027". */
+  rotuloDoPeriodo: string
 }) {
   const [coluna, setColuna] = useState<Coluna>('partos')
   const [crescente, setCrescente] = useState(false)
   const [aberta, setAberta] = useState<string | null>(null)
+  const [fechado, setFechado] = useState(false)
   const perfil = useRef<HTMLDivElement>(null)
 
   if (linhas.length === 0) {
@@ -99,10 +106,16 @@ export function TabelaDePessoas({
   // Sem toque ainda, o perfil é o da primeira da ordem — e só aparece no
   // computador. No celular ele mora embaixo da tabela, e abrir sozinho
   // empurraria a lista para longe de quem ainda não escolheu ninguém.
-  const selecionada = linhas.find((l) => l.pessoaId === aberta) ?? ordenadas[0]
+  const selecionada = fechado ? undefined : (linhas.find((l) => l.pessoaId === aberta) ?? ordenadas[0])
   const tocou = aberta !== null && selecionada?.pessoaId === aberta
 
+  function fechar() {
+    setFechado(true)
+    setAberta(null)
+  }
+
   function abrir(pessoaId: string) {
+    setFechado(false)
     setAberta(pessoaId)
     if (!window.matchMedia(TELA_LARGA).matches) {
       const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -116,8 +129,8 @@ export function TabelaDePessoas({
     <div className="space-y-4">
       <Destaques linhas={linhas} />
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_30rem]">
-        <Cartao titulo="Pessoas">
+      <div className={clsx('grid gap-4', selecionada && 'xl:grid-cols-[minmax(0,1fr)_30rem]')}>
+        <Cartao titulo="Pessoas" className="h-full">
           <div className="-mx-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -199,14 +212,15 @@ export function TabelaDePessoas({
         {selecionada && (
           <div
             ref={perfil}
-            className={clsx('min-w-0 scroll-mt-4 xl:sticky xl:top-4', !tocou && 'hidden xl:block')}
+            className={clsx('min-w-0 scroll-mt-4', !tocou && 'hidden xl:block')}
           >
             <PerfilDaPessoa
               linha={selecionada}
               pessoa={pessoas.find((p) => p.pessoaId === selecionada.pessoaId)}
               porEtapa={porEtapa}
               fases={fases}
-              rotuloDoMes={rotuloDoMes}
+              rotuloDoPeriodo={rotuloDoPeriodo}
+              onFechar={fechar}
             />
           </div>
         )}

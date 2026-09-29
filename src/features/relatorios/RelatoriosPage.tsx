@@ -2,18 +2,16 @@ import { useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import {
-  useFasesDeCampo,
   useMetricasDaEquipe,
-  useMetricasPorEtapa,
   useMetricasPorPessoa,
   usePadroesDeTempo,
   useSerieDaEquipe,
 } from './api/useMetricas'
 import { PadroesDeTempo } from './components/PadroesDeTempo'
 import { PainelDaEquipe } from './components/PainelDaEquipe'
-import { TabelaDePessoas } from './components/TabelaDePessoas'
+import { AbaPessoas } from './components/AbaPessoas'
 import { TrilhoDeAbas } from './components/TrilhoDeAbas'
-import { kpisDaEquipe, linhasDasPessoas } from './lib/kpis'
+import { kpisDaEquipe } from './lib/kpis'
 import {
   INICIO_DAS_METRICAS,
   MES_INICIAL,
@@ -64,18 +62,17 @@ export function RelatoriosPage() {
   const periodo = periodoDoMes(mes)
   const anterior = periodoDoMes(deslocarMes(mes, -1))
 
-  const porEtapa = useMetricasPorEtapa(periodo)
   const equipe = useMetricasDaEquipe(periodo)
   const pessoas = useMetricasPorPessoa(periodo)
   const padroes = usePadroesDeTempo()
-  const fases = useFasesDeCampo(periodo)
   const doisMeses = useSerieDaEquipe({ inicio: anterior.inicio, fim: periodo.fim }, 'mes')
   // A Produção segue o filtro de pessoa; sem pessoa, estas são as mesmas
   // consultas de cima (mesma chave, mesmo cache).
   const doisMesesDaProducao = useSerieDaEquipe({ inicio: anterior.inicio, fim: periodo.fim }, 'mes', pessoaId)
   const blocos = useSerieDaEquipe(periodo, 'bloco', pessoaId)
 
-  const consultas = [porEtapa, equipe, pessoas, padroes, fases, doisMeses, doisMesesDaProducao, blocos]
+  // A aba Pessoas lê as dela, com o período dos filtros dela (`AbaPessoas`).
+  const consultas = [equipe, pessoas, padroes, doisMeses, doisMesesDaProducao, blocos]
   const erro = consultas.find((c) => c.error)?.error
   const primeiraCarga = consultas.some((c) => c.isPending)
   // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
@@ -160,13 +157,7 @@ export function RelatoriosPage() {
             />
           )}
           {aba === 'pessoas' && (
-            <TabelaDePessoas
-              linhas={linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [])}
-              pessoas={pessoas.data ?? []}
-              porEtapa={porEtapa.data ?? []}
-              fases={fases.data ?? []}
-              rotuloDoMes={rotuloDoMes(mes)}
-            />
+            <AbaPessoas mes={mes} periodoDoMes={periodo} hoje={hoje} />
           )}
           {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}
         </div>

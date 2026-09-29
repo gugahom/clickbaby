@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
+import { BotaoIcone } from '@/components/ui/BotaoIcone'
+import { IconeX } from '@/components/ui/icones'
 import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { FASES_DA_ETAPA, ROTULO_FASE_CAMPO, type EtapaTipo } from '@/features/quadro/types'
 import { iniciais } from '@/lib/iniciais'
@@ -33,14 +35,18 @@ export function PerfilDaPessoa({
   pessoa,
   porEtapa,
   fases,
-  rotuloDoMes,
+  rotuloDoPeriodo,
+  onFechar,
 }: {
   linha: LinhaDaPessoa
   pessoa: MetricaPorPessoa | undefined
   /** Todas as linhas do mês, de todo mundo — a média da equipe sai daqui. */
   porEtapa: MetricaPorEtapa[]
   fases: FaseDaPessoa[]
-  rotuloDoMes: string
+  /** Como a frase termina: "em dezembro de 2027", "nos últimos 7 dias". */
+  rotuloDoPeriodo: string
+  /** O "xiszinho" (pedido do gestor): fecha o perfil e a tabela ocupa a largura. */
+  onFechar: () => void
 }) {
   const daPessoa = porEtapa.filter((m) => m.pessoaId === linha.pessoaId)
   const mediaDaEquipe = (tipo: EtapaTipo) => {
@@ -84,7 +90,7 @@ export function PerfilDaPessoa({
   ].filter((r) => r.valor > 0)
 
   return (
-    <section className="rounded-painel border border-border bg-card p-4 shadow-sm md:p-5">
+    <section className="h-full rounded-painel border border-border bg-card p-4 shadow-sm md:p-5">
       <header className="flex items-center gap-3 border-b border-border pb-4">
         <span
           className="grid size-12 flex-shrink-0 place-items-center rounded-full bg-marca text-base font-bold text-white"
@@ -92,15 +98,18 @@ export function PerfilDaPessoa({
         >
           {iniciais(linha.nome)}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg leading-tight font-bold text-foreground">{linha.nome}</h2>
           <p className="text-sm text-muted-foreground">
             {ROTULO_PAPEL[pessoa?.papel ?? ''] ?? pessoa?.papel ?? '—'}
             {pessoa && !pessoa.ativo && ' · cadastro inativo'}
             {' · '}
-            {linha.dias} {linha.dias === 1 ? 'dia' : 'dias'} com trabalho em {rotuloDoMes.toLowerCase()}
+            {linha.dias} {linha.dias === 1 ? 'dia' : 'dias'} com trabalho {rotuloDoPeriodo}
           </p>
         </div>
+        <BotaoIcone rotulo="Fechar o perfil" onClick={onFechar} className="-mt-1 -mr-1 self-start">
+          <IconeX className="size-5" />
+        </BotaoIcone>
       </header>
 
       <div className="grid grid-cols-4 gap-2 border-b border-border py-4">

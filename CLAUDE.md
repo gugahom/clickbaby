@@ -1815,6 +1815,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   mouse, fixá-la só trocava 3.5rem de largura permanente por nomes que já apareciam quando
   se precisava deles. Se um dia alguém pedir a barra travada aberta, o caminho é uma
   preferência de aparelho como o modo TV — não um botão dentro dela.
+  **A PÁGINA ROLA DENTRO DO `main`, NÃO NA JANELA** (29/09/2026, pedido do gestor: "a
+  sidebar acompanhe quando a página crescer"). Rolando a janela, a fileira da barra tinha a
+  altura da TELA e o conteúdo a ultrapassava: a barra acabava no meio da página e aparecia o
+  fundo embaixo. Com `overflow-y-auto` no `main`, a barra vai sempre até o chão e o cabeçalho
+  fica parado. O Quadro não sentiu — ele já era `h-full` com rolagens próprias. Quem precisar
+  de "rolar a página" rola o `main` (`scrollIntoView` já faz isso sozinho).
   **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
   no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
   **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
@@ -1983,7 +1989,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **TOCAR NUMA PESSOA ABRE O MINI PERFIL** (29/09/2026, pedido do gestor: "com todas as infos
   que coletamos nos cards (…) quantidade de produção e tempo médio em cada etapa"), no lugar
   das três linhas de resumo que abriam dentro da tabela. No computador fica AO LADO da tabela,
-  já aberto na primeira pessoa da ordem; no celular, embaixo e só depois do toque. Quatro
+  já aberto na primeira pessoa da ordem, com a MESMA ALTURA dela ("os cards devem se igualar
+  em tamanho"); no celular, embaixo e só depois do toque. O × fecha o perfil e a tabela ocupa
+  a largura; tocar em alguém reabre.
+  **A ABA TEM FILTROS PRÓPRIOS** (`AbaPessoas`, pedido do gestor: "datas e etc."): PERÍODO (o
+  mês do topo, os últimos 7 ou 30 dias, ou datas escolhidas — entre 01/10/2026 e hoje),
+  TRABALHO (todos, quem fez campo, quem fez edição no período) e BUSCA pelo nome. O período
+  vale para a aba inteira — tabela, destaques e perfil, que diz qual é ("nos últimos 7 dias").
+  Filtrar por trabalho não fere a 3.1: é "quem FEZ edição neste período", lido das etapas
+  concluídas, e a mesma pessoa aparece nos dois se fez as duas coisas. Com período fora de
+  "Mês", o seletor de mês do topo não vale para esta aba. Quatro
   blocos: os quatro números (partos, edições, prazo, ajustes); PRODUÇÃO POR ETAPA (feitas,
   tempo médio, média da equipe); FASES DO CAMPO (tempo médio em cada fase, por etapa); e o
   que mais os cards guardam (material, passagens, atribuições, entregas, termos, avaliações,
