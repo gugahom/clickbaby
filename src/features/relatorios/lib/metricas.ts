@@ -1,4 +1,5 @@
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
+import { hojeNoFuso } from '@/lib/formato'
 
 /**
  * AS MÉTRICAS COMEÇAM EM 01/10/2026 (decisão do gestor, 28/09).
@@ -10,6 +11,33 @@ import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
  * Mudou lá, muda aqui.
  */
 export const INICIO_DAS_METRICAS = '2026-10-01'
+
+/**
+ * O "HOJE" DO RELATÓRIO. Em produção é hoje, e ponto.
+ *
+ * SÓ EM DESENVOLVIMENTO, a tela abre como se fosse o ÚLTIMO DIA DOS DADOS
+ * FICTÍCIOS (29/09/2026, pedido do gestor: "coloca dados fictícios pra eu
+ * poder analisar" e, depois, "quero os dados fictícios" — com a data real eles
+ * não apareciam). Os dados do banco local vão de outubro de 2026 a dezembro de
+ * 2027, no futuro, e o gráfico só desenha o que já passou.
+ *   `?hoje=2027-06-15` simula outro dia;
+ *   `?hoje=real` volta à data de verdade.
+ * Um selo no topo diz sempre qual está valendo.
+ * `import.meta.env.DEV` vira `false` no build, e o ramo inteiro some do bundle
+ * publicado: em produção não existe data simulada, nem por engano.
+ */
+export function hojeDoRelatorio(): { hoje: string; simulado: boolean } {
+  if (import.meta.env.DEV) {
+    const pedido = new URLSearchParams(window.location.search).get('hoje')
+    if (pedido === 'real') return { hoje: hojeNoFuso(), simulado: false }
+    if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) return { hoje: pedido, simulado: true }
+    return { hoje: FIM_DOS_DADOS_FICTICIOS, simulado: true }
+  }
+  return { hoje: hojeNoFuso(), simulado: false }
+}
+
+/** Último dia de `scripts/seed-metricas-ficticias.sql`. Mudou lá, muda aqui. */
+const FIM_DOS_DADOS_FICTICIOS = '2027-12-31'
 
 /**
  * Amostra mínima para uma taxa entrar em ranking. Com um mês de dados, a
@@ -115,16 +143,93 @@ export function rotuloDoMes(mes: string): string {
   return texto.replace(/^./, (l) => l.toUpperCase())
 }
 
+const DIA = 86_400_000
+const emMs = (data: string) => Date.parse(`${data}T12:00:00Z`)
+
 /**
- * O rótulo da semana no gráfico. A semana do banco começa na SEGUNDA, e a
- * primeira do mês quase sempre começa no mês anterior — "28/09" no eixo de
- * outubro leria como dado de setembro. O rótulo é o primeiro dia da semana
- * que cai DENTRO do período.
+ * Quantos dias do pedaço JÁ PASSARAM e contam: do mais tarde entre o começo e o
+ * piso das métricas ao mais cedo entre o fim e hoje. Zero para um pedaço
+ * inteiro no futuro ou antes de 01/10/2026 — e é o zero que faz a tela
+ * desenhar "sem dado" em vez de uma coluna rasa.
  */
-export function rotuloDaSemana(segunda: string, inicioDoPeriodo: string): string {
-  const dia = segunda < inicioDoPeriodo ? inicioDoPeriodo : segunda
-  const [, m, d] = dia.split('-')
-  return `${d}/${m}`
+export function diasCorridos(periodo: { inicio: string; fim: string }, hoje: string): number {
+  const de = Math.max(emMs(periodo.inicio), emMs(INICIO_DAS_METRICAS))
+  const ate = Math.min(emMs(periodo.fim), emMs(hoje))
+  return ate < de ? 0 : Math.round((ate - de) / DIA) + 1
+}
+
+function nomeDoMes(data: string, formato: 'short' | 'long'): string {
+  return new Intl.DateTimeFormat('pt-BR', { month: formato, timeZone: 'UTC' })
+    .format(new Date(`${data}T12:00:00Z`))
+    .replace('.', '')
+}
+
+const paraData = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+
+/** '2027-12-31' + 1 -> '2028-01-01'. */
+export function somarDias(data: string, dias: number): string {
+  return paraData(emMs(data) + dias * DIA)
+}
+
+/** '2027-12-31' - 1 ano -> '2026-12-31'. 29/02 cai em 28/02. */
+export function somarAnos(data: string, anos: number): string {
+  const ano = Number(data.slice(0, 4)) + anos
+  const resto = data.slice(4) === '-02-29' ? '-02-28' : data.slice(4)
+  return `${ano}${resto}`
+}
+
+/** '2027-12-31' -> '31/12/2027'. */
+export const dataCurta = (data: string) => data.split('-').reverse().join('/')
+
+export type Janela = 'semana' | '30dias' | 'ano'
+
+/**
+ * AS JANELAS DO GRÁFICO (29/09/2026, pedido do gestor: "última semana, últimos
+ * 30 dias, último ano", no lugar das comparações mês a mês). Todas terminam na
+ * ÂNCORA — hoje, ou o último dia do mês escolhido no topo quando ele já passou,
+ * para o gráfico continuar falando do mês que está na tela.
+ *
+ * A anterior é a janela de mesmo tamanho logo antes: é contra ela que o selo
+ * do gráfico diz "subiu" ou "caiu".
+ */
+export function janelaDoGrafico(
+  janela: Janela,
+  ancora: string,
+): { atual: { inicio: string; fim: string }; anterior: { inicio: string; fim: string }; grao: 'dia' | 'mes' } {
+  if (janela === 'ano') {
+    // Doze meses de calendário, o último até a âncora.
+    const inicio = `${deslocarMes(ancora.slice(0, 7), -11)}-01`
+    return {
+      atual: { inicio, fim: ancora },
+      anterior: { inicio: `${deslocarMes(inicio.slice(0, 7), -12)}-01`, fim: somarDias(inicio, -1) },
+      grao: 'mes',
+    }
+  }
+  const dias = janela === 'semana' ? 7 : 30
+  const inicio = somarDias(ancora, -(dias - 1))
+  return {
+    atual: { inicio, fim: ancora },
+    anterior: { inicio: somarDias(inicio, -dias), fim: somarDias(inicio, -1) },
+    grao: 'dia',
+  }
+}
+
+/** No eixo: "15/12" num dia, "out" num mês, "1–7" num bloco. */
+export function rotuloCurtoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'dia' | 'bloco' | 'mes'): string {
+  if (grao === 'mes') return nomeDoMes(pedaco.inicio, 'short')
+  if (grao === 'dia') return `${pedaco.inicio.slice(8)}/${pedaco.inicio.slice(5, 7)}`
+  return `${Number(pedaco.inicio.slice(8))}–${Number(pedaco.fim.slice(8))}`
+}
+
+/** Na dica: "ter, 15 de dezembro", "Outubro de 2026", "1 a 7 de outubro". */
+export function rotuloLongoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'dia' | 'bloco' | 'mes'): string {
+  if (grao === 'mes') return rotuloDoMes(pedaco.inicio.slice(0, 7))
+  if (grao === 'dia') {
+    return new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'UTC' })
+      .format(new Date(`${pedaco.inicio}T12:00:00Z`))
+      .replace('.', '')
+  }
+  return `${Number(pedaco.inicio.slice(8))} a ${Number(pedaco.fim.slice(8))} de ${nomeDoMes(pedaco.inicio, 'long')}`
 }
 
 /** Só o primeiro nome, que é como a equipe se chama no corredor e no ranking. */

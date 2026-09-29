@@ -36,8 +36,7 @@ GRANT ALL ON FUNCTION public.metricas_da_equipe_por_etapa(p_inicio date, p_fim d
 GRANT ALL ON FUNCTION public.metricas_por_etapa(p_inicio date, p_fim date) TO authenticated;
 GRANT ALL ON FUNCTION public.metricas_por_pessoa(p_inicio date, p_fim date) TO authenticated;
 GRANT ALL ON FUNCTION public.metricas_prazo_do_periodo(p_inicio date, p_fim date) TO authenticated;
-GRANT ALL ON FUNCTION public.metricas_prazo_por_semana(p_inicio date, p_fim date) TO authenticated;
-GRANT ALL ON FUNCTION public.metricas_volume_por_semana(p_inicio date, p_fim date) TO authenticated;
+GRANT ALL ON FUNCTION public.metricas_serie_da_equipe(p_inicio date, p_fim date, p_grao text, p_pessoa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_click_home(p_caso_etapa_id uuid, p_fase public.fase_click_home) TO authenticated;
 GRANT ALL ON FUNCTION public.mover_fase_de_campo(p_caso_etapa_id uuid, p_fase public.fase_de_campo) TO authenticated;
@@ -125,8 +124,7 @@ REVOKE ALL ON FUNCTION public.metricas_da_equipe_por_etapa(p_inicio date, p_fim 
 REVOKE ALL ON FUNCTION public.metricas_por_etapa(p_inicio date, p_fim date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.metricas_por_pessoa(p_inicio date, p_fim date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.metricas_prazo_do_periodo(p_inicio date, p_fim date) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.metricas_prazo_por_semana(p_inicio date, p_fim date) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.metricas_volume_por_semana(p_inicio date, p_fim date) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.metricas_serie_da_equipe(p_inicio date, p_fim date, p_grao text, p_pessoa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_album(p_caso_etapa_id uuid, p_fase public.fase_album) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_click_home(p_caso_etapa_id uuid, p_fase public.fase_click_home) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mover_fase_de_campo(p_caso_etapa_id uuid, p_fase public.fase_de_campo) FROM PUBLIC;

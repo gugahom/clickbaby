@@ -11,15 +11,37 @@ import type { Kpi } from '../lib/kpis'
  * ruim), nunca do sinal sozinho. Volume é neutro.
  *
  * A MINI-LINHA é fraca de propósito — cinza, com só o último ponto na cor do
- * gráfico. Ela conta a direção, não os valores: quem quer o número de uma
- * semana lê o gráfico de baixo.
+ * gráfico. Ela conta a direção, não os valores: quem quer o número de um
+ * pedaço do mês toca no cartão e lê o gráfico grande.
  *
  * Algarismos proporcionais no número grande: `tabular-nums` deixaria "72%"
  * frouxo no tamanho de título.
+ *
+ * O CARTÃO DE PRODUÇÃO É UM BOTÃO (29/09/2026): tocar nele troca o gráfico
+ * grande do painel, e o escolhido ganha o contorno da marca. Os de ENTREGA são
+ * números fixos — sem `onSelecionar` o cartão é só um bloco.
  */
-export function CartaoKpi({ kpi, destaque = false }: { kpi: Kpi; destaque?: boolean }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-painel border border-border bg-card p-4">
+export function CartaoKpi({
+  kpi,
+  destaque = false,
+  selecionado = false,
+  onSelecionar,
+}: {
+  kpi: Kpi
+  destaque?: boolean
+  selecionado?: boolean
+  onSelecionar?: (() => void) | undefined
+}) {
+  const classes = clsx(
+    'flex w-full min-w-0 flex-col gap-2 rounded-painel border bg-card p-4 text-left',
+    onSelecionar &&
+      'transition-[border-color,box-shadow] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca',
+    selecionado
+      ? 'border-marca shadow-[0_0_0_1px_var(--marca)]'
+      : clsx('border-border', onSelecionar && 'hover:border-marca/40'),
+  )
+  const conteudo = (
+    <>
       <div className="text-sm text-muted-foreground">{kpi.rotulo}</div>
 
       <div className="flex items-end justify-between gap-3">
@@ -55,7 +77,15 @@ export function CartaoKpi({ kpi, destaque = false }: { kpi: Kpi; destaque?: bool
         )}
         {kpi.detalhe && <span className="text-muted-foreground">{kpi.detalhe}</span>}
       </div>
-    </div>
+    </>
+  )
+
+  return onSelecionar ? (
+    <button type="button" aria-pressed={selecionado} onClick={onSelecionar} className={classes}>
+      {conteudo}
+    </button>
+  ) : (
+    <div className={classes}>{conteudo}</div>
   )
 }
 

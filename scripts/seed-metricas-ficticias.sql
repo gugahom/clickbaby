@@ -5,9 +5,17 @@
 -- Docker local. Nunca para o remoto: nada aqui passa pelas RPCs, os carimbos são
 -- escritos à mão, e o mês inteiro é INVENTADO.
 --
--- POR QUE OUTUBRO: as métricas só contam a partir de 01/10/2026
--- (`inicio_das_metricas()`, decisão do gestor em 28/09). Dados de setembro não
--- apareceriam em relatório nenhum.
+-- DE OUTUBRO DE 2026 A DEZEMBRO DE 2027 (29/09/2026, pedido do gestor: "coloca
+-- dados fictícios pra eu poder analisar" as comparações). Começa em outubro
+-- porque as métricas só contam a partir de 01/10/2026 (`inicio_das_metricas()`);
+-- vai até dezembro de 2027 para existir "o mesmo mês do ano passado" e um ano
+-- inteiro contra o anterior. Tudo isso está no FUTURO — para a tela desenhar,
+-- abra o relatório com `?hoje=2027-12-31` (só funciona em desenvolvimento).
+--
+-- A EQUIPE MELHORA COM O TEMPO, de propósito: o atraso e o retrabalho caem mês
+-- a mês e o relógio passa a ser aberto mais vezes; o volume tem estação (março,
+-- abril e setembro mais cheios, dezembro e janeiro mais vazios). Sem isso toda
+-- comparação daria "igual", e não haveria o que analisar.
 --
 -- POR QUE PEDRAS PRECIOSAS: são nomes que ninguém confunde com a equipe real.
 -- As famílias são "FICTÍCIA 001", "Bebê 001" — sem nome de gente (seção 10).
@@ -17,8 +25,9 @@
 -- mostrar. As mesmas pessoas fotografam e editam, em proporções diferentes —
 -- é a invariante 3.1: não existe "tipo fotógrafa".
 --
--- IDEMPOTENTE: se já houver caso FICTÍCIA, não faz nada. Depois de um
--- `db reset`, roda de novo.
+-- IDEMPOTENTE POR MÊS: um mês que já tem caso FICTÍCIA é pulado, e os que
+-- faltam são criados — rodar de novo depois de aumentar o período só acrescenta.
+-- As pessoas são reaproveitadas pelo nome. Depois de um `db reset`, roda de novo.
 -- =============================================================================
 
 do $$
@@ -44,13 +53,19 @@ declare
   v_quem_clicou   uuid;
   v_outro         uuid;
   v_envio         timestamptz;
+  v_mes           date;
+  v_m             integer;
+  v_criados       integer := 0;
+  v_partos_dia    integer;
+  v_fator_atraso  numeric;
+  v_fator_ajuste  numeric;
+  v_bonus_relogio numeric;
 begin
-  if exists (select 1 from public.casos where mae_nome like 'FICTÍCIA %') then
-    raise notice 'Os dados fictícios já estão no banco — nada a fazer.';
-    return;
-  end if;
-
   perform setseed(0.42);
+
+  -- A numeração continua de onde parou, para rodar de novo sem repetir nome.
+  select coalesce(max(substring(mae_nome from 10)::int), 0) into v_n
+  from public.casos where mae_nome ~ '^FICTÍCIA [0-9]+$';
 
   -- A gestão que distribui, confirma e às vezes registra pela equipe: a conta
   -- de dev, se existir (é com ela que se loga para ver o relatório).
@@ -92,18 +107,17 @@ begin
     disciplina numeric, atraso numeric, ajuste numeric
   ) on commit drop;
 
-  with novas as (
-    insert into public.pessoas (nome, papel_sistema, ativo)
-    select v.nome, 'operador', true
-    from (values
-      ('Ametista'), ('Berilo'), ('Citrino'), ('Diamante'), ('Esmeralda'), ('Granada'),
-      ('Jade'), ('Opala'), ('Pérola'), ('Rubi'), ('Safira'), ('Topázio')
-    ) as v(nome)
-    returning id, nome
-  )
+  insert into public.pessoas (nome, papel_sistema, ativo)
+  select v.nome, 'operador', true
+  from (values
+    ('Ametista'), ('Berilo'), ('Citrino'), ('Diamante'), ('Esmeralda'), ('Granada'),
+    ('Jade'), ('Opala'), ('Pérola'), ('Rubi'), ('Safira'), ('Topázio')
+  ) as v(nome)
+  where not exists (select 1 from public.pessoas p where p.nome = v.nome);
+
   insert into perfil
   select n.id, n.nome, v.campo, v.edicao, v.ritmo, v.disciplina, v.atraso, v.ajuste
-  from novas n
+  from public.pessoas n
   join (values
     -- nome         campo edicao ritmo disciplina atraso ajuste
     ('Ametista',    6,    0,     0.9,  0.90,      0.02,  0.02),  -- só campo
@@ -125,24 +139,46 @@ begin
   insert into perfil values (v_gestao, 'Gestão', 1, 0, 1.0, 0.8, 0.05, 0.03);
 
   -- ---------------------------------------------------------------------------
-  -- Outubro inteiro: 3 a 5 partos por dia.
+  -- Mês a mês, de outubro de 2026 a dezembro de 2027: 3 a 5 partos por dia,
+  -- com estação.
   -- ---------------------------------------------------------------------------
-  for v_dia in select generate_series(date '2026-10-01', date '2026-10-31', interval '1 day')::date loop
-    for i in 1 .. (3 + floor(random() * 3))::int loop
+  for v_mes in select generate_series(date '2026-10-01', date '2027-12-01', interval '1 month')::date loop
+  if exists (
+    select 1 from public.casos
+    where mae_nome like 'FICTÍCIA %'
+      and previsao_em >= v_mes::timestamp at time zone 'America/Sao_Paulo'
+      and previsao_em <  (v_mes + interval '1 month')::timestamp at time zone 'America/Sao_Paulo'
+  ) then
+    continue;
+  end if;
+
+  -- Quantos meses desde outubro de 2026: a equipe melhora com eles.
+  v_m := (extract(year from v_mes)::int - 2026) * 12 + extract(month from v_mes)::int - 10;
+  v_fator_atraso  := greatest(0.35, 1.5 - 0.08 * v_m);
+  v_fator_ajuste  := greatest(0.5, 1.3 - 0.05 * v_m);
+  v_bonus_relogio := least(0.3, 0.025 * v_m);
+
+  for v_dia in select generate_series(v_mes, (v_mes + interval '1 month' - interval '1 day')::date, interval '1 day')::date loop
+    v_partos_dia := 3 + floor(random() * 3)::int
+                  + case when extract(month from v_dia) in (3, 4, 9) then 1
+                         when extract(month from v_dia) in (12, 1) then -1
+                         else 0 end;
+    for i in 1 .. v_partos_dia loop
       v_n := v_n + 1;
       v_hora := 1 + random() * 21;
       v_previsao := (v_dia + make_interval(secs => (v_hora * 3600)::int))::timestamp at time zone 'America/Sao_Paulo';
 
       insert into public.casos (mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, termo_status)
       values (
-        'FICTÍCIA ' || lpad(v_n::text, 3, '0'),
-        'Bebê ' || lpad(v_n::text, 3, '0'),
+        'FICTÍCIA ' || lpad(v_n::text, 4, '0'),
+        'Bebê ' || lpad(v_n::text, 4, '0'),
         v_pacotes[1 + floor(random() * array_length(v_pacotes, 1))::int],
         v_maternidades[1 + floor(random() * array_length(v_maternidades, 1))::int],
         v_previsao,
         (array['assinado', 'assinado', 'assinado', 'pendente', 'sem_contrato'])[1 + floor(random() * 5)::int]::public.termo_status
       )
       returning id into v_caso;
+      v_criados := v_criados + 1;
 
       -- Quem vai à maternidade: escolha ponderada pelo peso de campo.
       select p.id into v_campo from perfil p
@@ -254,7 +290,7 @@ begin
 
         v_ini := v_fim_nasc + make_interval(mins => (60 + random() * 1200)::int);
 
-        if random() > v_perfil.disciplina then
+        if random() > least(0.98, v_perfil.disciplina + v_bonus_relogio) then
           -- O RELÓGIO FECHADO: play e concluir quase juntos — o hábito que o
           -- relatório mostra como "sem medição".
           v_fim := v_ini + make_interval(mins => (1 + floor(random() * 3))::int);
@@ -269,7 +305,7 @@ begin
         end if;
 
         -- O atraso: empurra a conclusão para depois do vencimento.
-        if v_vence is not null and v_etapa.tipo in ('edicao_foto', 'reels') and random() < v_perfil.atraso then
+        if v_vence is not null and v_etapa.tipo in ('edicao_foto', 'reels') and random() < v_perfil.atraso * v_fator_atraso then
           v_ini := v_vence + make_interval(hours => (1 + floor(random() * 12))::int);
           v_fim := v_ini + make_interval(mins => (20 + random() * 90)::int);
         end if;
@@ -292,7 +328,7 @@ begin
         end if;
 
         -- … e o ajuste de verdade, pedido depois.
-        if v_etapa.tipo in ('edicao_foto', 'reels') and random() < v_perfil.ajuste then
+        if v_etapa.tipo in ('edicao_foto', 'reels') and random() < v_perfil.ajuste * v_fator_ajuste then
           insert into public.eventos (caso_id, caso_etapa_id, pessoa_id, tipo, payload, ocorrido_em)
           values (v_caso, null, v_gestao, 'caso_reaberto',
                   jsonb_build_object('etapas', jsonb_build_array(v_etapa.tipo), 'motivo', 'Família pediu ajuste'),
@@ -325,7 +361,12 @@ begin
       from public.casos c where c.id = v_caso;
     end loop;
   end loop;
+  end loop;
 
-  raise notice 'Pronto: % casos fictícios em outubro de 2026, 12 pessoas fictícias.', v_n;
+  if v_criados = 0 then
+    raise notice 'Os dados fictícios de outubro/2026 a dezembro/2027 já estão no banco — nada a fazer.';
+  else
+    raise notice 'Pronto: % casos fictícios novos (outubro/2026 a dezembro/2027), 12 pessoas fictícias.', v_criados;
+  end if;
 end;
 $$;

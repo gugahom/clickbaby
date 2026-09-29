@@ -1,7 +1,8 @@
 /**
- * Põe um mês FICTÍCIO de trabalho no banco LOCAL, para ver o relatório de
- * pessoas com dado dentro (28/09/2026, pedido do gestor: "no local coloque
- * dados fictícios pra ver layout").
+ * Põe trabalho FICTÍCIO no banco LOCAL, de outubro de 2026 a dezembro de 2027,
+ * para ver o relatório de pessoas com dado dentro (28/09/2026, pedido do
+ * gestor: "no local coloque dados fictícios pra ver layout"; estendido em 29/09
+ * para as comparações entre meses e anos terem o que comparar).
  *
  * SÓ LOCAL, por construção: o SQL vai direto para o Postgres do container do
  * Docker, e esse container só existe na máquina de quem roda. Não há flag que
@@ -33,3 +34,8 @@ if (r.status !== 0) {
   console.error('\nNão deu. O Supabase local está de pé? (`npx supabase start`)')
   process.exit(r.status ?? 1)
 }
+
+// Os meses estão no futuro, e o gráfico só desenha o que já passou: a data
+// simulada (só em desenvolvimento) é o que faz a tela mostrar tudo.
+console.log('\nAbra o relatório com a data simulada, por exemplo:')
+console.log('  http://localhost:5173/quadro/relatorios?hoje=2027-12-31')

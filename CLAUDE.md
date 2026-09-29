@@ -416,7 +416,8 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 
 -- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
 metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
-metricas_prazo_por_semana / metricas_prazo_do_periodo / metricas_volume_por_semana (p_inicio, p_fim)
+metricas_prazo_do_periodo (p_inicio, p_fim)
+metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por dia/bloco/mês/período; com pessoa, a produção dela (29/09/2026)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -1918,11 +1919,62 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **TRÊS ABAS, um mês no topo recortando todas:**
   EQUIPE — seis KPIs em dois grupos, cada um com a **variação contra o mês anterior** (seta e
   sinal, nunca só cor; a cor vem de "subir é bom?", e volume e tempo de edição são neutros) e
-  uma **mini-linha semanal** (volume normalizado POR DIA, porque a primeira e a última semana
-  do mês quase nunca são inteiras). *Entrega:* prazo cumprido (o número-herói), do parto ao
+  uma **mini-linha** bloco a bloco. *Entrega:* prazo cumprido (o número-herói), do parto ao
   envio (com a espera do ADM na linha de baixo), voltou para ajuste. *Produção:* partos,
   edições entregues, tempo de edição de fotos (com "% com relógio aberto" na linha de baixo —
-  a qualidade do registro mora ali, e só ali). Embaixo, UM gráfico: o prazo semana a semana.
+  a qualidade do registro mora ali, e só ali).
+  **O CARTÃO ABRE O GRÁFICO AO LADO** (29/09/2026, pedido do gestor: "espaço em branco demais"
+  e "minigráficos mais mostráveis"). No computador (≥1280px) os cartões viram uma coluna à
+  esquerda e o gráfico do KPI ESCOLHIDO ocupa o resto da largura, na altura da lista; abaixo
+  disso, cartões em cima e gráfico embaixo, e o toque rola até ele. A página passou de 72rem
+  para 100rem. Duas decisões conversadas com ele: o painel **nasce cheio** (no prazo, o
+  número-herói) — um lado que só aparece depois do clique deixaria o vazio lá quase sempre —
+  e o clique **não desliza a tela**, porque tiraria o cartão de baixo do mouse. Continua UM
+  gráfico na visão; o que muda é o assunto.
+  **SÓ A PRODUÇÃO VIRA GRÁFICO** (terceira volta do gestor: "apenas o que está nomeado de
+  produção é importante virar gráfico (…) esses números fixos são mais importantes"). Partos,
+  edições e tempo de edição ficam à esquerda, clicáveis — o painel abre em PARTOS —, e a
+  ENTREGA (prazo, do parto ao envio, voltou para ajuste) desceu para uma faixa de números
+  fixos embaixo, sem mini-linha e sem clique, marcada "da equipe".
+  **FILTRO POR PESSOA** no título da Produção ("assim que selecionar uma pessoa ele deve
+  filtrar os partos realizados por esse funcionário"): os três cartões E o gráfico passam a
+  ser da produção dela (`p_pessoa_id` na série, crédito do RESPONSÁVEL, lido de
+  `metricas_por_etapa` — nenhuma definição nova). A Entrega NÃO filtra: o prazo é fato do
+  caso, que passa por várias mãos, e dividi-lo inventaria um dono.
+  **O GRÁFICO: TRÊS JANELAS, E O SELO É A COMPARAÇÃO** (segunda volta do mesmo dia). A
+  primeira versão comparava mês com mês e ano com ano, com o outro período em cinza ao lado —
+  o gestor achou "meio esquisito". Ficaram ÚLTIMA SEMANA e ÚLTIMOS 30 DIAS (dia a dia) e
+  ÚLTIMO ANO (12 meses, mês a mês), todas terminando hoje — ou no último dia do mês escolhido,
+  quando ele já passou, para o gráfico não falar de outro mês que não o da tela. A comparação
+  virou o SELO do título: a janela inteira contra a de mesmo tamanho logo antes, com seta e
+  sinal (p.p. nas taxas, horas e minutos nos tempos, % no volume) e a cor de "subir é bom?".
+  O selo lê a janela INTEIRA num balde só (grão `periodo`), não a soma dos dias: mediana não
+  se compõe.
+  **A COMPARAÇÃO VOLTOU COMO LINHA ROSA** (terceira volta): "a outra linha pode aparecer em
+  rosa, como usamos nas cores de todo o sistema". Período anterior de mesmo tamanho (o
+  padrão) ou mesmo período do ano passado, alinhado pedaço a pedaço, TRACEJADO e sem área
+  embaixo; nas barras, o par lado a lado. O selo compara com o que estiver escolhido.
+  **O VISUAL VEIO DE UM EXEMPLO DE SHADCN/RECHARTS** que o gestor mandou (área com degradê,
+  linha e pontos com brilho, grade tracejada, dica em cartão), com a opção de BARRAS ao lado,
+  e SEM a tabela gêmea (pedido dele). Feito em SVG da casa, como o sino e a barra lateral: o
+  recharts somaria mais de 100kB ao carregamento de todo mundo por um gráfico que só a gestão
+  abre. Duas diferenças deliberadas do exemplo: a curva é MONÓTONA (a "natural" passa do
+  ponto, e um prazo de 100% desenharia barriga acima de 100%), e dia sem dado é BURACO na
+  linha, não zero. Sem a tabela, o gráfico é focável e as setas andam de pedaço em pedaço.
+  **UMA FORMA PARA OS SEIS:** o número do próprio KPI. O prazo deixou de ser pilha "no prazo ×
+  atrasado"; as contagens estão na dica. **Volume é POR DIA no gráfico** (o mês corrente está
+  pela metade, um ano tem meses de 28 a 31 dias) — o cartão continua com o total do mês.
+  **A MINI-LINHA DO CARTÃO É EM BLOCOS**, não na semana do calendário: 1–7, 8–14, 15–21 e
+  22–fim, contados do dia 1. Pedaço no futuro ou antes do piso é SEM DADO (nulo), não zero.
+  **UMA FUNÇÃO, TRÊS LEITURAS:** `metricas_serie_da_equipe` (migration `20260929053020`) devolve
+  os seis KPIs por pedaço, e o cartão (um balde = o mês), a mini-linha e o gráfico leem dela —
+  por isso não discordam. Ela NÃO redefine nada: chama `metricas_prazo_do_periodo`,
+  `metricas_da_equipe_por_etapa` e `metricas_por_pessoa` balde a balde, com teto de 62
+  pedaços. As duas séries semanais de 28/09 saíram na mesma migration; os grãos `dia` e
+  `periodo` vieram na `20260929064502`, e `p_pessoa_id` na `20260929073949` (assinatura nova:
+  DROP + CREATE, com o REVOKE de PUBLIC repetido). Com 15 meses de dado fictício, 30 dias levam ~0,6s
+  (cada balde refaz três consultas) — se a produção pesar, o lugar de otimizar é ali. O valor de cada KPI num
+  pedaço é `GRAFICO_DO_KPI`, em `lib/kpis.ts` — uma definição só.
   PESSOAS — três destaques (mais partos, mais edições, melhor prazo) e UMA tabela de KPIs que
   É o ranking: cada coluna ordena, o primeiro toque põe o melhor em cima, empate divide a
   posição, e zero numa coluna de volume não tem posição ("não fez esse tipo de trabalho").
@@ -1935,17 +1987,28 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **"VOLTOU PARA AJUSTE"** soma `caso_reaberto` (crédito da última rodada concluída do tipo
   reaberto) e `etapa_reaberta` de etapa concluída há MAIS DE 30 MIN — no remoto, 116 das 180
   reaberturas foram desfeitas em minutos (clique errado), e contá-las triplicaria o número.
-  **TODA SOMA É DO BANCO**, e mediana não se compõe: por isso `metricas_prazo_do_periodo`
-  existe ao lado da série semanal, e `metricas_da_equipe_por_etapa` ao lado da por pessoa.
+  **TODA SOMA É DO BANCO**, e mediana não se compõe: por isso a série chama as funções do
+  período balde a balde em vez de somar pedaços, e `metricas_da_equipe_por_etapa` existe ao
+  lado da por pessoa.
   Sem paginação — as funções devolvem linhas por pessoa e tipo, algumas centenas no máximo.
   **OS GRÁFICOS SÃO DA CASA** (SVG, sem biblioteca), com cores próprias validadas por script
   de daltonismo: `--grafico` (o azul da marca numa luminosidade de gráfico),
-  `--grafico-atrasado` e `--grafico-faixa`. **"No prazo" é AZUL e não verde**: verde ×
+  `--grafico-atrasado` e `--grafico-comparacao` (a linha de comparação: o rosa `--acento` numa
+  luminosidade de gráfico, ΔE 11 contra o azul no claro e 16 no escuro). **"No prazo" é AZUL e não verde**: verde ×
   vermelho deu ΔE 4,1 para deuteranopia (reprova); azul × vermelho, 25,8. Todo gráfico com
-  legenda quando há duas séries, dica no mouse E no foco do teclado, e tabela equivalente.
-  **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe outubro inteiro (130 casos, 12
-  pessoas com nomes de pedras preciosas, cada uma com um perfil de ritmo, disciplina com o
-  relógio, atraso e retrabalho). Só local, por construção: vai direto para o container.
+  legenda quando há duas séries, dica no mouse E no foco do teclado (a tabela gêmea saiu a pedido do gestor em 29/09; o gráfico é percorrível pelas setas).
+  **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe de OUTUBRO DE 2026 A DEZEMBRO DE
+  2027 (~1.850 casos, 12 pessoas com nomes de pedras preciosas, cada uma com um perfil de
+  ritmo, disciplina com o relógio, atraso e retrabalho). A equipe MELHORA mês a mês e o volume
+  tem estação, para as comparações terem o que mostrar. Idempotente por mês. Só local, por
+  construção: vai direto para o container. Os testes pgTAP das métricas moram em 2029 para não
+  colidir com ele.
+  **DATA SIMULADA, SÓ EM DESENVOLVIMENTO:** esses meses estão no futuro e o gráfico só desenha
+  o que já passou, então no local a tela ABRE em 31/12/2027, o último dia dos dados fictícios
+  (o gestor procurou os dados com a data real e não os achou). `?hoje=2027-06-15` simula outro
+  dia, `?hoje=real` volta à data de verdade, e um selo no topo diz qual está valendo. `hojeDoRelatorio` (em `lib/metricas.ts`)
+  lê o parâmetro atrás de `import.meta.env.DEV`, que vira `false` no build — conferido: a
+  leitura da URL não existe no bundle publicado.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
