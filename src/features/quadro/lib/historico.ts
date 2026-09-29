@@ -211,7 +211,10 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
     case 'video_enviado_para_entrega':
       return {
         ...base,
-        acao: 'Finalizou a edição do vídeo e mandou para Entregáveis',
+        acao:
+          evento.payload?.['nos_links_do_caso'] === true
+            ? 'Finalizou a edição do vídeo nos links do caso e mandou para Entregáveis'
+            : 'Finalizou a edição do vídeo e mandou para Entregáveis',
         tom: 'marco',
       }
 

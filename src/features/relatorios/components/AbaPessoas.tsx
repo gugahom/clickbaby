@@ -10,8 +10,11 @@ import { TabelaDePessoas } from './TabelaDePessoas'
  * A ABA PESSOAS, COM FILTROS (29/09/2026, pedido do gestor: "preciso de alguns
  * filtros nessa parte também, como datas e etc.").
  *
- *   PERÍODO — o mês do topo da tela (o padrão), os últimos 7 ou 30 dias, ou
- *   datas escolhidas. É o período de TUDO na aba: tabela, destaques e perfil.
+ *   PERÍODO — o mês do topo da tela (o padrão), os últimos 7 dias, hoje, ou
+ *   datas escolhidas. "30 dias" saiu (pedido do gestor: redundante com "Mês")
+ *   e entrou HOJE no lugar do "24h" que ele sugeriu: o relatório conta por dia
+ *   do calendário (as funções recebem datas), e um "24h" que na verdade fosse
+ *   "desde a meia-noite" mentiria no nome. É o período de TUDO na aba: tabela, destaques e perfil.
  *   O banco aceita qualquer intervalo e aplica o piso de 01/10/2026 por dentro;
  *   a tela só não oferece data antes dele, nem depois de hoje.
  *
@@ -23,7 +26,7 @@ import { TabelaDePessoas } from './TabelaDePessoas'
  *   BUSCA — pelo nome, sem acento e sem caixa, como as listas de pessoas do
  *   resto do sistema.
  */
-type ModoDoPeriodo = 'mes' | '7dias' | '30dias' | 'datas'
+type ModoDoPeriodo = 'mes' | '7dias' | 'hoje' | 'datas'
 type Trabalho = 'todos' | 'campo' | 'edicao'
 
 const semAcento = (texto: string) =>
@@ -46,16 +49,16 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
       ? periodoDoMes
       : modo === '7dias'
         ? { inicio: somarDias(hoje, -6), fim: hoje }
-        : modo === '30dias'
-          ? { inicio: somarDias(hoje, -29), fim: hoje }
+        : modo === 'hoje'
+          ? { inicio: hoje, fim: hoje }
           : { inicio: inicioEscolhido, fim: fimEscolhido }
   const rotuloDoPeriodo =
     modo === 'mes'
       ? `em ${rotuloDoMes(mes).toLowerCase()}`
       : modo === '7dias'
         ? 'nos últimos 7 dias'
-        : modo === '30dias'
-          ? 'nos últimos 30 dias'
+        : modo === 'hoje'
+          ? 'hoje'
           : `de ${dataCurta(periodo.inicio)} a ${dataCurta(periodo.fim)}`
 
   const porEtapa = useMetricasPorEtapa(periodo)
@@ -88,7 +91,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
           opcoes={[
             { id: 'mes', conteudo: 'Mês' },
             { id: '7dias', conteudo: '7 dias' },
-            { id: '30dias', conteudo: '30 dias' },
+            { id: 'hoje', conteudo: 'Hoje' },
             { id: 'datas', conteudo: 'Datas' },
           ]}
           ativa={modo}

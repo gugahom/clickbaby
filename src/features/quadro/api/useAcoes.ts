@@ -426,6 +426,17 @@ export function useEnviarVideoParaEntrega() {
 }
 
 /**
+ * TERMINAR O VÍDEO NOS LINKS QUE O CASO JÁ TEM (29/09/2026): sem par novo — a
+ * equipe subiu o vídeo no álbum e no WeTransfer que já existiam. Migration
+ * 20260929183438.
+ */
+export function useEnviarVideoNosLinksDoCaso() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('enviar_video_nos_links_do_caso', { p_caso_etapa_id: casoEtapaId }),
+  )
+}
+
+/**
  * A MORGANA CONFIRMA A ENTREGA DO VÍDEO, em Entregáveis: a etapa conclui, os
  * dois links viram confirmados, e o cartão sai da seção MASTER.
  */

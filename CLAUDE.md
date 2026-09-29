@@ -376,6 +376,7 @@ planejar_rendicao(p_caso_etapa_id, p_proxima_pessoa_id)
 -- fluxo do vídeo horizontal do MASTER (2 fases na tela + o fim; ver seção 13)
 mover_video_master(p_caso_etapa_id, p_fase)
 enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2 links + pronto; NÃO conclui
+enviar_video_nos_links_do_caso(p_caso_etapa_id)  -- pronto SEM par novo: o vídeo foi para os links do caso (29/09/2026)
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
 -- esteira do ensaio CLICK HOME (5 fases; ver seção 13)
@@ -1218,6 +1219,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   conferido — o vídeo voltou de pronto para editando sem confirmação — é trocado, com a
   contagem em `links_substituidos` no evento. `concluir_etapa` segue aceitando o vídeo no
   banco; a tela não o oferece mais.
+  **SE O CASO JÁ TEM LINKS, O VÍDEO VAI PARA ELES** (29/09/2026, pedido do gestor: "finalizar
+  o master está pedindo links de novo; se já existirem links ele só deve pedir para adicionar
+  o vídeo a esses links"). Medido no remoto no dia: o vídeo MASTER em edição estava num caso
+  que já tinha o álbum do Google e o WeTransfer das fotos, e o diálogo mandava criar outro par.
+  Agora `DialogoFinalizarVideo` mostra os links do caso (os do vídeo de uma entrega anterior
+  primeiro, depois os das fotos — `lib/links-do-video.ts`, espelho da lista do banco) e pede
+  só "Adicionei o vídeo a esses links"; "usar links novos" volta ao par de sempre, que também
+  é o único caminho quando o caso não tem link nenhum. `enviar_video_nos_links_do_caso`
+  carimba `caso_etapas.video_nos_links_do_caso_em` e leva a "pronto" — a trava de
+  `mover_video_master` aceita o par novo OU esse carimbo com o caso tendo link, e nada além.
+  Em Entregáveis, a linha do vídeo mostra os links do caso com "o vídeo foi adicionado aos
+  links que o caso já tinha". QUEM LIMPA o carimbo: voltar a editar e mandar um par novo; a
+  confirmação não limpa, e ele fica como registro de como o vídeo foi entregue.
+  **Isto revisa 21/09 só no "sempre par novo"**: o tipo `video_wetransfer` continua existindo
+  e continua sendo o que o par novo grava.
 - **QUEM EDITA SE ATRIBUI NA PRÓPRIA SEÇÃO** (21/09/2026, pedido do gestor; o Foto/Livro
   entrou junto, por decisão dele). O vídeo e o fotolivro não se operam pelo card do Quadro,
   então a coordenação não tinha onde dizer quem pega cada um. `AtribuicaoDaSecao` é uma pílula
@@ -1993,7 +2009,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   em tamanho"); no celular, embaixo e só depois do toque. O × fecha o perfil e a tabela ocupa
   a largura; tocar em alguém reabre.
   **A ABA TEM FILTROS PRÓPRIOS** (`AbaPessoas`, pedido do gestor: "datas e etc."): PERÍODO (o
-  mês do topo, os últimos 7 ou 30 dias, ou datas escolhidas — entre 01/10/2026 e hoje),
+  mês do topo, os últimos 7 dias, HOJE, ou datas escolhidas — entre 01/10/2026 e hoje; "30
+  dias" saiu por ser redundante com o mês, e o "24h" que o gestor sugeriu virou "Hoje" porque
+  o relatório conta por dia do calendário),
   TRABALHO (todos, quem fez campo, quem fez edição no período) e BUSCA pelo nome. O período
   vale para a aba inteira — tabela, destaques e perfil, que diz qual é ("nos últimos 7 dias").
   Filtrar por trabalho não fere a 3.1: é "quem FEZ edição neste período", lido das etapas

@@ -110,6 +110,9 @@ const RPCS_TRANSICAO = {
     p_link_video: 'https://sonda.test',
     p_link_wetransfer: 'https://sonda.test',
   },
+  // O vídeo nos links que o caso já tem (20260929183438). Quem a alcançasse
+  // mandaria o vídeo de um caso alheio para Entregáveis.
+  enviar_video_nos_links_do_caso: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   confirmar_entrega_do_video: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },

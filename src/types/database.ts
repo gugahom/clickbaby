@@ -68,6 +68,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
           trilha: string | null
           updated_at: string
+          video_nos_links_do_caso_em: string | null
         }
         Insert: {
           atribuido_em?: string | null
@@ -104,6 +105,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
           trilha?: string | null
           updated_at?: string
+          video_nos_links_do_caso_em?: string | null
         }
         Update: {
           atribuido_em?: string | null
@@ -140,6 +142,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["etapa_tipo"]
           trilha?: string | null
           updated_at?: string
+          video_nos_links_do_caso_em?: string | null
         }
         Relationships: [
           {
@@ -1125,6 +1128,10 @@ export type Database = {
       }
       enviar_fotolivro_para_aprovacao: {
         Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
+        Returns: undefined
+      }
+      enviar_video_nos_links_do_caso: {
+        Args: { p_caso_etapa_id: string }
         Returns: undefined
       }
       enviar_video_para_entrega: {

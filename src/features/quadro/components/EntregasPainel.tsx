@@ -22,6 +22,8 @@ import { podeConfirmarEntrega, podeEncerrarCaso } from '../lib/acoes'
 import { mensagemDeErro } from '../lib/erros'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { Entregaveis } from './Entregaveis'
+import { LinkParaCopiar } from './LinkParaCopiar'
+import { ROTULO_DO_LINK_DO_VIDEO, linksDoCasoParaOVideo } from '../lib/links-do-video'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
 /**
@@ -80,6 +82,10 @@ interface PropsEntregasPainel {
  * SÓ OS DOIS LINKS DO VÍDEO, e ainda não conferidos: a lista inteira do caso
  * traria os links das fotos, já entregues — e é justamente a confusão que o
  * selo existe para evitar.
+ *
+ * A EXCEÇÃO (29/09/2026): o vídeo terminado NOS LINKS QUE O CASO JÁ TINHA não
+ * tem par novo. Aí a linha mostra esses links, e diz que o vídeo foi adicionado
+ * a eles — é o que o ADM confere antes de mandar para a família.
  */
 function LinhaDoVideo({
   item,
@@ -96,9 +102,11 @@ function LinhaDoVideo({
   const [confirmando, setConfirmando] = useState(false)
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
-  const doVideo = (links ?? []).filter(
+  const parNovo = (links ?? []).filter(
     (l) => (l.tipo === 'video' || l.tipo === 'video_wetransfer') && l.confirmado_em === null,
   )
+  const nosLinksDoCaso = etapa.videoNosLinksDoCasoEm !== null && parNovo.length === 0
+  const doVideo = nosLinksDoCaso ? linksDoCasoParaOVideo(links ?? []) : parNovo
 
   return (
     <li className="rounded-cartao border border-andamento/30 bg-andamento/8 px-3 py-3 shadow-cartao md:px-4">
@@ -143,13 +151,20 @@ function LinhaDoVideo({
         ) : doVideo.length === 0 ? (
           <p className="text-xs text-muted-foreground">Sem links do vídeo.</p>
         ) : (
-          doVideo.map((link) => (
-            <LinkParaCopiar
-              key={link.id}
-              rotulo={link.tipo === 'video' ? 'Link do vídeo' : 'WeTransfer do vídeo'}
-              url={link.url}
-            />
-          ))
+          <>
+            {nosLinksDoCaso && (
+              <p className="text-xs font-semibold text-andamento">
+                O vídeo foi adicionado aos links que o caso já tinha:
+              </p>
+            )}
+            {doVideo.map((link) => (
+              <LinkParaCopiar
+                key={link.id}
+                rotulo={ROTULO_DO_LINK_DO_VIDEO[link.tipo] ?? link.tipo}
+                url={link.url}
+              />
+            ))}
+          </>
         )}
       </div>
 
@@ -171,8 +186,11 @@ function LinhaDoVideo({
           }}
         >
           <p className="text-sm text-muted-foreground">
-            {titulo}. O vídeo fica como entregue, os dois links passam a contar como
-            conferidos, e o cartão sai da seção MASTER. Se a família pedir alteração
+            {titulo}.{' '}
+            {nosLinksDoCaso
+              ? 'O vídeo fica como entregue nos links do caso'
+              : 'O vídeo fica como entregue, os dois links passam a contar como conferidos'}
+            , e o cartão sai da seção MASTER. Se a família pedir alteração
             depois, o caminho é “Pedir alteração no vídeo”, na linha da etapa dentro
             do card.
           </p>
@@ -283,32 +301,6 @@ function LinhaDoClickHome({
   )
 }
 
-/** Um link com rótulo e botão de copiar — o que se manda para a família. */
-function LinkParaCopiar({ rotulo, url }: { rotulo: string; url: string }) {
-  const [falhou, setFalhou] = useState(false)
-  return (
-    <div className="min-w-0">
-      <p className="text-xs font-semibold">{rotulo}</p>
-      <div className="flex items-center gap-1">
-        {/* rel="noreferrer": o link é credencial de acesso da família. */}
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="min-w-0 flex-1 truncate text-sm text-marca underline underline-offset-2"
-        >
-          {url}
-        </a>
-        <BotaoCopiar texto={url} onFalha={() => setFalhou(true)} />
-      </div>
-      {falhou && (
-        <p className="text-xs text-muted-foreground">
-          Não deu para copiar. Selecione o link e copie à mão.
-        </p>
-      )}
-    </div>
-  )
-}
 
 /**
  * UMA LINHA DE FOTO/LIVRO. Marcada como tal com todas as letras — o pedido foi

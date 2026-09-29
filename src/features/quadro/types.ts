@@ -217,6 +217,11 @@ export interface EtapaQuadro {
   fotolivroEnviadoEm: string | null
   /** Quem mandou — a ficha do Foto/Livro diz "enviado por Morgana". */
   fotolivroEnviadoPorNome: string | null
+  /**
+   * O vídeo do MASTER foi terminado nos links que o caso JÁ TINHA, sem par novo
+   * (29/09/2026). Em Entregáveis, o ADM confere esses links.
+   */
+  videoNosLinksDoCasoEm: string | null
 }
 
 /** O que uma carga do Quadro devolve — o Quadro, a aba Concluídos, ou só alguns casos. */
@@ -330,6 +335,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     fotolivroLink: linha.fotolivro_link,
     fotolivroCapa: linha.fotolivro_capa,
     fotolivroEnviadoEm: linha.fotolivro_enviado_em,
+    videoNosLinksDoCasoEm: linha.video_nos_links_do_caso_em,
     fotolivroEnviadoPorNome: linha.fotolivro_enviado?.nome ?? null,
   }
 }
