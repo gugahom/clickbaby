@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { supabase } from '@/lib/supabase'
 import type { EtapaTipo, FaseCampo } from '@/features/quadro/types'
 import type { Json } from '@/types/database'
+import type { ItemDePontuacao } from '../lib/pontos'
 
 /**
  * AS MÉTRICAS DAS PESSOAS — a leitura do relatório interno.
@@ -277,6 +278,76 @@ export function useFasesDeCampo({ inicio, fim }: Periodo) {
         mediaMin: numero(l.media_min),
       }))
     },
+  })
+}
+
+/**
+ * O RANKING POR PONTOS — ver `metricas_pontos_por_pessoa` (migration
+ * 20260929210556). Os pontos já vêm DIVIDIDOS entre quem pôs a mão na etapa.
+ */
+export interface PontosDaPessoa {
+  pessoaId: string
+  item: ItemDePontuacao
+  /** Etapas em que a pessoa pôs a mão. */
+  etapas: number
+  /** Dessas, quantas dividiu com alguém. */
+  divididas: number
+  pontos: number
+}
+
+export function usePontosPorPessoa({ inicio, fim }: Periodo) {
+  return useQuery({
+    queryKey: [CHAVE, 'pontos', inicio, fim],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<PontosDaPessoa[]> => {
+      const linhas = await chamar(supabase.rpc('metricas_pontos_por_pessoa', { p_inicio: inicio, p_fim: fim }))
+      return (linhas ?? []).map((l) => ({
+        pessoaId: l.pessoa_id,
+        item: l.item,
+        etapas: l.etapas,
+        divididas: l.divididas,
+        pontos: numero(l.pontos) ?? 0,
+      }))
+    },
+  })
+}
+
+export interface PesoDoItem {
+  item: ItemDePontuacao
+  pontos: number
+  vigenteDesde: string
+}
+
+/** A régua de pontos em vigor. */
+export function usePesosDosItens() {
+  return useQuery({
+    queryKey: [CHAVE, 'pesos'],
+    queryFn: async (): Promise<PesoDoItem[]> => {
+      const linhas = await chamar(supabase.rpc('pontos_por_item_vigentes'))
+      return (linhas ?? []).map((l) => ({
+        item: l.item,
+        pontos: numero(l.pontos) ?? 0,
+        vigenteDesde: l.vigente_desde,
+      }))
+    },
+  })
+}
+
+/**
+ * Muda o peso de um item, valendo de hoje em diante (no mesmo dia, corrige). O
+ * ranking inteiro depende disto, então as duas consultas voltam a ser lidas.
+ */
+export function useDefinirPesoDoItem() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ item, pontos }: { item: ItemDePontuacao; pontos: number }) => {
+      await chamar(supabase.rpc('definir_pontos_do_item', { p_item: item, p_pontos: pontos }))
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [CHAVE, 'pesos'] }),
+        queryClient.invalidateQueries({ queryKey: [CHAVE, 'pontos'] }),
+      ]),
   })
 }
 

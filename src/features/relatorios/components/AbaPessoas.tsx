@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import clsx from 'clsx'
-import { useFasesDeCampo, useMetricasPorEtapa, useMetricasPorPessoa, type Periodo } from '../api/useMetricas'
+import {
+  useFasesDeCampo,
+  useMetricasPorEtapa,
+  useMetricasPorPessoa,
+  usePontosPorPessoa,
+  type Periodo,
+} from '../api/useMetricas'
 import { ETAPAS_DE_EDICAO, linhasDasPessoas } from '../lib/kpis'
 import { INICIO_DAS_METRICAS, dataCurta, rotuloDoMes, somarDias } from '../lib/metricas'
 import { Segmentado } from './Segmentado'
@@ -64,7 +70,8 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
   const porEtapa = useMetricasPorEtapa(periodo)
   const pessoas = useMetricasPorPessoa(periodo)
   const fases = useFasesDeCampo(periodo)
-  const consultas = [porEtapa, pessoas, fases]
+  const pontos = usePontosPorPessoa(periodo)
+  const consultas = [porEtapa, pessoas, fases, pontos]
   const erro = consultas.find((c) => c.error)?.error
   const carregando = consultas.some((c) => c.isPending)
   const atualizando = consultas.some((c) => c.isPlaceholderData)
@@ -77,7 +84,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
     else fezCampo.add(m.pessoaId)
   }
   const procurado = semAcento(busca.trim())
-  const linhas = linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? []).filter(
+  const linhas = linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [], pontos.data ?? []).filter(
     (l) =>
       (trabalho === 'todos' || (trabalho === 'campo' ? fezCampo : fezEdicao).has(l.pessoaId)) &&
       (procurado === '' || semAcento(l.nome).includes(procurado)),
@@ -145,6 +152,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
             pessoas={pessoas.data ?? []}
             porEtapa={porEtapa.data ?? []}
             fases={fases.data ?? []}
+            pontos={pontos.data ?? []}
             rotuloDoPeriodo={rotuloDoPeriodo}
           />
         </div>

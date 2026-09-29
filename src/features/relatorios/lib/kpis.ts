@@ -1,5 +1,5 @@
 import type { EtapaTipo } from '@/features/quadro/types'
-import type { BaldeDaSerie, MetricaPorEtapa, MetricaPorPessoa } from '../api/useMetricas'
+import type { BaldeDaSerie, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
 import { AMOSTRA_MINIMA, ETAPAS_COM_PRAZO, diasCorridos, rotuloDaEtapa } from './metricas'
 
 /**
@@ -305,6 +305,8 @@ export function kpisDaEquipe(
 export interface LinhaDaPessoa {
   pessoaId: string
   nome: string
+  /** O ranking por pontos: a soma dos pontos, já divididos (20260929210556). */
+  pontos: number
   partos: number
   edicoes: number
   /** Fotos e reels antes do vencimento; nulo abaixo da amostra mínima. */
@@ -322,7 +324,11 @@ export interface LinhaDaPessoa {
   passagens: number
 }
 
-export function linhasDasPessoas(porEtapa: MetricaPorEtapa[], pessoas: MetricaPorPessoa[]): LinhaDaPessoa[] {
+export function linhasDasPessoas(
+  porEtapa: MetricaPorEtapa[],
+  pessoas: MetricaPorPessoa[],
+  pontos: PontosDaPessoa[] = [],
+): LinhaDaPessoa[] {
   return pessoas
     .map((p) => {
       const dela = porEtapa.filter((m) => m.pessoaId === p.pessoaId)
@@ -333,6 +339,9 @@ export function linhasDasPessoas(porEtapa: MetricaPorEtapa[], pessoas: MetricaPo
       return {
         pessoaId: p.pessoaId,
         nome: p.nome,
+        // Duas casas no fim: a soma de metades e quartos não deixa rabo de
+        // ponto flutuante na tela.
+        pontos: Math.round(pontos.filter((x) => x.pessoaId === p.pessoaId).reduce((acc, x) => acc + x.pontos, 0) * 100) / 100,
         partos: de('nascimento')?.concluidas ?? 0,
         edicoes: edicao.reduce((acc, m) => acc + m.concluidas, 0),
         taxaPrazo: comPrazo >= AMOSTRA_MINIMA ? noPrazo / comPrazo : null,
@@ -350,5 +359,5 @@ export function linhasDasPessoas(porEtapa: MetricaPorEtapa[], pessoas: MetricaPo
     })
     // Quem não fez nada no período não entra na tabela: uma linha de zeros é
     // ruído num painel de KPI.
-    .filter((l) => l.partos + l.edicoes + l.dias > 0)
+    .filter((l) => l.partos + l.edicoes + l.dias + l.pontos > 0)
 }
