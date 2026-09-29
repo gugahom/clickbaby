@@ -135,11 +135,6 @@ export function rotuloDoMes(mes: string): string {
   return texto.replace(/^./, (l) => l.toUpperCase())
 }
 
-/** '2026' -> o ano inteiro, fim INCLUSIVO. */
-export function periodoDoAno(ano: string): { inicio: string; fim: string } {
-  return { inicio: `${ano}-01-01`, fim: `${ano}-12-31` }
-}
-
 const DIA = 86_400_000
 const emMs = (data: string) => Date.parse(`${data}T12:00:00Z`)
 
@@ -161,15 +156,64 @@ function nomeDoMes(data: string, formato: 'short' | 'long'): string {
     .replace('.', '')
 }
 
-/** No eixo: "1–7" num mês em blocos, "out" num ano em meses. */
-export function rotuloCurtoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'bloco' | 'mes'): string {
+const paraData = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+
+/** '2027-12-31' + 1 -> '2028-01-01'. */
+export function somarDias(data: string, dias: number): string {
+  return paraData(emMs(data) + dias * DIA)
+}
+
+/** '2027-12-31' -> '31/12/2027'. */
+export const dataCurta = (data: string) => data.split('-').reverse().join('/')
+
+export type Janela = 'semana' | '30dias' | 'ano'
+
+/**
+ * AS JANELAS DO GRÁFICO (29/09/2026, pedido do gestor: "última semana, últimos
+ * 30 dias, último ano", no lugar das comparações mês a mês). Todas terminam na
+ * ÂNCORA — hoje, ou o último dia do mês escolhido no topo quando ele já passou,
+ * para o gráfico continuar falando do mês que está na tela.
+ *
+ * A anterior é a janela de mesmo tamanho logo antes: é contra ela que o selo
+ * do gráfico diz "subiu" ou "caiu".
+ */
+export function janelaDoGrafico(
+  janela: Janela,
+  ancora: string,
+): { atual: { inicio: string; fim: string }; anterior: { inicio: string; fim: string }; grao: 'dia' | 'mes' } {
+  if (janela === 'ano') {
+    // Doze meses de calendário, o último até a âncora.
+    const inicio = `${deslocarMes(ancora.slice(0, 7), -11)}-01`
+    return {
+      atual: { inicio, fim: ancora },
+      anterior: { inicio: `${deslocarMes(inicio.slice(0, 7), -12)}-01`, fim: somarDias(inicio, -1) },
+      grao: 'mes',
+    }
+  }
+  const dias = janela === 'semana' ? 7 : 30
+  const inicio = somarDias(ancora, -(dias - 1))
+  return {
+    atual: { inicio, fim: ancora },
+    anterior: { inicio: somarDias(inicio, -dias), fim: somarDias(inicio, -1) },
+    grao: 'dia',
+  }
+}
+
+/** No eixo: "15/12" num dia, "out" num mês, "1–7" num bloco. */
+export function rotuloCurtoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'dia' | 'bloco' | 'mes'): string {
   if (grao === 'mes') return nomeDoMes(pedaco.inicio, 'short')
+  if (grao === 'dia') return `${pedaco.inicio.slice(8)}/${pedaco.inicio.slice(5, 7)}`
   return `${Number(pedaco.inicio.slice(8))}–${Number(pedaco.fim.slice(8))}`
 }
 
-/** Na dica e na tabela: "1 a 7 de outubro", ou "Outubro de 2026". */
-export function rotuloLongoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'bloco' | 'mes'): string {
+/** Na dica: "ter, 15 de dezembro", "Outubro de 2026", "1 a 7 de outubro". */
+export function rotuloLongoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'dia' | 'bloco' | 'mes'): string {
   if (grao === 'mes') return rotuloDoMes(pedaco.inicio.slice(0, 7))
+  if (grao === 'dia') {
+    return new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'UTC' })
+      .format(new Date(`${pedaco.inicio}T12:00:00Z`))
+      .replace('.', '')
+  }
   return `${Number(pedaco.inicio.slice(8))} a ${Number(pedaco.fim.slice(8))} de ${nomeDoMes(pedaco.inicio, 'long')}`
 }
 

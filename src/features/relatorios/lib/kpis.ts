@@ -126,7 +126,23 @@ export interface GraficoDoKpi {
   valor: (b: BaldeDaSerie, dias: number) => number | null
   /** As linhas da dica, embaixo do número. */
   detalhe: (b: BaldeDaSerie, dias: number) => string[]
+  /**
+   * O SELO DO GRÁFICO: o valor da janela contra o da janela anterior, na
+   * unidade que se lê — pontos percentuais numa taxa, horas e minutos num
+   * tempo, e PORCENTAGEM no volume ("+12%"), que é por dia e muda de escala
+   * entre uma semana e um ano.
+   */
+  comparar: (atual: number, anterior: number) => Variacao | undefined
 }
+
+const emPontos = (subirE: Tom) => (a: number, b: number) =>
+  variacao(a, b, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), subirE, 0.005)
+const emHoras = (subirE: Tom) => (a: number, b: number) =>
+  variacao(a, b, (d) => sinal(d, horas(Math.abs(d))), subirE, 0.05)
+const emMinutos = (subirE: Tom) => (a: number, b: number) =>
+  variacao(a, b, (d) => sinal(d, minutos(Math.abs(d))), subirE, 0.5)
+const relativa = (subirE: Tom) => (a: number, b: number) =>
+  b > 0 ? variacao(a / b, 1, (d) => sinal(d, `${Math.abs(Math.round(d * 100))}%`), subirE, 0.005) : undefined
 
 /**
  * VOLUME É POR DIA no gráfico, e só no gráfico. O último bloco do mês tem de 7
@@ -138,6 +154,7 @@ export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
   prazo: {
     formatar: (v) => pct(v),
     teto: 1,
+    comparar: emPontos('bom'),
     valor: (b, dias) => (dias === 0 ? null : numeros(b).taxaPrazo),
     detalhe: (b) =>
       b.enviados === 0
@@ -146,6 +163,7 @@ export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
   },
   'parto-envio': {
     formatar: (v) => horas(v),
+    comparar: emHoras('ruim'),
     valor: (b, dias) => (dias === 0 ? null : b.medianaHorasAteEnvio),
     detalhe: (b) => [
       `mediana de ${plural(b.enviados, 'caso', 'casos')}`,
@@ -154,6 +172,7 @@ export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
   },
   ajuste: {
     formatar: (v) => pct(v),
+    comparar: emPontos('ruim'),
     valor: (b, dias) => (dias === 0 ? null : numeros(b).taxaAjuste),
     detalhe: (b) => {
       const n = numeros(b)
@@ -163,12 +182,14 @@ export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
   partos: {
     unidade: 'por dia',
     formatar: decimal,
+    comparar: relativa('neutro'),
     valor: (b, dias) => (dias === 0 ? null : numeros(b).partos / dias),
     detalhe: (b, dias) => [`${plural(numeros(b).partos, 'parto', 'partos')} em ${plural(dias, 'dia', 'dias')}`],
   },
   edicoes: {
     unidade: 'por dia',
     formatar: decimal,
+    comparar: relativa('neutro'),
     valor: (b, dias) => (dias === 0 ? null : numeros(b).edicoes / dias),
     detalhe: (b, dias) => {
       const partes = ETAPAS_DE_EDICAO.filter((t) => (b.porTipo[t]?.concluidas ?? 0) > 0).map(
@@ -182,6 +203,7 @@ export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
   },
   'tempo-fotos': {
     formatar: (v) => minutos(v),
+    comparar: emMinutos('neutro'),
     valor: (b, dias) => (dias === 0 ? null : numeros(b).tempoFotos),
     detalhe: (b) => {
       const f = numeros(b).fotos

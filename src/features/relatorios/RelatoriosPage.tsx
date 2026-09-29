@@ -134,7 +134,6 @@ export function RelatoriosPage() {
               producao={producao}
               mes={mes}
               hoje={hoje}
-              blocosDoMes={blocos.data ?? []}
             />
           )}
           {aba === 'pessoas' && (

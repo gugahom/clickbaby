@@ -1,5 +1,4 @@
 import { useRef, useState, type ReactNode } from 'react'
-import type { BaldeDaSerie } from '../api/useMetricas'
 import type { ChaveKpi, Kpi } from '../lib/kpis'
 import { CartaoKpi } from './CartaoKpi'
 import { DetalheDoKpi } from './DetalheDoKpi'
@@ -28,13 +27,11 @@ export function PainelDaEquipe({
   producao,
   mes,
   hoje,
-  blocosDoMes,
 }: {
   entrega: Kpi[]
   producao: Kpi[]
   mes: string
   hoje: string
-  blocosDoMes: BaldeDaSerie[]
 }) {
   const [escolhido, setEscolhido] = useState<ChaveKpi>('prazo')
   const detalhe = useRef<HTMLDivElement>(null)
@@ -73,7 +70,6 @@ export function PainelDaEquipe({
           rotulo={kpi?.rotulo ?? ''}
           mes={mes}
           hoje={hoje}
-          blocosDoMes={blocosDoMes}
         />
       </div>
     </div>

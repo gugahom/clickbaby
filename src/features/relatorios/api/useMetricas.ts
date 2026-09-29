@@ -186,11 +186,14 @@ export interface BaldeDaSerie {
 }
 
 /**
+ * 'dia' — um pedaço por dia (a semana e os 30 dias do gráfico).
  * 'bloco' — 7 dias contados do começo, o último absorve a sobra (1–7, 8–14,
- * 15–21, 22–fim); é o que deixa um mês se comparar com outro pedaço a pedaço.
- * 'mes' — meses do calendário.
+ * 15–21, 22–fim); é a mini-linha do cartão.
+ * 'mes' — meses do calendário (o número do cartão e o último ano do gráfico).
+ * 'periodo' — o período inteiro num pedaço só (o selo do gráfico: mediana não
+ * sai da soma dos dias).
  */
-export type Grao = 'bloco' | 'mes'
+export type Grao = 'dia' | 'bloco' | 'mes' | 'periodo'
 
 function objeto(valor: Json | undefined): { [chave: string]: Json | undefined } | null {
   return valor !== null && typeof valor === 'object' && !Array.isArray(valor) ? valor : null

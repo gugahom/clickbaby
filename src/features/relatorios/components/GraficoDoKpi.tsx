@@ -1,249 +1,316 @@
-import { useRef, useState } from 'react'
-import clsx from 'clsx'
+import { useId, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { topoRedondo, useTamanho } from '../lib/useTamanho'
 
 /**
- * O GRÁFICO DO KPI ESCOLHIDO — colunas, pedaço a pedaço, com o outro período
- * ao lado (29/09/2026, pedido do gestor: "opções de comparações nesses
- * gráficos de meses, anos e etc").
+ * O GRÁFICO DO KPI ESCOLHIDO — área com brilho, ou barras (29/09/2026, pedido
+ * do gestor, a partir de um exemplo de shadcn/recharts que ele mandou).
  *
- * UMA FORMA SÓ PARA OS SEIS KPIs: coluna no número do próprio KPI (taxa, horas,
- * minutos, por dia). Até aqui o prazo era uma pilha "no prazo × atrasado"; com
- * a comparação, a pilha teria que dividir o lugar com um segundo par de cores,
- * e o que se compara entre dois meses é a TAXA, não a contagem. As contagens
- * moram na dica e na tabela.
+ * O VISUAL É O DO EXEMPLO, AS PEÇAS SÃO DA CASA. O exemplo trazia recharts,
+ * lucide, cva e três componentes do shadcn; nenhum entrou — é o mesmo arranjo
+ * do sino (18/09) e da barra lateral (28/09). O recharts sozinho somaria mais
+ * de 100kB ao carregamento de todo mundo, no 4G do corredor, para desenhar um
+ * gráfico que só a gestão abre. Do exemplo ficou o que se vê: a área com
+ * degradê que some no chão, a linha e os pontos com brilho, a grade tracejada
+ * sem eixo, e a dica em cartão.
  *
- * O OUTRO PERÍODO É CINZA e fica À ESQUERDA do atual: o que se lê primeiro é o
- * agora, e o cinza é contexto (ver `--grafico-comparacao`). A legenda existe
- * sempre que há dois; a posição também separa, para ninguém depender da cor.
+ * A CURVA É MONÓTONA, não a "natural" do exemplo: a spline natural passa do
+ * ponto entre dois valores, e um prazo de 100% desenharia uma barriga acima de
+ * 100% — o gráfico afirmando um número que não existe.
  *
- * O VALOR VAI EM CIMA DA COLUNA ATUAL, e só dela — com doze meses e dois
- * períodos, rotular as duas seria um número em cada marca. Some quando a faixa
- * fica estreita demais para ele caber.
+ * DIA SEM DADO É BURACO, não zero: a linha para e recomeça. Um pedaço no futuro
+ * ou antes de 01/10/2026 não é "zero partos".
+ *
+ * BARRAS são a outra forma do mesmo dado ("ver gráfico em barras como está
+ * agora"), no mesmo desenho: degradê, topo arredondado, a ativa acesa.
+ *
+ * SEM TABELA (pedido do gestor). O que ela garantia continua de outro jeito: o
+ * gráfico é focável, as setas andam de pedaço em pedaço, e a dica é lida pelo
+ * leitor de tela.
  */
-export interface ColunaDoGrafico {
-  /** No eixo: "1–7", "out". */
+export interface PontoDoGrafico {
+  /** No eixo: "15/12", "out". */
   rotulo: string
-  /** Na dica e na tabela: "1 a 7 de outubro", "Outubro de 2026". */
+  /** Na dica: "ter, 15 de dezembro", "Outubro de 2026". */
   rotuloLongo: string
   valor: number | null
   detalhe: string[]
-  /** O mês escolhido, na visão do ano. */
-  destaque?: boolean | undefined
 }
 
-const MARGEM = { topo: 24, direita: 8, base: 28, esquerda: 44 }
-const COLUNA_SO = 28
-const COLUNA_PAR = 20
-const ENTRE_O_PAR = 3
+export type TipoDeGrafico = 'linha' | 'barras'
+
+const MARGEM = { topo: 18, direita: 14, base: 30, esquerda: 44 }
+const BARRA_MAX = 28
 const RAIO = 4
-const FAIXA_PARA_ROTULO = 38
+/** Abaixo disto de espaço entre pontos, só o ativo ganha bolinha. */
+const PONTOS_A_PARTIR_DE = 16
+/** Espaço mínimo entre dois rótulos do eixo. */
+const ROTULO_MIN = 52
 
 export function GraficoDoKpi({
-  colunas,
-  comparacao,
-  nomeAtual,
-  nomeComparacao,
+  pontos,
+  tipo,
+  nomeDaSerie,
   formatar,
   teto,
   descricao,
 }: {
-  colunas: ColunaDoGrafico[]
-  comparacao: ColunaDoGrafico[] | null
-  nomeAtual: string
-  nomeComparacao: string | null
+  pontos: PontoDoGrafico[]
+  tipo: TipoDeGrafico
+  /** O KPI, na linha da dica. */
+  nomeDaSerie: string
   formatar: (valor: number) => string
   teto?: number | undefined
   /** Para leitor de tela: o que o gráfico mostra. */
   descricao: string
 }) {
+  const id = useId().replace(/:/g, '')
   const ref = useRef<HTMLDivElement>(null)
   const { largura, altura } = useTamanho(ref)
-  const [ativa, setAtiva] = useState<number | null>(null)
+  const [ativo, setAtivo] = useState<number | null>(null)
 
-  const comPar = comparacao !== null
-  const valores = [...colunas, ...(comparacao ?? [])]
-    .map((c) => c.valor)
-    .filter((v): v is number => v !== null)
+  const valores = pontos.map((p) => p.valor).filter((v): v is number => v !== null)
   const vazio = valores.length === 0
 
   const topo = teto ?? topoRedondo(Math.max(0, ...valores))
   const alturaDoPlot = Math.max(80, altura - MARGEM.topo - MARGEM.base)
   const larguraDoPlot = Math.max(0, largura - MARGEM.esquerda - MARGEM.direita)
-  const faixa = colunas.length > 0 ? larguraDoPlot / colunas.length : 0
-  const coluna = comPar ? Math.min(COLUNA_PAR, faixa * 0.3) : Math.min(COLUNA_SO, faixa * 0.5)
-  const y = (valor: number) => (Math.min(valor, topo) / topo) * alturaDoPlot
+  const faixa = pontos.length > 0 ? larguraDoPlot / pontos.length : 0
   const base = MARGEM.topo + alturaDoPlot
+  const x = (i: number) => MARGEM.esquerda + faixa * (i + 0.5)
+  const y = (v: number) => base - (Math.min(v, topo) / topo) * alturaDoPlot
   const ticks = [0, topo / 2, topo]
-  const mostrarValor = faixa >= FAIXA_PARA_ROTULO
+  const passoDoRotulo = Math.max(1, Math.ceil(ROTULO_MIN / Math.max(faixa, 1)))
+  const comPontos = faixa >= PONTOS_A_PARTIR_DE
+  const barra = Math.min(BARRA_MAX, faixa * 0.6)
+
+  const trechos = trechosSemBuraco(pontos.map((p, i) => (p.valor === null ? null : { x: x(i), y: y(p.valor) })))
+
+  function apontar(e: PointerEvent<SVGRectElement>) {
+    const caixa = e.currentTarget.getBoundingClientRect()
+    const i = Math.floor((e.clientX - caixa.left) / Math.max(faixa, 1))
+    setAtivo(Math.max(0, Math.min(pontos.length - 1, i)))
+  }
+
+  function andar(e: KeyboardEvent<SVGRectElement>) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    setAtivo((atual) => {
+      const agora = atual ?? pontos.length - 1
+      if (e.key === 'Home') return 0
+      if (e.key === 'End') return pontos.length - 1
+      return Math.max(0, Math.min(pontos.length - 1, agora + (e.key === 'ArrowRight' ? 1 : -1)))
+    })
+  }
+
+  const pontoAtivo = ativo === null ? null : pontos[ativo]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {comPar && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-[2px] bg-grafico-comparacao" aria-hidden="true" />
-            {nomeComparacao}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-[2px] bg-grafico" aria-hidden="true" />
-            {nomeAtual}
-          </span>
-        </div>
-      )}
+    <div ref={ref} className="relative min-h-64 flex-1">
+      {vazio ? (
+        <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+          Sem dados neste período.
+        </p>
+      ) : (
+        largura > 0 &&
+        altura > 0 && (
+          <svg width={largura} height={altura} role="img" aria-label={descricao} className="absolute inset-0 overflow-visible">
+            <defs>
+              <linearGradient id={`${id}-area`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--grafico)" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="var(--grafico)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${id}-barra`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--grafico)" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="var(--grafico)" stopOpacity={0.35} />
+              </linearGradient>
+              <filter id={`${id}-brilho-linha`} x="-10%" y="-20%" width="120%" height="140%">
+                <feGaussianBlur stdDeviation="8" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <filter id={`${id}-brilho-ponto`} x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
 
-      <div ref={ref} className="relative min-h-60 flex-1">
-        {vazio ? (
-          <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Sem dados neste período.
-          </p>
-        ) : (
-          largura > 0 &&
-          altura > 0 && (
-            <svg width={largura} height={altura} role="img" aria-label={descricao} className="absolute inset-0">
-              {/* Grade: linha fina, sólida, um passo acima da superfície. */}
-              {ticks.map((t) => (
-                <g key={t}>
-                  <line
-                    x1={MARGEM.esquerda}
-                    x2={MARGEM.esquerda + larguraDoPlot}
-                    y1={base - y(t)}
-                    y2={base - y(t)}
-                    className="stroke-border"
-                    strokeWidth={1}
-                  />
+            {/* Grade tracejada, sem linha de eixo — a do exemplo. */}
+            {ticks.map((t) => (
+              <g key={t}>
+                <line
+                  x1={MARGEM.esquerda}
+                  x2={MARGEM.esquerda + larguraDoPlot}
+                  y1={y(t)}
+                  y2={y(t)}
+                  className="stroke-border"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                />
+                <text
+                  x={MARGEM.esquerda - 10}
+                  y={y(t)}
+                  dy="0.32em"
+                  textAnchor="end"
+                  className="fill-muted-foreground text-[10px] tabular-nums"
+                >
+                  {formatar(t)}
+                </text>
+              </g>
+            ))}
+
+            {pontos.map(
+              (p, i) =>
+                (i % passoDoRotulo === (pontos.length - 1) % passoDoRotulo) && (
                   <text
-                    x={MARGEM.esquerda - 8}
-                    y={base - y(t)}
-                    dy="0.32em"
-                    textAnchor="end"
-                    className="fill-muted-foreground text-[10px] tabular-nums"
+                    key={`r-${i}`}
+                    x={x(i)}
+                    y={base + 20}
+                    textAnchor="middle"
+                    className={
+                      i === ativo ? 'fill-foreground text-[11px] font-semibold' : 'fill-muted-foreground text-[11px]'
+                    }
                   >
-                    {formatar(t)}
+                    {p.rotulo}
                   </text>
-                </g>
-              ))}
+                ),
+            )}
 
-              {colunas.map((c, i) => {
-                const centro = MARGEM.esquerda + faixa * (i + 0.5)
-                const outra = comparacao?.[i]
-                const xAtual = comPar ? centro + ENTRE_O_PAR / 2 : centro - coluna / 2
-                const xOutra = centro - ENTRE_O_PAR / 2 - coluna
-                const escurecida = ativa !== null && ativa !== i
-
-                return (
-                  <g key={`${c.rotulo}-${i}`} opacity={escurecida ? 0.45 : 1} className="transition-opacity">
-                    {outra?.valor != null && outra.valor > 0 && (
-                      <path
-                        d={caminhoDaColuna(xOutra, base - y(outra.valor), coluna, y(outra.valor), RAIO)}
-                        className="fill-grafico-comparacao"
-                      />
-                    )}
-                    {c.valor !== null && c.valor > 0 && (
-                      <path
-                        d={caminhoDaColuna(xAtual, base - y(c.valor), coluna, y(c.valor), RAIO)}
-                        className="fill-grafico"
-                      />
-                    )}
-                    {mostrarValor && c.valor !== null && (
-                      <text
-                        x={xAtual + coluna / 2}
-                        y={base - y(c.valor) - 6}
-                        textAnchor="middle"
-                        className="fill-foreground text-[11px] font-semibold tabular-nums"
-                      >
-                        {formatar(c.valor)}
-                      </text>
-                    )}
-                    <text
-                      x={centro}
-                      y={base + 17}
-                      textAnchor="middle"
-                      className={clsx(
-                        'text-[10px] tabular-nums',
-                        c.destaque ? 'fill-foreground font-bold' : 'fill-muted-foreground',
-                      )}
-                    >
-                      {c.rotulo}
-                    </text>
-
-                    {/* O ALVO É A FAIXA INTEIRA, não a tinta: ninguém mira numa
-                        coluna de 20px. Focável pelo teclado, com a mesma dica. */}
-                    <rect
-                      x={MARGEM.esquerda + faixa * i}
-                      y={MARGEM.topo}
-                      width={faixa}
-                      height={alturaDoPlot}
-                      fill="transparent"
-                      tabIndex={0}
-                      aria-label={`${c.rotuloLongo}: ${c.valor === null ? 'sem dado' : formatar(c.valor)}${
-                        outra ? `; ${outra.rotuloLongo}: ${outra.valor === null ? 'sem dado' : formatar(outra.valor)}` : ''
-                      }`}
-                      onPointerEnter={() => setAtiva(i)}
-                      onPointerLeave={() => setAtiva(null)}
-                      onFocus={() => setAtiva(i)}
-                      onBlur={() => setAtiva(null)}
-                      className="cursor-default outline-none focus-visible:stroke-foreground/40"
+            {tipo === 'linha' ? (
+              <g>
+                {trechos.map((t, n) => (
+                  <g key={n}>
+                    <path d={`${curva(t)} L${t[t.length - 1]!.x},${base} L${t[0]!.x},${base} Z`} fill={`url(#${id}-area)`} />
+                    <path
+                      d={curva(t)}
+                      fill="none"
+                      stroke="var(--grafico)"
+                      strokeWidth={2}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      filter={`url(#${id}-brilho-linha)`}
                     />
                   </g>
-                )
-              })}
-            </svg>
-          )
-        )}
+                ))}
+                {pontos.map((p, i) => {
+                  if (p.valor === null) return null
+                  const eAtivo = i === ativo
+                  if (!comPontos && !eAtivo) return null
+                  return (
+                    <circle
+                      key={`p-${i}`}
+                      cx={x(i)}
+                      cy={y(p.valor)}
+                      r={eAtivo ? 6 : 4}
+                      fill="var(--grafico)"
+                      stroke="var(--card)"
+                      strokeWidth={eAtivo ? 3 : 2}
+                      filter={eAtivo ? undefined : `url(#${id}-brilho-ponto)`}
+                    />
+                  )
+                })}
+              </g>
+            ) : (
+              <g>
+                {pontos.map((p, i) => {
+                  if (p.valor === null || p.valor <= 0) return null
+                  const topoDaBarra = y(p.valor)
+                  return (
+                    <path
+                      key={`b-${i}`}
+                      d={caminhoDaBarra(x(i) - barra / 2, topoDaBarra, barra, base - topoDaBarra)}
+                      fill={`url(#${id}-barra)`}
+                      opacity={ativo === null || ativo === i ? 1 : 0.45}
+                      className="transition-opacity"
+                    />
+                  )
+                })}
+              </g>
+            )}
 
-        {ativa !== null && colunas[ativa] && (
-          <Dica
-            atual={colunas[ativa]}
-            outra={comparacao?.[ativa] ?? null}
-            formatar={formatar}
-            esquerda={MARGEM.esquerda + faixa * (ativa + 0.5)}
-            larguraTotal={largura}
-            folga={comPar ? coluna + 14 : coluna / 2 + 12}
-          />
-        )}
-      </div>
+            {/* O ALVO É O GRÁFICO INTEIRO: o ponteiro escolhe a faixa em que
+                está, e o teclado anda com as setas. */}
+            <rect
+              x={MARGEM.esquerda}
+              y={MARGEM.topo}
+              width={larguraDoPlot}
+              height={alturaDoPlot}
+              fill="transparent"
+              tabIndex={0}
+              aria-label={`${descricao}. Use as setas para percorrer.`}
+              onPointerMove={apontar}
+              onPointerLeave={() => setAtivo(null)}
+              onFocus={() => setAtivo((a) => a ?? pontos.length - 1)}
+              onBlur={() => setAtivo(null)}
+              onKeyDown={andar}
+              className="cursor-crosshair outline-none focus-visible:stroke-foreground/30"
+            />
+          </svg>
+        )
+      )}
 
-      {/* A TABELA É O GÊMEO DO GRÁFICO: todo número da dica também está aqui,
-          sem depender de mouse nenhum. */}
-      <details className="text-sm">
-        <summary className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
-          Ver em tabela
-        </summary>
-        <div className="mt-2 max-h-72 overflow-auto">
-          <table className="w-full text-left text-xs tabular-nums">
-            <thead className="text-muted-foreground">
-              <tr>
-                <th className="py-1 pr-3 font-semibold">Período</th>
-                <th className="py-1 pr-3 font-semibold">{nomeAtual}</th>
-                {comPar && <th className="py-1 pr-3 font-semibold">{nomeComparacao}</th>}
-                <th className="py-1 font-semibold">Detalhe</th>
-              </tr>
-            </thead>
-            <tbody>
-              {colunas.map((c, i) => {
-                const outra = comparacao?.[i]
-                return (
-                  <tr key={`${c.rotulo}-${i}`} className="border-t border-border">
-                    <td className="py-1 pr-3">{c.rotuloLongo}</td>
-                    <td className="py-1 pr-3 font-semibold">{c.valor === null ? '—' : formatar(c.valor)}</td>
-                    {comPar && <td className="py-1 pr-3">{outra?.valor == null ? '—' : formatar(outra.valor)}</td>}
-                    <td className="py-1 text-muted-foreground">{c.detalhe.join(' · ') || '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      {pontoAtivo && ativo !== null && (
+        <Dica
+          ponto={pontoAtivo}
+          nomeDaSerie={nomeDaSerie}
+          formatar={formatar}
+          x={x(ativo)}
+          y={pontoAtivo.valor === null ? MARGEM.topo : y(pontoAtivo.valor)}
+          larguraTotal={largura}
+          alturaTotal={altura}
+        />
+      )}
     </div>
   )
 }
 
+type Ponto = { x: number; y: number }
+
+/** Os trechos contínuos da série: um dia sem dado corta a linha em dois. */
+function trechosSemBuraco(pontos: (Ponto | null)[]): Ponto[][] {
+  const trechos: Ponto[][] = []
+  let atual: Ponto[] = []
+  for (const p of pontos) {
+    if (p) atual.push(p)
+    else if (atual.length) {
+      trechos.push(atual)
+      atual = []
+    }
+  }
+  if (atual.length) trechos.push(atual)
+  return trechos
+}
+
+/**
+ * Curva cúbica MONÓTONA (Fritsch–Carlson): suave como a do exemplo, mas nunca
+ * passa acima nem abaixo dos pontos que liga.
+ */
+function curva(p: Ponto[]): string {
+  if (p.length === 1) return `M${p[0]!.x - 3},${p[0]!.y} L${p[0]!.x + 3},${p[0]!.y}`
+  const n = p.length
+  const dx: number[] = []
+  const inc: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(p[i + 1]!.x - p[i]!.x)
+    inc.push((p[i + 1]!.y - p[i]!.y) / dx[i]!)
+  }
+  const m: number[] = [inc[0]!]
+  for (let i = 1; i < n - 1; i++) {
+    const a = inc[i - 1]!
+    const b = inc[i]!
+    m.push(a * b <= 0 ? 0 : (3 * (dx[i - 1]! + dx[i]!)) / ((2 * dx[i]! + dx[i - 1]!) / a + (dx[i]! + 2 * dx[i - 1]!) / b))
+  }
+  m.push(inc[n - 2]!)
+  let d = `M${p[0]!.x},${p[0]!.y}`
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i]! / 3
+    d += ` C${p[i]!.x + h},${p[i]!.y + m[i]! * h} ${p[i + 1]!.x - h},${p[i + 1]!.y - m[i + 1]! * h} ${p[i + 1]!.x},${p[i + 1]!.y}`
+  }
+  return d
+}
+
 /** Retângulo com os cantos de CIMA arredondados e a base reta. */
-function caminhoDaColuna(x: number, y: number, w: number, h: number, raio: number): string {
+function caminhoDaBarra(x: number, y: number, w: number, h: number): string {
   if (h <= 0) return ''
-  const r = Math.min(raio, w / 2, h)
+  const r = Math.min(RAIO, w / 2, h)
   return [
     `M${x},${y + h}`,
     `L${x},${y + r}`,
@@ -256,59 +323,54 @@ function caminhoDaColuna(x: number, y: number, w: number, h: number, raio: numbe
 }
 
 /**
- * A dica. O VALOR VEM PRIMEIRO e forte; o outro período embaixo, com o traço
- * cinza da cor dele. AO LADO do par de colunas, e não em cima — centrada, ela
- * cobria justamente o que descreve.
+ * A dica, em cartão como a do exemplo: o pedaço em cima, e a linha do KPI com
+ * o quadradinho da cor, o nome e o valor à direita. Embaixo, as contagens que o
+ * número resume. AO LADO do ponto, e não em cima — centrada, ela cobria
+ * justamente o que descreve.
  */
 function Dica({
-  atual,
-  outra,
+  ponto,
+  nomeDaSerie,
   formatar,
-  esquerda,
+  x,
+  y,
   larguraTotal,
-  folga,
+  alturaTotal,
 }: {
-  atual: ColunaDoGrafico
-  outra: ColunaDoGrafico | null
+  ponto: PontoDoGrafico
+  nomeDaSerie: string
   formatar: (valor: number) => string
-  esquerda: number
+  x: number
+  y: number
   larguraTotal: number
-  folga: number
+  alturaTotal: number
 }) {
-  const largura = 220
-  const x =
-    esquerda + folga + largura <= larguraTotal ? esquerda + folga : Math.max(0, esquerda - folga - largura)
+  const largura = 216
+  const folga = 16
+  const esquerda = x + folga + largura <= larguraTotal ? x + folga : Math.max(0, x - folga - largura)
+  const topo = Math.max(0, Math.min(y - 36, alturaTotal - 120))
 
   return (
     <div
       role="status"
-      className="pointer-events-none absolute top-2 z-10 rounded-xl border border-border bg-card p-3 text-xs shadow-lg"
-      style={{ left: x, width: largura }}
+      className="pointer-events-none absolute z-10 grid gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-xs shadow-xl"
+      style={{ left: esquerda, top: topo, width: largura }}
     >
-      <div className="mb-1 font-semibold text-muted-foreground">{atual.rotuloLongo}</div>
-      <div className="flex items-center gap-2">
-        <span className="h-0.5 w-3 rounded-full bg-grafico" aria-hidden="true" />
-        <span className="text-base font-extrabold text-foreground tabular-nums">
-          {atual.valor === null ? 'sem dado' : formatar(atual.valor)}
+      <div className="font-medium text-foreground">{ponto.rotuloLongo}</div>
+      <div className="flex w-full items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <span className="size-2.5 shrink-0 rounded-[2px] bg-grafico" aria-hidden="true" />
+          <span className="text-muted-foreground">{nomeDaSerie}</span>
+        </div>
+        <span className="font-semibold text-foreground tabular-nums">
+          {ponto.valor === null ? 'sem dado' : formatar(ponto.valor)}
         </span>
       </div>
-      {atual.detalhe.length > 0 && (
-        <div className="mt-1 space-y-0.5 text-muted-foreground">
-          {atual.detalhe.map((linha) => (
+      {ponto.detalhe.length > 0 && (
+        <div className="space-y-0.5 border-t border-border/60 pt-1.5 text-muted-foreground">
+          {ponto.detalhe.map((linha) => (
             <div key={linha}>{linha}</div>
           ))}
-        </div>
-      )}
-      {outra && (
-        <div className="mt-2 border-t border-border pt-2">
-          <div className="flex items-center gap-2">
-            <span className="h-0.5 w-3 rounded-full bg-grafico-comparacao" aria-hidden="true" />
-            <span className="font-bold text-foreground tabular-nums">
-              {outra.valor === null ? 'sem dado' : formatar(outra.valor)}
-            </span>
-            <span className="text-muted-foreground">{outra.rotuloLongo}</span>
-          </div>
-          {outra.detalhe[0] && <div className="mt-0.5 pl-5 text-muted-foreground">{outra.detalhe[0]}</div>}
         </div>
       )}
     </div>

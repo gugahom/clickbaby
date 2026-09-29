@@ -12,8 +12,8 @@
 --       desfeito em minutos não conta.
 --   G — os padrões de tempo: só gestão define, mesmo dia substitui, fica evento.
 --   H — período invertido é recusado; período sem nada devolve zero, não erro.
---   S — a SÉRIE da equipe (migration 20260929053020): os baldes, o piso, e os
---       mesmos números das funções que ela chama.
+--   S — a SÉRIE da equipe (migrations 20260929053020 e 20260929064502): os
+--       baldes, o piso, e os mesmos números das funções que ela chama.
 
 -- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2029, um mês que nada mais usa. O
 -- seed fictício (`npm run seed:metricas`) enche de OUTUBRO DE 2026 A DEZEMBRO DE
@@ -23,7 +23,7 @@
 -- ou não, um seed antes.
 
 begin;
-select plan(33);
+select plan(35);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -349,7 +349,7 @@ select pg_temp.como('gestao.me@clickbaby.test');
 
 select throws_ok(
   $$ select * from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'semana') $$,
-  'P0001', 'O grão da série é ''bloco'' ou ''mes''.',
+  'P0001', 'O grão da série é ''dia'', ''bloco'', ''mes'' ou ''periodo''.',
   'S2: grão desconhecido é recusado'
 );
 
@@ -385,6 +385,21 @@ select is(
      from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'mes')),
   (select mediana_min from public.metricas_da_equipe_por_etapa('2029-02-01', '2029-02-28') where tipo = 'edicao_foto'),
   'S7: o balde do mês é a mesma conta da função da equipe — a mediana verdadeira, não composta'
+);
+
+select is(
+  (select string_agg(inicio || ':' || coalesce(por_tipo->'nascimento'->>'concluidas', '0'), ',' order by inicio)
+     from public.metricas_serie_da_equipe('2029-02-09', '2029-02-11', 'dia')),
+  '2029-02-09:0,2029-02-10:2,2029-02-11:0',
+  'S9: por dia, um balde por dia — os dois partos caem no dia 10'
+);
+
+select is(
+  (select count(*)::int || '/' || max(enviados) || '/' || max((por_tipo->'edicao_foto'->>'mediana_min')::numeric)
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'periodo')),
+  '1/' || (select enviados from public.metricas_prazo_do_periodo('2029-02-01', '2029-02-28'))
+    || '/' || (select mediana_min from public.metricas_da_equipe_por_etapa('2029-02-01', '2029-02-28') where tipo = 'edicao_foto'),
+  'S10: o período inteiro é UM balde, com os números das funções do período — a mediana não sai dos dias'
 );
 
 select throws_ok(
