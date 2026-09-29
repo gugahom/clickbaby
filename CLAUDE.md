@@ -1989,8 +1989,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   construção: vai direto para o container. Os testes pgTAP das métricas moram em 2029 para não
   colidir com ele.
   **DATA SIMULADA, SÓ EM DESENVOLVIMENTO:** esses meses estão no futuro e o gráfico só desenha
-  o que já passou, então `/quadro/relatorios?hoje=2027-12-31` faz a tela se comportar como se
-  fosse aquele dia, com um selo "Data simulada" no topo. `hojeDoRelatorio` (em `lib/metricas.ts`)
+  o que já passou, então no local a tela ABRE em 31/12/2027, o último dia dos dados fictícios
+  (o gestor procurou os dados com a data real e não os achou). `?hoje=2027-06-15` simula outro
+  dia, `?hoje=real` volta à data de verdade, e um selo no topo diz qual está valendo. `hojeDoRelatorio` (em `lib/metricas.ts`)
   lê o parâmetro atrás de `import.meta.env.DEV`, que vira `false` no build — conferido: a
   leitura da URL não existe no bundle publicado.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar

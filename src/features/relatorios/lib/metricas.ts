@@ -15,21 +15,29 @@ export const INICIO_DAS_METRICAS = '2026-10-01'
 /**
  * O "HOJE" DO RELATÓRIO. Em produção é hoje, e ponto.
  *
- * SÓ EM DESENVOLVIMENTO, `?hoje=2027-12-31` na URL faz a tela se comportar como
- * se fosse aquele dia (29/09/2026, pedido do gestor: "coloca dados fictícios
- * pra eu poder analisar"). Os dados fictícios do banco local vão de outubro de
- * 2026 a dezembro de 2027 — no futuro —, e o gráfico só desenha o que já
- * passou; sem isto, a tela local ficaria vazia até esses meses chegarem.
+ * SÓ EM DESENVOLVIMENTO, a tela abre como se fosse o ÚLTIMO DIA DOS DADOS
+ * FICTÍCIOS (29/09/2026, pedido do gestor: "coloca dados fictícios pra eu
+ * poder analisar" e, depois, "quero os dados fictícios" — com a data real eles
+ * não apareciam). Os dados do banco local vão de outubro de 2026 a dezembro de
+ * 2027, no futuro, e o gráfico só desenha o que já passou.
+ *   `?hoje=2027-06-15` simula outro dia;
+ *   `?hoje=real` volta à data de verdade.
+ * Um selo no topo diz sempre qual está valendo.
  * `import.meta.env.DEV` vira `false` no build, e o ramo inteiro some do bundle
  * publicado: em produção não existe data simulada, nem por engano.
  */
 export function hojeDoRelatorio(): { hoje: string; simulado: boolean } {
   if (import.meta.env.DEV) {
     const pedido = new URLSearchParams(window.location.search).get('hoje')
+    if (pedido === 'real') return { hoje: hojeNoFuso(), simulado: false }
     if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) return { hoje: pedido, simulado: true }
+    return { hoje: FIM_DOS_DADOS_FICTICIOS, simulado: true }
   }
   return { hoje: hojeNoFuso(), simulado: false }
 }
+
+/** Último dia de `scripts/seed-metricas-ficticias.sql`. Mudou lá, muda aqui. */
+const FIM_DOS_DADOS_FICTICIOS = '2027-12-31'
 
 /**
  * Amostra mínima para uma taxa entrar em ranking. Com um mês de dados, a

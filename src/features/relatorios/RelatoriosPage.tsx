@@ -90,7 +90,10 @@ export function RelatoriosPage() {
           KPIs da equipe, contando a partir de {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
           {simulado && (
             <span className="ml-2 rounded-full bg-atencao/15 px-2 py-0.5 text-xs font-semibold text-atencao-tinta">
-              Data simulada: {hoje.split('-').reverse().join('/')} · só no local
+              Data simulada: {hoje.split('-').reverse().join('/')} · só no local ·{' '}
+              <a href="?hoje=real" className="underline underline-offset-2">
+                usar a data real
+              </a>
             </span>
           )}
         </p>
