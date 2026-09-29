@@ -1,37 +1,156 @@
-import { IconeRelatorio } from '@/components/ui/icones'
+import { useState } from 'react'
+import clsx from 'clsx'
+import { Botao } from '@/components/ui/Botao'
+import { hojeNoFuso } from '@/lib/formato'
+import {
+  useMetricasDaEquipe,
+  useMetricasPorEtapa,
+  useMetricasPorPessoa,
+  usePadroesDeTempo,
+  usePrazoDoPeriodo,
+  usePrazoPorSemana,
+} from './api/useMetricas'
+import { FichaDaPessoa } from './components/FichaDaPessoa'
+import { PadroesDeTempo } from './components/PadroesDeTempo'
+import { PainelDaEquipe } from './components/PainelDaEquipe'
+import { RankingPorEtapa } from './components/RankingPorEtapa'
+import { TrilhoDeAbas } from './components/TrilhoDeAbas'
+import {
+  INICIO_DAS_METRICAS,
+  MES_INICIAL,
+  deslocarMes,
+  mesPadrao,
+  periodoDoMes,
+  rotuloDoMes,
+} from './lib/metricas'
+
+type Aba = 'equipe' | 'ranking' | 'individual' | 'padroes'
+
+const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, medianaHorasAteConfirmacao: null }
+
+const ABAS: { id: Aba; rotulo: string }[] = [
+  { id: 'equipe', rotulo: 'Equipe' },
+  { id: 'ranking', rotulo: 'Ranking' },
+  { id: 'individual', rotulo: 'Individual' },
+  { id: 'padroes', rotulo: 'Padrões de tempo' },
+]
 
 /**
- * RELATÓRIOS — a tela existe, os números ainda não (28/09/2026, pedido do
- * gestor: "já pode criar a aba de relatório MAS SEM NADA NELA POR ENQUANTO").
+ * RELATÓRIOS — o relatório interno das pessoas (28/09/2026, pedido do gestor).
  *
- * Ela nasce vazia DE PROPÓSITO, e a página diz isso em voz alta em vez de
- * fingir que está carregando. O que ainda não existe é o acordo sobre o que se
- * mede: as métricas da ficha da Equipe foram REMOVIDAS em 03/09/2026 por essa
- * mesma razão (seção 13), e recolocá-las aqui por conta própria seria refazer
- * a decisão que o gestor tomou.
+ * A aba nasceu vazia no mesmo dia, e ganhou o conteúdo depois de um inventário
+ * dos dados de produção: o que o banco guarda, e três defeitos que um ranking
+ * herdaria (partos creditados a quem não estava na sala, metade das edições
+ * sem relógio, e padrões de tempo que nunca foram definidos). O desenho de cada
+ * visão responde a um deles — ver a migration 20260929020655.
  *
- * O DADO JÁ ESTÁ GUARDADO, e é isso que esta tela vai ler quando tiver
- * pergunta: `eventos` é append-only desde o primeiro dia (invariante 3.3), o
- * que permite calcular uma definição nova sobre o histórico inteiro — inclusive
- * o tempo em cada fase do trabalho de campo, que passou a ser gravado hoje.
+ * SÓ A GESTÃO vê (decisão do gestor): a rota está atrás da `RotaDeGestao`, e
+ * cada função de métrica confere o papel de novo no banco.
+ *
+ * CONTA A PARTIR DE 01/10/2026 (decisão do gestor): setembro e o passado
+ * continuam no banco, e o relatório não os lê. A tela diz isso em voz alta, e
+ * o seletor de mês não oferece nada antes.
+ *
+ * O MÊS ESTÁ ACIMA DE TUDO, numa linha só, e recorta TODAS as visões: os
+ * números de uma aba e de outra precisam concordar, e isso só acontece se
+ * vierem do mesmo recorte.
  */
 export function RelatoriosPage() {
+  const hoje = hojeNoFuso()
+  const [mes, setMes] = useState(() => mesPadrao(hoje))
+  const [aba, setAba] = useState<Aba>('equipe')
+  const [pessoaId, setPessoaId] = useState<string | null>(null)
+
+  const periodo = periodoDoMes(mes)
+  const porEtapa = useMetricasPorEtapa(periodo)
+  const equipe = useMetricasDaEquipe(periodo)
+  const pessoas = useMetricasPorPessoa(periodo)
+  const semanas = usePrazoPorSemana(periodo)
+  const prazo = usePrazoDoPeriodo(periodo)
+  const padroes = usePadroesDeTempo()
+
+  const consultas = [porEtapa, equipe, pessoas, semanas, prazo, padroes]
+  const erro = consultas.find((c) => c.error)?.error
+  const primeiraCarga = consultas.some((c) => c.isPending)
+  // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
+  const atualizando = consultas.some((c) => c.isPlaceholderData)
+
+  const ultimoMes = mesPadrao(hoje)
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-3 md:p-6">
+    <div className="mx-auto w-full max-w-6xl space-y-4 p-3 md:p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
         <p className="text-sm text-muted-foreground">
-          O lugar dos números da operação.
+          O trabalho da equipe, pessoa por pessoa. Contando a partir de{' '}
+          {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
         </p>
       </header>
 
-      <div className="flex flex-col items-center gap-3 rounded-painel border border-dashed border-border bg-card/50 px-4 py-12 text-center">
-        <IconeRelatorio className="size-8 text-muted-foreground/60" />
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Ainda não há nada aqui. O sistema guarda o histórico desde o primeiro
-          dia — falta combinar o que vale a pena medir.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-painel border border-border bg-card p-1">
+          <Botao
+            variante="fantasma"
+            onClick={() => setMes((m) => deslocarMes(m, -1))}
+            disabled={mes <= MES_INICIAL}
+            aria-label="Mês anterior"
+          >
+            ‹
+          </Botao>
+          <span className="min-w-[10rem] text-center text-base font-bold">{rotuloDoMes(mes)}</span>
+          <Botao
+            variante="fantasma"
+            onClick={() => setMes((m) => deslocarMes(m, 1))}
+            disabled={mes >= ultimoMes}
+            aria-label="Próximo mês"
+          >
+            ›
+          </Botao>
+        </div>
+        <TrilhoDeAbas abas={ABAS} ativa={aba} onTrocar={setAba} />
       </div>
+
+      {erro ? (
+        <p className="rounded-painel border border-atrasado/40 bg-card p-4 text-sm text-atrasado">
+          Não deu para carregar o relatório: {erro.message}
+        </p>
+      ) : primeiraCarga ? (
+        <p className="py-16 text-center text-sm text-muted-foreground">Carregando o relatório…</p>
+      ) : (
+        <div className={clsx('transition-opacity', atualizando && 'opacity-60')}>
+          {aba === 'equipe' && (
+            <PainelDaEquipe
+              prazo={prazo.data ?? PRAZO_VAZIO}
+              semanas={semanas.data ?? []}
+              equipe={equipe.data ?? []}
+              porEtapa={porEtapa.data ?? []}
+              inicioDoPeriodo={periodo.inicio}
+            />
+          )}
+          {aba === 'ranking' && (
+            <RankingPorEtapa
+              porEtapa={porEtapa.data ?? []}
+              equipe={equipe.data ?? []}
+              pessoas={pessoas.data ?? []}
+              onAbrirPessoa={(id) => {
+                setPessoaId(id)
+                setAba('individual')
+              }}
+            />
+          )}
+          {aba === 'individual' && (
+            <FichaDaPessoa
+              pessoaId={pessoaId}
+              onTrocarPessoa={setPessoaId}
+              pessoas={pessoas.data ?? []}
+              porEtapa={porEtapa.data ?? []}
+              equipe={equipe.data ?? []}
+              padroes={padroes.data ?? []}
+            />
+          )}
+          {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}
+        </div>
+      )}
     </div>
   )
 }

@@ -98,6 +98,10 @@
   --color-acento-suave: var(--acento-suave);
   /* Cores CRUAS do logo. Superfície apenas — ver a nota de contraste no topo. */
   --color-logo-rosa: var(--logo-rosa);
+  /* As cores dos GRÁFICOS — ver o bloco `--grafico` no :root. */
+  --color-grafico: var(--grafico);
+  --color-grafico-atrasado: var(--grafico-atrasado);
+  --color-grafico-faixa: var(--grafico-faixa);
   --color-logo-azul: var(--logo-azul);
   --color-logo-manteiga: var(--logo-manteiga);
   --color-logo-cinza: var(--logo-cinza);
@@ -185,6 +189,27 @@
   --andamento: oklch(0.52 0.17 248);
   --atrasado: oklch(0.53 0.21 25);
   --atencao: oklch(0.55 0.14 68);
+
+  /* AS CORES DOS GRÁFICOS (28/09/2026, relatório de pessoas).
+
+     `--grafico` é a série única — volume, tempo, a marca da pessoa. É o azul da
+     marca numa luminosidade que um gráfico aguenta: a `--marca` do tema claro
+     (L 0.29) é escura demais para barra, e usar `--andamento` emprestaria à
+     barra o sentido de "em andamento", que é status.
+
+     `--grafico-atrasado` é o "atrasado" do prazo — status de verdade, e por
+     isso vermelho. O "no prazo" ao lado dele é o AZUL, e não o verde de
+     concluído: validado com o script de daltonismo, verde × vermelho dá ΔE 4,1
+     para deuteranopia (reprova; metade de quem é daltônico não separaria as
+     duas pilhas), e azul × vermelho dá 25,8. No escuro o vermelho é próprio
+     (L 0.63), porque o `--atrasado` escuro (L 0.68) sai da faixa de
+     luminosidade de marca de gráfico.
+
+     `--grafico-faixa` é o "normal da equipe" (P25–P75) atrás do ponto da
+     pessoa: um passo acima da superfície, recessivo. */
+  --grafico: oklch(0.55 0.15 262);
+  --grafico-atrasado: oklch(0.53 0.21 25);
+  --grafico-faixa: oklch(0.9 0.02 264);
 
   /* AS MESMAS TRÊS, MAIS ESCURAS, para texto sobre pílula tingida.
   
@@ -365,6 +390,11 @@
   --andamento: oklch(0.78 0.15 230);
   --atrasado: oklch(0.68 0.2 20);
   --atencao: oklch(0.8 0.15 80);
+
+  /* Gráficos no escuro — os mesmos três papéis, validados contra o card escuro. */
+  --grafico: oklch(0.66 0.15 255);
+  --grafico-atrasado: oklch(0.63 0.2 22);
+  --grafico-faixa: oklch(0.33 0.02 260);
   --rascunho: oklch(0.83 0.13 85);
   --rascunho-fundo: oklch(0.28 0.05 85 / 35%);
   --rascunho-borda: oklch(0.5 0.09 85 / 45%);

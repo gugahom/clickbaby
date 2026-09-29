@@ -22,9 +22,13 @@ import type { Destino } from './destinos'
  */
 export function FaixaDeNavegacao({ destinos }: { destinos: Destino[] }) {
   return (
+    // ROLA NA HORIZONTAL quando não cabe (28/09/2026). Com a aba Relatórios
+    // a gestão passou a ter quatro destinos, e a 375px o quarto era cortado na
+    // borda — sem rolar, uma tela sumia sem aviso. A área comercial e o
+    // calendário vão somar mais dois; o trilho aguenta.
     <nav
       aria-label="Navegação"
-      className="flex gap-1 border-t border-white/10 bg-black/25 px-3 py-2 md:hidden"
+      className="flex gap-1 overflow-x-auto border-t border-white/10 bg-black/25 px-3 py-2 md:hidden"
     >
       {destinos.map((destino) => (
         <NavLink
@@ -36,7 +40,7 @@ export function FaixaDeNavegacao({ destinos }: { destinos: Destino[] }) {
               // 40px de alvo dentro de uma faixa que soma 44 com o respiro
               // dela — a régua da seção 6 aplicada onde ela vale, que é o dedo
               // no corredor.
-              'inline-flex min-h-10 items-center rounded-full px-4 text-[0.9375rem] font-bold tracking-tight transition-colors',
+              'inline-flex min-h-10 flex-shrink-0 items-center rounded-full px-3 text-[0.9375rem] font-bold tracking-tight whitespace-nowrap transition-colors',
               isActive
                 ? 'bg-white text-marca-forte shadow-sm'
                 : 'text-white/65 hover:bg-white/10 hover:text-white',

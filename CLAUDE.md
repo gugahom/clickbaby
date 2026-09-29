@@ -414,6 +414,11 @@ reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um ence
 -- sino do cabeçalho (17/09/2026; ver seção 13)
 marcar_notificacoes_vistas()                            -- só o "já vi" — a lista é derivada
 
+-- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
+metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
+metricas_prazo_por_semana / metricas_prazo_do_periodo / metricas_volume_por_semana (p_inicio, p_fim)
+padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
+
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 sync_marcar_click_home(p_google_event_id)               -- o "+ CLICK HOME" do título
@@ -483,7 +488,7 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
   /features
     /quadro          hoje é praticamente o app inteiro
     /auth
-    /relatorios      a aba vazia (28/09/2026) — ver a seção 13
+    /relatorios      o relatório interno das pessoas (28/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -1878,13 +1883,57 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `on delete restrict` — quem já trabalhou sai da operação, não do cadastro. O botão de
   excluir só aparece para quem nunca tocou em nada, e o banco recusa o resto.
   Não mostra o e-mail de login: ele vive em `auth.users`, fora do alcance do cliente.
-- **Relatórios** (`/quadro/relatorios`), só para `gestao`, **VAZIA de propósito**
-  (28/09/2026, pedido do gestor: "já pode criar a aba de relatório MAS SEM NADA NELA POR
-  ENQUANTO"). A aba existe para a navegação nova ter para onde crescer; o que falta não é
-  dado — `eventos` é append-only desde o primeiro dia e já guarda até o tempo em cada fase
-  do trabalho de campo — é o ACORDO sobre o que medir. As métricas da ficha da Equipe foram
-  removidas em 03/09 por essa mesma razão, e recolocá-las aqui por conta própria refaria a
-  decisão dele. A tela diz que está vazia em voz alta, em vez de fingir que carrega.
+- **RELATÓRIOS — O RELATÓRIO INTERNO DAS PESSOAS** (`/quadro/relatorios`, só `gestao`;
+  28/09/2026, migration `20260929020655`). A aba nasceu vazia no mesmo dia e ganhou conteúdo
+  depois de um INVENTÁRIO dos dados de produção. O pedido: "métrica das fotógrafas, tempo,
+  nascimentos, entradas, TUDO", com ranking, análise individual, dashboard e gráficos. Há um
+  segundo relatório previsto, EXTERNO (operação, filtros de busca), que ainda não existe.
+  **O INVENTÁRIO ACHOU TRÊS DEFEITOS DE DADO, e o desenho inteiro responde a eles** (medidos
+  no remoto, 27/08 → 28/09):
+  1. *Partos creditados a quem não estava na sala* — uma conta de gestão com 51 nascimentos
+     em 33 dias, 47 "pegos para si" e 15 de 48 SOBREPOSTOS a outro parto dela. Por isso o
+     **crédito é do RESPONSÁVEL** (`responsavel_id`, 100% preenchido), não de quem clicou
+     concluir (`eventos.pessoa_id`, outra pessoa em 18% do campo), e existe a marca **EM
+     PARALELO** (campo cruzado no tempo com outra etapa do mesmo tipo, da mesma pessoa, em
+     outro caso). É marca, não exclusão, e vale para qualquer papel.
+  2. *O relógio da edição não media trabalho* — 48% das edições de foto e reels concluídas
+     com menos de 5 min de relógio. **Ciclo < 5 min é "SEM MEDIÇÃO"**: conta no volume, fica
+     fora do tempo, e a coluna `medidas` diz quantas tinham relógio. **TEMPO NÃO ORDENA
+     RANKING** — ordenaria para premiar quem não abre o relógio.
+  3. *`escalas` e `padroes_tempo` vazias* — sem turno e sem os "padrões conhecidos por todas"
+     do plano. A régua agora se define na tela (ver abaixo).
+  **AS MÉTRICAS COMEÇAM EM 01/10/2026** (decisão do gestor: "ignorando esse mês e o
+  passado"). NADA FOI APAGADO — `eventos` é append-only. É um PISO,
+  `inicio_das_metricas()`, aplicado DENTRO de toda função: nem uma chamada direta à API lê
+  setembro. A tela tem o espelho `INICIO_DAS_METRICAS` só para não oferecer o mês.
+  **SÓ A GESTÃO** (decisão do gestor; ele recusou a ficha visível para a própria pessoa):
+  `exigir_gestao()` é `papel_sistema = 'gestao'`, NÃO `eh_adm()`, que inclui comercial,
+  coordenação e financeiro. **O ranking é de quem FEZ** — a gestão que fotografa entra
+  (invariante 3.1); "só as fotógrafas" seria filtrar por tipo de pessoa.
+  **QUATRO VISÕES, UM MÊS NO TOPO recortando todas:** EQUIPE (prazo cumprido como
+  número-herói, prazo por semana em colunas empilhadas, volume por tipo, qualidade do
+  registro); RANKING (um tipo de etapa por vez, por quantidade ou por prazo — este só com 5+
+  casos —, com empate dividindo a posição); INDIVIDUAL (blocos, barras por tipo, a qualidade
+  do registro DA PESSOA, o tempo como ponto sobre a faixa P25–P75 da equipe, e o trabalho
+  que não é etapa: passagens, material baixado/subido, atribuições, confirmações);
+  PADRÕES DE TEMPO (a mediana medida como sugestão; o número é da gestão).
+  **"VOLTOU PARA AJUSTE"** soma `caso_reaberto` (crédito da última rodada concluída do tipo
+  reaberto) e `etapa_reaberta` de etapa concluída há MAIS DE 30 MIN — no remoto, 116 das 180
+  reaberturas foram desfeitas em minutos (clique errado), e contá-las triplicaria o número.
+  **TODA SOMA É DO BANCO**, e mediana não se compõe: por isso `metricas_prazo_do_periodo`
+  existe ao lado da série semanal, e `metricas_da_equipe_por_etapa` ao lado da por pessoa.
+  Sem paginação — as funções devolvem linhas por pessoa e tipo, algumas centenas no máximo.
+  **OS GRÁFICOS SÃO DA CASA** (SVG, sem biblioteca), com cores próprias validadas por script
+  de daltonismo: `--grafico` (o azul da marca numa luminosidade de gráfico),
+  `--grafico-atrasado` e `--grafico-faixa`. **"No prazo" é AZUL e não verde**: verde ×
+  vermelho deu ΔE 4,1 para deuteranopia (reprova); azul × vermelho, 25,8. Todo gráfico com
+  legenda quando há duas séries, dica no mouse E no foco do teclado, e tabela equivalente.
+  **AS BARRAS SE COMPARAM NA MESMA RÉGUA** — cada linha é uma grade própria, então rótulo e
+  coluna de métricas têm largura FIXA, e a barra reserva o espaço do número (`calc`). Com
+  `auto`, três "17" saíam com três comprimentos.
+  **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe outubro inteiro (130 casos, 12
+  pessoas com nomes de pedras preciosas, cada uma com um perfil de ritmo, disciplina com o
+  relógio, atraso e retrabalho). Só local, por construção: vai direto para o container.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -1919,9 +1968,10 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    cliente. Exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT e
    teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
    sem avisar no dia em que um endereço fugisse do padrão.
-3. **Produtividade ainda não tem tela.** O dado está em `eventos` desde o primeiro dia; a
-   Equipe só mostra a agregação simples de `caso_etapas` (em mãos agora, concluídas em 30
-   dias), feita no cliente.
+3. **O relatório EXTERNO ainda não existe** (operação, filtros de busca específica). O
+   interno — produtividade por pessoa — entrou em 28/09/2026. E `escalas` continua vazia: sem
+   turno registrado, não há "vazão por turno" (o plano previa), só "dias com trabalho", que é
+   mais fraco. Preencher escalas NÃO é registro de ponto (seção 9): é a escala planejada.
 4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto
    de adm, e desde 28/09/2026 vale perguntar se ela deve existir: as fases do trabalho de
    campo cobrem a pergunta que a operação de fato faz, e esta coluna segue no valor padrão em

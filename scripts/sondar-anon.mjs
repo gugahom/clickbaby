@@ -185,6 +185,16 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
   sync_marcar_click_home: { p_google_event_id: 'sonda' },
+  // As métricas das pessoas (20260929020655). Quem alcançasse estas RPCs leria
+  // o desempenho de cada pessoa da equipe — ou reescreveria a régua de tempo.
+  metricas_por_etapa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  metricas_da_equipe_por_etapa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  metricas_por_pessoa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  metricas_prazo_por_semana: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  metricas_prazo_do_periodo: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  metricas_volume_por_semana: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
+  padroes_de_tempo: {},
+  definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC
   // escreveria no histórico de um parto o pé em que ele estava.
   mover_fase_de_campo: {
