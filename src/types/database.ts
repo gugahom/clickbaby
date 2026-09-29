@@ -1157,6 +1157,17 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
         }[]
       }
+      metricas_fases_de_campo: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          etapa_tipo: Database["public"]["Enums"]["etapa_tipo"]
+          etapas: number
+          fase: Database["public"]["Enums"]["fase_de_campo"]
+          media_min: number
+          pessoa_id: string
+          soma_min: number
+        }[]
+      }
       metricas_por_etapa: {
         Args: { p_fim: string; p_inicio: string }
         Returns: {

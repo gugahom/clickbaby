@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { EtapaTipo } from '@/features/quadro/types'
+import type { EtapaTipo, FaseCampo } from '@/features/quadro/types'
 import type { Json } from '@/types/database'
 
 /**
@@ -243,6 +243,38 @@ export function useSerieDaEquipe(periodo: Periodo | null, grao: Grao, pessoaId: 
         medianaHorasAteConfirmacao: numero(l.mediana_horas_ate_confirmacao),
         porTipo: lerPorTipo(l.por_tipo),
         voltouParaAjuste: l.voltou_para_ajuste,
+      }))
+    },
+  })
+}
+
+/**
+ * Quanto tempo cada pessoa passa em cada fase do campo, por etapa concluída —
+ * ver `metricas_fases_de_campo` (migration 20260929092831).
+ */
+export interface FaseDaPessoa {
+  pessoaId: string
+  tipo: EtapaTipo
+  fase: FaseCampo
+  /** Etapas em que a fase foi declarada. */
+  etapas: number
+  somaMin: number
+  mediaMin: number | null
+}
+
+export function useFasesDeCampo({ inicio, fim }: Periodo) {
+  return useQuery({
+    queryKey: [CHAVE, 'fases', inicio, fim],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<FaseDaPessoa[]> => {
+      const linhas = await chamar(supabase.rpc('metricas_fases_de_campo', { p_inicio: inicio, p_fim: fim }))
+      return (linhas ?? []).map((l) => ({
+        pessoaId: l.pessoa_id,
+        tipo: l.etapa_tipo,
+        fase: l.fase,
+        etapas: l.etapas,
+        somaMin: numero(l.soma_min) ?? 0,
+        mediaMin: numero(l.media_min),
       }))
     },
   })

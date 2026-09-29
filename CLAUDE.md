@@ -418,6 +418,7 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
 metricas_prazo_do_periodo (p_inicio, p_fim)
 metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por dia/bloco/mês/período; com pessoa, a produção dela (29/09/2026)
+metricas_fases_de_campo(p_inicio, p_fim)  -- tempo em cada fase do campo, por pessoa (29/09/2026)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -1978,8 +1979,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   PESSOAS — três destaques (mais partos, mais edições, melhor prazo) e UMA tabela de KPIs que
   É o ranking: cada coluna ordena, o primeiro toque põe o melhor em cima, empate divide a
   posição, e zero numa coluna de volume não tem posição ("não fez esse tipo de trabalho").
-  Tocar numa pessoa abre TRÊS LINHAS: tempo contra a equipe, registro (relógio aberto,
-  etapas em paralelo) e o resto. Tempo não é coluna.
+  Tempo não é coluna.
+  **TOCAR NUMA PESSOA ABRE O MINI PERFIL** (29/09/2026, pedido do gestor: "com todas as infos
+  que coletamos nos cards (…) quantidade de produção e tempo médio em cada etapa"), no lugar
+  das três linhas de resumo que abriam dentro da tabela. No computador fica AO LADO da tabela,
+  já aberto na primeira pessoa da ordem; no celular, embaixo e só depois do toque. Quatro
+  blocos: os quatro números (partos, edições, prazo, ajustes); PRODUÇÃO POR ETAPA (feitas,
+  tempo médio, média da equipe); FASES DO CAMPO (tempo médio em cada fase, por etapa); e o
+  que mais os cards guardam (material, passagens, atribuições, entregas, termos, avaliações,
+  concluídas por outra pessoa, campo em paralelo — só o que for maior que zero).
+  **TEMPO MÉDIO É MÉDIA**, como ele pediu (`soma_min / medidas`), só das etapas com relógio
+  de verdade; a da equipe é soma sobre soma, que se compõe (mediana não). Na EDIÇÃO, quando
+  parte das etapas não teve relógio, a linha diz "10 de 17 com relógio" — âmbar abaixo de
+  metade; no CAMPO não, porque registrar depois é permitido (seção 9). A comparação com a
+  equipe é neutra, sem cor.
+  **AS FASES DO CAMPO VIRARAM MÉTRICA** (`metricas_fases_de_campo`, migration
+  `20260929092831`), como o pedido que as criou previa. A fase dura da declaração à próxima,
+  ou à conclusão da etapa — e NUNCA passa da conclusão: a primeira versão deixava uma fase
+  declarada depois de concluir esticar a anterior (o parto de 60 min virava 90), e o teste F1
+  pegou. Mesma fase duas vezes na mesma etapa soma; a média é por etapa. Crédito do
+  responsável, piso de 01/10, só gestão. Os dados fictícios ganharam fases em 85% das
+  entradas e nascimentos.
   PADRÕES DE TEMPO — uma linha por etapa: mediana da equipe, padrão em vigor, campo para
   definir (a mediana é a marca-d'água; o número é da gestão).
   A variação só aparece quando o mês anterior tem dado — em outubro de 2026 ele é setembro,
