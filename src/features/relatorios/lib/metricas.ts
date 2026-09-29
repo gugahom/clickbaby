@@ -12,13 +12,6 @@ import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
 export const INICIO_DAS_METRICAS = '2026-10-01'
 
 /**
- * Abaixo disto, o ciclo é "SEM MEDIÇÃO", não "rápido". No remoto em 28/09,
- * 48% das edições tinham menos de 5 minutos de relógio: play e concluir juntos,
- * com a edição feita antes. Espelho da constante das funções do banco.
- */
-export const MINUTOS_MINIMOS_DE_MEDICAO = 5
-
-/**
  * Amostra mínima para uma taxa entrar em ranking. Com um mês de dados, a
  * diferença entre 3 de 4 e 4 de 4 é sorte, não desempenho.
  */
@@ -42,16 +35,6 @@ export const ORDEM_DAS_ETAPAS: EtapaTipo[] = [
   'album',
   'click_home',
 ]
-
-export const ETAPAS_DE_CAMPO = new Set<EtapaTipo>([
-  'entrada',
-  'nascimento',
-  'banho',
-  'fechamento',
-  'encontro_irmaos',
-  'saida_uti',
-  'alta',
-])
 
 /**
  * As que têm PRAZO contado contra o vencimento do caso. Espelho do filtro de
@@ -90,10 +73,6 @@ export function formatarHoras(horas: number | null): string {
 export function formatarPercentual(parte: number, todo: number): string {
   if (todo === 0) return '—'
   return `${Math.round((100 * parte) / todo)}%`
-}
-
-export function taxa(parte: number, todo: number): number | null {
-  return todo === 0 ? null : parte / todo
 }
 
 // ---------------------------------------------------------------------------

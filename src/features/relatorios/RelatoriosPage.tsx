@@ -9,12 +9,13 @@ import {
   usePadroesDeTempo,
   usePrazoDoPeriodo,
   usePrazoPorSemana,
+  useVolumePorSemana,
 } from './api/useMetricas'
-import { FichaDaPessoa } from './components/FichaDaPessoa'
 import { PadroesDeTempo } from './components/PadroesDeTempo'
 import { PainelDaEquipe } from './components/PainelDaEquipe'
-import { RankingPorEtapa } from './components/RankingPorEtapa'
+import { TabelaDePessoas } from './components/TabelaDePessoas'
 import { TrilhoDeAbas } from './components/TrilhoDeAbas'
+import { kpisDaEquipe, linhasDasPessoas } from './lib/kpis'
 import {
   INICIO_DAS_METRICAS,
   MES_INICIAL,
@@ -24,69 +25,75 @@ import {
   rotuloDoMes,
 } from './lib/metricas'
 
-type Aba = 'equipe' | 'ranking' | 'individual' | 'padroes'
-
-const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, medianaHorasAteConfirmacao: null }
+type Aba = 'equipe' | 'pessoas' | 'padroes'
 
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: 'equipe', rotulo: 'Equipe' },
-  { id: 'ranking', rotulo: 'Ranking' },
-  { id: 'individual', rotulo: 'Individual' },
+  { id: 'pessoas', rotulo: 'Pessoas' },
   { id: 'padroes', rotulo: 'Padrões de tempo' },
 ]
 
+const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, medianaHorasAteConfirmacao: null }
+
 /**
- * RELATÓRIOS — o relatório interno das pessoas (28/09/2026, pedido do gestor).
+ * RELATÓRIOS — os KPIs da equipe (28/09/2026, pedido do gestor).
  *
- * A aba nasceu vazia no mesmo dia, e ganhou o conteúdo depois de um inventário
- * dos dados de produção: o que o banco guarda, e três defeitos que um ranking
- * herdaria (partos creditados a quem não estava na sala, metade das edições
- * sem relógio, e padrões de tempo que nunca foram definidos). O desenho de cada
- * visão responde a um deles — ver a migration 20260929020655.
+ * SEGUNDA VERSÃO, do mesmo dia. A primeira tinha quatro abas e mostrava tudo o
+ * que o banco sabe; o gestor a recusou — "ficou muita informação (…) foco em
+ * KPI e métricas". Esta tem três: EQUIPE (seis KPIs com variação e tendência,
+ * e um gráfico), PESSOAS (três destaques e uma tabela de KPIs que é o ranking)
+ * e PADRÕES DE TEMPO (a régua). O que saiu, e por quê, está nos componentes.
  *
- * SÓ A GESTÃO vê (decisão do gestor): a rota está atrás da `RotaDeGestao`, e
- * cada função de métrica confere o papel de novo no banco.
+ * SÓ A GESTÃO vê — a rota está atrás da `RotaDeGestao`, e cada função confere o
+ * papel de novo no banco. CONTA A PARTIR DE 01/10/2026: o seletor não oferece
+ * nada antes, e o banco não devolve.
  *
- * CONTA A PARTIR DE 01/10/2026 (decisão do gestor): setembro e o passado
- * continuam no banco, e o relatório não os lê. A tela diz isso em voz alta, e
- * o seletor de mês não oferece nada antes.
- *
- * O MÊS ESTÁ ACIMA DE TUDO, numa linha só, e recorta TODAS as visões: os
- * números de uma aba e de outra precisam concordar, e isso só acontece se
- * vierem do mesmo recorte.
+ * O MÊS ANTERIOR É LIDO JUNTO, só para a variação dos KPIs. Em outubro de 2026
+ * ele é setembro — antes do piso —, vem zerado, e a variação não aparece.
  */
 export function RelatoriosPage() {
   const hoje = hojeNoFuso()
   const [mes, setMes] = useState(() => mesPadrao(hoje))
   const [aba, setAba] = useState<Aba>('equipe')
-  const [pessoaId, setPessoaId] = useState<string | null>(null)
 
   const periodo = periodoDoMes(mes)
+  const anterior = periodoDoMes(deslocarMes(mes, -1))
+
   const porEtapa = useMetricasPorEtapa(periodo)
   const equipe = useMetricasDaEquipe(periodo)
   const pessoas = useMetricasPorPessoa(periodo)
   const semanas = usePrazoPorSemana(periodo)
+  const volume = useVolumePorSemana(periodo)
   const prazo = usePrazoDoPeriodo(periodo)
   const padroes = usePadroesDeTempo()
+  const equipeAntes = useMetricasDaEquipe(anterior)
+  const pessoasAntes = useMetricasPorPessoa(anterior)
+  const prazoAntes = usePrazoDoPeriodo(anterior)
 
-  const consultas = [porEtapa, equipe, pessoas, semanas, prazo, padroes]
+  const consultas = [porEtapa, equipe, pessoas, semanas, volume, prazo, padroes, equipeAntes, pessoasAntes, prazoAntes]
   const erro = consultas.find((c) => c.error)?.error
   const primeiraCarga = consultas.some((c) => c.isPending)
   // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
   const atualizando = consultas.some((c) => c.isPlaceholderData)
 
-  const ultimoMes = mesPadrao(hoje)
+  const { entrega, producao } = kpisDaEquipe(
+    { prazo: prazo.data ?? PRAZO_VAZIO, equipe: equipe.data ?? [], pessoas: pessoas.data ?? [] },
+    { prazo: prazoAntes.data ?? PRAZO_VAZIO, equipe: equipeAntes.data ?? [], pessoas: pessoasAntes.data ?? [] },
+    semanas.data ?? [],
+    volume.data ?? [],
+    periodo,
+  )
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 p-3 md:p-6">
+    <div className="mx-auto w-full max-w-6xl space-y-5 p-3 md:p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
         <p className="text-sm text-muted-foreground">
-          O trabalho da equipe, pessoa por pessoa. Contando a partir de{' '}
-          {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
+          KPIs da equipe, contando a partir de {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
         </p>
       </header>
 
+      {/* Os filtros numa linha só, acima de tudo o que eles recortam. */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 rounded-painel border border-border bg-card p-1">
           <Botao
@@ -101,7 +108,7 @@ export function RelatoriosPage() {
           <Botao
             variante="fantasma"
             onClick={() => setMes((m) => deslocarMes(m, 1))}
-            disabled={mes >= ultimoMes}
+            disabled={mes >= mesPadrao(hoje)}
             aria-label="Próximo mês"
           >
             ›
@@ -115,37 +122,21 @@ export function RelatoriosPage() {
           Não deu para carregar o relatório: {erro.message}
         </p>
       ) : primeiraCarga ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">Carregando o relatório…</p>
+        <p className="py-16 text-center text-sm text-muted-foreground">Carregando…</p>
       ) : (
         <div className={clsx('transition-opacity', atualizando && 'opacity-60')}>
           {aba === 'equipe' && (
             <PainelDaEquipe
-              prazo={prazo.data ?? PRAZO_VAZIO}
+              entrega={entrega}
+              producao={producao}
               semanas={semanas.data ?? []}
-              equipe={equipe.data ?? []}
-              porEtapa={porEtapa.data ?? []}
               inicioDoPeriodo={periodo.inicio}
             />
           )}
-          {aba === 'ranking' && (
-            <RankingPorEtapa
-              porEtapa={porEtapa.data ?? []}
+          {aba === 'pessoas' && (
+            <TabelaDePessoas
+              linhas={linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [])}
               equipe={equipe.data ?? []}
-              pessoas={pessoas.data ?? []}
-              onAbrirPessoa={(id) => {
-                setPessoaId(id)
-                setAba('individual')
-              }}
-            />
-          )}
-          {aba === 'individual' && (
-            <FichaDaPessoa
-              pessoaId={pessoaId}
-              onTrocarPessoa={setPessoaId}
-              pessoas={pessoas.data ?? []}
-              porEtapa={porEtapa.data ?? []}
-              equipe={equipe.data ?? []}
-              padroes={padroes.data ?? []}
             />
           )}
           {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}

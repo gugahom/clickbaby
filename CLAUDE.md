@@ -1910,13 +1910,28 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `exigir_gestao()` é `papel_sistema = 'gestao'`, NÃO `eh_adm()`, que inclui comercial,
   coordenação e financeiro. **O ranking é de quem FEZ** — a gestão que fotografa entra
   (invariante 3.1); "só as fotógrafas" seria filtrar por tipo de pessoa.
-  **QUATRO VISÕES, UM MÊS NO TOPO recortando todas:** EQUIPE (prazo cumprido como
-  número-herói, prazo por semana em colunas empilhadas, volume por tipo, qualidade do
-  registro); RANKING (um tipo de etapa por vez, por quantidade ou por prazo — este só com 5+
-  casos —, com empate dividindo a posição); INDIVIDUAL (blocos, barras por tipo, a qualidade
-  do registro DA PESSOA, o tempo como ponto sobre a faixa P25–P75 da equipe, e o trabalho
-  que não é etapa: passagens, material baixado/subido, atribuições, confirmações);
-  PADRÕES DE TEMPO (a mediana medida como sugestão; o número é da gestão).
+  **É UM PAINEL DE KPI, e isso foi corrigido no mesmo dia.** A primeira versão tinha quatro
+  abas (equipe, ranking por tipo com chips e marcas, ficha individual de cinco cartões,
+  padrões) e mostrava tudo o que o banco sabe; o gestor a recusou — "ficou muita informação
+  (…) o ponto principal desses dashs são KPI da equipe (…) foco em KPI e métricas". **Não a
+  reconstrua achando que é melhoria:** o que saiu saiu por excesso, não por defeito.
+  **TRÊS ABAS, um mês no topo recortando todas:**
+  EQUIPE — seis KPIs em dois grupos, cada um com a **variação contra o mês anterior** (seta e
+  sinal, nunca só cor; a cor vem de "subir é bom?", e volume e tempo de edição são neutros) e
+  uma **mini-linha semanal** (volume normalizado POR DIA, porque a primeira e a última semana
+  do mês quase nunca são inteiras). *Entrega:* prazo cumprido (o número-herói), do parto ao
+  envio (com a espera do ADM na linha de baixo), voltou para ajuste. *Produção:* partos,
+  edições entregues, tempo de edição de fotos (com "% com relógio aberto" na linha de baixo —
+  a qualidade do registro mora ali, e só ali). Embaixo, UM gráfico: o prazo semana a semana.
+  PESSOAS — três destaques (mais partos, mais edições, melhor prazo) e UMA tabela de KPIs que
+  É o ranking: cada coluna ordena, o primeiro toque põe o melhor em cima, empate divide a
+  posição, e zero numa coluna de volume não tem posição ("não fez esse tipo de trabalho").
+  Tocar numa pessoa abre TRÊS LINHAS: tempo contra a equipe, registro (relógio aberto,
+  etapas em paralelo) e o resto. Tempo não é coluna.
+  PADRÕES DE TEMPO — uma linha por etapa: mediana da equipe, padrão em vigor, campo para
+  definir (a mediana é a marca-d'água; o número é da gestão).
+  A variação só aparece quando o mês anterior tem dado — em outubro de 2026 ele é setembro,
+  antes do piso, e um "+100%" contra zero seria mentira com cara de conquista.
   **"VOLTOU PARA AJUSTE"** soma `caso_reaberto` (crédito da última rodada concluída do tipo
   reaberto) e `etapa_reaberta` de etapa concluída há MAIS DE 30 MIN — no remoto, 116 das 180
   reaberturas foram desfeitas em minutos (clique errado), e contá-las triplicaria o número.
@@ -1928,9 +1943,6 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `--grafico-atrasado` e `--grafico-faixa`. **"No prazo" é AZUL e não verde**: verde ×
   vermelho deu ΔE 4,1 para deuteranopia (reprova); azul × vermelho, 25,8. Todo gráfico com
   legenda quando há duas séries, dica no mouse E no foco do teclado, e tabela equivalente.
-  **AS BARRAS SE COMPARAM NA MESMA RÉGUA** — cada linha é uma grade própria, então rótulo e
-  coluna de métricas têm largura FIXA, e a barra reserva o espaço do número (`calc`). Com
-  `auto`, três "17" saíam com três comprimentos.
   **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe outubro inteiro (130 casos, 12
   pessoas com nomes de pedras preciosas, cada uma com um perfil de ritmo, disciplina com o
   relógio, atraso e retrabalho). Só local, por construção: vai direto para o container.
