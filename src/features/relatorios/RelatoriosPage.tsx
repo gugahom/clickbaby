@@ -8,6 +8,7 @@ import {
   useSerieDaEquipe,
 } from './api/useMetricas'
 import { PadroesDeTempo } from './components/PadroesDeTempo'
+import { TabelaDePontuacao } from './components/TabelaDePontuacao'
 import { PainelDaEquipe } from './components/PainelDaEquipe'
 import { AbaPessoas } from './components/AbaPessoas'
 import { TrilhoDeAbas } from './components/TrilhoDeAbas'
@@ -22,11 +23,12 @@ import {
   rotuloDoMes,
 } from './lib/metricas'
 
-type Aba = 'equipe' | 'pessoas' | 'padroes'
+type Aba = 'equipe' | 'pessoas' | 'pontuacao' | 'padroes'
 
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: 'equipe', rotulo: 'Equipe' },
   { id: 'pessoas', rotulo: 'Pessoas' },
+  { id: 'pontuacao', rotulo: 'Pontuação' },
   { id: 'padroes', rotulo: 'Padrões de tempo' },
 ]
 
@@ -159,6 +161,7 @@ export function RelatoriosPage() {
           {aba === 'pessoas' && (
             <AbaPessoas mes={mes} periodoDoMes={periodo} hoje={hoje} />
           )}
+          {aba === 'pontuacao' && <TabelaDePontuacao />}
           {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}
         </div>
       )}

@@ -1,14 +1,16 @@
 import { useRef, useState } from 'react'
 import clsx from 'clsx'
-import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa } from '../api/useMetricas'
+import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
 import type { LinhaDaPessoa } from '../lib/kpis'
 import { primeiroNome } from '../lib/metricas'
+import { formatarPontos } from '../lib/pontos'
 import { Cartao } from './PainelDaEquipe'
 import { PerfilDaPessoa } from './PerfilDaPessoa'
 
-type Coluna = 'partos' | 'edicoes' | 'taxaPrazo' | 'ajustes' | 'dias'
+type Coluna = 'pontos' | 'partos' | 'edicoes' | 'taxaPrazo' | 'ajustes' | 'dias'
 
 const COLUNAS: { id: Coluna; rotulo: string; so_no_largo?: boolean; menorEMelhor?: boolean }[] = [
+  { id: 'pontos', rotulo: 'Pontos' },
   { id: 'partos', rotulo: 'Partos' },
   { id: 'edicoes', rotulo: 'Edições' },
   { id: 'taxaPrazo', rotulo: 'No prazo' },
@@ -41,6 +43,11 @@ const TELA_LARGA = '(min-width: 1280px)'
  * metade das edições sem relógio em setembro, ordenar por velocidade premiaria
  * quem não abre o relógio (ver a migration 20260929020655).
  *
+ * OS PONTOS ABREM A TABELA (29/09/2026, pedido do gestor e do André): é o
+ * ranking que eles já faziam na planilha — cada etapa com um peso, e a etapa
+ * que passou de mão dividida entre quem a fez (migration 20260929210556). A
+ * tabela nasce ordenada por eles; as outras colunas continuam a um toque.
+ *
  * "NO PRAZO" PEDE AMOSTRA: abaixo de 5 fotos e reels com prazo a célula fica
  * "—" e vai para o fim da ordem. 3 de 3 não é melhor que 18 de 20.
  */
@@ -49,16 +56,18 @@ export function TabelaDePessoas({
   pessoas,
   porEtapa,
   fases,
+  pontos,
   rotuloDoPeriodo,
 }: {
   linhas: LinhaDaPessoa[]
   pessoas: MetricaPorPessoa[]
   porEtapa: MetricaPorEtapa[]
   fases: FaseDaPessoa[]
+  pontos: PontosDaPessoa[]
   /** Como a frase do perfil termina: "em dezembro de 2027". */
   rotuloDoPeriodo: string
 }) {
-  const [coluna, setColuna] = useState<Coluna>('partos')
+  const [coluna, setColuna] = useState<Coluna>('pontos')
   const [crescente, setCrescente] = useState(false)
   const [aberta, setAberta] = useState<string | null>(null)
   const [fechado, setFechado] = useState(false)
@@ -190,6 +199,7 @@ export function TabelaDePessoas({
                           {primeiroNome(l.nome)}
                         </button>
                       </td>
+                      <Celula ativa={coluna === 'pontos'}>{formatarPontos(l.pontos)}</Celula>
                       <Celula ativa={coluna === 'partos'}>{l.partos}</Celula>
                       <Celula ativa={coluna === 'edicoes'}>{l.edicoes}</Celula>
                       <Celula ativa={coluna === 'taxaPrazo'}>
@@ -219,6 +229,7 @@ export function TabelaDePessoas({
               pessoa={pessoas.find((p) => p.pessoaId === selecionada.pessoaId)}
               porEtapa={porEtapa}
               fases={fases}
+              pontos={pontos}
               rotuloDoPeriodo={rotuloDoPeriodo}
               onFechar={fechar}
             />
@@ -261,11 +272,13 @@ function Destaques({ linhas }: { linhas: LinhaDaPessoa[] }) {
       .filter((l) => typeof l[campo] === 'number' && (l[campo] as number) > 0)
       .sort((a, b) => (b[campo] as number) - (a[campo] as number) || (desempate ? desempate(b) - desempate(a) : 0))[0]
 
+  const maisPontos = topo('pontos')
   const partos = topo('partos')
   const edicoes = topo('edicoes')
   const prazo = topo('taxaPrazo', (l) => l.comPrazo)
 
   const cartoes = [
+    maisPontos && { rotulo: 'Mais pontos', nome: maisPontos.nome, valor: formatarPontos(maisPontos.pontos) },
     partos && { rotulo: 'Mais partos', nome: partos.nome, valor: String(partos.partos) },
     edicoes && { rotulo: 'Mais edições', nome: edicoes.nome, valor: String(edicoes.edicoes) },
     prazo &&
@@ -279,7 +292,7 @@ function Destaques({ linhas }: { linhas: LinhaDaPessoa[] }) {
   if (cartoes.length === 0) return null
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cartoes.map((c) => (
         <div key={c.rotulo} className="flex items-center justify-between gap-3 rounded-painel border border-border bg-card p-4">
           <div className="min-w-0">

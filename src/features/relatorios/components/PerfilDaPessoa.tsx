@@ -5,9 +5,10 @@ import { IconeX } from '@/components/ui/icones'
 import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { FASES_DA_ETAPA, ROTULO_FASE_CAMPO, type EtapaTipo } from '@/features/quadro/types'
 import { iniciais } from '@/lib/iniciais'
-import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa } from '../api/useMetricas'
+import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
 import { ETAPAS_DE_EDICAO, type LinhaDaPessoa } from '../lib/kpis'
 import { ORDEM_DAS_ETAPAS, formatarMinutos, rotuloDaEtapa } from '../lib/metricas'
+import { ITENS_DE_PONTUACAO, formatarPontos, pontosComUnidade } from '../lib/pontos'
 
 /**
  * O MINI PERFIL DE UMA PESSOA (29/09/2026, pedido do gestor: "sempre que
@@ -35,6 +36,7 @@ export function PerfilDaPessoa({
   pessoa,
   porEtapa,
   fases,
+  pontos,
   rotuloDoPeriodo,
   onFechar,
 }: {
@@ -43,6 +45,8 @@ export function PerfilDaPessoa({
   /** Todas as linhas do mês, de todo mundo — a média da equipe sai daqui. */
   porEtapa: MetricaPorEtapa[]
   fases: FaseDaPessoa[]
+  /** Os pontos de todo mundo no período — os desta pessoa saem daqui. */
+  pontos: PontosDaPessoa[]
   /** Como a frase termina: "em dezembro de 2027", "nos últimos 7 dias". */
   rotuloDoPeriodo: string
   /** O "xiszinho" (pedido do gestor): fecha o perfil e a tabela ocupa a largura. */
@@ -60,6 +64,10 @@ export function PerfilDaPessoa({
   )
 
   const fasesDaPessoa = fases.filter((f) => f.pessoaId === linha.pessoaId)
+  // Na ordem da tabela de pontos da gestão, e só o que rendeu alguma coisa.
+  const pontosDaPessoa = ITENS_DE_PONTUACAO.map((i) =>
+    pontos.find((p) => p.pessoaId === linha.pessoaId && p.item === i.id),
+  ).filter((p): p is PontosDaPessoa => p !== undefined && p.etapas > 0)
   const mediaDaFase = (tipo: EtapaTipo, fase: string) => {
     const todas = fases.filter((f) => f.tipo === tipo && f.fase === fase)
     const etapas = todas.reduce((acc, f) => acc + f.etapas, 0)
@@ -112,7 +120,8 @@ export function PerfilDaPessoa({
         </BotaoIcone>
       </header>
 
-      <div className="grid grid-cols-4 gap-2 border-b border-border py-4">
+      <div className="grid grid-cols-5 gap-2 border-b border-border py-4">
+        <Numero rotulo="Pontos" valor={formatarPontos(linha.pontos)} />
         <Numero rotulo="Partos" valor={String(linha.partos)} />
         <Numero rotulo="Edições" valor={String(linha.edicoes)} />
         <Numero
@@ -126,6 +135,33 @@ export function PerfilDaPessoa({
         />
         <Numero rotulo="Ajustes" valor={String(linha.ajustes)} />
       </div>
+
+      <Bloco titulo="Pontos" nota="o peso de cada etapa, dividido quando passou de mão">
+        {pontosDaPessoa.length === 0 ? (
+          <Vazio>Nenhum ponto no período.</Vazio>
+        ) : (
+          <table className="w-full text-sm tabular-nums">
+            <tbody>
+              {pontosDaPessoa.map((p) => (
+                <tr key={p.item} className="border-t border-border/70 first:border-t-0">
+                  <td className="py-1.5 pr-2 font-semibold text-foreground">
+                    {ITENS_DE_PONTUACAO.find((i) => i.id === p.item)?.rotulo ?? p.item}
+                  </td>
+                  <td className="py-1.5 text-right text-muted-foreground">
+                    {p.etapas}×
+                    {p.divididas > 0 && (
+                      <span className="ml-1 text-xs" title="Etapas que passaram de mão e tiveram os pontos divididos">
+                        ({p.divididas} {p.divididas === 1 ? 'dividida' : 'divididas'})
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1.5 pl-2 text-right font-bold text-foreground">{pontosComUnidade(p.pontos)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Bloco>
 
       <Bloco titulo="Produção por etapa">
         {producao.length === 0 ? (

@@ -927,6 +927,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pontos_por_item: {
+        Row: {
+          created_at: string
+          id: string
+          item: Database["public"]["Enums"]["item_de_pontuacao"]
+          pontos: number
+          updated_at: string
+          vigente_desde: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item: Database["public"]["Enums"]["item_de_pontuacao"]
+          pontos: number
+          updated_at?: string
+          vigente_desde: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item?: Database["public"]["Enums"]["item_de_pontuacao"]
+          pontos?: number
+          updated_at?: string
+          vigente_desde?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       despesas_por_caso: {
@@ -1110,10 +1137,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      definir_pontos_do_item: {
+        Args: {
+          p_item: Database["public"]["Enums"]["item_de_pontuacao"]
+          p_pontos: number
+        }
+        Returns: undefined
+      }
       devolver_para_o_quadro: {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined
       }
+      dia_da_regua_de_pontos: { Args: never; Returns: string }
       disparar_sync_calendar: { Args: never; Returns: string }
       dispensar_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
@@ -1145,6 +1180,14 @@ export type Database = {
       exigir_gestao: { Args: never; Returns: undefined }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       inicio_das_metricas: { Args: never; Returns: string }
+      item_de_pontuacao: {
+        Args: {
+          p_pacote_slug: string
+          p_rodada: number
+          p_tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }
+        Returns: Database["public"]["Enums"]["item_de_pontuacao"]
+      }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       limpar_notificacoes_gerais: { Args: never; Returns: string }
       marcar_fotolivro_enviado: {
@@ -1173,6 +1216,16 @@ export type Database = {
           media_min: number
           pessoa_id: string
           soma_min: number
+        }[]
+      }
+      metricas_pontos_por_pessoa: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          divididas: number
+          etapas: number
+          item: Database["public"]["Enums"]["item_de_pontuacao"]
+          pessoa_id: string
+          pontos: number
         }[]
       }
       metricas_por_etapa: {
@@ -1289,6 +1342,14 @@ export type Database = {
       planejar_rendicao: {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
         Returns: undefined
+      }
+      pontos_por_item_vigentes: {
+        Args: never
+        Returns: {
+          item: Database["public"]["Enums"]["item_de_pontuacao"]
+          pontos: number
+          vigente_desde: string
+        }[]
       }
       reabrir_caso: {
         Args: {
@@ -1430,6 +1491,24 @@ export type Database = {
         | "admissao_cco"
         | "nascimento"
         | "cuidados"
+      item_de_pontuacao:
+        | "nascimento"
+        | "nascimento_birth"
+        | "entrada"
+        | "banho"
+        | "fechamento"
+        | "encontro_irmaos"
+        | "saida_uti"
+        | "alta"
+        | "foto_parto"
+        | "foto_bf"
+        | "foto_revisao"
+        | "reels_parto"
+        | "reels_bf"
+        | "reels_revisao"
+        | "video_master"
+        | "fotolivro"
+        | "new_born"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       papel_sistema:
         | "operador"
@@ -1650,6 +1729,25 @@ export const Constants = {
         "admissao_cco",
         "nascimento",
         "cuidados",
+      ],
+      item_de_pontuacao: [
+        "nascimento",
+        "nascimento_birth",
+        "entrada",
+        "banho",
+        "fechamento",
+        "encontro_irmaos",
+        "saida_uti",
+        "alta",
+        "foto_parto",
+        "foto_bf",
+        "foto_revisao",
+        "reels_parto",
+        "reels_bf",
+        "reels_revisao",
+        "video_master",
+        "fotolivro",
+        "new_born",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       papel_sistema: [

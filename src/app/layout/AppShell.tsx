@@ -325,8 +325,14 @@ export function AppShell() {
             meio da página e embaixo dela aparecia o fundo. Com a rolagem no
             `main`, a fileira é sempre a altura da tela, a barra vai até o chão,
             e o cabeçalho fica parado de brinde. O Quadro não muda: ele já é
-            `h-full` com rolagens próprias por dentro. */}
-        <main className="min-w-0 flex-1 overflow-y-auto">
+            `h-full` com rolagens próprias por dentro.
+            O `relative` NÃO É ENFEITE (29/09/2026, segunda volta): sem ele, todo
+            elemento absoluto de dentro — os rótulos `sr-only` das tabelas, por
+            exemplo — se media pela JANELA e não pelo `main`, e os que moravam no
+            fim de uma página comprida esticavam o documento. Aparecia uma
+            segunda barra de rolagem, e rolar por ela subia o app inteiro,
+            deixando o fundo à mostra embaixo da barra lateral. */}
+        <main className="relative min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

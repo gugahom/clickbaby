@@ -420,6 +420,8 @@ metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inici
 metricas_prazo_do_periodo (p_inicio, p_fim)
 metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por dia/bloco/mês/período; com pessoa, a produção dela (29/09/2026)
 metricas_fases_de_campo(p_inicio, p_fim)  -- tempo em cada fase do campo, por pessoa (29/09/2026)
+metricas_pontos_por_pessoa(p_inicio, p_fim)  -- o ranking por pontos, já dividido (29/09/2026)
+pontos_por_item_vigentes() / definir_pontos_do_item(p_item, p_pontos)  -- a régua dos pontos; linha nova, nunca UPDATE
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -1837,6 +1839,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   fundo embaixo. Com `overflow-y-auto` no `main`, a barra vai sempre até o chão e o cabeçalho
   fica parado. O Quadro não sentiu — ele já era `h-full` com rolagens próprias. Quem precisar
   de "rolar a página" rola o `main` (`scrollIntoView` já faz isso sozinho).
+  **E O `main` É `relative`** (mesmo dia, segunda volta: "correção nesse rodapé"). Sem isso,
+  todo elemento absoluto de dentro — os rótulos `sr-only` das tabelas — se media pela JANELA,
+  e os que moravam no fim de uma página comprida esticavam o DOCUMENTO: aparecia uma segunda
+  barra de rolagem, e rolar por ela subia o app inteiro, com o fundo à mostra embaixo da
+  barra. Conferido nas cinco telas: o documento tem a altura da janela, e os únicos absolutos
+  afetados eram os `sr-only`. Não tire o `relative`.
   **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
   no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
   **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
@@ -2033,6 +2041,33 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   pegou. Mesma fase duas vezes na mesma etapa soma; a média é por etapa. Crédito do
   responsável, piso de 01/10, só gestão. Os dados fictícios ganharam fases em 85% das
   entradas e nascimentos.
+  **O RANKING POR PONTOS** (29/09/2026, pedido do gestor e do André, migration
+  `20260929210556`). É o que eles já faziam numa planilha com um chat: cada etapa vale um PESO
+  ("não posso colocar o mesmo peso para quem editou um Reels, que leva 40 minutos, e quem
+  fotografou um parto"), e a etapa que passou de mão tem os pontos DIVIDIDOS. A régua de
+  fábrica é a tabela que eles mandaram: Nascimento 3 · Fotografia de Birth 3 · Foto parto 2 ·
+  Foto/Livro 1,5 · Entrada 1 · Banho 1 · Vídeo MASTER 1 · Fechamento 0,5 · Reels parto 0,5 ·
+  Foto B+F 0,5 · Reels B+F 0,5. **Três suposições, porque a tabela não as cobre:** encontro de
+  irmãos, alta e saída da UTI valem o fechamento (0,5 — a própria tabela descreve o fechamento
+  como "encontros de irmãos, alta ou fotos finais no quarto"); REVISÃO (rodada 3+) e NEW BORN
+  começam em ZERO; e a divisão é em partes iguais para QUALQUER número de pessoas.
+  **O ITEM NÃO É O TIPO DA ETAPA** (enum `item_de_pontuacao`, mapeado por `item_de_pontuacao()`,
+  UMA definição): a edição de fotos é "foto parto" na rodada 1 e "foto B+F" na 2, e o
+  nascimento de pacote cujo slug começa com `birth` é "fotografia de Birth" — o mesmo critério
+  de `termo.ts`.
+  **QUEM DIVIDE:** o RESPONSÁVEL mais todo mundo que aparece num HANDOFF da etapa, de um lado ou
+  do outro. Handoff só existe depois de o trabalho começar (antes é atribuição), então quem está
+  nele pôs a mão. Quem só clicou "concluir" no lugar de alguém NÃO divide — creditar quem clicou
+  era o defeito nº 1 do inventário.
+  **A RÉGUA SE MUDA NA TELA** — aba **Pontuação**, pedido deles ("a gente precisa começar a usar
+  pra ver"). É versionada como os padrões de tempo: peso novo vale da data em diante, o mês que
+  passou continua contado com o peso dele, e no mesmo dia corrige; cada mudança fica em
+  `eventos`. **"Hoje" nunca é antes de 01/10/2026** (`dia_da_regua_de_pontos`): a régua de
+  fábrica vale dessa data, e sem o piso um peso definido em 29/09 ficaria ATRÁS dela.
+  **NA TELA:** a coluna Pontos abre a tabela de Pessoas e é a ordem padrão; o primeiro destaque
+  é "Mais pontos"; o perfil ganhou o bloco de pontos por item, com quantas etapas e quantas
+  foram divididas. A contagem de etapas do bloco de pontos pode passar a de "Produção por
+  etapa": aquela conta só o responsável, esta conta quem pôs a mão.
   PADRÕES DE TEMPO — uma linha por etapa: mediana da equipe, padrão em vigor, campo para
   definir (a mediana é a marca-d'água; o número é da gestão).
   A variação só aparece quando o mês anterior tem dado — em outubro de 2026 ele é setembro,
