@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { hojeNoFuso } from '@/lib/formato'
 import {
   useMetricasDaEquipe,
   useMetricasPorEtapa,
@@ -17,6 +16,7 @@ import { kpisDaEquipe, linhasDasPessoas } from './lib/kpis'
 import {
   INICIO_DAS_METRICAS,
   MES_INICIAL,
+  hojeDoRelatorio,
   deslocarMes,
   mesPadrao,
   periodoDoMes,
@@ -54,7 +54,7 @@ const ABAS: { id: Aba; rotulo: string }[] = [
  * vazia dos dois lados — o incômodo que motivou a mudança.
  */
 export function RelatoriosPage() {
-  const hoje = hojeNoFuso()
+  const [{ hoje, simulado }] = useState(hojeDoRelatorio)
   const [mes, setMes] = useState(() => mesPadrao(hoje))
   const [aba, setAba] = useState<Aba>('equipe')
 
@@ -88,6 +88,11 @@ export function RelatoriosPage() {
         <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
         <p className="text-sm text-muted-foreground">
           KPIs da equipe, contando a partir de {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
+          {simulado && (
+            <span className="ml-2 rounded-full bg-atencao/15 px-2 py-0.5 text-xs font-semibold text-atencao-tinta">
+              Data simulada: {hoje.split('-').reverse().join('/')} · só no local
+            </span>
+          )}
         </p>
       </header>
 

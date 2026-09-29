@@ -15,8 +15,9 @@
 --   S — a SÉRIE da equipe (migration 20260929053020): os baldes, o piso, e os
 --       mesmos números das funções que ela chama.
 
--- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2027, um mês que nada mais usa. O
--- seed fictício (`npm run seed:metricas`) enche OUTUBRO de 2026 no banco local,
+-- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2029, um mês que nada mais usa. O
+-- seed fictício (`npm run seed:metricas`) enche de OUTUBRO DE 2026 A DEZEMBRO DE
+-- 2027 no banco local,
 -- e as asserções que leem a equipe inteira (mediana, séries, resumo) passariam
 -- a medir aquilo em vez disto — a suíte não pode depender de alguém ter rodado,
 -- ou não, um seed antes.
@@ -81,27 +82,27 @@ $$;
 -- A fotógrafa A: DOIS partos que se cruzam no tempo (10/10, 10h-12h e 11h-13h),
 -- e um terceiro em SETEMBRO, antes do piso.
 select pg_temp.concluir(pg_temp.etapa('Mae ME Um',   'nascimento'), pg_temp.pessoa('Fotografa A'),
-                        '2027-02-10 10:00-03', '2027-02-10 12:00-03');
+                        '2029-02-10 10:00-03', '2029-02-10 12:00-03');
 select pg_temp.concluir(pg_temp.etapa('Mae ME Dois', 'nascimento'), pg_temp.pessoa('Fotografa A'),
-                        '2027-02-10 11:00-03', '2027-02-10 13:00-03');
+                        '2029-02-10 11:00-03', '2029-02-10 13:00-03');
 select pg_temp.concluir(pg_temp.etapa('Mae ME Tres', 'nascimento'), pg_temp.pessoa('Fotografa A'),
                         '2026-09-20 10:00-03', '2026-09-20 12:00-03');
 
 -- A editora B: uma edição MEDIDA (2h com 30min de pausa = 90min, dentro do
 -- prazo) e uma de 2 minutos (sem medição), concluída depois de o caso vencer.
 select pg_temp.concluir(pg_temp.etapa('Mae ME Um',   'edicao_foto'), pg_temp.pessoa('Editora B'),
-                        '2027-02-10 14:00-03', '2027-02-10 16:00-03', interval '30 minutes');
+                        '2029-02-10 14:00-03', '2029-02-10 16:00-03', interval '30 minutes');
 select pg_temp.concluir(pg_temp.etapa('Mae ME Dois', 'edicao_foto'), pg_temp.pessoa('Editora B'),
-                        '2027-02-13 09:00-03', '2027-02-13 09:02-03');
+                        '2029-02-13 09:00-03', '2029-02-13 09:02-03');
 
 -- Quem clicou: o parto do caso Um foi concluído pela GESTÃO no lugar da A; o do
 -- caso Dois, pela própria A.
 insert into public.eventos (caso_id, caso_etapa_id, pessoa_id, tipo, ocorrido_em)
 values
   ((select id from public.casos where mae_nome = 'Mae ME Um'),   pg_temp.etapa('Mae ME Um', 'nascimento'),
-   pg_temp.pessoa('Gestao ME'),   'etapa_concluida', '2027-02-10 12:00-03'),
+   pg_temp.pessoa('Gestao ME'),   'etapa_concluida', '2029-02-10 12:00-03'),
   ((select id from public.casos where mae_nome = 'Mae ME Dois'), pg_temp.etapa('Mae ME Dois', 'nascimento'),
-   pg_temp.pessoa('Fotografa A'), 'etapa_concluida', '2027-02-10 13:00-03');
+   pg_temp.pessoa('Fotografa A'), 'etapa_concluida', '2029-02-10 13:00-03');
 
 -- O que voltou: o caso Um foi REABERTO na foto (conta, e o crédito é da B, que
 -- fez a última foto concluída antes); a foto do caso Dois foi reaberta 8
@@ -109,10 +110,10 @@ values
 insert into public.eventos (caso_id, caso_etapa_id, pessoa_id, tipo, payload, ocorrido_em)
 values
   ((select id from public.casos where mae_nome = 'Mae ME Um'), null, pg_temp.pessoa('Gestao ME'),
-   'caso_reaberto', '{"etapas": ["edicao_foto"], "motivo": "Família pediu ajuste"}', '2027-02-20 10:00-03'),
+   'caso_reaberto', '{"etapas": ["edicao_foto"], "motivo": "Família pediu ajuste"}', '2029-02-20 10:00-03'),
   ((select id from public.casos where mae_nome = 'Mae ME Dois'), pg_temp.etapa('Mae ME Dois', 'edicao_foto'),
    pg_temp.pessoa('Editora B'), 'etapa_reaberta',
-   '{"status_anterior": "concluida", "concluido_em_anterior": "2027-02-13T09:02:00-03:00"}', '2027-02-13 09:10-03');
+   '{"status_anterior": "concluida", "concluido_em_anterior": "2029-02-13T09:02:00-03:00"}', '2029-02-13 09:10-03');
 
 
 -- =============================================================================
@@ -121,7 +122,7 @@ values
 
 select pg_temp.como('fotografa.a@clickbaby.test');
 select throws_ok(
-  $$ select * from public.metricas_por_etapa('2027-02-01', '2027-02-28') $$,
+  $$ select * from public.metricas_por_etapa('2029-02-01', '2029-02-28') $$,
   'P0001', 'Os relatórios de pessoas são só da gestão.',
   'A1: a fotógrafa não lê as métricas'
 );
@@ -129,7 +130,7 @@ reset role;
 
 select pg_temp.como('atendimento.me@clickbaby.test');
 select throws_ok(
-  $$ select * from public.metricas_por_pessoa('2027-02-01', '2027-02-28') $$,
+  $$ select * from public.metricas_por_pessoa('2029-02-01', '2029-02-28') $$,
   'P0001', 'Os relatórios de pessoas são só da gestão.',
   'A2: nem o atendimento — é gestão, não "atendimento ou adm"'
 );
@@ -137,7 +138,7 @@ reset role;
 
 select pg_temp.como('gestao.me@clickbaby.test');
 select lives_ok(
-  $$ select * from public.metricas_por_etapa('2027-02-01', '2027-02-28') $$,
+  $$ select * from public.metricas_por_etapa('2029-02-01', '2029-02-28') $$,
   'A3: a gestão lê'
 );
 
@@ -148,7 +149,7 @@ select lives_ok(
 
 -- Pede desde 01/09: o parto de 20/09 continua de fora.
 select is(
-  (select concluidas from public.metricas_por_etapa('2026-09-01', '2027-02-28')
+  (select concluidas from public.metricas_por_etapa('2026-09-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Fotografa A') and tipo = 'nascimento'),
   2,
   'B1: o parto de setembro não entra, mesmo pedindo setembro'
@@ -166,42 +167,42 @@ select is(
 -- =============================================================================
 
 select is(
-  (select concluidas from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select concluidas from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B') and tipo = 'edicao_foto'),
   2,
   'C1: as duas edições contam no volume'
 );
 
 select is(
-  (select medidas from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select medidas from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B') and tipo = 'edicao_foto'),
   1,
   'C2: a de 2 minutos é "sem medição" — fica fora do tempo'
 );
 
 select is(
-  (select mediana_min from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select mediana_min from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B') and tipo = 'edicao_foto'),
   90.0,
   'C3: o tempo é líquido — 2h de relógio menos 30min de pausa'
 );
 
 select is(
-  (select com_prazo || '/' || no_prazo from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select com_prazo || '/' || no_prazo from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B') and tipo = 'edicao_foto'),
   '2/1',
   'C4: das duas edições com prazo, uma saiu antes de o caso vencer'
 );
 
 select is(
-  (select com_prazo from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select com_prazo from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Fotografa A') and tipo = 'nascimento'),
   0,
   'C5: prazo é só de foto e reels — o parto não tem'
 );
 
 select is(
-  (select mediana_min from public.metricas_da_equipe_por_etapa('2027-02-01', '2027-02-28')
+  (select mediana_min from public.metricas_da_equipe_por_etapa('2029-02-01', '2029-02-28')
     where tipo = 'edicao_foto'),
   90.0,
   'C6: a mediana da equipe também ignora o que não foi medido'
@@ -213,14 +214,14 @@ select is(
 -- =============================================================================
 
 select is(
-  (select em_paralelo from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select em_paralelo from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Fotografa A') and tipo = 'nascimento'),
   2,
   'D1: os dois partos que se cruzam no tempo ficam marcados'
 );
 
 select is(
-  (select em_paralelo from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select em_paralelo from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B') and tipo = 'edicao_foto'),
   0,
   'D2: edição não tem marca de paralelo — editar duas coisas no dia é normal'
@@ -232,7 +233,7 @@ select is(
 -- =============================================================================
 
 select is(
-  (select concluidas_por_outra from public.metricas_por_etapa('2027-02-01', '2027-02-28')
+  (select concluidas_por_outra from public.metricas_por_etapa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Fotografa A') and tipo = 'nascimento'),
   1,
   'E1: o parto concluído pela gestão continua da fotógrafa, e fica contado como registrado por outra pessoa'
@@ -244,21 +245,21 @@ select is(
 -- =============================================================================
 
 select is(
-  (select voltou_para_ajuste from public.metricas_por_pessoa('2027-02-01', '2027-02-28')
+  (select voltou_para_ajuste from public.metricas_por_pessoa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B')),
   1,
   'F1: a reabertura do caso volta para quem fez a foto; o clique desfeito em 8 min não conta'
 );
 
 select is(
-  (select dias_com_trabalho from public.metricas_por_pessoa('2027-02-01', '2027-02-28')
+  (select dias_com_trabalho from public.metricas_por_pessoa('2029-02-01', '2029-02-28')
     where pessoa_id = pg_temp.pessoa('Editora B')),
   2,
   'F2: dias com trabalho, em Brasília'
 );
 
 select ok(
-  exists (select 1 from public.metricas_por_pessoa('2027-02-01', '2027-02-28')
+  exists (select 1 from public.metricas_por_pessoa('2029-02-01', '2029-02-28')
            where pessoa_id = pg_temp.pessoa('Atendimento ME') and dias_com_trabalho = 0),
   'F3: pessoa ativa sem nada no período aparece com zero, em vez de sumir'
 );
@@ -313,19 +314,19 @@ reset role;
 
 select pg_temp.como('gestao.me@clickbaby.test');
 select throws_ok(
-  $$ select * from public.metricas_por_etapa('2027-02-28', '2027-02-01') $$,
-  'P0001', 'O fim do período (2027-02-01) vem antes do começo (2027-02-28).',
+  $$ select * from public.metricas_por_etapa('2029-02-28', '2029-02-01') $$,
+  'P0001', 'O fim do período (2029-02-01) vem antes do começo (2029-02-28).',
   'H1: período invertido é recusado com a frase de quem lê'
 );
 
 select is(
-  (select sum(enviados)::int from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
+  (select sum(enviados)::int from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'bloco')),
   0,
   'H2: sem caso enviado no período, a série vem zerada em cada pedaço — e não quebra'
 );
 
 select is(
-  (select enviados from public.metricas_prazo_do_periodo('2027-02-01', '2027-02-28')),
+  (select enviados from public.metricas_prazo_do_periodo('2029-02-01', '2029-02-28')),
   0,
   'H3: e o resumo do período devolve UMA linha com zero, não nenhuma — o painel lê um número'
 );
@@ -338,7 +339,7 @@ reset role;
 
 select pg_temp.como('atendimento.me@clickbaby.test');
 select throws_ok(
-  $$ select * from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco') $$,
+  $$ select * from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'bloco') $$,
   'P0001', 'Os relatórios de pessoas são só da gestão.',
   'S1: a série também é só da gestão'
 );
@@ -347,42 +348,42 @@ reset role;
 select pg_temp.como('gestao.me@clickbaby.test');
 
 select throws_ok(
-  $$ select * from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'semana') $$,
+  $$ select * from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'semana') $$,
   'P0001', 'O grão da série é ''bloco'' ou ''mes''.',
   'S2: grão desconhecido é recusado'
 );
 
 select is(
   (select string_agg(inicio || '/' || fim, ',' order by inicio)
-     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
-  '2027-02-01/2027-02-07,2027-02-08/2027-02-14,2027-02-15/2027-02-21,2027-02-22/2027-02-28',
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'bloco')),
+  '2029-02-01/2029-02-07,2029-02-08/2029-02-14,2029-02-15/2029-02-21,2029-02-22/2029-02-28',
   'S3: blocos de 7 dias contados do dia 1 — o "1–7" de um mês é o "1–7" do outro'
 );
 
 select is(
   (select string_agg(inicio || '/' || fim, ',' order by inicio)
-     from public.metricas_serie_da_equipe('2027-03-01', '2027-03-31', 'bloco')),
-  '2027-03-01/2027-03-07,2027-03-08/2027-03-14,2027-03-15/2027-03-21,2027-03-22/2027-03-31',
+     from public.metricas_serie_da_equipe('2029-03-01', '2029-03-31', 'bloco')),
+  '2029-03-01/2029-03-07,2029-03-08/2029-03-14,2029-03-15/2029-03-21,2029-03-22/2029-03-31',
   'S4: o último bloco absorve a sobra (22–31), em vez de virar um quinto de três dias'
 );
 
 select is(
   (select string_agg(coalesce(por_tipo->'nascimento'->>'concluidas', '0') || ':' || voltou_para_ajuste, ',' order by inicio)
-     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'bloco')),
   '0:0,2:0,0:1,0:0',
   'S5: cada número cai no seu bloco — os dois partos de 10/02, o caso reaberto em 20/02'
 );
 
 select is(
-  (select por_tipo from public.metricas_serie_da_equipe('2026-09-01', '2027-02-28', 'mes') where inicio = '2026-09-01'),
+  (select por_tipo from public.metricas_serie_da_equipe('2026-09-01', '2026-10-31', 'mes') where inicio = '2026-09-01'),
   '{}'::jsonb,
   'S6: o mês antes do piso vem, mas vazio — o parto de 20/09 não entra'
 );
 
 select is(
   (select (por_tipo->'edicao_foto'->>'mediana_min')::numeric
-     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'mes')),
-  (select mediana_min from public.metricas_da_equipe_por_etapa('2027-02-01', '2027-02-28') where tipo = 'edicao_foto'),
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'mes')),
+  (select mediana_min from public.metricas_da_equipe_por_etapa('2029-02-01', '2029-02-28') where tipo = 'edicao_foto'),
   'S7: o balde do mês é a mesma conta da função da equipe — a mediana verdadeira, não composta'
 );
 

@@ -91,17 +91,19 @@ function variacao(
   anterior: number | null,
   formatar: (diferenca: number) => string,
   subirE: Tom,
+  /** Abaixo disto a diferença some no arredondamento, e é "igual" — não "▼ −0 p.p.". */
+  passo: number,
 ): Variacao | undefined {
   if (atual === null || anterior === null) return undefined
   const d = atual - anterior
-  const direcao = Math.abs(d) < 1e-9 ? 'igual' : d > 0 ? 'sobe' : 'desce'
+  const direcao = Math.abs(d) < passo ? 'igual' : d > 0 ? 'sobe' : 'desce'
   const tom: Tom =
     direcao === 'igual' || subirE === 'neutro'
       ? 'neutro'
       : (direcao === 'sobe') === (subirE === 'bom')
         ? 'bom'
         : 'ruim'
-  return { texto: formatar(d), tom, direcao }
+  return { texto: formatar(direcao === 'igual' ? 0 : d), tom, direcao }
 }
 
 const sinal = (n: number, texto: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${texto}`
@@ -225,7 +227,7 @@ export function kpisDaEquipe(
         rotulo: 'Prazo cumprido',
         valor: pct(a.taxaPrazo),
         detalhe: a.enviados === 0 ? 'nenhum caso enviado' : `${a.noPrazo} de ${a.enviados} casos`,
-        variacao: variacao(a.taxaPrazo, b?.taxaPrazo ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'bom'),
+        variacao: variacao(a.taxaPrazo, b?.taxaPrazo ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'bom', 0.005),
         tendencia: tendencia('prazo'),
       },
       {
@@ -233,7 +235,7 @@ export function kpisDaEquipe(
         rotulo: 'Do parto ao envio',
         valor: horas(a.partoAoEnvio),
         detalhe: a.esperaAdm === null ? 'mediana' : `mediana · mais ${horas(a.esperaAdm)} até o ADM`,
-        variacao: variacao(a.partoAoEnvio, b?.partoAoEnvio ?? null, (d) => sinal(d, horas(Math.abs(d))), 'ruim'),
+        variacao: variacao(a.partoAoEnvio, b?.partoAoEnvio ?? null, (d) => sinal(d, horas(Math.abs(d))), 'ruim', 0.05),
         tendencia: tendencia('parto-envio'),
       },
       {
@@ -241,7 +243,7 @@ export function kpisDaEquipe(
         rotulo: 'Voltou para ajuste',
         valor: pct(a.taxaAjuste),
         detalhe: `${a.ajustes} de ${a.edicoes} edições`,
-        variacao: variacao(a.taxaAjuste, b?.taxaAjuste ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'ruim'),
+        variacao: variacao(a.taxaAjuste, b?.taxaAjuste ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'ruim', 0.005),
         tendencia: tendencia('ajuste'),
       },
     ],
@@ -250,7 +252,7 @@ export function kpisDaEquipe(
         chave: 'partos',
         rotulo: 'Partos',
         valor: a.partos.toLocaleString('pt-BR'),
-        variacao: variacao(a.partos, b?.partos ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro'),
+        variacao: variacao(a.partos, b?.partos ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro', 0.5),
         tendencia: tendencia('partos'),
       },
       {
@@ -258,7 +260,7 @@ export function kpisDaEquipe(
         rotulo: 'Edições entregues',
         valor: a.edicoes.toLocaleString('pt-BR'),
         detalhe: 'fotos, reels, vídeo e álbum',
-        variacao: variacao(a.edicoes, b?.edicoes ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro'),
+        variacao: variacao(a.edicoes, b?.edicoes ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro', 0.5),
         tendencia: tendencia('edicoes'),
       },
       {
@@ -267,7 +269,7 @@ export function kpisDaEquipe(
         valor: minutos(a.tempoFotos),
         // A QUALIDADE DO REGISTRO MORA AQUI: é o número que ela qualifica.
         detalhe: a.edicoes === 0 ? 'mediana' : `mediana · ${pct(a.edicoesMedidas / a.edicoes)} com relógio aberto`,
-        variacao: variacao(a.tempoFotos, b?.tempoFotos ?? null, (d) => sinal(d, minutos(Math.abs(d))), 'neutro'),
+        variacao: variacao(a.tempoFotos, b?.tempoFotos ?? null, (d) => sinal(d, minutos(Math.abs(d))), 'neutro', 0.5),
         tendencia: tendencia('tempo-fotos'),
       },
     ],

@@ -1,4 +1,5 @@
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
+import { hojeNoFuso } from '@/lib/formato'
 
 /**
  * AS MÉTRICAS COMEÇAM EM 01/10/2026 (decisão do gestor, 28/09).
@@ -10,6 +11,25 @@ import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
  * Mudou lá, muda aqui.
  */
 export const INICIO_DAS_METRICAS = '2026-10-01'
+
+/**
+ * O "HOJE" DO RELATÓRIO. Em produção é hoje, e ponto.
+ *
+ * SÓ EM DESENVOLVIMENTO, `?hoje=2027-12-31` na URL faz a tela se comportar como
+ * se fosse aquele dia (29/09/2026, pedido do gestor: "coloca dados fictícios
+ * pra eu poder analisar"). Os dados fictícios do banco local vão de outubro de
+ * 2026 a dezembro de 2027 — no futuro —, e o gráfico só desenha o que já
+ * passou; sem isto, a tela local ficaria vazia até esses meses chegarem.
+ * `import.meta.env.DEV` vira `false` no build, e o ramo inteiro some do bundle
+ * publicado: em produção não existe data simulada, nem por engano.
+ */
+export function hojeDoRelatorio(): { hoje: string; simulado: boolean } {
+  if (import.meta.env.DEV) {
+    const pedido = new URLSearchParams(window.location.search).get('hoje')
+    if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) return { hoje: pedido, simulado: true }
+  }
+  return { hoje: hojeNoFuso(), simulado: false }
+}
 
 /**
  * Amostra mínima para uma taxa entrar em ranking. Com um mês de dados, a

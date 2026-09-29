@@ -1971,12 +1971,17 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   que ficou sem uso quando a ficha individual saiu). **"No prazo" é AZUL e não verde**: verde ×
   vermelho deu ΔE 4,1 para deuteranopia (reprova); azul × vermelho, 25,8. Todo gráfico com
   legenda quando há duas séries, dica no mouse E no foco do teclado, e tabela equivalente.
-  **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe outubro inteiro (130 casos, 12
-  pessoas com nomes de pedras preciosas, cada uma com um perfil de ritmo, disciplina com o
-  relógio, atraso e retrabalho). Só local, por construção: vai direto para o container.
-  Como o gráfico só desenha pedaço que JÁ PASSOU, antes de 01/10/2026 o local mostra os
-  cartões com os números de outubro e o gráfico vazio — para ver o gráfico antes disso, fixe
-  `hoje` na tela temporariamente (foi como a PR de 29/09 foi conferida).
+  **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe de OUTUBRO DE 2026 A DEZEMBRO DE
+  2027 (~1.850 casos, 12 pessoas com nomes de pedras preciosas, cada uma com um perfil de
+  ritmo, disciplina com o relógio, atraso e retrabalho). A equipe MELHORA mês a mês e o volume
+  tem estação, para as comparações terem o que mostrar. Idempotente por mês. Só local, por
+  construção: vai direto para o container. Os testes pgTAP das métricas moram em 2029 para não
+  colidir com ele.
+  **DATA SIMULADA, SÓ EM DESENVOLVIMENTO:** esses meses estão no futuro e o gráfico só desenha
+  o que já passou, então `/quadro/relatorios?hoje=2027-12-31` faz a tela se comportar como se
+  fosse aquele dia, com um selo "Data simulada" no topo. `hojeDoRelatorio` (em `lib/metricas.ts`)
+  lê o parâmetro atrás de `import.meta.env.DEV`, que vira `false` no build — conferido: a
+  leitura da URL não existe no bundle publicado.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
