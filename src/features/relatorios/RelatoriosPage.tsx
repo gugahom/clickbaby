@@ -101,7 +101,7 @@ export function RelatoriosPage() {
   return (
     <div className="mx-auto w-full max-w-[100rem] space-y-5 p-3 md:p-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Relatório interno</h1>
         <p className="text-sm text-muted-foreground">
           KPIs da equipe, contando a partir de {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
           {simulado && (

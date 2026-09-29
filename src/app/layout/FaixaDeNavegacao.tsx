@@ -30,7 +30,16 @@ export function FaixaDeNavegacao({ destinos }: { destinos: Destino[] }) {
       aria-label="Navegação"
       className="flex gap-1 overflow-x-auto border-t border-white/10 bg-black/25 px-3 py-2 md:hidden"
     >
-      {destinos.map((destino) => (
+      {/* Destino com filhos vira UMA PÍLULA POR FILHO, com o nome completo:
+          a faixa não tem onde abrir um grupo, e "Interno" sozinho não diz de
+          quê. */}
+      {destinos
+        .flatMap((d) =>
+          d.filhos
+            ? d.filhos.map((f) => ({ para: f.para, rotulo: f.rotuloCompleto, fim: f.fim }))
+            : [{ para: d.para, rotulo: d.rotulo, fim: d.fim }],
+        )
+        .map((destino) => (
         <NavLink
           key={destino.para}
           to={destino.para}
@@ -49,7 +58,7 @@ export function FaixaDeNavegacao({ destinos }: { destinos: Destino[] }) {
         >
           {destino.rotulo}
         </NavLink>
-      ))}
+        ))}
     </nav>
   )
 }

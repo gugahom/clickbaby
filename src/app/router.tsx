@@ -8,6 +8,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
 import { EquipePage } from '@/features/equipe/EquipePage'
 import { RelatoriosPage } from '@/features/relatorios/RelatoriosPage'
+import { RelatorioExternoPage } from '@/features/relatorios/externo/RelatorioExternoPage'
 import { PerfilPage } from '@/features/perfil/PerfilPage'
 
 /**
@@ -53,6 +54,7 @@ export const router = createBrowserRouter(
                 // existe para as telas novas terem onde chegar, e o que ela
                 // mede ainda não foi combinado — ver RelatoriosPage.
                 { path: 'relatorios', element: <RelatoriosPage /> },
+                { path: 'relatorios/externo', element: <RelatorioExternoPage /> },
               ],
             },
             {

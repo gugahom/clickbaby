@@ -58,6 +58,7 @@ const TABELAS = [
   { nome: 'escalas' },
   { nome: 'padroes_tempo' },
   { nome: 'pontos_por_item' },
+  { nome: 'operacao_dos_casos', view: true },
   { nome: 'eventos' },
   { nome: 'quadro_casos', view: true },
   // Despesas do caso (20260913022926) e o relatório do financeiro
@@ -203,6 +204,11 @@ const RPCS_TRANSICAO = {
   metricas_pontos_por_pessoa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   pontos_por_item_vigentes: {},
   definir_pontos_do_item: { p_item: 'nascimento', p_pontos: null },
+  // O relatório externo (20260929233525). Quem as alcançasse listaria a
+  // operação inteira, com nome de mãe e bebê.
+  operacao_buscar: { p_filtros: {}, p_ordem: 'recentes', p_limite: 1, p_deslocamento: 0 },
+  operacao_facetas: { p_filtros: {} },
+  operacao_resumo: { p_filtros: {} },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC
