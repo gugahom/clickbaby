@@ -1,37 +1,147 @@
-import { IconeRelatorio } from '@/components/ui/icones'
+import { useState } from 'react'
+import clsx from 'clsx'
+import { Botao } from '@/components/ui/Botao'
+import { hojeNoFuso } from '@/lib/formato'
+import {
+  useMetricasDaEquipe,
+  useMetricasPorEtapa,
+  useMetricasPorPessoa,
+  usePadroesDeTempo,
+  usePrazoDoPeriodo,
+  usePrazoPorSemana,
+  useVolumePorSemana,
+} from './api/useMetricas'
+import { PadroesDeTempo } from './components/PadroesDeTempo'
+import { PainelDaEquipe } from './components/PainelDaEquipe'
+import { TabelaDePessoas } from './components/TabelaDePessoas'
+import { TrilhoDeAbas } from './components/TrilhoDeAbas'
+import { kpisDaEquipe, linhasDasPessoas } from './lib/kpis'
+import {
+  INICIO_DAS_METRICAS,
+  MES_INICIAL,
+  deslocarMes,
+  mesPadrao,
+  periodoDoMes,
+  rotuloDoMes,
+} from './lib/metricas'
+
+type Aba = 'equipe' | 'pessoas' | 'padroes'
+
+const ABAS: { id: Aba; rotulo: string }[] = [
+  { id: 'equipe', rotulo: 'Equipe' },
+  { id: 'pessoas', rotulo: 'Pessoas' },
+  { id: 'padroes', rotulo: 'Padrões de tempo' },
+]
+
+const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, medianaHorasAteConfirmacao: null }
 
 /**
- * RELATÓRIOS — a tela existe, os números ainda não (28/09/2026, pedido do
- * gestor: "já pode criar a aba de relatório MAS SEM NADA NELA POR ENQUANTO").
+ * RELATÓRIOS — os KPIs da equipe (28/09/2026, pedido do gestor).
  *
- * Ela nasce vazia DE PROPÓSITO, e a página diz isso em voz alta em vez de
- * fingir que está carregando. O que ainda não existe é o acordo sobre o que se
- * mede: as métricas da ficha da Equipe foram REMOVIDAS em 03/09/2026 por essa
- * mesma razão (seção 13), e recolocá-las aqui por conta própria seria refazer
- * a decisão que o gestor tomou.
+ * SEGUNDA VERSÃO, do mesmo dia. A primeira tinha quatro abas e mostrava tudo o
+ * que o banco sabe; o gestor a recusou — "ficou muita informação (…) foco em
+ * KPI e métricas". Esta tem três: EQUIPE (seis KPIs com variação e tendência,
+ * e um gráfico), PESSOAS (três destaques e uma tabela de KPIs que é o ranking)
+ * e PADRÕES DE TEMPO (a régua). O que saiu, e por quê, está nos componentes.
  *
- * O DADO JÁ ESTÁ GUARDADO, e é isso que esta tela vai ler quando tiver
- * pergunta: `eventos` é append-only desde o primeiro dia (invariante 3.3), o
- * que permite calcular uma definição nova sobre o histórico inteiro — inclusive
- * o tempo em cada fase do trabalho de campo, que passou a ser gravado hoje.
+ * SÓ A GESTÃO vê — a rota está atrás da `RotaDeGestao`, e cada função confere o
+ * papel de novo no banco. CONTA A PARTIR DE 01/10/2026: o seletor não oferece
+ * nada antes, e o banco não devolve.
+ *
+ * O MÊS ANTERIOR É LIDO JUNTO, só para a variação dos KPIs. Em outubro de 2026
+ * ele é setembro — antes do piso —, vem zerado, e a variação não aparece.
  */
 export function RelatoriosPage() {
+  const hoje = hojeNoFuso()
+  const [mes, setMes] = useState(() => mesPadrao(hoje))
+  const [aba, setAba] = useState<Aba>('equipe')
+
+  const periodo = periodoDoMes(mes)
+  const anterior = periodoDoMes(deslocarMes(mes, -1))
+
+  const porEtapa = useMetricasPorEtapa(periodo)
+  const equipe = useMetricasDaEquipe(periodo)
+  const pessoas = useMetricasPorPessoa(periodo)
+  const semanas = usePrazoPorSemana(periodo)
+  const volume = useVolumePorSemana(periodo)
+  const prazo = usePrazoDoPeriodo(periodo)
+  const padroes = usePadroesDeTempo()
+  const equipeAntes = useMetricasDaEquipe(anterior)
+  const pessoasAntes = useMetricasPorPessoa(anterior)
+  const prazoAntes = usePrazoDoPeriodo(anterior)
+
+  const consultas = [porEtapa, equipe, pessoas, semanas, volume, prazo, padroes, equipeAntes, pessoasAntes, prazoAntes]
+  const erro = consultas.find((c) => c.error)?.error
+  const primeiraCarga = consultas.some((c) => c.isPending)
+  // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
+  const atualizando = consultas.some((c) => c.isPlaceholderData)
+
+  const { entrega, producao } = kpisDaEquipe(
+    { prazo: prazo.data ?? PRAZO_VAZIO, equipe: equipe.data ?? [], pessoas: pessoas.data ?? [] },
+    { prazo: prazoAntes.data ?? PRAZO_VAZIO, equipe: equipeAntes.data ?? [], pessoas: pessoasAntes.data ?? [] },
+    semanas.data ?? [],
+    volume.data ?? [],
+    periodo,
+  )
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-3 md:p-6">
+    <div className="mx-auto w-full max-w-6xl space-y-5 p-3 md:p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
         <p className="text-sm text-muted-foreground">
-          O lugar dos números da operação.
+          KPIs da equipe, contando a partir de {INICIO_DAS_METRICAS.split('-').reverse().join('/')}.
         </p>
       </header>
 
-      <div className="flex flex-col items-center gap-3 rounded-painel border border-dashed border-border bg-card/50 px-4 py-12 text-center">
-        <IconeRelatorio className="size-8 text-muted-foreground/60" />
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Ainda não há nada aqui. O sistema guarda o histórico desde o primeiro
-          dia — falta combinar o que vale a pena medir.
-        </p>
+      {/* Os filtros numa linha só, acima de tudo o que eles recortam. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-painel border border-border bg-card p-1">
+          <Botao
+            variante="fantasma"
+            onClick={() => setMes((m) => deslocarMes(m, -1))}
+            disabled={mes <= MES_INICIAL}
+            aria-label="Mês anterior"
+          >
+            ‹
+          </Botao>
+          <span className="min-w-[10rem] text-center text-base font-bold">{rotuloDoMes(mes)}</span>
+          <Botao
+            variante="fantasma"
+            onClick={() => setMes((m) => deslocarMes(m, 1))}
+            disabled={mes >= mesPadrao(hoje)}
+            aria-label="Próximo mês"
+          >
+            ›
+          </Botao>
+        </div>
+        <TrilhoDeAbas abas={ABAS} ativa={aba} onTrocar={setAba} />
       </div>
+
+      {erro ? (
+        <p className="rounded-painel border border-atrasado/40 bg-card p-4 text-sm text-atrasado">
+          Não deu para carregar o relatório: {erro.message}
+        </p>
+      ) : primeiraCarga ? (
+        <p className="py-16 text-center text-sm text-muted-foreground">Carregando…</p>
+      ) : (
+        <div className={clsx('transition-opacity', atualizando && 'opacity-60')}>
+          {aba === 'equipe' && (
+            <PainelDaEquipe
+              entrega={entrega}
+              producao={producao}
+              semanas={semanas.data ?? []}
+              inicioDoPeriodo={periodo.inicio}
+            />
+          )}
+          {aba === 'pessoas' && (
+            <TabelaDePessoas
+              linhas={linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [])}
+              equipe={equipe.data ?? []}
+            />
+          )}
+          {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}
+        </div>
+      )}
     </div>
   )
 }

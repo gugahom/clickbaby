@@ -13,6 +13,7 @@
     "seed:auth": "node scripts/seed-dev-auth.mjs",
     "gen:types": "supabase gen types typescript --local > src/types/database.ts",
     "seed:casos": "node scripts/seed-casos.mjs",
+    "seed:metricas": "node scripts/seed-metricas.mjs",
     "auditar:privilegios": "node scripts/auditar-privilegios.mjs",
     "sondar:anon": "node scripts/sondar-anon.mjs",
     "seguranca": "node scripts/auditar-privilegios.mjs && node scripts/sondar-anon.mjs && node scripts/auditar-storage.mjs",

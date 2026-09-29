@@ -1100,6 +1100,13 @@ export type Database = {
         Returns: undefined
       }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
+      definir_padrao_de_tempo: {
+        Args: {
+          p_etapa_tipo: Database["public"]["Enums"]["etapa_tipo"]
+          p_minutos: number
+        }
+        Returns: undefined
+      }
       devolver_para_o_quadro: {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined
@@ -1128,7 +1135,9 @@ export type Database = {
         }
         Returns: undefined
       }
+      exigir_gestao: { Args: never; Returns: undefined }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
+      inicio_das_metricas: { Args: never; Returns: string }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       limpar_notificacoes_gerais: { Args: never; Returns: string }
       marcar_fotolivro_enviado: {
@@ -1136,6 +1145,79 @@ export type Database = {
         Returns: undefined
       }
       marcar_notificacoes_vistas: { Args: never; Returns: string }
+      metricas_da_equipe_por_etapa: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          concluidas: number
+          mediana_min: number
+          medidas: number
+          p25_min: number
+          p75_min: number
+          pessoas: number
+          tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }[]
+      }
+      metricas_por_etapa: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          com_prazo: number
+          concluidas: number
+          concluidas_por_outra: number
+          em_paralelo: number
+          mediana_min: number
+          medidas: number
+          no_prazo: number
+          pessoa_id: string
+          soma_min: number
+          tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }[]
+      }
+      metricas_por_pessoa: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          ativo: boolean
+          atribuicoes_feitas: number
+          avaliacoes_feitas: number
+          dias_com_trabalho: number
+          entregas_confirmadas: number
+          material_baixou: number
+          material_subiu: number
+          nome: string
+          papel_sistema: string
+          passagens_dadas: number
+          passagens_recebidas: number
+          pessoa_id: string
+          termos_registrados: number
+          voltou_para_ajuste: number
+        }[]
+      }
+      metricas_prazo_do_periodo: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          enviados: number
+          mediana_horas_ate_confirmacao: number
+          mediana_horas_ate_envio: number
+          no_prazo: number
+        }[]
+      }
+      metricas_prazo_por_semana: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          enviados: number
+          mediana_horas_ate_confirmacao: number
+          mediana_horas_ate_envio: number
+          no_prazo: number
+          semana: string
+        }[]
+      }
+      metricas_volume_por_semana: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          concluidas: number
+          semana: string
+          tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }[]
+      }
       mover_album: {
         Args: {
           p_caso_etapa_id: string
@@ -1169,10 +1251,22 @@ export type Database = {
         Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
         Returns: number
       }
+      padroes_de_tempo: {
+        Args: never
+        Returns: {
+          etapa_tipo: Database["public"]["Enums"]["etapa_tipo"]
+          minutos_esperados: number
+          vigente_desde: string
+        }[]
+      }
       pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       pedir_alteracao_da_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo: string }
         Returns: undefined
+      }
+      periodo_das_metricas: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: Record<string, unknown>
       }
       planejar_rendicao: {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
