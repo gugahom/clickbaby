@@ -214,18 +214,25 @@ function lerPorTipo(json: Json): Partial<Record<EtapaTipo, DadosDoTipo>> {
 }
 
 /**
- * A série da equipe. Sem período, não consulta — é como a tela diz "não há o
- * que comparar" (um mês antes de 01/10/2026, por exemplo).
+ * A série da equipe — ou da produção de uma pessoa. Sem período, não consulta:
+ * é como a tela diz "não há o que comparar" (antes de 01/10/2026, por exemplo).
  */
-export function useSerieDaEquipe(periodo: Periodo | null, grao: Grao) {
+export function useSerieDaEquipe(periodo: Periodo | null, grao: Grao, pessoaId: string | null = null) {
   return useQuery({
-    queryKey: [CHAVE, 'serie', grao, periodo?.inicio, periodo?.fim],
+    queryKey: [CHAVE, 'serie', grao, periodo?.inicio, periodo?.fim, pessoaId],
     enabled: periodo !== null,
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<BaldeDaSerie[]> => {
       if (!periodo) return []
       const linhas = await chamar(
-        supabase.rpc('metricas_serie_da_equipe', { p_inicio: periodo.inicio, p_fim: periodo.fim, p_grao: grao }),
+        supabase.rpc('metricas_serie_da_equipe', {
+          p_inicio: periodo.inicio,
+          p_fim: periodo.fim,
+          p_grao: grao,
+          // Sem pessoa, a equipe inteira. Com pessoa, a PRODUÇÃO é só dela —
+          // o prazo continua da equipe (é fato do caso, não de uma pessoa).
+          ...(pessoaId ? { p_pessoa_id: pessoaId } : {}),
+        }),
       )
       return (linhas ?? []).map((l) => ({
         inicio: l.inicio,

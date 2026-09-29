@@ -57,6 +57,8 @@ export function RelatoriosPage() {
   const [{ hoje, simulado }] = useState(hojeDoRelatorio)
   const [mes, setMes] = useState(() => mesPadrao(hoje))
   const [aba, setAba] = useState<Aba>('equipe')
+  // O filtro da Produção. Nula = a equipe inteira.
+  const [pessoaId, setPessoaId] = useState<string | null>(null)
 
   const periodo = periodoDoMes(mes)
   const anterior = periodoDoMes(deslocarMes(mes, -1))
@@ -66,21 +68,34 @@ export function RelatoriosPage() {
   const pessoas = useMetricasPorPessoa(periodo)
   const padroes = usePadroesDeTempo()
   const doisMeses = useSerieDaEquipe({ inicio: anterior.inicio, fim: periodo.fim }, 'mes')
-  const blocos = useSerieDaEquipe(periodo, 'bloco')
+  // A Produção segue o filtro de pessoa; sem pessoa, estas são as mesmas
+  // consultas de cima (mesma chave, mesmo cache).
+  const doisMesesDaProducao = useSerieDaEquipe({ inicio: anterior.inicio, fim: periodo.fim }, 'mes', pessoaId)
+  const blocos = useSerieDaEquipe(periodo, 'bloco', pessoaId)
 
-  const consultas = [porEtapa, equipe, pessoas, padroes, doisMeses, blocos]
+  const consultas = [porEtapa, equipe, pessoas, padroes, doisMeses, doisMesesDaProducao, blocos]
   const erro = consultas.find((c) => c.error)?.error
   const primeiraCarga = consultas.some((c) => c.isPending)
   // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
   const atualizando = consultas.some((c) => c.isPlaceholderData)
 
   const meses = doisMeses.data ?? []
-  const { entrega, producao } = kpisDaEquipe(
+  const { entrega } = kpisDaEquipe(
     meses.find((b) => b.inicio === periodo.inicio),
     meses.find((b) => b.inicio === anterior.inicio),
+    [],
+    hoje,
+  )
+  const mesesDaProducao = doisMesesDaProducao.data ?? []
+  const { producao } = kpisDaEquipe(
+    mesesDaProducao.find((b) => b.inicio === periodo.inicio),
+    mesesDaProducao.find((b) => b.inicio === anterior.inicio),
     blocos.data ?? [],
     hoje,
   )
+  const quemPodeSerFiltrado = (pessoas.data ?? [])
+    .map((p) => ({ id: p.pessoaId, nome: p.nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
 
   return (
     <div className="mx-auto w-full max-w-[100rem] space-y-5 p-3 md:p-6">
@@ -137,6 +152,9 @@ export function RelatoriosPage() {
               producao={producao}
               mes={mes}
               hoje={hoje}
+              pessoas={quemPodeSerFiltrado}
+              pessoaId={pessoaId}
+              onTrocarPessoa={setPessoaId}
             />
           )}
           {aba === 'pessoas' && (

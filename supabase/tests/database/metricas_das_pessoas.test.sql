@@ -12,8 +12,9 @@
 --       desfeito em minutos não conta.
 --   G — os padrões de tempo: só gestão define, mesmo dia substitui, fica evento.
 --   H — período invertido é recusado; período sem nada devolve zero, não erro.
---   S — a SÉRIE da equipe (migrations 20260929053020 e 20260929064502): os
---       baldes, o piso, e os mesmos números das funções que ela chama.
+--   S — a SÉRIE da equipe (migrations 20260929053020, 20260929064502 e
+--       20260929073949): os baldes, o piso, o filtro por pessoa, e os mesmos
+--       números das funções que ela chama.
 
 -- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2029, um mês que nada mais usa. O
 -- seed fictício (`npm run seed:metricas`) enche de OUTUBRO DE 2026 A DEZEMBRO DE
@@ -23,7 +24,7 @@
 -- ou não, um seed antes.
 
 begin;
-select plan(35);
+select plan(37);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -400,6 +401,21 @@ select is(
   '1/' || (select enviados from public.metricas_prazo_do_periodo('2029-02-01', '2029-02-28'))
     || '/' || (select mediana_min from public.metricas_da_equipe_por_etapa('2029-02-01', '2029-02-28') where tipo = 'edicao_foto'),
   'S10: o período inteiro é UM balde, com os números das funções do período — a mediana não sai dos dias'
+);
+
+select is(
+  (select coalesce(por_tipo->'nascimento'->>'concluidas', '0') || '/' || coalesce(por_tipo->'edicao_foto'->>'concluidas', '0')
+          || '/' || voltou_para_ajuste
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'periodo', pg_temp.pessoa('Editora B'))),
+  '0/2/1',
+  'S11: com pessoa, a produção é SÓ dela — a editora B: nenhum parto, duas fotos, um ajuste'
+);
+
+select is(
+  (select coalesce(por_tipo->'nascimento'->>'concluidas', '0') || '/' || enviados
+     from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'periodo', pg_temp.pessoa('Fotografa A'))),
+  '2/' || (select enviados from public.metricas_prazo_do_periodo('2029-02-01', '2029-02-28')),
+  'S12: a fotógrafa A tem os dois partos (crédito do responsável), e o prazo continua o da equipe'
 );
 
 select throws_ok(

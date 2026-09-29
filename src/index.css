@@ -205,16 +205,15 @@
      (L 0.63), porque o `--atrasado` escuro (L 0.68) sai da faixa de
      luminosidade de marca de gráfico.
 
-     `--grafico-comparacao` é o OUTRO PERÍODO ao lado do atual (29/09/2026): o
-     mês anterior, o mesmo mês do ano passado. É cinza de propósito — contexto,
-     não uma segunda série que disputa atenção —, e por isso reprova as regras
-     de paleta CATEGÓRICA do validador (faixa de luminosidade e croma), que não
-     são para ele. O que importa passou: separação para daltonismo ΔE 26 no
-     claro e 22 no escuro. O contraste com o fundo fica abaixo de 3:1, e o
-     alívio exigido está lá: legenda, valor na dica e a tabela gêmea. */
+     `--grafico-comparacao` é a LINHA DE COMPARAÇÃO (29/09/2026, pedido do
+     gestor: "a outra linha pode aparecer em rosa, como usamos nas cores de
+     todo o sistema") — o `--acento` da marca numa luminosidade de gráfico.
+     Validado com o script de daltonismo contra o azul: ΔE 11,3 no claro e 16
+     no escuro (o mínimo é 8), todas as regras passando. Ainda assim ela vem
+     TRACEJADA: a forma separa as duas linhas sem depender da cor. */
   --grafico: oklch(0.55 0.15 262);
   --grafico-atrasado: oklch(0.53 0.21 25);
-  --grafico-comparacao: oklch(0.74 0.02 264);
+  --grafico-comparacao: oklch(0.6 0.2 357);
 
   /* AS MESMAS TRÊS, MAIS ESCURAS, para texto sobre pílula tingida.
   
@@ -399,7 +398,7 @@
   /* Gráficos no escuro — os mesmos três papéis, validados contra o card escuro. */
   --grafico: oklch(0.66 0.15 255);
   --grafico-atrasado: oklch(0.63 0.2 22);
-  --grafico-comparacao: oklch(0.52 0.02 260);
+  --grafico-comparacao: oklch(0.64 0.19 357);
   --rascunho: oklch(0.83 0.13 85);
   --rascunho-fundo: oklch(0.28 0.05 85 / 35%);
   --rascunho-borda: oklch(0.5 0.09 85 / 45%);

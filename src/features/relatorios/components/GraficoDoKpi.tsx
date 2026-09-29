@@ -23,6 +23,12 @@ import { topoRedondo, useTamanho } from '../lib/useTamanho'
  * BARRAS são a outra forma do mesmo dado ("ver gráfico em barras como está
  * agora"), no mesmo desenho: degradê, topo arredondado, a ativa acesa.
  *
+ * A COMPARAÇÃO É ROSA E TRACEJADA (segunda volta): o outro período, pedaço a
+ * pedaço — o 1º dia com o 1º dia, o 1º mês com o 1º mês. Rosa porque é a outra
+ * cor da marca, pedido do gestor; tracejada para a forma separar as duas linhas
+ * sem depender da cor. Sem área embaixo: duas manchas sobrepostas virariam
+ * uma. Nas barras, o par fica lado a lado, a comparação à esquerda.
+ *
  * SEM TABELA (pedido do gestor). O que ela garantia continua de outro jeito: o
  * gráfico é focável, as setas andam de pedaço em pedaço, e a dica é lida pelo
  * leitor de tela.
@@ -40,6 +46,8 @@ export type TipoDeGrafico = 'linha' | 'barras'
 
 const MARGEM = { topo: 18, direita: 14, base: 30, esquerda: 44 }
 const BARRA_MAX = 28
+const BARRA_DO_PAR = 20
+const ENTRE_O_PAR = 3
 const RAIO = 4
 /** Abaixo disto de espaço entre pontos, só o ativo ganha bolinha. */
 const PONTOS_A_PARTIR_DE = 16
@@ -48,6 +56,7 @@ const ROTULO_MIN = 52
 
 export function GraficoDoKpi({
   pontos,
+  comparacao = null,
   tipo,
   nomeDaSerie,
   formatar,
@@ -55,6 +64,8 @@ export function GraficoDoKpi({
   descricao,
 }: {
   pontos: PontoDoGrafico[]
+  /** O outro período, alinhado pela posição com `pontos`. */
+  comparacao?: PontoDoGrafico[] | null
   tipo: TipoDeGrafico
   /** O KPI, na linha da dica. */
   nomeDaSerie: string
@@ -68,8 +79,8 @@ export function GraficoDoKpi({
   const { largura, altura } = useTamanho(ref)
   const [ativo, setAtivo] = useState<number | null>(null)
 
-  const valores = pontos.map((p) => p.valor).filter((v): v is number => v !== null)
-  const vazio = valores.length === 0
+  const valores = [...pontos, ...(comparacao ?? [])].map((p) => p.valor).filter((v): v is number => v !== null)
+  const vazio = pontos.every((p) => p.valor === null)
 
   const topo = teto ?? topoRedondo(Math.max(0, ...valores))
   const alturaDoPlot = Math.max(80, altura - MARGEM.topo - MARGEM.base)
@@ -81,9 +92,16 @@ export function GraficoDoKpi({
   const ticks = [0, topo / 2, topo]
   const passoDoRotulo = Math.max(1, Math.ceil(ROTULO_MIN / Math.max(faixa, 1)))
   const comPontos = faixa >= PONTOS_A_PARTIR_DE
-  const barra = Math.min(BARRA_MAX, faixa * 0.6)
+  const comPar = comparacao !== null
+  const barra = comPar ? Math.min(BARRA_DO_PAR, faixa * 0.32) : Math.min(BARRA_MAX, faixa * 0.6)
 
   const trechos = trechosSemBuraco(pontos.map((p, i) => (p.valor === null ? null : { x: x(i), y: y(p.valor) })))
+  const trechosDaComparacao = trechosSemBuraco(
+    pontos.map((_, i) => {
+      const v = comparacao?.[i]?.valor
+      return v == null ? null : { x: x(i), y: y(v) }
+    }),
+  )
 
   function apontar(e: PointerEvent<SVGRectElement>) {
     const caixa = e.currentTarget.getBoundingClientRect()
@@ -105,7 +123,7 @@ export function GraficoDoKpi({
   const pontoAtivo = ativo === null ? null : pontos[ativo]
 
   return (
-    <div ref={ref} className="relative min-h-64 flex-1">
+    <div ref={ref} className="relative min-h-64 flex-1 xl:min-h-[26rem]">
       {vazio ? (
         <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           Sem dados neste período.
@@ -122,6 +140,10 @@ export function GraficoDoKpi({
               <linearGradient id={`${id}-barra`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--grafico)" stopOpacity={0.95} />
                 <stop offset="100%" stopColor="var(--grafico)" stopOpacity={0.35} />
+              </linearGradient>
+              <linearGradient id={`${id}-barra-comparacao`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--grafico-comparacao)" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="var(--grafico-comparacao)" stopOpacity={0.3} />
               </linearGradient>
               <filter id={`${id}-brilho-linha`} x="-10%" y="-20%" width="120%" height="140%">
                 <feGaussianBlur stdDeviation="8" result="blur" />
@@ -176,6 +198,27 @@ export function GraficoDoKpi({
 
             {tipo === 'linha' ? (
               <g>
+                {trechosDaComparacao.map((t, n) => (
+                  <path
+                    key={`c-${n}`}
+                    d={curva(t)}
+                    fill="none"
+                    stroke="var(--grafico-comparacao)"
+                    strokeWidth={2}
+                    strokeDasharray="5 4"
+                    strokeLinecap="round"
+                  />
+                ))}
+                {ativo !== null && comparacao?.[ativo]?.valor != null && (
+                  <circle
+                    cx={x(ativo)}
+                    cy={y(comparacao[ativo]!.valor!)}
+                    r={5}
+                    fill="var(--grafico-comparacao)"
+                    stroke="var(--card)"
+                    strokeWidth={2}
+                  />
+                )}
                 {trechos.map((t, n) => (
                   <g key={n}>
                     <path d={`${curva(t)} L${t[t.length - 1]!.x},${base} L${t[0]!.x},${base} Z`} fill={`url(#${id}-area)`} />
@@ -211,16 +254,24 @@ export function GraficoDoKpi({
             ) : (
               <g>
                 {pontos.map((p, i) => {
-                  if (p.valor === null || p.valor <= 0) return null
-                  const topoDaBarra = y(p.valor)
+                  const outra = comparacao?.[i]?.valor
+                  const xAtual = comPar ? x(i) + ENTRE_O_PAR / 2 : x(i) - barra / 2
+                  const xOutra = x(i) - ENTRE_O_PAR / 2 - barra
                   return (
-                    <path
-                      key={`b-${i}`}
-                      d={caminhoDaBarra(x(i) - barra / 2, topoDaBarra, barra, base - topoDaBarra)}
-                      fill={`url(#${id}-barra)`}
-                      opacity={ativo === null || ativo === i ? 1 : 0.45}
-                      className="transition-opacity"
-                    />
+                    <g key={`b-${i}`} opacity={ativo === null || ativo === i ? 1 : 0.45} className="transition-opacity">
+                      {outra != null && outra > 0 && (
+                        <path
+                          d={caminhoDaBarra(xOutra, y(outra), barra, base - y(outra))}
+                          fill={`url(#${id}-barra-comparacao)`}
+                        />
+                      )}
+                      {p.valor !== null && p.valor > 0 && (
+                        <path
+                          d={caminhoDaBarra(xAtual, y(p.valor), barra, base - y(p.valor))}
+                          fill={`url(#${id}-barra)`}
+                        />
+                      )}
+                    </g>
                   )
                 })}
               </g>
@@ -250,6 +301,7 @@ export function GraficoDoKpi({
       {pontoAtivo && ativo !== null && (
         <Dica
           ponto={pontoAtivo}
+          outro={comparacao?.[ativo] ?? null}
           nomeDaSerie={nomeDaSerie}
           formatar={formatar}
           x={x(ativo)}
@@ -330,6 +382,7 @@ function caminhoDaBarra(x: number, y: number, w: number, h: number): string {
  */
 function Dica({
   ponto,
+  outro,
   nomeDaSerie,
   formatar,
   x,
@@ -338,6 +391,7 @@ function Dica({
   alturaTotal,
 }: {
   ponto: PontoDoGrafico
+  outro: PontoDoGrafico | null
   nomeDaSerie: string
   formatar: (valor: number) => string
   x: number
@@ -348,7 +402,7 @@ function Dica({
   const largura = 216
   const folga = 16
   const esquerda = x + folga + largura <= larguraTotal ? x + folga : Math.max(0, x - folga - largura)
-  const topo = Math.max(0, Math.min(y - 36, alturaTotal - 120))
+  const topo = Math.max(0, Math.min(y - 36, alturaTotal - (outro ? 170 : 120)))
 
   return (
     <div
@@ -367,10 +421,24 @@ function Dica({
         </span>
       </div>
       {ponto.detalhe.length > 0 && (
-        <div className="space-y-0.5 border-t border-border/60 pt-1.5 text-muted-foreground">
+        <div className="space-y-0.5 text-muted-foreground">
           {ponto.detalhe.map((linha) => (
             <div key={linha}>{linha}</div>
           ))}
+        </div>
+      )}
+      {outro && (
+        <div className="grid gap-0.5 border-t border-border/60 pt-1.5">
+          <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="size-2.5 shrink-0 rounded-[2px] bg-grafico-comparacao" aria-hidden="true" />
+              <span className="truncate text-muted-foreground">{outro.rotuloLongo}</span>
+            </div>
+            <span className="font-semibold text-foreground tabular-nums">
+              {outro.valor === null ? 'sem dado' : formatar(outro.valor)}
+            </span>
+          </div>
+          {outro.detalhe[0] && <div className="pl-4 text-muted-foreground">{outro.detalhe[0]}</div>}
         </div>
       )}
     </div>

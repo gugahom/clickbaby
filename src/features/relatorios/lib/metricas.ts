@@ -171,6 +171,13 @@ export function somarDias(data: string, dias: number): string {
   return paraData(emMs(data) + dias * DIA)
 }
 
+/** '2027-12-31' - 1 ano -> '2026-12-31'. 29/02 cai em 28/02. */
+export function somarAnos(data: string, anos: number): string {
+  const ano = Number(data.slice(0, 4)) + anos
+  const resto = data.slice(4) === '-02-29' ? '-02-28' : data.slice(4)
+  return `${ano}${resto}`
+}
+
 /** '2027-12-31' -> '31/12/2027'. */
 export const dataCurta = (data: string) => data.split('-').reverse().join('/')
 

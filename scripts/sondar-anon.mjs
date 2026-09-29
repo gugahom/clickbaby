@@ -192,7 +192,7 @@ const RPCS_TRANSICAO = {
   metricas_por_pessoa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   metricas_prazo_do_periodo: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   // A série da equipe (20260929053020), que substituiu as duas semanais.
-  metricas_serie_da_equipe: { p_inicio: '2026-10-01', p_fim: '2026-10-31', p_grao: 'bloco' },
+  metricas_serie_da_equipe: { p_inicio: '2026-10-01', p_fim: '2026-10-31', p_grao: 'bloco', p_pessoa_id: null },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC

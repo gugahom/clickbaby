@@ -1201,7 +1201,12 @@ export type Database = {
         }[]
       }
       metricas_serie_da_equipe: {
-        Args: { p_fim: string; p_grao: string; p_inicio: string }
+        Args: {
+          p_fim: string
+          p_grao: string
+          p_inicio: string
+          p_pessoa_id?: string
+        }
         Returns: {
           enviados: number
           fim: string
