@@ -1839,6 +1839,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   fundo embaixo. Com `overflow-y-auto` no `main`, a barra vai sempre até o chão e o cabeçalho
   fica parado. O Quadro não sentiu — ele já era `h-full` com rolagens próprias. Quem precisar
   de "rolar a página" rola o `main` (`scrollIntoView` já faz isso sozinho).
+  **E O `main` É `relative`** (mesmo dia, segunda volta: "correção nesse rodapé"). Sem isso,
+  todo elemento absoluto de dentro — os rótulos `sr-only` das tabelas — se media pela JANELA,
+  e os que moravam no fim de uma página comprida esticavam o DOCUMENTO: aparecia uma segunda
+  barra de rolagem, e rolar por ela subia o app inteiro, com o fundo à mostra embaixo da
+  barra. Conferido nas cinco telas: o documento tem a altura da janela, e os únicos absolutos
+  afetados eram os `sr-only`. Não tire o `relative`.
   **A FAIXA DO CELULAR CONTINUA EXISTINDO** para quem tem mais de um destino: barra lateral
   no toque não serve — custa largura onde ela é escassa, e "abrir no hover" não existe.
   **A NAVEGAÇÃO NÃO EXISTE PARA QUEM SÓ OPERA** (regra do gestor, 28/09/2026: "essa sidebar
