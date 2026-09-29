@@ -416,7 +416,8 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 
 -- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
 metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
-metricas_prazo_por_semana / metricas_prazo_do_periodo / metricas_volume_por_semana (p_inicio, p_fim)
+metricas_prazo_do_periodo (p_inicio, p_fim)
+metricas_serie_da_equipe(p_inicio, p_fim, p_grao)  -- os 6 KPIs por bloco de 7 dias ou por mês (29/09/2026)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -1918,11 +1919,36 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **TRÊS ABAS, um mês no topo recortando todas:**
   EQUIPE — seis KPIs em dois grupos, cada um com a **variação contra o mês anterior** (seta e
   sinal, nunca só cor; a cor vem de "subir é bom?", e volume e tempo de edição são neutros) e
-  uma **mini-linha semanal** (volume normalizado POR DIA, porque a primeira e a última semana
-  do mês quase nunca são inteiras). *Entrega:* prazo cumprido (o número-herói), do parto ao
+  uma **mini-linha** bloco a bloco. *Entrega:* prazo cumprido (o número-herói), do parto ao
   envio (com a espera do ADM na linha de baixo), voltou para ajuste. *Produção:* partos,
   edições entregues, tempo de edição de fotos (com "% com relógio aberto" na linha de baixo —
-  a qualidade do registro mora ali, e só ali). Embaixo, UM gráfico: o prazo semana a semana.
+  a qualidade do registro mora ali, e só ali).
+  **O CARTÃO ABRE O GRÁFICO AO LADO** (29/09/2026, pedido do gestor: "espaço em branco demais"
+  e "minigráficos mais mostráveis"). No computador (≥1280px) os cartões viram uma coluna à
+  esquerda e o gráfico do KPI ESCOLHIDO ocupa o resto da largura, na altura da lista; abaixo
+  disso, cartões em cima e gráfico embaixo, e o toque rola até ele. A página passou de 72rem
+  para 100rem. Duas decisões conversadas com ele: o painel **nasce cheio** (no prazo, o
+  número-herói) — um lado que só aparece depois do clique deixaria o vazio lá quase sempre —
+  e o clique **não desliza a tela**, porque tiraria o cartão de baixo do mouse. Continua UM
+  gráfico na visão; o que muda é o assunto.
+  **COMPARAÇÕES:** MÊS em blocos de 7 dias, contra o mês anterior ou o mesmo mês do ano
+  passado; ANO mês a mês, contra o ano anterior. O outro período é CINZA
+  (`--grafico-comparacao`) e fica à esquerda da coluna atual. Opção sem dado (antes de
+  01/10/2026) fica apagada e, escolhida, diz por quê — o "ano passado" só acende em outubro de
+  2027.
+  **UMA FORMA PARA OS SEIS:** coluna no número do próprio KPI. O prazo deixou de ser pilha "no
+  prazo × atrasado": com a comparação, o que se compara entre dois meses é a TAXA; as contagens
+  foram para a dica e para a tabela gêmea. **Volume é POR DIA no gráfico** (o último bloco tem
+  de 7 a 10 dias, o mês corrente está pela metade) — o cartão continua com o total do mês.
+  **O BLOCO NÃO É A SEMANA DO CALENDÁRIO:** 1–7, 8–14, 15–21 e 22–fim, contados do dia 1. É o
+  que alinha um mês com outro — a primeira semana de segunda a domingo tem quatro dias num mês
+  e seis no outro. Pedaço no futuro ou antes do piso é SEM DADO (nulo), não zero.
+  **UMA FUNÇÃO, TRÊS LEITURAS:** `metricas_serie_da_equipe` (migration `20260929053020`) devolve
+  os seis KPIs por pedaço, e o cartão (um balde = o mês), a mini-linha e o gráfico leem dela —
+  por isso não discordam. Ela NÃO redefine nada: chama `metricas_prazo_do_periodo`,
+  `metricas_da_equipe_por_etapa` e `metricas_por_pessoa` balde a balde, com teto de 62
+  pedaços. As duas séries semanais de 28/09 saíram na mesma migration. O valor de cada KPI num
+  pedaço é `GRAFICO_DO_KPI`, em `lib/kpis.ts` — uma definição só.
   PESSOAS — três destaques (mais partos, mais edições, melhor prazo) e UMA tabela de KPIs que
   É o ranking: cada coluna ordena, o primeiro toque põe o melhor em cima, empate divide a
   posição, e zero numa coluna de volume não tem posição ("não fez esse tipo de trabalho").
@@ -1935,17 +1961,22 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **"VOLTOU PARA AJUSTE"** soma `caso_reaberto` (crédito da última rodada concluída do tipo
   reaberto) e `etapa_reaberta` de etapa concluída há MAIS DE 30 MIN — no remoto, 116 das 180
   reaberturas foram desfeitas em minutos (clique errado), e contá-las triplicaria o número.
-  **TODA SOMA É DO BANCO**, e mediana não se compõe: por isso `metricas_prazo_do_periodo`
-  existe ao lado da série semanal, e `metricas_da_equipe_por_etapa` ao lado da por pessoa.
+  **TODA SOMA É DO BANCO**, e mediana não se compõe: por isso a série chama as funções do
+  período balde a balde em vez de somar pedaços, e `metricas_da_equipe_por_etapa` existe ao
+  lado da por pessoa.
   Sem paginação — as funções devolvem linhas por pessoa e tipo, algumas centenas no máximo.
   **OS GRÁFICOS SÃO DA CASA** (SVG, sem biblioteca), com cores próprias validadas por script
   de daltonismo: `--grafico` (o azul da marca numa luminosidade de gráfico),
-  `--grafico-atrasado` e `--grafico-faixa`. **"No prazo" é AZUL e não verde**: verde ×
+  `--grafico-atrasado` e `--grafico-comparacao` (o cinza do outro período; era `--grafico-faixa`,
+  que ficou sem uso quando a ficha individual saiu). **"No prazo" é AZUL e não verde**: verde ×
   vermelho deu ΔE 4,1 para deuteranopia (reprova); azul × vermelho, 25,8. Todo gráfico com
   legenda quando há duas séries, dica no mouse E no foco do teclado, e tabela equivalente.
   **DADOS FICTÍCIOS NO LOCAL:** `npm run seed:metricas` põe outubro inteiro (130 casos, 12
   pessoas com nomes de pedras preciosas, cada uma com um perfil de ritmo, disciplina com o
   relógio, atraso e retrabalho). Só local, por construção: vai direto para o container.
+  Como o gráfico só desenha pedaço que JÁ PASSOU, antes de 01/10/2026 o local mostra os
+  cartões com os números de outubro e o gráfico vazio — para ver o gráfico antes disso, fixe
+  `hoje` na tela temporariamente (foi como a PR de 29/09 foi conferida).
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha

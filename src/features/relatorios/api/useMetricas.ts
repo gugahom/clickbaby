@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { EtapaTipo } from '@/features/quadro/types'
+import type { Json } from '@/types/database'
 
 /**
  * AS MÉTRICAS DAS PESSOAS — a leitura do relatório interno.
@@ -11,9 +12,9 @@ import type { EtapaTipo } from '@/features/quadro/types'
  * dependeria de a lista ter vindo inteira.
  *
  * SEM PAGINAÇÃO, e por conta: as funções devolvem linhas por PESSOA e TIPO (ou
- * por semana e tipo), não por caso. Com a equipe de hoje são ~200 linhas no
- * pior caso; um ano inteiro de semanas por tipo fica abaixo de 700. O teto de
- * mil do PostgREST só vira assunto se a equipe passar de ~80 pessoas.
+ * por pedaço do período), não por caso. Com a equipe de hoje são ~200 linhas
+ * no pior caso, e a série tem no máximo 62. O teto de mil do PostgREST só vira
+ * assunto se a equipe passar de ~80 pessoas.
  *
  * SÓ A GESTÃO. As funções recusam os outros papéis no banco; a tela nem as
  * chama fora da `RotaDeGestao`.
@@ -68,21 +69,6 @@ export interface MetricaPorPessoa {
   termosRegistrados: number
   avaliacoesFeitas: number
   voltouParaAjuste: number
-}
-
-export interface PrazoDaSemana {
-  /** Segunda-feira da semana, 'YYYY-MM-DD'. */
-  semana: string
-  enviados: number
-  noPrazo: number
-  medianaHorasAteEnvio: number | null
-  medianaHorasAteConfirmacao: number | null
-}
-
-export interface VolumeDaSemana {
-  semana: string
-  tipo: EtapaTipo
-  concluidas: number
 }
 
 export interface PadraoDeTempo {
@@ -175,55 +161,79 @@ export function useMetricasPorPessoa({ inicio, fim }: Periodo) {
   })
 }
 
-export function usePrazoPorSemana({ inicio, fim }: Periodo) {
-  return useQuery({
-    queryKey: [CHAVE, 'prazo-semana', inicio, fim],
-    placeholderData: keepPreviousData,
-    queryFn: async (): Promise<PrazoDaSemana[]> => {
-      const linhas = await chamar(supabase.rpc('metricas_prazo_por_semana', { p_inicio: inicio, p_fim: fim }))
-      return (linhas ?? []).map((l) => ({
-        semana: l.semana,
-        enviados: l.enviados,
-        noPrazo: l.no_prazo,
-        medianaHorasAteEnvio: numero(l.mediana_horas_ate_envio),
-        medianaHorasAteConfirmacao: numero(l.mediana_horas_ate_confirmacao),
-      }))
-    },
-  })
+/** O que a série traz de cada tipo de etapa num pedaço do período. */
+export interface DadosDoTipo {
+  concluidas: number
+  medidas: number
+  medianaMin: number | null
 }
 
-export interface PrazoDoPeriodo {
+/**
+ * Um pedaço do período com tudo o que os seis cartões precisam — ver
+ * `metricas_serie_da_equipe` (migration 20260929053020). O cartão, a
+ * mini-linha e o gráfico leem a MESMA função, e por isso não discordam.
+ */
+export interface BaldeDaSerie {
+  /** 'YYYY-MM-DD', Brasília, inclusivo nos dois lados. */
+  inicio: string
+  fim: string
   enviados: number
   noPrazo: number
   medianaHorasAteEnvio: number | null
   medianaHorasAteConfirmacao: number | null
+  porTipo: Partial<Record<EtapaTipo, DadosDoTipo>>
+  voltouParaAjuste: number
 }
 
-/** O mesmo prazo, numa linha para o período inteiro — a mediana verdadeira do mês. */
-export function usePrazoDoPeriodo({ inicio, fim }: Periodo) {
-  return useQuery({
-    queryKey: [CHAVE, 'prazo-periodo', inicio, fim],
-    placeholderData: keepPreviousData,
-    queryFn: async (): Promise<PrazoDoPeriodo> => {
-      const linhas = await chamar(supabase.rpc('metricas_prazo_do_periodo', { p_inicio: inicio, p_fim: fim }))
-      const l = linhas?.[0]
-      return {
-        enviados: l?.enviados ?? 0,
-        noPrazo: l?.no_prazo ?? 0,
-        medianaHorasAteEnvio: numero(l?.mediana_horas_ate_envio),
-        medianaHorasAteConfirmacao: numero(l?.mediana_horas_ate_confirmacao),
-      }
-    },
-  })
+/**
+ * 'bloco' — 7 dias contados do começo, o último absorve a sobra (1–7, 8–14,
+ * 15–21, 22–fim); é o que deixa um mês se comparar com outro pedaço a pedaço.
+ * 'mes' — meses do calendário.
+ */
+export type Grao = 'bloco' | 'mes'
+
+function objeto(valor: Json | undefined): { [chave: string]: Json | undefined } | null {
+  return valor !== null && typeof valor === 'object' && !Array.isArray(valor) ? valor : null
 }
 
-export function useVolumePorSemana({ inicio, fim }: Periodo) {
+function lerPorTipo(json: Json): Partial<Record<EtapaTipo, DadosDoTipo>> {
+  const saida: Partial<Record<EtapaTipo, DadosDoTipo>> = {}
+  for (const [tipo, valor] of Object.entries(objeto(json) ?? {})) {
+    const v = objeto(valor)
+    if (!v) continue
+    saida[tipo as EtapaTipo] = {
+      concluidas: numero(v.concluidas as number | string | null) ?? 0,
+      medidas: numero(v.medidas as number | string | null) ?? 0,
+      medianaMin: numero(v.mediana_min as number | string | null),
+    }
+  }
+  return saida
+}
+
+/**
+ * A série da equipe. Sem período, não consulta — é como a tela diz "não há o
+ * que comparar" (um mês antes de 01/10/2026, por exemplo).
+ */
+export function useSerieDaEquipe(periodo: Periodo | null, grao: Grao) {
   return useQuery({
-    queryKey: [CHAVE, 'volume-semana', inicio, fim],
+    queryKey: [CHAVE, 'serie', grao, periodo?.inicio, periodo?.fim],
+    enabled: periodo !== null,
     placeholderData: keepPreviousData,
-    queryFn: async (): Promise<VolumeDaSemana[]> => {
-      const linhas = await chamar(supabase.rpc('metricas_volume_por_semana', { p_inicio: inicio, p_fim: fim }))
-      return (linhas ?? []).map((l) => ({ semana: l.semana, tipo: l.tipo, concluidas: l.concluidas }))
+    queryFn: async (): Promise<BaldeDaSerie[]> => {
+      if (!periodo) return []
+      const linhas = await chamar(
+        supabase.rpc('metricas_serie_da_equipe', { p_inicio: periodo.inicio, p_fim: periodo.fim, p_grao: grao }),
+      )
+      return (linhas ?? []).map((l) => ({
+        inicio: l.inicio,
+        fim: l.fim,
+        enviados: l.enviados,
+        noPrazo: l.no_prazo,
+        medianaHorasAteEnvio: numero(l.mediana_horas_ate_envio),
+        medianaHorasAteConfirmacao: numero(l.mediana_horas_ate_confirmacao),
+        porTipo: lerPorTipo(l.por_tipo),
+        voltouParaAjuste: l.voltou_para_ajuste,
+      }))
     },
   })
 }

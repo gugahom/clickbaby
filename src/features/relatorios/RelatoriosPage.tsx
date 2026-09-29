@@ -7,9 +7,7 @@ import {
   useMetricasPorEtapa,
   useMetricasPorPessoa,
   usePadroesDeTempo,
-  usePrazoDoPeriodo,
-  usePrazoPorSemana,
-  useVolumePorSemana,
+  useSerieDaEquipe,
 } from './api/useMetricas'
 import { PadroesDeTempo } from './components/PadroesDeTempo'
 import { PainelDaEquipe } from './components/PainelDaEquipe'
@@ -33,8 +31,6 @@ const ABAS: { id: Aba; rotulo: string }[] = [
   { id: 'padroes', rotulo: 'Padrões de tempo' },
 ]
 
-const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, medianaHorasAteConfirmacao: null }
-
 /**
  * RELATÓRIOS — os KPIs da equipe (28/09/2026, pedido do gestor).
  *
@@ -48,8 +44,14 @@ const PRAZO_VAZIO = { enviados: 0, noPrazo: 0, medianaHorasAteEnvio: null, media
  * papel de novo no banco. CONTA A PARTIR DE 01/10/2026: o seletor não oferece
  * nada antes, e o banco não devolve.
  *
- * O MÊS ANTERIOR É LIDO JUNTO, só para a variação dos KPIs. Em outubro de 2026
- * ele é setembro — antes do piso —, vem zerado, e a variação não aparece.
+ * O MÊS ANTERIOR É LIDO JUNTO, só para a variação dos KPIs: uma chamada da
+ * série em grão de mês cobrindo os dois devolve os dois números. Em outubro de
+ * 2026 o anterior é setembro — antes do piso —, vem zerado, e a variação não
+ * aparece.
+ *
+ * A PÁGINA É LARGA (29/09/2026): o painel da equipe põe o gráfico ao lado da
+ * lista de KPIs, e na largura antiga (72rem) ele sobraria espremido com a tela
+ * vazia dos dois lados — o incômodo que motivou a mudança.
  */
 export function RelatoriosPage() {
   const hoje = hojeNoFuso()
@@ -62,30 +64,26 @@ export function RelatoriosPage() {
   const porEtapa = useMetricasPorEtapa(periodo)
   const equipe = useMetricasDaEquipe(periodo)
   const pessoas = useMetricasPorPessoa(periodo)
-  const semanas = usePrazoPorSemana(periodo)
-  const volume = useVolumePorSemana(periodo)
-  const prazo = usePrazoDoPeriodo(periodo)
   const padroes = usePadroesDeTempo()
-  const equipeAntes = useMetricasDaEquipe(anterior)
-  const pessoasAntes = useMetricasPorPessoa(anterior)
-  const prazoAntes = usePrazoDoPeriodo(anterior)
+  const doisMeses = useSerieDaEquipe({ inicio: anterior.inicio, fim: periodo.fim }, 'mes')
+  const blocos = useSerieDaEquipe(periodo, 'bloco')
 
-  const consultas = [porEtapa, equipe, pessoas, semanas, volume, prazo, padroes, equipeAntes, pessoasAntes, prazoAntes]
+  const consultas = [porEtapa, equipe, pessoas, padroes, doisMeses, blocos]
   const erro = consultas.find((c) => c.error)?.error
   const primeiraCarga = consultas.some((c) => c.isPending)
   // Trocando de mês: o quadro anterior fica, esmaecido, até o novo chegar.
   const atualizando = consultas.some((c) => c.isPlaceholderData)
 
+  const meses = doisMeses.data ?? []
   const { entrega, producao } = kpisDaEquipe(
-    { prazo: prazo.data ?? PRAZO_VAZIO, equipe: equipe.data ?? [], pessoas: pessoas.data ?? [] },
-    { prazo: prazoAntes.data ?? PRAZO_VAZIO, equipe: equipeAntes.data ?? [], pessoas: pessoasAntes.data ?? [] },
-    semanas.data ?? [],
-    volume.data ?? [],
-    periodo,
+    meses.find((b) => b.inicio === periodo.inicio),
+    meses.find((b) => b.inicio === anterior.inicio),
+    blocos.data ?? [],
+    hoje,
   )
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 p-3 md:p-6">
+    <div className="mx-auto w-full max-w-[100rem] space-y-5 p-3 md:p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight">Relatórios</h1>
         <p className="text-sm text-muted-foreground">
@@ -129,8 +127,9 @@ export function RelatoriosPage() {
             <PainelDaEquipe
               entrega={entrega}
               producao={producao}
-              semanas={semanas.data ?? []}
-              inicioDoPeriodo={periodo.inicio}
+              mes={mes}
+              hoje={hoje}
+              blocosDoMes={blocos.data ?? []}
             />
           )}
           {aba === 'pessoas' && (

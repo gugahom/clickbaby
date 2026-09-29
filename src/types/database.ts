@@ -1200,22 +1200,17 @@ export type Database = {
           no_prazo: number
         }[]
       }
-      metricas_prazo_por_semana: {
-        Args: { p_fim: string; p_inicio: string }
+      metricas_serie_da_equipe: {
+        Args: { p_fim: string; p_grao: string; p_inicio: string }
         Returns: {
           enviados: number
+          fim: string
+          inicio: string
           mediana_horas_ate_confirmacao: number
           mediana_horas_ate_envio: number
           no_prazo: number
-          semana: string
-        }[]
-      }
-      metricas_volume_por_semana: {
-        Args: { p_fim: string; p_inicio: string }
-        Returns: {
-          concluidas: number
-          semana: string
-          tipo: Database["public"]["Enums"]["etapa_tipo"]
+          por_tipo: Json
+          voltou_para_ajuste: number
         }[]
       }
       mover_album: {

@@ -1,13 +1,6 @@
 import type { EtapaTipo } from '@/features/quadro/types'
-import type {
-  MetricaDaEquipe,
-  MetricaPorEtapa,
-  MetricaPorPessoa,
-  PrazoDaSemana,
-  PrazoDoPeriodo,
-  VolumeDaSemana,
-} from '../api/useMetricas'
-import { AMOSTRA_MINIMA, ETAPAS_COM_PRAZO } from './metricas'
+import type { BaldeDaSerie, MetricaPorEtapa, MetricaPorPessoa } from '../api/useMetricas'
+import { AMOSTRA_MINIMA, ETAPAS_COM_PRAZO, diasCorridos, rotuloDaEtapa } from './metricas'
 
 /**
  * OS KPIs DA EQUIPE — poucos números que respondem "estamos bem?".
@@ -15,8 +8,8 @@ import { AMOSTRA_MINIMA, ETAPAS_COM_PRAZO } from './metricas'
  * A primeira versão do relatório (28/09) mostrava tudo o que o banco sabia, e
  * o gestor a recusou no mesmo dia: "ficou muita informação (…) o ponto
  * principal desses dashs são KPI da equipe". Esta é a segunda: SEIS números em
- * dois grupos, cada um com a variação contra o mês anterior e a tendência da
- * semana — o que um KPI precisa para ser lido sem explicação.
+ * dois grupos, cada um com a variação contra o mês anterior e a tendência
+ * dentro do mês — o que um KPI precisa para ser lido sem explicação.
  *
  *   ENTREGA   prazo cumprido · do parto ao envio · voltou para ajuste
  *   PRODUÇÃO  partos · edições · tempo de edição de fotos
@@ -24,6 +17,11 @@ import { AMOSTRA_MINIMA, ETAPAS_COM_PRAZO } from './metricas'
  * A qualidade do registro, que tinha um cartão inteiro, virou UMA LINHA embaixo
  * do tempo de edição ("65% com relógio"): é lá que ela muda a leitura, e é só
  * lá que ela precisa aparecer.
+ *
+ * TUDO SAI DA MESMA SÉRIE (29/09/2026): o número do cartão é o balde do mês, a
+ * mini-linha e o gráfico são os blocos de 7 dias, e o valor de cada KPI num
+ * balde tem UMA definição (`GRAFICO_DO_KPI`). Cartão e gráfico não discordam
+ * porque não há duas contas para discordar.
  */
 
 /** Etapas que contam como EDIÇÃO entregue. */
@@ -37,38 +35,35 @@ export interface Variacao {
   direcao: 'sobe' | 'desce' | 'igual'
 }
 
+export type ChaveKpi = 'prazo' | 'parto-envio' | 'ajuste' | 'partos' | 'edicoes' | 'tempo-fotos'
+
 export interface Kpi {
-  chave: string
+  chave: ChaveKpi
   rotulo: string
   valor: string
   detalhe?: string | undefined
   variacao?: Variacao | undefined
-  /** Semana a semana dentro do mês — a mini-linha do cartão. */
+  /** Bloco a bloco dentro do mês — a mini-linha do cartão. */
   tendencia?: (number | null)[] | undefined
 }
 
-export interface PeriodoDosKpis {
-  prazo: PrazoDoPeriodo
-  equipe: MetricaDaEquipe[]
-  pessoas: MetricaPorPessoa[]
-}
-
-function numeros({ prazo, equipe, pessoas }: PeriodoDosKpis) {
-  const de = (tipo: EtapaTipo) => equipe.find((e) => e.tipo === tipo)
+function numeros(b: BaldeDaSerie) {
+  const de = (tipo: EtapaTipo) => b.porTipo[tipo]
   const edicoes = ETAPAS_DE_EDICAO.reduce((acc, t) => acc + (de(t)?.concluidas ?? 0), 0)
   const edicoesMedidas = ETAPAS_DE_EDICAO.reduce((acc, t) => acc + (de(t)?.medidas ?? 0), 0)
-  const ajustes = pessoas.reduce((acc, p) => acc + p.voltouParaAjuste, 0)
   return {
-    enviados: prazo.enviados,
-    taxaPrazo: prazo.enviados > 0 ? prazo.noPrazo / prazo.enviados : null,
-    partoAoEnvio: prazo.medianaHorasAteEnvio,
-    esperaAdm: prazo.medianaHorasAteConfirmacao,
+    enviados: b.enviados,
+    noPrazo: b.noPrazo,
+    taxaPrazo: b.enviados > 0 ? b.noPrazo / b.enviados : null,
+    partoAoEnvio: b.medianaHorasAteEnvio,
+    esperaAdm: b.medianaHorasAteConfirmacao,
     partos: de('nascimento')?.concluidas ?? 0,
     edicoes,
     edicoesMedidas,
-    ajustes,
-    taxaAjuste: edicoes > 0 ? ajustes / edicoes : null,
+    ajustes: b.voltouParaAjuste,
+    taxaAjuste: edicoes > 0 ? b.voltouParaAjuste / edicoes : null,
     tempoFotos: de('edicao_foto')?.medianaMin ?? null,
+    fotos: de('edicao_foto'),
   }
 }
 
@@ -82,6 +77,8 @@ const minutos = (v: number | null) => {
   const h = Math.floor(m / 60)
   return m % 60 === 0 ? `${h}h` : `${h}h${String(m % 60).padStart(2, '0')}`
 }
+const decimal = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
 /**
  * A variação contra o mês anterior. A COR SAI DE "SUBIR É BOM?", não do sinal:
@@ -109,38 +106,117 @@ function variacao(
 
 const sinal = (n: number, texto: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${texto}`
 
-/** Quantos dias da semana (segunda a domingo) caem dentro do período. */
-function diasDaSemanaNoPeriodo(segunda: string, periodo: { inicio: string; fim: string }): number {
-  const dia = 86_400_000
-  const ini = Math.max(Date.parse(`${segunda}T12:00:00Z`), Date.parse(`${periodo.inicio}T12:00:00Z`))
-  const fim = Math.min(Date.parse(`${segunda}T12:00:00Z`) + 6 * dia, Date.parse(`${periodo.fim}T12:00:00Z`))
-  return Math.max(1, Math.round((fim - ini) / dia) + 1)
+// ---------------------------------------------------------------------------
+// O GRÁFICO DE CADA KPI — o que o cartão abre ao lado.
+// ---------------------------------------------------------------------------
+
+export interface GraficoDoKpi {
+  /** O que o eixo mede, quando não é o próprio número do cartão: "por dia". */
+  unidade?: string | undefined
+  formatar: (valor: number) => string
+  /** Eixo com teto fixo — taxa vai de 0 a 100%, não de 0 ao maior valor. */
+  teto?: number | undefined
+  /**
+   * O VALOR DO KPI num pedaço do período. `dias` são os dias que já passaram
+   * e contam (`diasCorridos`); zero quer dizer "sem dado" — pedaço no futuro,
+   * ou antes de 01/10/2026 —, e aí o valor é nulo, não zero.
+   */
+  valor: (b: BaldeDaSerie, dias: number) => number | null
+  /** As linhas da dica, embaixo do número. */
+  detalhe: (b: BaldeDaSerie, dias: number) => string[]
+}
+
+/**
+ * VOLUME É POR DIA no gráfico, e só no gráfico. O último bloco do mês tem de 7
+ * a 10 dias, o mês corrente está pela metade, fevereiro tem 28: contagem crua
+ * desenharia calendário, não trabalho. O cartão continua com o total do mês,
+ * que é a pergunta que ele responde; a dica traz os dois.
+ */
+export const GRAFICO_DO_KPI: Record<ChaveKpi, GraficoDoKpi> = {
+  prazo: {
+    formatar: (v) => pct(v),
+    teto: 1,
+    valor: (b, dias) => (dias === 0 ? null : numeros(b).taxaPrazo),
+    detalhe: (b) =>
+      b.enviados === 0
+        ? ['nenhum caso enviado']
+        : [`${b.noPrazo} de ${plural(b.enviados, 'caso', 'casos')} no prazo`, `${b.enviados - b.noPrazo} depois de vencer`],
+  },
+  'parto-envio': {
+    formatar: (v) => horas(v),
+    valor: (b, dias) => (dias === 0 ? null : b.medianaHorasAteEnvio),
+    detalhe: (b) => [
+      `mediana de ${plural(b.enviados, 'caso', 'casos')}`,
+      ...(b.medianaHorasAteConfirmacao === null ? [] : [`mais ${horas(b.medianaHorasAteConfirmacao)} até o ADM`]),
+    ],
+  },
+  ajuste: {
+    formatar: (v) => pct(v),
+    valor: (b, dias) => (dias === 0 ? null : numeros(b).taxaAjuste),
+    detalhe: (b) => {
+      const n = numeros(b)
+      return [`${n.ajustes} de ${plural(n.edicoes, 'edição', 'edições')}`]
+    },
+  },
+  partos: {
+    unidade: 'por dia',
+    formatar: decimal,
+    valor: (b, dias) => (dias === 0 ? null : numeros(b).partos / dias),
+    detalhe: (b, dias) => [`${plural(numeros(b).partos, 'parto', 'partos')} em ${plural(dias, 'dia', 'dias')}`],
+  },
+  edicoes: {
+    unidade: 'por dia',
+    formatar: decimal,
+    valor: (b, dias) => (dias === 0 ? null : numeros(b).edicoes / dias),
+    detalhe: (b, dias) => {
+      const partes = ETAPAS_DE_EDICAO.filter((t) => (b.porTipo[t]?.concluidas ?? 0) > 0).map(
+        (t) => `${rotuloDaEtapa(t)} ${b.porTipo[t]?.concluidas ?? 0}`,
+      )
+      return [
+        `${plural(numeros(b).edicoes, 'edição', 'edições')} em ${plural(dias, 'dia', 'dias')}`,
+        ...(partes.length > 0 ? [partes.join(' · ')] : []),
+      ]
+    },
+  },
+  'tempo-fotos': {
+    formatar: (v) => minutos(v),
+    valor: (b, dias) => (dias === 0 ? null : numeros(b).tempoFotos),
+    detalhe: (b) => {
+      const f = numeros(b).fotos
+      return f ? [`mediana · ${f.medidas} de ${f.concluidas} com relógio aberto`] : ['nenhuma edição de fotos']
+    },
+  },
+}
+
+/** A série de um KPI, pedaço a pedaço — a mini-linha e as colunas do gráfico. */
+export function serieDoKpi(chave: ChaveKpi, baldes: BaldeDaSerie[], hoje: string): (number | null)[] {
+  const g = GRAFICO_DO_KPI[chave]
+  return baldes.map((b) => g.valor(b, diasCorridos(b, hoje)))
+}
+
+const BALDE_VAZIO: BaldeDaSerie = {
+  inicio: '',
+  fim: '',
+  enviados: 0,
+  noPrazo: 0,
+  medianaHorasAteEnvio: null,
+  medianaHorasAteConfirmacao: null,
+  porTipo: {},
+  voltouParaAjuste: 0,
 }
 
 export function kpisDaEquipe(
-  atual: PeriodoDosKpis,
-  anterior: PeriodoDosKpis | null,
-  semanas: PrazoDaSemana[],
-  volume: VolumeDaSemana[],
-  periodo: { inicio: string; fim: string },
+  atual: BaldeDaSerie | undefined,
+  anterior: BaldeDaSerie | undefined,
+  blocos: BaldeDaSerie[],
+  hoje: string,
 ): { entrega: Kpi[]; producao: Kpi[] } {
-  const a = numeros(atual)
+  const a = numeros(atual ?? BALDE_VAZIO)
   // Sem mês anterior com dado (o primeiro mês das métricas), não há variação —
   // e um "+100%" contra zero seria mentira com cara de conquista.
-  const b = anterior && anterior.prazo.enviados + numeros(anterior).partos > 0 ? numeros(anterior) : null
-
-  // POR DIA, e não por semana: a primeira e a última semana do mês quase nunca
-  // são inteiras (outubro de 2026 começa numa quinta), e a contagem crua de uma
-  // semana de 4 dias desenhava uma "subida" que era só calendário.
-  const porSemana = (tipos: EtapaTipo[]) => {
-    const chaves = [...new Set(volume.map((v) => v.semana))].sort()
-    return chaves.map((s) => {
-      const total = volume
-        .filter((v) => v.semana === s && tipos.includes(v.tipo))
-        .reduce((acc, v) => acc + v.concluidas, 0)
-      return total / diasDaSemanaNoPeriodo(s, periodo)
-    })
-  }
+  const n = anterior ? numeros(anterior) : null
+  const b = n && n.enviados + n.partos > 0 ? n : null
+  const tendencia = (chave: ChaveKpi) => serieDoKpi(chave, blocos, hoje)
 
   return {
     entrega: [
@@ -148,9 +224,9 @@ export function kpisDaEquipe(
         chave: 'prazo',
         rotulo: 'Prazo cumprido',
         valor: pct(a.taxaPrazo),
-        detalhe: a.enviados === 0 ? 'nenhum caso enviado' : `${atual.prazo.noPrazo} de ${a.enviados} casos`,
+        detalhe: a.enviados === 0 ? 'nenhum caso enviado' : `${a.noPrazo} de ${a.enviados} casos`,
         variacao: variacao(a.taxaPrazo, b?.taxaPrazo ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'bom'),
-        tendencia: semanas.map((s) => (s.enviados > 0 ? s.noPrazo / s.enviados : null)),
+        tendencia: tendencia('prazo'),
       },
       {
         chave: 'parto-envio',
@@ -158,7 +234,7 @@ export function kpisDaEquipe(
         valor: horas(a.partoAoEnvio),
         detalhe: a.esperaAdm === null ? 'mediana' : `mediana · mais ${horas(a.esperaAdm)} até o ADM`,
         variacao: variacao(a.partoAoEnvio, b?.partoAoEnvio ?? null, (d) => sinal(d, horas(Math.abs(d))), 'ruim'),
-        tendencia: semanas.map((s) => s.medianaHorasAteEnvio),
+        tendencia: tendencia('parto-envio'),
       },
       {
         chave: 'ajuste',
@@ -166,6 +242,7 @@ export function kpisDaEquipe(
         valor: pct(a.taxaAjuste),
         detalhe: `${a.ajustes} de ${a.edicoes} edições`,
         variacao: variacao(a.taxaAjuste, b?.taxaAjuste ?? null, (d) => sinal(d, `${Math.abs(Math.round(d * 100))} p.p.`), 'ruim'),
+        tendencia: tendencia('ajuste'),
       },
     ],
     producao: [
@@ -174,7 +251,7 @@ export function kpisDaEquipe(
         rotulo: 'Partos',
         valor: a.partos.toLocaleString('pt-BR'),
         variacao: variacao(a.partos, b?.partos ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro'),
-        tendencia: porSemana(['nascimento']),
+        tendencia: tendencia('partos'),
       },
       {
         chave: 'edicoes',
@@ -182,7 +259,7 @@ export function kpisDaEquipe(
         valor: a.edicoes.toLocaleString('pt-BR'),
         detalhe: 'fotos, reels, vídeo e álbum',
         variacao: variacao(a.edicoes, b?.edicoes ?? null, (d) => sinal(d, String(Math.abs(d))), 'neutro'),
-        tendencia: porSemana(ETAPAS_DE_EDICAO),
+        tendencia: tendencia('edicoes'),
       },
       {
         chave: 'tempo-fotos',
@@ -191,6 +268,7 @@ export function kpisDaEquipe(
         // A QUALIDADE DO REGISTRO MORA AQUI: é o número que ela qualifica.
         detalhe: a.edicoes === 0 ? 'mediana' : `mediana · ${pct(a.edicoesMedidas / a.edicoes)} com relógio aberto`,
         variacao: variacao(a.tempoFotos, b?.tempoFotos ?? null, (d) => sinal(d, minutos(Math.abs(d))), 'neutro'),
+        tendencia: tendencia('tempo-fotos'),
       },
     ],
   }

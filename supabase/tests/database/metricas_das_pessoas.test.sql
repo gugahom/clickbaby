@@ -12,6 +12,8 @@
 --       desfeito em minutos não conta.
 --   G — os padrões de tempo: só gestão define, mesmo dia substitui, fica evento.
 --   H — período invertido é recusado; período sem nada devolve zero, não erro.
+--   S — a SÉRIE da equipe (migration 20260929053020): os baldes, o piso, e os
+--       mesmos números das funções que ela chama.
 
 -- OS DADOS DO TESTE MORAM EM FEVEREIRO DE 2027, um mês que nada mais usa. O
 -- seed fictício (`npm run seed:metricas`) enche OUTUBRO de 2026 no banco local,
@@ -20,7 +22,7 @@
 -- ou não, um seed antes.
 
 begin;
-select plan(25);
+select plan(33);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -317,15 +319,77 @@ select throws_ok(
 );
 
 select is(
-  (select count(*)::int from public.metricas_prazo_por_semana('2027-02-01', '2027-02-28')),
+  (select sum(enviados)::int from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
   0,
-  'H2: sem caso enviado no período, a série de prazo vem vazia — e não quebra'
+  'H2: sem caso enviado no período, a série vem zerada em cada pedaço — e não quebra'
 );
 
 select is(
   (select enviados from public.metricas_prazo_do_periodo('2027-02-01', '2027-02-28')),
   0,
   'H3: e o resumo do período devolve UMA linha com zero, não nenhuma — o painel lê um número'
+);
+reset role;
+
+
+-- =============================================================================
+-- S. A série da equipe
+-- =============================================================================
+
+select pg_temp.como('atendimento.me@clickbaby.test');
+select throws_ok(
+  $$ select * from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco') $$,
+  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'S1: a série também é só da gestão'
+);
+reset role;
+
+select pg_temp.como('gestao.me@clickbaby.test');
+
+select throws_ok(
+  $$ select * from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'semana') $$,
+  'P0001', 'O grão da série é ''bloco'' ou ''mes''.',
+  'S2: grão desconhecido é recusado'
+);
+
+select is(
+  (select string_agg(inicio || '/' || fim, ',' order by inicio)
+     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
+  '2027-02-01/2027-02-07,2027-02-08/2027-02-14,2027-02-15/2027-02-21,2027-02-22/2027-02-28',
+  'S3: blocos de 7 dias contados do dia 1 — o "1–7" de um mês é o "1–7" do outro'
+);
+
+select is(
+  (select string_agg(inicio || '/' || fim, ',' order by inicio)
+     from public.metricas_serie_da_equipe('2027-03-01', '2027-03-31', 'bloco')),
+  '2027-03-01/2027-03-07,2027-03-08/2027-03-14,2027-03-15/2027-03-21,2027-03-22/2027-03-31',
+  'S4: o último bloco absorve a sobra (22–31), em vez de virar um quinto de três dias'
+);
+
+select is(
+  (select string_agg(coalesce(por_tipo->'nascimento'->>'concluidas', '0') || ':' || voltou_para_ajuste, ',' order by inicio)
+     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'bloco')),
+  '0:0,2:0,0:1,0:0',
+  'S5: cada número cai no seu bloco — os dois partos de 10/02, o caso reaberto em 20/02'
+);
+
+select is(
+  (select por_tipo from public.metricas_serie_da_equipe('2026-09-01', '2027-02-28', 'mes') where inicio = '2026-09-01'),
+  '{}'::jsonb,
+  'S6: o mês antes do piso vem, mas vazio — o parto de 20/09 não entra'
+);
+
+select is(
+  (select (por_tipo->'edicao_foto'->>'mediana_min')::numeric
+     from public.metricas_serie_da_equipe('2027-02-01', '2027-02-28', 'mes')),
+  (select mediana_min from public.metricas_da_equipe_por_etapa('2027-02-01', '2027-02-28') where tipo = 'edicao_foto'),
+  'S7: o balde do mês é a mesma conta da função da equipe — a mediana verdadeira, não composta'
+);
+
+select throws_ok(
+  $$ select * from public.metricas_serie_da_equipe('2020-01-01', '2026-12-31', 'mes') $$,
+  'P0001', 'Período longo demais para a série (84 pedaços; o limite é 62).',
+  'S8: série longa demais é recusada — cada pedaço refaz três consultas'
 );
 reset role;
 

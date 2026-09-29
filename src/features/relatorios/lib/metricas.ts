@@ -115,16 +115,42 @@ export function rotuloDoMes(mes: string): string {
   return texto.replace(/^./, (l) => l.toUpperCase())
 }
 
+/** '2026' -> o ano inteiro, fim INCLUSIVO. */
+export function periodoDoAno(ano: string): { inicio: string; fim: string } {
+  return { inicio: `${ano}-01-01`, fim: `${ano}-12-31` }
+}
+
+const DIA = 86_400_000
+const emMs = (data: string) => Date.parse(`${data}T12:00:00Z`)
+
 /**
- * O rótulo da semana no gráfico. A semana do banco começa na SEGUNDA, e a
- * primeira do mês quase sempre começa no mês anterior — "28/09" no eixo de
- * outubro leria como dado de setembro. O rótulo é o primeiro dia da semana
- * que cai DENTRO do período.
+ * Quantos dias do pedaço JÁ PASSARAM e contam: do mais tarde entre o começo e o
+ * piso das métricas ao mais cedo entre o fim e hoje. Zero para um pedaço
+ * inteiro no futuro ou antes de 01/10/2026 — e é o zero que faz a tela
+ * desenhar "sem dado" em vez de uma coluna rasa.
  */
-export function rotuloDaSemana(segunda: string, inicioDoPeriodo: string): string {
-  const dia = segunda < inicioDoPeriodo ? inicioDoPeriodo : segunda
-  const [, m, d] = dia.split('-')
-  return `${d}/${m}`
+export function diasCorridos(periodo: { inicio: string; fim: string }, hoje: string): number {
+  const de = Math.max(emMs(periodo.inicio), emMs(INICIO_DAS_METRICAS))
+  const ate = Math.min(emMs(periodo.fim), emMs(hoje))
+  return ate < de ? 0 : Math.round((ate - de) / DIA) + 1
+}
+
+function nomeDoMes(data: string, formato: 'short' | 'long'): string {
+  return new Intl.DateTimeFormat('pt-BR', { month: formato, timeZone: 'UTC' })
+    .format(new Date(`${data}T12:00:00Z`))
+    .replace('.', '')
+}
+
+/** No eixo: "1–7" num mês em blocos, "out" num ano em meses. */
+export function rotuloCurtoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'bloco' | 'mes'): string {
+  if (grao === 'mes') return nomeDoMes(pedaco.inicio, 'short')
+  return `${Number(pedaco.inicio.slice(8))}–${Number(pedaco.fim.slice(8))}`
+}
+
+/** Na dica e na tabela: "1 a 7 de outubro", ou "Outubro de 2026". */
+export function rotuloLongoDoPedaco(pedaco: { inicio: string; fim: string }, grao: 'bloco' | 'mes'): string {
+  if (grao === 'mes') return rotuloDoMes(pedaco.inicio.slice(0, 7))
+  return `${Number(pedaco.inicio.slice(8))} a ${Number(pedaco.fim.slice(8))} de ${nomeDoMes(pedaco.inicio, 'long')}`
 }
 
 /** Só o primeiro nome, que é como a equipe se chama no corredor e no ranking. */

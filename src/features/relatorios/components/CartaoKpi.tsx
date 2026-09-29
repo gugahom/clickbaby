@@ -11,15 +11,40 @@ import type { Kpi } from '../lib/kpis'
  * ruim), nunca do sinal sozinho. Volume é neutro.
  *
  * A MINI-LINHA é fraca de propósito — cinza, com só o último ponto na cor do
- * gráfico. Ela conta a direção, não os valores: quem quer o número de uma
- * semana lê o gráfico de baixo.
+ * gráfico. Ela conta a direção, não os valores: quem quer o número de um
+ * pedaço do mês toca no cartão e lê o gráfico grande.
  *
  * Algarismos proporcionais no número grande: `tabular-nums` deixaria "72%"
  * frouxo no tamanho de título.
+ *
+ * O CARTÃO É UM BOTÃO (29/09/2026): tocar nele troca o gráfico grande do
+ * painel. O escolhido ganha o contorno da marca — é o que diz "o gráfico ao
+ * lado é deste" sem uma linha de texto.
  */
-export function CartaoKpi({ kpi, destaque = false }: { kpi: Kpi; destaque?: boolean }) {
+export function CartaoKpi({
+  kpi,
+  destaque = false,
+  selecionado,
+  onSelecionar,
+}: {
+  kpi: Kpi
+  destaque?: boolean
+  selecionado: boolean
+  onSelecionar: () => void
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-painel border border-border bg-card p-4">
+    <button
+      type="button"
+      aria-pressed={selecionado}
+      onClick={onSelecionar}
+      className={clsx(
+        'flex w-full min-w-0 flex-col gap-2 rounded-painel border bg-card p-4 text-left transition-[border-color,box-shadow]',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca',
+        selecionado
+          ? 'border-marca shadow-[0_0_0_1px_var(--marca)]'
+          : 'border-border hover:border-marca/40',
+      )}
+    >
       <div className="text-sm text-muted-foreground">{kpi.rotulo}</div>
 
       <div className="flex items-end justify-between gap-3">
@@ -55,7 +80,7 @@ export function CartaoKpi({ kpi, destaque = false }: { kpi: Kpi; destaque?: bool
         )}
         {kpi.detalhe && <span className="text-muted-foreground">{kpi.detalhe}</span>}
       </div>
-    </div>
+    </button>
   )
 }
 
