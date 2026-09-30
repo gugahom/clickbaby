@@ -11,9 +11,11 @@
 //
 //   1. `verify_jwt = true` no config.toml — o gateway exige credencial válida
 //      do projeto. NÃO basta: a anon key é válida e é pública.
-//   2. A checagem aqui dentro: o chamador precisa ser uma pessoa ATIVA com
-//      `papel_sistema = 'gestao'`. Ela é feita com o JWT DO CHAMADOR, sob RLS,
-//      antes de a `service_role` ser usada para qualquer coisa.
+//   2. A checagem aqui dentro: o chamador precisa ser uma pessoa ATIVA com a
+//      TELA Equipe (`tem_tela('equipe')`, desde 30/09/2026 — até ali era
+//      `papel_sistema = 'gestao'`; a gestão concede a tela e o poder vai
+//      junto). Ela é feita com o JWT DO CHAMADOR, sob RLS, antes de a
+//      `service_role` ser usada para qualquer coisa.
 //
 // A ordem importa. A `service_role` só é instanciada depois de o chamador
 // passar — assim não existe caminho em que a chave privilegiada é usada com o
@@ -135,16 +137,31 @@ Deno.serve(async (req) => {
     );
   }
 
-  const { data: quemPede } = await comoChamador
-    .from("pessoas")
-    .select("id, papel_sistema, ativo")
-    .eq("auth_user_id", usuario.user.id)
-    .maybeSingle();
+  // A MESMA REGRA DO BANCO: `tem_tela` lê a pessoa do JWT do chamador, ativa e
+  // com a tela Equipe (as escolhidas pela gestão, ou as do papel). Erro na
+  // chamada conta como "não": na dúvida, a chave privilegiada não sai.
+  const { data: temEquipe, error: erroTela } = await comoChamador.rpc(
+    "tem_tela",
+    { p_tela: "equipe" },
+  );
 
-  if (!quemPede?.ativo || quemPede.papel_sistema !== "gestao") {
+  if (erroTela || temEquipe !== true) {
     // 403 e não 404: o chamador está autenticado e a rota existe. Esconder
     // isso não protegeria nada e atrapalharia quem está depurando.
-    return responder({ erro: "Só a gestão cadastra pessoas." }, 403);
+    return responder(
+      { erro: "Só quem tem a tela Equipe cadastra pessoas." },
+      403,
+    );
+  }
+
+  // Quem pede, para a regra de "ninguém se exclui" logo abaixo.
+  const { data: quemPede } = await comoChamador
+    .from("pessoas")
+    .select("id")
+    .eq("auth_user_id", usuario.user.id)
+    .maybeSingle();
+  if (!quemPede) {
+    return responder({ erro: "Usuário sem pessoa vinculada." }, 403);
   }
 
   // ---------------------------------------------------------------------

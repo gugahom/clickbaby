@@ -1,19 +1,24 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Alerta } from '@/components/ui/Alerta'
-import { IconeCheck, IconeSair, IconeX } from '@/components/ui/icones'
+import { CampoTexto } from '@/components/ui/CampoTexto'
+import { IconeCaneta, IconeCheck, IconeSair, IconeX } from '@/components/ui/icones'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { formatarData } from '@/lib/formato'
 import type { EtapaEmMaos, PessoaDaEquipe } from '../api/useEquipe'
 import {
   useDefinirAtivo,
   useDefinirPapel,
+  useEditarNome,
   useExcluirPessoa,
+  useTrocarFotoDaPessoa,
 } from '../api/useAcoesDaPessoa'
+import { EscalaDaPessoa } from './EscalaDaPessoa'
+import { TelasDaPessoa } from './TelasDaPessoa'
 import {
   COR_LUGAR,
   PAPEIS,
@@ -38,6 +43,11 @@ import {
  * O QUE SOBROU não é consolo: é cadastro e presente. "Quem é essa pessoa, ela
  * consegue entrar, o que ela está segurando agora, e o que eu posso fazer com
  * ela." Nenhuma das quatro precisa de acordo nenhum para ser verdade.
+ *
+ * MAIS PODER PARA A GESTÃO (30/09/2026, pedido do gestor): a ficha passou a
+ * mudar a FOTO e o NOME de qualquer pessoa (o lápis no cabeçalho), as TELAS
+ * que ela vê e a ESCALA de plantão dela. Quem faz tudo isso é quem tem a tela
+ * Equipe — o banco confere a mesma lista.
  */
 export function FichaDaPessoa({
   pessoa,
@@ -53,11 +63,12 @@ export function FichaDaPessoa({
       <section className="overflow-hidden rounded-cartao border border-border bg-card shadow-cartao">
         <div className="superficie-cabecalho px-4 pt-4 pb-5 text-white">
           <div className="flex items-center gap-3">
-            <Avatar nome={pessoa.nome} fotoUrl={foto} className="size-12 text-sm" />
-            <div className="min-w-0">
-              <h2 className="truncate text-xl font-extrabold tracking-tight">
-                {pessoa.nome}
-              </h2>
+            <FotoEditavel pessoa={pessoa} foto={foto} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <h2 className="truncate text-xl font-extrabold tracking-tight">{pessoa.nome}</h2>
+                <NomeEditavel pessoa={pessoa} />
+              </div>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-white/70">
                 <span>{ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}</span>
                 {apelido && <span>· “{apelido}”</span>}
@@ -74,6 +85,8 @@ export function FichaDaPessoa({
       {pessoa.emMaos.length > 0 && <EmMaos etapas={pessoa.emMaos} />}
 
       <Acesso pessoa={pessoa} />
+      <TelasDaPessoa pessoa={pessoa} />
+      <EscalaDaPessoa pessoa={pessoa} />
       <Acoes pessoa={pessoa} />
     </div>
   )
@@ -130,6 +143,112 @@ function Acesso({ pessoa }: { pessoa: PessoaDaEquipe }) {
         aplicativo — ainda não dá para mostrar aqui.
       </p>
     </section>
+  )
+}
+
+/**
+ * A FOTO, trocada pela gestão: o lápis sobre o retrato abre o seletor de
+ * arquivo. A regra do arquivo (JPG, PNG ou WEBP, até 2 MB) é a da foto própria.
+ */
+function FotoEditavel({ pessoa, foto }: { pessoa: PessoaDaEquipe; foto: string | null }) {
+  const trocar = useTrocarFotoDaPessoa()
+  const entrada = useRef<HTMLInputElement>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  return (
+    <div className="relative flex-shrink-0">
+      <Avatar nome={pessoa.nome} fotoUrl={foto} className={clsx('size-14 text-base', trocar.isPending && 'opacity-50')} />
+      <button
+        type="button"
+        onClick={() => entrada.current?.click()}
+        disabled={trocar.isPending}
+        aria-label={`Trocar a foto de ${pessoa.nome}`}
+        title={erro ?? 'Trocar a foto'}
+        className={clsx(
+          'absolute -right-1 -bottom-1 grid size-7 place-items-center rounded-full border-2 border-white/80 text-white shadow',
+          erro ? 'bg-atrasado' : 'bg-marca-forte hover:bg-marca',
+        )}
+      >
+        <IconeCaneta className="size-3.5" />
+      </button>
+      <input
+        ref={entrada}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => {
+          const arquivo = e.target.files?.[0]
+          e.target.value = ''
+          if (!arquivo) return
+          setErro(null)
+          trocar.mutate(
+            { pessoaId: pessoa.id, arquivo },
+            { onError: (x) => setErro(x instanceof Error ? x.message : String(x)) },
+          )
+        }}
+      />
+    </div>
+  )
+}
+
+/** O NOME E O APELIDO, pelo lápis ao lado do nome. */
+function NomeEditavel({ pessoa }: { pessoa: PessoaDaEquipe }) {
+  const editar = useEditarNome()
+  const [aberto, setAberto] = useState(false)
+  const [nome, setNome] = useState(pessoa.nome)
+  const [apelido, setApelido] = useState(pessoa.apelidos[0] ?? '')
+  const [erro, setErro] = useState<string | null>(null)
+
+  function abrir() {
+    setNome(pessoa.nome)
+    setApelido(pessoa.apelidos[0] ?? '')
+    setErro(null)
+    setAberto(true)
+  }
+
+  function salvar() {
+    setErro(null)
+    const resto = pessoa.apelidos.slice(1)
+    editar.mutate(
+      { pessoaId: pessoa.id, nome, apelidos: apelido.trim() ? [apelido.trim(), ...resto] : resto },
+      { onSuccess: () => setAberto(false), onError: (e) => setErro(e instanceof Error ? e.message : String(e)) },
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={abrir}
+        aria-label={`Editar o nome de ${pessoa.nome}`}
+        className="grid size-9 flex-shrink-0 place-items-center rounded-full text-white/70 hover:bg-white/15 hover:text-white"
+      >
+        <IconeCaneta className="size-4" />
+      </button>
+      {aberto && (
+        <Dialogo
+          titulo="Editar nome"
+          rotuloConfirmar={editar.isPending ? 'Salvando…' : 'Salvar'}
+          confirmarDesabilitado={nome.trim() === ''}
+          ocupado={editar.isPending}
+          erro={erro}
+          onConfirmar={salvar}
+          onCancelar={() => setAberto(false)}
+        >
+          <div className="space-y-3">
+            <CampoTexto rotulo="Nome" valor={nome} aoMudar={setNome} autoFocus />
+            <CampoTexto
+              rotulo="Apelido"
+              valor={apelido}
+              aoMudar={setApelido}
+              opcional
+              ajuda="Como a equipe chama a pessoa no dia a dia."
+            />
+          </div>
+        </Dialogo>
+      )}
+    </>
   )
 }
 
@@ -203,8 +322,9 @@ function Acoes({ pessoa }: { pessoa: PessoaDaEquipe }) {
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Só gestão enxerga esta tela. Atendimento e adm cancelam caso e editam
-            cadastro; operação, não.
+            O papel decide o que a pessoa FAZ nos casos (atendimento e adm
+            cancelam caso e editam cadastro; operação, não) e o padrão de telas
+            dela. As telas se ajustam na caixa acima.
           </p>
         </div>
 

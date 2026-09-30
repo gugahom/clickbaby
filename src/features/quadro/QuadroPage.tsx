@@ -23,8 +23,7 @@ import {
   type ColunaDoConcluido,
 } from './lib/avaliacao'
 import { Alerta } from '@/components/ui/Alerta'
-import { useAuth } from '@/features/auth/contexto'
-import { podeVerConcluidos } from './lib/acoes'
+import { useTelas } from '@/features/auth/telas'
 import {
   DIAS_INICIAIS,
   DIAS_POR_PAGINA,
@@ -131,10 +130,11 @@ export function QuadroPage() {
   /*
    * A ABA CONCLUÍDOS É DO ADM (28/09/2026, pedido do gestor). Ela deixou de ser
    * arquivo morto e virou a FILA DA AVALIAÇÃO — trabalho de quem liga para a
-   * família, não de quem fotografa. Ver `podeVerConcluidos`.
+   * família, não de quem fotografa. Ver `telasPadraoDoPapel`.
    */
-  const { pessoa } = useAuth()
-  const veConcluidos = podeVerConcluidos(pessoa?.papelSistema ?? 'operador')
+  // Desde 30/09/2026 é a TELA Concluídos, que a gestão concede pessoa a
+  // pessoa; o padrão continua sendo todo papel menos operador.
+  const veConcluidos = useTelas().has('concluidos')
 
   const [aba, setAba] = useState<Aba>('lista')
   const [diasVisiveis, setDiasVisiveis] = useState(DIAS_INICIAIS)

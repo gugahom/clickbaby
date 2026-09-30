@@ -88,7 +88,7 @@ update public.caso_etapas
 select pg_temp.como('atendimento.op@clickbaby.test');
 select throws_ok(
   $$ select * from public.operacao_buscar('{}'::jsonb) $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'O1: o atendimento não abre o relatório externo'
 );
 reset role;

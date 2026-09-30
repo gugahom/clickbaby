@@ -83,7 +83,7 @@ values (pg_temp.etapa('Mae PTS Basic', 'edicao_foto'), pg_temp.pessoa('Fotografa
 select pg_temp.como('atendimento.pts@clickbaby.test');
 select throws_ok(
   $$ select * from public.metricas_pontos_por_pessoa('2029-03-01', '2029-03-31') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'P1: nem o atendimento lê o ranking por pontos'
 );
 reset role;
@@ -91,7 +91,7 @@ reset role;
 select pg_temp.como('fotografa.pts@clickbaby.test');
 select throws_ok(
   $$ select public.definir_pontos_do_item('nascimento', 10) $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'P1: a fotógrafa não mexe nos pesos'
 );
 reset role;

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import clsx from 'clsx'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -6,6 +7,9 @@ import { useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
 import { emBrasilia, rotuloDoDia } from '../lib/datas'
+import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
+import { IconeCheck } from '@/components/ui/icones'
+import type { TermoStatus } from '@/features/quadro/types'
 
 /**
  * O CASO PELO CALENDÁRIO — criar (30/09/2026, pedido do gestor: "criar casos
@@ -33,6 +37,17 @@ import { emBrasilia, rotuloDoDia } from '../lib/datas'
  * desfazer é na seção dele, que dispensa a etapa. ARRASTAR um item no
  * calendário abre este formulário já com o dia e a hora do lugar onde ele foi
  * solto: nada muda sem a pessoa conferir e salvar.
+ *
+ * EM DUAS COLUNAS, TUDO À VISTA (30/09/2026, pedido do gestor: "não gosto de
+ * ele ficar extenso verticalmente e ter que ter um scroll"). À esquerda, o que
+ * é o TÍTULO do evento — quem, pacote, onde, quando — e a prévia do Google; à
+ * direita, o que se soma a ele — adicionais, termo e observações. No celular
+ * as duas empilham, como antes.
+ *
+ * O TERMO DE IMAGEM JÁ NO CADASTRO (mesmo pedido): a pergunta mora também na
+ * confirmação da entrega, e quem já sabe a resposta ao marcar o parto não
+ * precisa esperar o fim do caso. É opcional aqui — sem resposta, a
+ * confirmação continua cobrando — e o BIRTH abre em "Sem contrato", como lá.
  */
 export interface Proposta {
   dia: string
@@ -110,12 +125,17 @@ function FormularioDoCaso({
   const [observacao, setObservacao] = useState(caso?.observacao ?? '')
   const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
   const [fotolivro, setFotolivro] = useState(caso?.temFotolivro ?? false)
+  // O termo ESCOLHIDO; enquanto ninguém tocou, vale o do caso ou a sugestão do
+  // pacote (BIRTH = sem contrato), que acompanha a troca de pacote.
+  const [termoEscolhido, setTermoEscolhido] = useState<TermoStatus | null | undefined>(undefined)
   const [erro, setErro] = useState<string | null>(null)
   const ocupado = criar.isPending || editar.isPending
 
   const pacote = cadastros.data?.pacotes.find((p) => p.id === pacoteId)
   // O MASTER + ÁLBUM já traz o Foto/Livro: a caixa aparece marcada e presa.
   const livroNoPacote = pacote ? /ALBUM/.test(pacote.nome.normalize('NFD').replace(/\p{Diacritic}/gu, '').toUpperCase()) : false
+  const termo =
+    termoEscolhido !== undefined ? termoEscolhido : (caso?.termo ?? termoSugerido(pacote?.slug ?? null))
   const maternidade = cadastros.data?.maternidades.find((m) => m.id === maternidadeId)
   // EVENTO e NEWBORN (30/09/2026) não são parto: o evento guarda "EVENTO" como
   // mãe e o NOME do evento no lugar do bebê, e nenhum dos dois leva adicional.
@@ -161,8 +181,11 @@ function FormularioDoCaso({
       observacao,
       clickHome: clickHome && !ehEvento && !ehNewborn,
       fotolivro: fotolivro && !ehEvento && !ehNewborn,
+      termo,
     }
-    const feito = caso ? editar.mutateAsync({ ...dados, casoId: caso.id }) : criar.mutateAsync(dados)
+    const feito = caso
+      ? editar.mutateAsync({ ...dados, casoId: caso.id, termoAntes: caso.termo })
+      : criar.mutateAsync(dados)
     feito
       .then(() => onPronto(dia))
       .catch((e: unknown) =>
@@ -184,159 +207,215 @@ function FormularioDoCaso({
       confirmarDesabilitado={falta.length > 0 || temBarra || cadastros.isPending}
       ocupado={ocupado}
       erro={erro}
+      largo
       onConfirmar={salvar}
       onCancelar={onFechar}
     >
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {!ehEvento && <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso} />}
-          {ehEvento ? (
-            <CampoTexto rotulo="Nome do evento" valor={bebeNome} aoMudar={setBebeNome} ajuda="Ex.: MKT, 60 ANOS, ENFERMAGEM." />
-          ) : (
-            <CampoTexto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional ajuda="Se ainda não tiver nome, deixe vazio." />
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-[minmax(0,8fr)_minmax(0,6fr)]">
+        {/* O TÍTULO DO EVENTO: quem, pacote, onde, quando — e como fica no Google. */}
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {!ehEvento && <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso} />}
+            {ehEvento ? (
+              <CampoTexto rotulo="Nome do evento" valor={bebeNome} aoMudar={setBebeNome} ajuda="Ex.: MKT, 60 ANOS, ENFERMAGEM." />
+            ) : (
+              <CampoTexto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional ajuda="Sem nome ainda? Deixe vazio." />
+            )}
+          </div>
+          {temBarra && <p className="text-sm font-semibold text-atrasado">O nome não pode ter barra (/): ela separa mãe e bebê na agenda.</p>}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Escolha
+              rotulo="Pacote"
+              valor={pacoteId}
+              aoMudar={setPacoteId}
+              carregando={cadastros.isPending}
+              buscarPor="Buscar pacote"
+              opcoes={(cadastros.data?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor_calendar }))}
+            />
+            <Escolha
+              rotulo="Maternidade"
+              valor={maternidadeId}
+              aoMudar={setMaternidadeId}
+              carregando={cadastros.isPending}
+              buscarPor="Buscar maternidade"
+              opcoes={(cadastros.data?.maternidades ?? []).map((m) => ({
+                valor: m.id,
+                rotulo: `${m.sigla} — ${m.nome}`,
+                cor: m.cor_calendar,
+              }))}
+            />
+          </div>
+          {trocouPacote && (
+            <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              Trocar o pacote acrescenta as etapas que faltam no caso. As que ele já tem ficam — se alguma não vai
+              acontecer, dispense no Quadro.
+            </p>
           )}
-        </div>
-        {temBarra && <p className="text-sm font-semibold text-atrasado">O nome não pode ter barra (/): ela separa mãe e bebê na agenda.</p>}
 
-        <Escolha
-          rotulo="Pacote"
-          valor={pacoteId}
-          aoMudar={setPacoteId}
-          carregando={cadastros.isPending}
-          buscarPor="Buscar pacote"
-          opcoes={(cadastros.data?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor_calendar }))}
-        />
-        <Escolha
-          rotulo="Maternidade"
-          valor={maternidadeId}
-          aoMudar={setMaternidadeId}
-          carregando={cadastros.isPending}
-          buscarPor="Buscar maternidade"
-          opcoes={(cadastros.data?.maternidades ?? []).map((m) => ({
-            valor: m.id,
-            rotulo: `${m.sigla} — ${m.nome}`,
-            cor: m.cor_calendar,
-          }))}
-        />
-        {trocouPacote && (
-          <p className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            Trocar o pacote acrescenta as etapas que faltam no caso. As que ele já tem ficam — se alguma não vai
-            acontecer, dispense no Quadro.
-          </p>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <CampoTexto rotulo="Dia" type="date" valor={dia} aoMudar={setDia} {...(dia ? { ajuda: rotuloDoDia(dia) } : {})} />
-          <CampoTexto
-            rotulo="Hora prevista"
-            type="time"
-            valor={hora}
-            aoMudar={setHora}
-            opcional
-            ajuda={hora === '' ? 'Hora a definir: no Google fica como dia inteiro.' : 'Apague para deixar a definir.'}
-          />
-          {!ehEvento && !ehNewborn && (
+          <div
+            className={clsx(
+              'grid gap-3',
+              ehEvento || ehNewborn
+                ? 'grid-cols-2'
+                : 'grid-cols-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]',
+            )}
+          >
+            <CampoTexto rotulo="Dia" type="date" valor={dia} aoMudar={setDia} {...(dia ? { ajuda: rotuloDoDia(dia) } : {})} />
             <CampoTexto
-              rotulo="Hora da cesárea"
+              rotulo="Hora prevista"
               type="time"
-              valor={cesarea}
-              aoMudar={setCesarea}
+              valor={hora}
+              aoMudar={setHora}
               opcional
-              ajuda="A hora marcada da cirurgia, no mesmo dia."
+              ajuda={hora === '' ? 'A definir: dia inteiro no Google.' : 'Apague para deixar a definir.'}
             />
+            {!ehEvento && !ehNewborn && (
+              <CampoTexto rotulo="Cesárea" type="time" valor={cesarea} aoMudar={setCesarea} opcional ajuda="Hora da cirurgia." />
+            )}
+          </div>
+          {mudouQuando && antes && (
+            <p className="text-xs font-semibold text-foreground">
+              Antes: {rotuloDoDia(antes.dia)}, {horaAntes ? `às ${horaAntes}` : 'hora a definir'}.
+            </p>
           )}
+
+          <div className="rounded-xl bg-muted/50 px-3 py-2.5 text-sm">
+            <div className="text-xs font-semibold text-muted-foreground">
+              {caso ? 'O evento no Google Calendar vai ficar assim:' : 'Vai aparecer no Google Calendar assim:'}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <span
+                className="size-3 flex-shrink-0 rounded-full border border-border"
+                style={{ backgroundColor: corDoParto(pacote?.cor_calendar ?? maternidade?.cor_calendar).hex }}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 truncate font-semibold text-foreground">{titulo}</span>
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {cor ? `Cor ${cor.nome}` : 'Cor padrão da agenda'}
+              {pacote?.cor_calendar ? ' (regra do pacote)' : maternidade?.cor_calendar ? ' (regra da maternidade)' : ''}
+              {quandoChega}
+            </div>
+          </div>
         </div>
-        {mudouQuando && antes && (
-          <p className="text-xs font-semibold text-foreground">
-            Antes: {rotuloDoDia(antes.dia)}, {horaAntes ? `às ${horaAntes}` : 'hora a definir'}.
-          </p>
-        )}
 
-        {!ehEvento && !ehNewborn && (
-          <>
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
-              <input
-                type="checkbox"
-                checked={clickHome}
-                disabled={caso?.clickHome === true}
-                onChange={(e) => setClickHome(e.target.checked)}
-                className="size-5 accent-marca"
+        {/* O QUE SE SOMA AO CASO: adicionais, termo, observações. */}
+        <div className="space-y-3">
+          {!ehEvento && !ehNewborn && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Marcador
+                rotulo="New Born"
+                marcado={clickHome}
+                travado={caso?.clickHome === true}
+                aoMudar={setClickHome}
+                ajuda={caso?.clickHome ? 'Já no caso — dispense na seção.' : 'Click Home vendido junto'}
               />
-              <span className="text-sm">
-                <span className="font-semibold text-foreground">New Born</span>
-                <span className="text-muted-foreground">
-                  {caso?.clickHome
-                    ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção New Born.'
-                    : ' — o ensaio Click Home foi vendido junto'}
-                </span>
-              </span>
-            </label>
-
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
-              <input
-                type="checkbox"
-                checked={fotolivro || livroNoPacote}
-                disabled={caso?.temFotolivro === true || livroNoPacote}
-                onChange={(e) => setFotolivro(e.target.checked)}
-                className="size-5 accent-marca"
+              <Marcador
+                rotulo="Foto/Livro"
+                marcado={fotolivro || livroNoPacote}
+                travado={caso?.temFotolivro === true || livroNoPacote}
+                aoMudar={setFotolivro}
+                ajuda={
+                  livroNoPacote ? 'Já vem no pacote.' : caso?.temFotolivro ? 'Já no caso — dispense na seção.' : 'Fotolivro vendido junto'
+                }
               />
-              <span className="text-sm">
-                <span className="font-semibold text-foreground">Foto/Livro</span>
-                <span className="text-muted-foreground">
-                  {livroNoPacote
-                    ? ' — já vem no pacote.'
-                    : caso?.temFotolivro
-                      ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção Foto/Livro.'
-                      : ' — o fotolivro foi vendido junto'}
-                </span>
-              </span>
-            </label>
+            </div>
+          )}
 
-          </>
-        )}
+          <fieldset>
+            <legend className="text-sm font-medium">
+              Termo de imagem <span className="font-normal text-muted-foreground">(opcional)</span>
+            </legend>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {OPCOES_TERMO.map((t) => {
+                const ativo = termo === t
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={ativo}
+                    // Tocar no marcado desmarca: "ninguém perguntou ainda" é
+                    // uma resposta válida no cadastro.
+                    onClick={() => setTermoEscolhido(ativo ? null : t)}
+                    // O desenho do seletor da confirmação de entrega (`SeletorDeTermo`),
+                    // com um ✓ na escolhida: "Sem contrato" é neutro, e sem o ✓
+                    // marcado e desmarcado quase não se distinguiam.
+                    className={clsx(
+                      'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-colors',
+                      ativo
+                        ? clsx('border-transparent', CLASSE_TERMO[t])
+                        : 'border-border text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    {ativo && <IconeCheck className="size-4 flex-shrink-0" />}
+                    {ROTULO_TERMO[t]}
+                  </button>
+                )
+              })}
+            </div>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {termo === null
+                ? 'Sem resposta, a confirmação da entrega continua perguntando.'
+                : `${EXPLICACAO_TERMO[termo]}${caso?.termo && termo !== caso.termo ? ` Antes: ${ROTULO_TERMO[caso.termo]}.` : ''}`}
+            </span>
+          </fieldset>
 
-        <label className="block">
-          <span className="text-sm font-medium">
-            Observações <span className="font-normal text-muted-foreground">(opcional)</span>
-          </span>
-          <textarea
-            value={observacao}
-            onChange={(e) => setObservacao(e.target.value)}
-            rows={4}
-            maxLength={4000}
-            className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-base"
-          />
-          <span className="mt-1 block text-xs text-muted-foreground">
-            {!caso || caso.criadoPeloSistema
-              ? 'Vai na descrição do evento no Google.'
-              : 'Fica no sistema. A descrição do evento no Google é da equipe e não muda.'}
-          </span>
-        </label>
-
-        <div className="rounded-xl bg-muted/50 px-3 py-2.5 text-sm">
-          <div className="text-xs font-semibold text-muted-foreground">
-            {caso ? 'O evento no Google Calendar vai ficar assim:' : 'Vai aparecer no Google Calendar assim:'}
-          </div>
-          <div className="mt-1 flex items-center gap-2">
-            <span
-              className="size-3 flex-shrink-0 rounded-full border border-border"
-              style={{ backgroundColor: corDoParto(pacote?.cor_calendar ?? maternidade?.cor_calendar).hex }}
-              aria-hidden="true"
+          <label className="block">
+            <span className="text-sm font-medium">
+              Observações <span className="font-normal text-muted-foreground">(opcional)</span>
+            </span>
+            <textarea
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              rows={ehEvento || ehNewborn ? 6 : 4}
+              maxLength={4000}
+              className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-base"
             />
-            <span className="min-w-0 truncate font-semibold text-foreground">{titulo}</span>
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {cor ? `Cor ${cor.nome}` : 'Cor padrão da agenda'}
-            {pacote?.cor_calendar ? ' (regra do pacote)' : maternidade?.cor_calendar ? ' (regra da maternidade)' : ''}
-            {quandoChega}
-          </div>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {!caso || caso.criadoPeloSistema
+                ? 'Vai na descrição do evento no Google.'
+                : 'Fica no sistema. A descrição do evento no Google é da equipe e não muda.'}
+            </span>
+          </label>
         </div>
 
         {falta.length > 0 && !temBarra && (
-          <p className="text-xs text-muted-foreground">Falta {falta.join(', ')}.</p>
+          <p className="text-xs text-muted-foreground md:col-span-2">Falta {falta.join(', ')}.</p>
         )}
       </div>
     </Dialogo>
+  )
+}
+
+/** Uma caixa de marcar do tamanho de um alvo de dedo, com uma linha de ajuda. */
+function Marcador({
+  rotulo,
+  marcado,
+  travado,
+  aoMudar,
+  ajuda,
+}: {
+  rotulo: string
+  marcado: boolean
+  travado: boolean
+  aoMudar: (v: boolean) => void
+  ajuda: string
+}) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3 py-1.5">
+      <input
+        type="checkbox"
+        checked={marcado}
+        disabled={travado}
+        onChange={(e) => aoMudar(e.target.checked)}
+        className="size-5 flex-shrink-0 accent-marca"
+      />
+      <span className="min-w-0 text-sm leading-tight">
+        <span className="block font-semibold text-foreground">{rotulo}</span>
+        <span className="block text-xs text-muted-foreground">{ajuda}</span>
+      </span>
+    </label>
   )
 }
 

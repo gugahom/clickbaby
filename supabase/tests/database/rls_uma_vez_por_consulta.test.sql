@@ -21,17 +21,18 @@ select is(
      from pg_policies p,
           lateral (select coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '') as expr) e
     where p.schemaname = 'public'
-      and regexp_count(e.expr, 'eh_(pessoa_ativa|adm|atendimento)\(\)')
-        <> regexp_count(e.expr, 'SELECT eh_(pessoa_ativa|adm|atendimento)\(\)')),
+      and regexp_count(e.expr, '(eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()')
+        <> regexp_count(e.expr, 'SELECT (eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()')),
   0,
-  'U1: toda policy que chama eh_pessoa_ativa/eh_adm/eh_atendimento o faz dentro de (select ...)');
+  'U1: toda policy que chama eh_pessoa_ativa/eh_adm/eh_atendimento/tem_tela o faz dentro de (select ...)');
 
 -- 2. E elas continuam existindo — a troca foi de expressão, não de policy.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'public'
-      and (qual ~ 'eh_(pessoa_ativa|adm|atendimento)\(\)'
-           or with_check ~ 'eh_(pessoa_ativa|adm|atendimento)\(\)')),
+      and (qual ~ '(eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()'
+           or with_check ~ '(eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()')),
+  -- Desde 30/09/2026, duas delas (pessoas e escalas) usam tem_tela('equipe').
   19,
   'U2: as 19 policies que usam os helpers continuam lá');
 

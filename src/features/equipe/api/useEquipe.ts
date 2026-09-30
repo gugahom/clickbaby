@@ -1,3 +1,4 @@
+import type { Tela } from '@/features/auth/telas'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -66,6 +67,8 @@ export interface PessoaDaEquipe {
   temHistorico: boolean
   /** Última vez que uma etapa dela começou ou terminou; null se nunca. */
   ultimaAtividade: string | null
+  /** As telas escolhidas pela gestão; `null` = o padrão do papel. */
+  telas: Tela[] | null
 }
 
 export const chavesEquipe = {
@@ -82,6 +85,7 @@ interface LinhaPessoa {
   auth_user_id: string | null
   created_at: string
   foto_path: string | null
+  telas: Tela[] | null
 }
 
 interface LinhaEtapa {
@@ -123,7 +127,7 @@ function vazio(): Acumulado {
 async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
   const { data: linhas, error } = await supabase
     .from('pessoas')
-    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at, foto_path')
+    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at, foto_path, telas')
     .order('nome')
 
   if (error) throw error
@@ -194,6 +198,7 @@ async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
       emMaos,
       temHistorico: d.tocouEmAlgo,
       ultimaAtividade: d.ultima,
+      telas: p.telas,
     }
   })
 }

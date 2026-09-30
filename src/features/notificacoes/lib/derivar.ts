@@ -1,11 +1,9 @@
-import { MINUTOS_IMINENTE, alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
   rotuloDaRodada,
   type CasoQuadro,
   type EtapaQuadro,
-  type EtapaTipo,
 } from '@/features/quadro/types'
 
 /**
@@ -23,38 +21,29 @@ import {
  * o vídeo sai de "alterações" — e a notificação some porque a condição que a
  * criava deixou de ser verdade. Não há código nenhum no meio.
  *
- * DUAS FAMÍLIAS, e é a divisão que o gestor pediu:
- *   MINHAS   — atribuição, rendição, alteração pedida em trabalho meu. São as
- *              que acendem o pulso: é trabalho esperando por MIM.
- *   GERAIS   — aviso escrito num card, horário estourando, trabalho liberado
- *              que ninguém pegou, prazo vencido, alteração pedida em trabalho
- *              de outra pessoa. Todo mundo vê (o Quadro já é de todo mundo),
- *              e elas entram SEM GRITAR.
+ * SÓ "PARA VOCÊ" (30/09/2026, pedido do gestor: "vai ser só para você, e só
+ * vai notificar o usuário que tiver que ser notificado mesmo"). Até aqui havia
+ * duas famílias, e as GERAIS — aviso escrito num card, horário estourando,
+ * edição liberada sem ninguém, prazo vencido, alteração no trabalho de outra
+ * pessoa — entravam na lista de todo mundo. Elas SAÍRAM: o Quadro já mostra
+ * tudo isso a quem olha, e o sino voltou a ser sobre MIM.
  *
- * DUAS SÃO POR PAPEL: caso esperando confirmação em Entregáveis e rascunho
- * pendente são trabalho de atendimento e adm. Mandar para fotógrafa seria
- * ensinar a ignorar o sino — que é o único jeito de estragar um.
+ * O que fica:
+ *   * atribuição, rendição e alteração pedida em trabalho MEU;
+ *   * e, só para atendimento e adm, o trabalho do ADM — caso esperando
+ *     conferência em Entregáveis, rascunho pendente, vídeo, Foto/Livro e New
+ *     Born para entregar (decisão do gestor, perguntado). Não são "de uma
+ *     pessoa", mas são do PAPEL de quem as recebe: é a Morgana que precisa
+ *     saber. Mandar para fotógrafa seria ensinar a ignorar o sino.
  */
-export type FamiliaNotificacao = 'minha' | 'geral'
 
-export type TipoNotificacao =
-  | 'atribuida'
-  | 'rendicao'
-  | 'alteracao_minha'
-  | 'aviso'
-  | 'horario'
-  | 'alteracao'
-  | 'parada'
-  | 'prazo'
-  | 'entrega'
-  | 'rascunho'
+export type TipoNotificacao = 'atribuida' | 'rendicao' | 'alteracao_minha' | 'entrega' | 'rascunho'
 
 export interface Notificacao {
   /** Estável entre renderizações: é o que o React usa de chave e o que o
    *  "já vi" compara. Muda quando a condição muda, não a cada segundo. */
   id: string
   tipo: TipoNotificacao
-  familia: FamiliaNotificacao
   /** Menor = mais urgente. Ver ORDEM. */
   peso: number
   titulo: string
@@ -75,25 +64,11 @@ export interface Notificacao {
  */
 const ORDEM: Record<TipoNotificacao, number> = {
   atribuida: 0,
-  horario: 1,
-  alteracao_minha: 2,
-  rendicao: 3,
-  aviso: 4,
-  prazo: 5,
-  parada: 6,
-  alteracao: 7,
-  entrega: 8,
-  rascunho: 9,
+  alteracao_minha: 1,
+  rendicao: 2,
+  entrega: 3,
+  rascunho: 4,
 }
-
-/**
- * ESTAS DUAS NÃO VIRAM AVISO, pela mesma razão que já as tirou da faixa
- * vermelha do card: a observação do vídeo e do fotolivro é onde moram os
- * PEDIDOS DO CLIENTE (prints, link de música), e um pedido de música dentro de
- * um vídeo de dez dias úteis tocando o sino ensinaria a equipe a ignorá-lo.
- * A lista é a mesma de `SEM_FAIXA_NO_CARD` e de `SECAO_DA_ETAPA`.
- */
-const SEM_AVISO = new Set<EtapaTipo>(['edicao_video', 'album', 'click_home'])
 
 /** Papéis que recebem o trabalho de ADM: conferir entrega e resolver rascunho. */
 function ehAdmOuAtendimento(papel: string): boolean {
@@ -130,13 +105,11 @@ export function derivarNotificacoes({
   etapasPorCaso,
   pessoaId,
   papel,
-  agora,
 }: {
   casos: CasoQuadro[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   pessoaId: string | null
   papel: string
-  agora: Date
 }): Notificacao[] {
   const lista: Notificacao[] = []
 
@@ -156,7 +129,6 @@ export function derivarNotificacoes({
       lista.push({
         id: `rascunho:${caso.id}`,
         tipo: 'rascunho',
-        familia: 'geral',
         peso: ORDEM.rascunho,
         titulo: 'Rascunho esperando confirmação',
         detalhe: caso.faltaPacote ? 'Sem pacote definido' : 'Sem maternidade definida',
@@ -171,7 +143,6 @@ export function derivarNotificacoes({
       lista.push({
         id: `entrega:${caso.id}`,
         tipo: 'entrega',
-        familia: 'geral',
         peso: ORDEM.entrega,
         titulo: 'Entrega esperando conferência',
         detalhe: caso.liberadoParaEntregaPorNome
@@ -180,56 +151,6 @@ export function derivarNotificacoes({
         casoId: caso.id,
         casoNome: nome,
         em: caso.liberadoParaEntregaEm ?? '',
-      })
-    }
-
-    // HORÁRIO CHEGANDO OU ESTOURADO. A mesma função que pinta o card — uma
-    // definição só de "está na hora", para o sino e o Quadro não discordarem.
-    const alerta = alertaDeHorario(caso, etapas, agora)
-    if (alerta && !enviado && (alerta.nivel === 'iminente' || alerta.atrasado)) {
-      lista.push({
-        id: `horario:${caso.id}:${alerta.oQue}`,
-        tipo: 'horario',
-        familia: 'geral',
-        peso: ORDEM.horario,
-        titulo: alerta.atrasado ? `${alerta.oQue} atrasada` : `${alerta.oQue} ${alerta.rotulo}`,
-        detalhe: caso.maternidadeSigla ?? 'Sem maternidade',
-        casoId: caso.id,
-        casoNome: nome,
-        /*
-         * QUANDO O ALERTA NASCEU, e não a hora marcada. A hora marcada está no
-         * FUTURO enquanto o alerta é iminente — e um carimbo futuro faria esta
-         * notificação parecer nova para sempre e escapar de "Limpar gerais",
-         * que esconde o que nasceu ATÉ o instante do clique. Ela nasce quando
-         * entra na janela vermelha: a hora marcada menos a janela.
-         */
-        em: caso.previsaoEm
-          ? new Date(
-              new Date(caso.previsaoEm).getTime() - MINUTOS_IMINENTE * 60_000,
-            ).toISOString()
-          : '',
-      })
-    }
-
-    // PRAZO DO PACOTE VENCIDO com trabalho ainda aberto. Na UTI não: lá o SLA
-    // está congelado de propósito, e cobrar um prazo parado seria mentira.
-    if (
-      caso.venceEm !== null &&
-      !caso.ehTerminal &&
-      !caso.naUti &&
-      !enviado &&
-      new Date(caso.venceEm).getTime() < agora.getTime()
-    ) {
-      lista.push({
-        id: `prazo:${caso.id}`,
-        tipo: 'prazo',
-        familia: 'geral',
-        peso: ORDEM.prazo,
-        titulo: 'Prazo de entrega vencido',
-        detalhe: caso.pacoteNome ?? 'Sem pacote',
-        casoId: caso.id,
-        casoNome: nome,
-        em: caso.venceEm,
       })
     }
 
@@ -246,7 +167,6 @@ export function derivarNotificacoes({
         lista.push({
           id: `atribuida:${etapa.id}`,
           tipo: 'atribuida',
-          familia: 'minha',
           peso: ORDEM.atribuida,
           titulo: `${nomeDaEtapa(etapa)} atribuída a você`,
           detalhe: 'Aguardando início',
@@ -261,7 +181,6 @@ export function derivarNotificacoes({
         lista.push({
           id: `rendicao:${etapa.id}`,
           tipo: 'rendicao',
-          familia: 'minha',
           peso: ORDEM.rendicao,
           titulo: `Você assume ${nomeDaEtapa(etapa)} na virada`,
           detalhe: etapa.responsavelNome ? `Hoje com ${etapa.responsavelNome}` : 'Sem responsável',
@@ -271,39 +190,20 @@ export function derivarNotificacoes({
         })
       }
 
-      // VOLTOU PARA ALTERAÇÃO. Minha ou de outra pessoa: as duas existem, e a
-      // diferença é só quem pulsa. Um vídeo em alterações sem dono nenhum é
-      // trabalho que a coordenação precisa distribuir.
+      // VOLTOU PARA ALTERAÇÃO, no MEU trabalho. A de outra pessoa saiu com as
+      // gerais (30/09/2026).
       const emAlteracao =
         etapa.status === 'em_alteracao' || etapa.faseAlbum === 'pedido_de_alteracoes'
-      if (emAlteracao && !resolvida) {
+      if (emAlteracao && !resolvida && minha) {
         lista.push({
           id: `alteracao:${etapa.id}`,
-          tipo: minha ? 'alteracao_minha' : 'alteracao',
-          familia: minha ? 'minha' : 'geral',
-          peso: minha ? ORDEM.alteracao_minha : ORDEM.alteracao,
-          titulo: minha
-            ? `Pediram alteração no seu ${ROTULO_ETAPA[etapa.tipo]}`
-            : `${ROTULO_ETAPA[etapa.tipo]} voltou para alteração`,
+          tipo: 'alteracao_minha',
+          peso: ORDEM.alteracao_minha,
+          titulo: `Pediram alteração no seu ${ROTULO_ETAPA[etapa.tipo]}`,
           detalhe:
             etapa.faseAlbum !== null
               ? ROTULO_FASE_ALBUM[etapa.faseAlbum]
               : (etapa.responsavelNome ?? 'Sem responsável'),
-          casoId: caso.id,
-          casoNome: nome,
-          em: quando(etapa),
-        })
-      }
-
-      // AVISO ESCRITO NUMA ETAPA ABERTA — a pílula vermelha com megafone.
-      if (!resolvida && etapa.observacao && !SEM_AVISO.has(etapa.tipo)) {
-        lista.push({
-          id: `aviso:${etapa.id}`,
-          tipo: 'aviso',
-          familia: 'geral',
-          peso: ORDEM.aviso,
-          titulo: `Aviso em ${nomeDaEtapa(etapa)}`,
-          detalhe: etapa.observacao,
           casoId: caso.id,
           casoNome: nome,
           em: quando(etapa),
@@ -321,7 +221,6 @@ export function derivarNotificacoes({
           lista.push({
             id: `fotolivro-${paraAprovar ? 'aprovacao' : 'entrega'}:${etapa.id}`,
             tipo: 'entrega',
-            familia: 'geral',
             peso: ORDEM.entrega,
             titulo: paraAprovar ? 'Foto/Livro para mandar ao cliente' : 'Foto/Livro pronto para entregar',
             detalhe: 'Na aba Entregáveis',
@@ -342,7 +241,6 @@ export function derivarNotificacoes({
         lista.push({
           id: `video-entrega:${etapa.id}`,
           tipo: 'entrega',
-          familia: 'geral',
           peso: ORDEM.entrega,
           titulo: 'Vídeo do MASTER pronto para entregar',
           detalhe: 'Na aba Entregáveis',
@@ -363,33 +261,9 @@ export function derivarNotificacoes({
         lista.push({
           id: `click-home-entrega:${etapa.id}`,
           tipo: 'entrega',
-          familia: 'geral',
           peso: ORDEM.entrega,
           titulo: 'Galeria do New Born para mandar à família',
           detalhe: 'Na aba Entregáveis',
-          casoId: caso.id,
-          casoNome: nome,
-          em: quando(etapa),
-        })
-      }
-
-      // EDIÇÃO LIBERADA QUE NINGUÉM PEGOU — o anel vermelho da seção REELS.
-      // Só edição: em campo, "pendente" é o estado normal de quem ainda vai
-      // acontecer, e o alerta de horário já cobre a hora marcada.
-      if (
-        etapa.trilha === 'edicao' &&
-        etapa.status === 'pendente' &&
-        etapa.responsavelId === null &&
-        !enviado &&
-        caso.nascimentoConcluidoEm !== null
-      ) {
-        lista.push({
-          id: `parada:${etapa.id}`,
-          tipo: 'parada',
-          familia: 'geral',
-          peso: ORDEM.parada,
-          titulo: `${nomeDaEtapa(etapa)} sem ninguém`,
-          detalhe: 'Liberada para editar',
           casoId: caso.id,
           casoNome: nome,
           em: quando(etapa),
@@ -401,16 +275,7 @@ export function derivarNotificacoes({
   return lista.sort((a, b) => a.peso - b.peso || b.em.localeCompare(a.em))
 }
 
-/**
- * O PULSO É SÓ DAS MINHAS (decisão do gestor).
- *
- * "Todo mundo vê, mas só as minhas pulsam." O sino fica vermelho e pulsando
- * quando existe notificação MINHA que nasceu depois da última vez que olhei;
- * as gerais entram na lista e no contador sem acender nada. Um sino que grita
- * por qualquer urgência da operação inteira grita o dia todo — e um alerta que
- * toca o dia todo é um alerta que ninguém olha, que é exatamente o defeito que
- * a faixa de avisos do card já teve.
- */
+/** Há notificação que nasceu depois da última vez que o sino foi aberto. */
 export function temNovidade(lista: Notificacao[], vistoEm: string | null): boolean {
-  return lista.some((n) => n.familia === 'minha' && (vistoEm === null || n.em > vistoEm))
+  return lista.some((n) => vistoEm === null || n.em > vistoEm)
 }

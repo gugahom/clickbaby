@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import clsx from 'clsx'
 import { useAuth } from '@/features/auth/contexto'
 import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
-import { useFotosDaEquipe } from '../api/useMetricas'
+import { useFotosDaEquipe, type PlantaoDaPessoa } from '../api/useMetricas'
 import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
 import type { PadraoNoPerfil } from './PerfilDaPessoa'
 import type { LinhaDaPessoa } from '../lib/kpis'
@@ -68,6 +68,7 @@ export function TabelaDePessoas({
   fases,
   pontos,
   padrao,
+  plantoes,
   rotuloDoPeriodo,
   ranking,
 }: {
@@ -77,6 +78,8 @@ export function TabelaDePessoas({
   fases: FaseDaPessoa[]
   pontos: PontosDaPessoa[]
   padrao: PadraoNoPerfil
+  /** As horas de plantão da escala, por pessoa. */
+  plantoes: PlantaoDaPessoa[]
   /** Como a frase do perfil termina: "em dezembro de 2027". */
   rotuloDoPeriodo: string
   /**
@@ -276,6 +279,7 @@ export function TabelaDePessoas({
               fases={fases}
               pontos={pontos}
               padrao={padrao}
+              plantao={plantoes.find((p) => p.pessoaId === selecionada.pessoaId)}
               rotuloDoPeriodo={rotuloDoPeriodo}
               onFechar={fechar}
             />

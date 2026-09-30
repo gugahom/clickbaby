@@ -6,6 +6,7 @@ import {
   useMetricasPorEtapa,
   useMetricasPorPessoa,
   usePadroesDeTempo,
+  usePlantoesPorPessoa,
   usePontosPorPessoa,
   type Periodo,
 } from '../api/useMetricas'
@@ -91,9 +92,10 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
   const fases = useFasesDeCampo(periodo)
   const pontos = usePontosPorPessoa(periodo)
   const pontosAntes = usePontosPorPessoa(anterior)
+  const plantoes = usePlantoesPorPessoa(periodo)
   const dentroDoPadrao = useDentroDoPadrao(periodo)
   const padroes = usePadroesDeTempo()
-  const consultas = [porEtapa, pessoas, fases, pontos, dentroDoPadrao, padroes]
+  const consultas = [porEtapa, pessoas, fases, pontos, dentroDoPadrao, padroes, plantoes]
   const erro = consultas.find((c) => c.error)?.error
   const carregando = consultas.some((c) => c.isPending)
   const atualizando = consultas.some((c) => c.isPlaceholderData)
@@ -184,6 +186,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
             fases={fases.data ?? []}
             pontos={pontos.data ?? []}
             padrao={{ dentro: dentroDoPadrao.data ?? [], vigentes: padroes.data ?? [] }}
+            plantoes={plantoes.data ?? []}
             rotuloDoPeriodo={rotuloDoPeriodo}
             ranking={{ linhas: doTrabalho, anteriores, rotuloDaComparacao }}
           />

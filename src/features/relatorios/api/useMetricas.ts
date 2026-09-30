@@ -313,6 +313,28 @@ export function usePontosPorPessoa({ inicio, fim }: Periodo) {
 }
 
 /**
+ * AS HORAS DE PLANTÃO (30/09/2026): a escala PLANEJADA que a gestão lança na
+ * Equipe, somada por pessoa no período. Não é ponto — ver a migration
+ * 20260930232424.
+ */
+export interface PlantaoDaPessoa {
+  pessoaId: string
+  plantoes: number
+  minutos: number
+}
+
+export function usePlantoesPorPessoa({ inicio, fim }: Periodo) {
+  return useQuery({
+    queryKey: [CHAVE, 'plantoes', inicio, fim],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<PlantaoDaPessoa[]> => {
+      const linhas = await chamar(supabase.rpc('metricas_plantoes_por_pessoa', { p_inicio: inicio, p_fim: fim }))
+      return (linhas ?? []).map((l) => ({ pessoaId: l.pessoa_id, plantoes: l.plantoes, minutos: l.minutos }))
+    },
+  })
+}
+
+/**
  * O RETRATO DE CADA PESSOA, para o ranking (30/09/2026). Só o CAMINHO no
  * bucket: a URL se assina na hora, com `useUrlsDasFotos`, como em todo o app.
  */

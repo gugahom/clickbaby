@@ -23,6 +23,7 @@ import {
 } from '@/features/presenca/lib/estados'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
 import { destinosDe } from './destinos'
+import { useTelas } from '@/features/auth/telas'
 import { BarraLateral } from './BarraLateral'
 import { FaixaDeNavegacao } from './FaixaDeNavegacao'
 
@@ -49,9 +50,9 @@ import { FaixaDeNavegacao } from './FaixaDeNavegacao'
  */
 export function AppShell() {
   const { pessoa, sair } = useAuth()
-  // Para onde esta pessoa pode ir. A lista espelha as guardas de rota — ver
-  // `destinos.ts`.
-  const destinos = destinosDe(pessoa?.papelSistema)
+  // Para onde esta pessoa pode ir: as telas dela, que as guardas de rota
+  // conferem do mesmo jeito — ver `destinos.ts`.
+  const destinos = destinosDe(useTelas())
   const telaLarga = useTelaLarga()
   // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.

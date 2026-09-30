@@ -954,6 +954,7 @@ export type Database = {
           nome: string
           papel_sistema: Database["public"]["Enums"]["papel_sistema"]
           pin_hash: string | null
+          telas: Database["public"]["Enums"]["tela"][] | null
           updated_at: string
         }
         Insert: {
@@ -966,6 +967,7 @@ export type Database = {
           nome: string
           papel_sistema?: Database["public"]["Enums"]["papel_sistema"]
           pin_hash?: string | null
+          telas?: Database["public"]["Enums"]["tela"][] | null
           updated_at?: string
         }
         Update: {
@@ -978,6 +980,7 @@ export type Database = {
           nome?: string
           papel_sistema?: Database["public"]["Enums"]["papel_sistema"]
           pin_hash?: string | null
+          telas?: Database["public"]["Enums"]["tela"][] | null
           updated_at?: string
         }
         Relationships: []
@@ -1248,6 +1251,10 @@ export type Database = {
         }
         Returns: string
       }
+      definir_foto_da_pessoa: {
+        Args: { p_foto_path: string; p_pessoa_id: string }
+        Returns: undefined
+      }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
       definir_padrao_de_tempo: {
         Args: {
@@ -1365,6 +1372,14 @@ export type Database = {
           media_min: number
           pessoa_id: string
           soma_min: number
+        }[]
+      }
+      metricas_plantoes_por_pessoa: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          minutos: number
+          pessoa_id: string
+          plantoes: number
         }[]
       }
       metricas_pontos_por_pessoa: {
@@ -1734,6 +1749,21 @@ export type Database = {
         Args: { p_caso_id: string; p_google_event_id: string }
         Returns: string
       }
+      telas_efetivas: {
+        Args: {
+          p_papel: Database["public"]["Enums"]["papel_sistema"]
+          p_telas: Database["public"]["Enums"]["tela"][]
+        }
+        Returns: Database["public"]["Enums"]["tela"][]
+      }
+      telas_padrao_do_papel: {
+        Args: { p_papel: Database["public"]["Enums"]["papel_sistema"] }
+        Returns: Database["public"]["Enums"]["tela"][]
+      }
+      tem_tela: {
+        Args: { p_tela: Database["public"]["Enums"]["tela"] }
+        Returns: boolean
+      }
       tipo_tem_segunda_rodada: {
         Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
         Returns: boolean
@@ -1838,6 +1868,13 @@ export type Database = {
         | "aguardando_entrega"
         | "encerrado"
         | "cancelado"
+      tela:
+        | "quadro"
+        | "concluidos"
+        | "calendario"
+        | "equipe"
+        | "despesas"
+        | "relatorios"
       termo_status:
         | "assinado"
         | "pendente"
@@ -2084,6 +2121,14 @@ export const Constants = {
         "aguardando_entrega",
         "encerrado",
         "cancelado",
+      ],
+      tela: [
+        "quadro",
+        "concluidos",
+        "calendario",
+        "equipe",
+        "despesas",
+        "relatorios",
       ],
       termo_status: [
         "assinado",

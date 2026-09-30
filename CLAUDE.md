@@ -433,12 +433,17 @@ reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um ence
 -- sino do cabeçalho (17/09/2026; ver seção 13)
 marcar_notificacoes_vistas()                            -- só o "já vi" — a lista é derivada
 
+-- telas por pessoa (30/09/2026; ver seção 13)
+tem_tela(p_tela)                                        -- helper das policies e da porta dos relatórios
+definir_foto_da_pessoa(p_pessoa_id, p_foto_path)        -- a Equipe troca a foto de outra pessoa
+
 -- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
 metricas_por_etapa / metricas_da_equipe_por_etapa / metricas_por_pessoa (p_inicio, p_fim)
 metricas_prazo_do_periodo (p_inicio, p_fim)
 metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por dia/bloco/mês/período; com pessoa, a produção dela (29/09/2026)
 metricas_fases_de_campo(p_inicio, p_fim)  -- tempo em cada fase do campo, por pessoa (29/09/2026)
 metricas_pontos_por_pessoa(p_inicio, p_fim)  -- o ranking por pontos, já dividido (29/09/2026)
+metricas_plantoes_por_pessoa(p_inicio, p_fim)  -- horas de plantão da escala, por pessoa (30/09/2026)
 pontos_por_item_vigentes() / definir_pontos_do_item(p_item, p_pontos)  -- a régua dos pontos; linha nova, nunca UPDATE
 
 -- relatório EXTERNO — a operação inteira, com filtros (29/09/2026; ver seção 13) — SÓ GESTÃO, leitura
@@ -575,7 +580,8 @@ Três armadilhas, todas já verificadas na prática:
    `PUBLIC`.
 2. **As policies chamam `eh_pessoa_ativa()`/`eh_adm()`/`eh_atendimento()` e rodam
    com o privilégio de quem consulta.** Sem `EXECUTE` nesses três helpers, toda
-   leitura do app morre. Nunca os revogue de `authenticated`.
+   leitura do app morre. Nunca os revogue de `authenticated`. Desde 30/09/2026
+   vale o mesmo para `tem_tela`, que as policies de `pessoas` e `escalas` chamam.
 3. **Funções de trigger não exigem `EXECUTE`** de quem dispara o trigger.
    `set_updated_at` e `gerar_caso_etapas` ficam fechadas e os triggers funcionam.
 
@@ -1105,6 +1111,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **A LISTA DE IDS VAI EM LOTES DE 150** (`CASOS_POR_LOTE`, em `useQuadro.ts`). Ela viaja na
   URL, e até aqui o Quadro mandava todos os casos do sistema numa lista só: ~10kB no dia,
   crescendo uns 5kB por mês. Quem precisa do lote agora é a aba Concluídos.
+- **O SINO É SÓ "PARA VOCÊ"** (30/09/2026, pedido do gestor: "vai ser só para você, e só vai
+  notificar o usuário que tiver que ser notificado mesmo"). As GERAIS saíram — aviso num card,
+  horário estourando, edição sem ninguém, prazo vencido, alteração no trabalho de outra pessoa —,
+  e com elas as abas "Todas/Para você" e o "Limpar gerais". Ficam: atribuição, rendição e
+  alteração no trabalho MEU; e, para atendimento e adm, o trabalho do ADM (entrega esperando
+  conferência, rascunho, vídeo/Foto/Livro/New Born para entregar), que passou a contar como "para
+  você" (decisão do gestor, perguntado). Com isso o sino chama sempre que há item na lista — para
+  o ADM, enquanto houver fila em Entregáveis. A coluna `gerais_limpas_em` e a RPC de limpar
+  ficaram no banco, sem uso. O texto abaixo descreve o desenho ANTERIOR, de duas famílias.
 - **O SINO DO CABEÇALHO** (17/09/2026, pedido do gestor, migration `20260917215442`).
   Ao lado da presença, um sino com contador; a bolinha fica **vermelha e pulsa** quando há
   algo esperando por MIM. Ele existe no celular, ao contrário da fileira de presença — quem
@@ -1668,7 +1683,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **Quem LANÇA são as funcionárias, no card; quem RECOLHE é o financeiro.** Até aqui só
   existia o primeiro lado: o gasto vivia dentro de cada card, e somar um mês exigia abrir
   caso por caso.
-  **A tela `/quadro/despesas`** é do `financeiro` e da `gestao` (`RotaDoFinanceiro`, guarda
+  **FILTRO POR TIPO** (30/09/2026, pedido do gestor: "filtrar por refeição"): Refeição, Outro,
+  Uber ida e Uber volta, que SOMAM entre si; o total, os cartões, a lista e o CSV passam a ser do
+  recorte, e cada caso mostra só o valor dos tipos marcados. É filtro de TELA sobre a lista que já
+  vem do banco inteira e somada por tipo — nenhuma soma nova.
+  **A tela `/quadro/despesas`** é do `financeiro` e da `gestao` (desde 30/09/2026, a TELA
+  Despesas, ver "TELAS POR PESSOA"; antes, `RotaDoFinanceiro`, guarda
   PRÓPRIA e não a `RotaDeGestao` com um papel a mais — juntar as duas abriria a Equipe para
   o financeiro). Um mês por vez, com seta e não calendário; totais do mês; uma linha por caso
   com a quebra por tipo; e **Exportar CSV** no formato que abre direto no Excel pt-BR (`;`
@@ -2028,7 +2048,40 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
   conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
   espremido numa coluna de 3.5rem viraria listra.
-- **Equipe** (`/quadro/equipe`), só para `gestao`. Cadastro com ações: a lista separa
+- **TELAS POR PESSOA** (30/09/2026, pedido do gestor, migration `20260930232424`). Quem vê
+  qual tela deixou de ser só o PAPEL: a gestão concede e tira telas pessoa a pessoa na ficha da
+  Equipe — é a porta para o que vem, o painel comercial e o financeiro, em que a pessoa entra
+  direto numa tela só dela. `pessoas.telas` (enum `tela`: quadro, concluidos, calendario, equipe,
+  despesas, relatorios) NULO é "o padrão do papel" (`telas_padrao_do_papel`, espelho em
+  `features/auth/telas.ts`) — exatamente o que valia antes, então ninguém mudou de acesso.
+  **A TELA DÁ O PODER JUNTO** (decisão do gestor, perguntado): nas telas RELATÓRIOS e EQUIPE o
+  banco confere a tela, não o papel. `exigir_gestao()` — a porta das quinze funções dos dois
+  relatórios — virou `tem_tela('relatorios')` (o NOME ficou, para não reescrever quinze funções);
+  a escrita em `pessoas` e em `escalas` deixou de ser `eh_adm()` (que incluía comercial,
+  coordenação e financeiro sem tela nenhuma para isso) e passou a ser `tem_tela('equipe')`; a
+  Edge Function `admin-pessoas` também. Nas outras telas os dados já eram de toda pessoa ativa, e
+  a tela é só a porta: criar caso, cancelar e confirmar entrega continuam sendo do PAPEL.
+  **NINGUÉM SE TRANCA PARA FORA:** o trigger `guardar_acesso_a_equipe` recusa a mudança (telas,
+  papel, ativo, exclusão) que deixaria nenhuma pessoa ativa com conta e com a tela Equipe. E toda
+  mudança de telas ou de papel grava `acesso_alterado` em `eventos`, com o antes e o depois.
+  **NA TELA:** as três guardas por papel (`RotaDeGestao`, `RotaDoFinanceiro`,
+  `RotaAdministrativa`) viraram UMA, `RotaDaTela`, e `destinosDe` lê as telas da pessoa. Sem a
+  tela Quadro, "/" leva à primeira tela que a pessoa tem; sem nenhuma, uma frase e o Perfil. A
+  aba Concluídos é a tela `concluidos`. A pessoa logada só vê a própria mudança depois de
+  recarregar — o banco já vale na hora.
+- **A ESCALA DE PLANTÃO** (30/09/2026, pedido do gestor, mesma migration). A ficha da Equipe
+  lança plantões na tabela `escalas` (vazia desde o schema inicial): um dia, ou uma sequência
+  pelo ritmo 12x36 ou por dias da semana, com atalhos Dia 07–19 e Noite 19–07; o noturno termina
+  no dia seguinte, e o `turno` é derivado do horário de início. Não há editar — plantão trocado se
+  apaga e se lança de novo. O relatório interno mostra, no perfil da pessoa, as HORAS DE PLANTÃO
+  (`metricas_plantoes_por_pessoa`) ao lado das horas COM ETAPA ABERTA (soma do tempo líquido das
+  etapas com relógio), com a proporção. **É ESCALA PLANEJADA, NÃO PONTO** (seção 9): a frase do
+  bloco diz o que a conta não pega — campo registrado depois, deslocamento, tempo entre etapas —
+  e que campo em paralelo conta duas vezes, porque a leitura crua seria injusta com quem fotografa.
+- **Equipe** (`/quadro/equipe`), de quem tem a tela Equipe. Desde 30/09/2026 a ficha também
+  muda FOTO (pasta `avatares/equipe/<pessoa_id>/`, `definir_foto_da_pessoa`) e NOME/APELIDO de
+  qualquer pessoa, as TELAS e a ESCALA — ver os dois itens acima —, e os grupos "Sem acesso" e
+  "Inativas" nascem FECHADOS (pedido do gestor: "para não ficar poluindo"). Cadastro com ações: a lista separa
   **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
   e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
   em mãos (etapa + nome do caso + há quanto tempo), os dados de acesso, e as ações:
@@ -2065,6 +2118,7 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `inicio_das_metricas()`, aplicado DENTRO de toda função: nem uma chamada direta à API lê
   setembro. A tela tem o espelho `INICIO_DAS_METRICAS` só para não oferecer o mês.
   **SÓ A GESTÃO** (decisão do gestor; ele recusou a ficha visível para a própria pessoa):
+  (Desde 30/09/2026 `exigir_gestao()` é a TELA Relatórios — ver "TELAS POR PESSOA". Até ali:)
   `exigir_gestao()` é `papel_sistema = 'gestao'`, NÃO `eh_adm()`, que inclui comercial,
   coordenação e financeiro. **O ranking é de quem FEZ** — a gestão que fotografa entra
   (invariante 3.1); "só as fotógrafas" seria filtrar por tipo de pessoa.
@@ -2330,7 +2384,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   situação, prazo, maternidade, pacote, quem fez, na etapa, equipamento, e o resto.
   **Fica para as próximas voltas:** buscas salvas.
 - **O CALENDÁRIO** (`/quadro/calendario`, 30/09/2026, item 5 da fila do gestor). Todos os
-  papéis MENOS `operador` (decisão do gestor), pela guarda `RotaAdministrativa`, que usa a
+  papéis MENOS `operador` (decisão do gestor; desde 30/09/2026, a tela `calendario` — o padrão
+  do papel é o mesmo), pela guarda `RotaAdministrativa`, que usa a
   mesma regra da aba Concluídos (`podeVerConcluidos`) — regra de tela, a RLS não mudou.
   **É A PRIMEIRA DE TRÊS ETAPAS**, combinadas com o usuário: (1) MOSTRAR o que o banco já sabe;
   (2) a ESCALA de plantão, registrada na seção Equipe (pedido do gestor: "a gestão sabe os
@@ -2399,6 +2454,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   como o New Born. **A descrição do evento só é escrita no caso que o SISTEMA criou**
   (`criado_por`): no que veio do Google ela é da equipe (tem CPF, e-mail, médico), e reescrevê-la
   com um campo que aqui nasceu vazio apagaria o cadastro. O texto não vai para `eventos`.
+  **O FORMULÁRIO ABRE LARGO, EM DUAS COLUNAS** (30/09/2026, pedido do gestor: "não gosto de ele
+  ficar extenso verticalmente e ter que ter scroll"): `Dialogo` ganhou `largo`; à esquerda o que
+  é o título do evento e a prévia do Google, à direita adicionais, termo e observações. E o
+  **TERMO DE IMAGEM entrou no cadastro** (mesmo pedido): opcional, o BIRTH abre em "Sem
+  contrato", e vai por `registrar_termo` depois de salvar o caso — a confirmação da entrega
+  continua perguntando quando ficou sem resposta.
   **O DETALHE FECHA NO X** (`Dialogo` ganhou `fecharNoCanto`) e **"Abrir o caso no Quadro" só
   aparece quando o caso ESTÁ lá** (`useNoQuadro`: não arquivado e dia até amanhã).
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
@@ -2436,7 +2497,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
    sem avisar no dia em que um endereço fugisse do padrão.
 3. **O relatório EXTERNO nasceu em 29/09/2026** (a operação inteira, com filtros) e ganhou
-   gráfico, agrupamento e planilha em 30/09; faltam as buscas salvas. E `escalas` continua vazia: sem
+   gráfico, agrupamento e planilha em 30/09; faltam as buscas salvas. (`escalas` ganhou tela em
+   30/09/2026, na Equipe — o que segue abaixo vale até ela ser preenchida.) E `escalas` continua vazia: sem
    turno registrado, não há "vazão por turno" (o plano previa), só "dias com trabalho", que é
    mais fraco. Preencher escalas NÃO é registro de ponto (seção 9): é a escala planejada.
 4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto

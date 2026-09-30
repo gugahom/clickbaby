@@ -32,6 +32,13 @@ interface PropsDialogo {
    * `onCancelar`.
    */
   fecharNoCanto?: boolean
+  /**
+   * LARGO (30/09/2026, o formulário de caso da agenda: "não gosto de ele ficar
+   * extenso verticalmente e ter que ter scroll"). Um formulário de muitos
+   * campos cabe em duas colunas e fica todo à vista; o diálogo de confirmação
+   * continua estreito, que é o tamanho de uma pergunta.
+   */
+  largo?: boolean
   onConfirmar: () => void
   onCancelar: () => void
 }
@@ -58,6 +65,7 @@ export function Dialogo({
   erro = null,
   soFechar = false,
   fecharNoCanto = false,
+  largo = false,
   onConfirmar,
   onCancelar,
 }: PropsDialogo) {
@@ -92,7 +100,7 @@ export function Dialogo({
         overflow visível — o que sobra é cortado, e junto vão os botões. Rolar
         aqui dentro é o que mantém "Cancelar" e "Enviar" alcançáveis.
       */
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
+      className={`m-auto max-h-[calc(100dvh-2rem)] ${largo ? 'w-[min(66rem,calc(100vw-2rem))]' : 'w-[min(30rem,calc(100vw-2rem))]'} overflow-y-auto rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm`}
     >
       <div className="space-y-4 p-5 md:p-6">
         <div className="flex items-start justify-between gap-3">

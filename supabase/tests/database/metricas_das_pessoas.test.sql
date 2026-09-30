@@ -143,7 +143,7 @@ join public.casos c on c.mae_nome = v.mae;
 select pg_temp.como('fotografa.a@clickbaby.test');
 select throws_ok(
   $$ select * from public.metricas_por_etapa('2029-02-01', '2029-02-28') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'A1: a fotógrafa não lê as métricas'
 );
 reset role;
@@ -151,7 +151,7 @@ reset role;
 select pg_temp.como('atendimento.me@clickbaby.test');
 select throws_ok(
   $$ select * from public.metricas_por_pessoa('2029-02-01', '2029-02-28') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'A2: nem o atendimento — é gestão, não "atendimento ou adm"'
 );
 reset role;
@@ -322,7 +322,7 @@ select is(
 select pg_temp.como('fotografa.a@clickbaby.test');
 select throws_ok(
   $$ select public.definir_padrao_de_tempo('reels', 10) $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'G5: a fotógrafa não define a régua'
 );
 reset role;
@@ -360,7 +360,7 @@ reset role;
 select pg_temp.como('atendimento.me@clickbaby.test');
 select throws_ok(
   $$ select * from public.metricas_serie_da_equipe('2029-02-01', '2029-02-28', 'bloco') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'S1: a série também é só da gestão'
 );
 reset role;
@@ -456,7 +456,7 @@ reset role;
 select pg_temp.como('atendimento.me@clickbaby.test');
 select throws_ok(
   $$ select * from public.metricas_fases_de_campo('2029-02-01', '2029-02-28') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'F3: as fases também são só da gestão'
 );
 reset role;
