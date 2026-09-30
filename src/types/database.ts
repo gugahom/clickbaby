@@ -235,7 +235,10 @@ export type Database = {
           criado_por: string | null
           encerrado_em: string | null
           google_calendar_event_id: string | null
+          google_desatualizado: boolean
+          google_escrito_em: string | null
           google_pendente: boolean
+          google_versao: number
           id: string
           liberado_para_entrega_em: string | null
           liberado_para_entrega_por: string | null
@@ -264,7 +267,10 @@ export type Database = {
           criado_por?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
+          google_desatualizado?: boolean
+          google_escrito_em?: string | null
           google_pendente?: boolean
+          google_versao?: number
           id?: string
           liberado_para_entrega_em?: string | null
           liberado_para_entrega_por?: string | null
@@ -293,7 +299,10 @@ export type Database = {
           criado_por?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
+          google_desatualizado?: boolean
+          google_escrito_em?: string | null
           google_pendente?: boolean
+          google_versao?: number
           id?: string
           liberado_para_entrega_em?: string | null
           liberado_para_entrega_por?: string | null
@@ -1247,6 +1256,18 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
         Returns: undefined
       }
+      editar_caso: {
+        Args: {
+          p_bebe_nome: string
+          p_caso_id: string
+          p_click_home?: boolean
+          p_mae_nome: string
+          p_maternidade_id: string
+          p_pacote_id: string
+          p_previsao_em: string
+        }
+        Returns: string
+      }
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
@@ -1614,6 +1635,22 @@ export type Database = {
         Args: { p_google_event_id: string; p_motivo?: string }
         Returns: string
       }
+      sync_casos_para_atualizar_no_google: {
+        Args: never
+        Returns: {
+          bebe_nome: string
+          cancelado: boolean
+          caso_id: string
+          click_home: boolean
+          cor_calendar: string
+          google_event_id: string
+          mae_nome: string
+          maternidade_sigla: string
+          pacote_nome: string
+          previsao_em: string
+          versao: number
+        }[]
+      }
       sync_casos_para_o_google: {
         Args: never
         Returns: {
@@ -1629,6 +1666,10 @@ export type Database = {
       }
       sync_marcar_click_home: {
         Args: { p_google_event_id: string }
+        Returns: string
+      }
+      sync_marcar_google_atualizado: {
+        Args: { p_caso_id: string; p_resultado?: string; p_versao: number }
         Returns: string
       }
       sync_upsert_caso: {

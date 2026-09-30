@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
 import type { ItemDoCalendario } from '../api/useCalendario'
 import { rotuloDoDiaCompleto } from '../lib/datas'
@@ -7,13 +8,34 @@ import { aparencia } from '../lib/estilos'
 /**
  * O DETALHE DE UM ITEM, ao tocar nele — o "Event Details" do exemplo.
  *
- * SÓ LEITURA, por enquanto, e de propósito: o exemplo edita, arrasta e apaga,
- * mas um caso que veio do Google (ou que o sistema já escreveu lá) é relido
- * pelo sync a cada 25 segundos, e uma hora mudada aqui VOLTARIA sozinha. Mudar
- * a hora pelo calendário precisa que o sistema também atualize o evento no
- * Google — é a próxima etapa. Até lá, o caminho é o de sempre: abrir o caso.
+ * AS AÇÕES (30/09/2026, "poder editar, excluir"): no parto, EDITAR (adm) e
+ * CANCELAR (atendimento ou adm); na hora marcada e na entrega combinada, MUDAR
+ * O HORÁRIO. Quem pode o quê decide a página — aqui só aparece o botão que
+ * veio. O prazo do pacote não tem ação: ele é conta, não combinado.
+ *
+ * O Google acompanha o que se faz no parto (ver `editar_caso` e a trigger
+ * `marcar_caso_para_o_google`); enquanto não acompanhou, a linha de baixo diz.
  */
-export function DetalheDoItem({ item, onFechar }: { item: ItemDoCalendario; onFechar: () => void }) {
+export interface AcoesDoDetalhe {
+  onEditar?: () => void
+  onCancelar?: () => void
+  onMudarHorario?: () => void
+}
+
+const NO_GOOGLE = {
+  enviando: 'Indo para o Google Calendar — entra em até um minuto.',
+  atualizando: 'Atualizando o evento no Google Calendar — em até um minuto.',
+}
+
+export function DetalheDoItem({
+  item,
+  acoes,
+  onFechar,
+}: {
+  item: ItemDoCalendario
+  acoes: AcoesDoDetalhe
+  onFechar: () => void
+}) {
   const a = aparencia(item)
   const linhas: [string, string | null][] = [
     ['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : ' · dia todo'}`],
@@ -22,6 +44,7 @@ export function DetalheDoItem({ item, onFechar }: { item: ItemDoCalendario; onFe
     ['Com quem', item.responsavel],
     ['Cor na agenda', a.nome],
   ]
+  const temAcao = acoes.onEditar ?? acoes.onCancelar ?? acoes.onMudarHorario
   return (
     <Dialogo titulo={item.nome} rotuloConfirmar="Fechar" soFechar onConfirmar={onFechar} onCancelar={onFechar}>
       <div className="space-y-4">
@@ -43,6 +66,31 @@ export function DetalheDoItem({ item, onFechar }: { item: ItemDoCalendario; onFe
               </div>
             ))}
         </dl>
+        {item.google && (
+          <p className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground" role="status">
+            <span className="size-2 flex-shrink-0 animate-pulse rounded-full bg-marca" aria-hidden="true" />
+            {NO_GOOGLE[item.google]}
+          </p>
+        )}
+        {temAcao && (
+          <div className="flex flex-wrap gap-2">
+            {acoes.onEditar && (
+              <Botao variante="contorno" onClick={acoes.onEditar}>
+                Editar caso
+              </Botao>
+            )}
+            {acoes.onMudarHorario && (
+              <Botao variante="contorno" onClick={acoes.onMudarHorario}>
+                Mudar horário
+              </Botao>
+            )}
+            {acoes.onCancelar && (
+              <Botao variante="fantasma" className="text-atrasado" onClick={acoes.onCancelar}>
+                {item.rascunho ? 'Descartar rascunho' : 'Cancelar caso'}
+              </Botao>
+            )}
+          </div>
+        )}
         <Link
           to={`/?caso=${item.casoId}`}
           className="superficie-acento flex min-h-11 w-full items-center justify-center rounded-full text-sm font-bold text-white"

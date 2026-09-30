@@ -62,3 +62,95 @@ export function montarEventoDoCaso(caso: CasoParaOGoogle): Record<string, unknow
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
 }
+
+// -----------------------------------------------------------------------------
+// A MUDANÇA FEITA NO SISTEMA, LEVADA AO EVENTO QUE JÁ EXISTE (30/09/2026).
+// -----------------------------------------------------------------------------
+//
+// Uma pessoa editou ou cancelou o caso no sistema, e o evento no Google precisa
+// acompanhar — senão o sync, que relê a agenda a cada ciclo, traria o valor
+// velho de volta (a trava no banco segura isso só enquanto a marca existe).
+//
+// O EVENTO INTEIRO VOLTA (PUT), a partir do que o Google devolveu no GET: o que
+// o sistema não controla — descrição, convidados, lembretes — fica como a
+// equipe deixou. Um PATCH seria menor, mas "voltar para a cor padrão" num PATCH
+// depende de o Google tratar `null` como apagar; com o evento inteiro, a cor
+// padrão é simplesmente não mandar `colorId`.
+//
+// A DURAÇÃO FICA: o evento que a equipe marcou com duas horas continua com duas
+// horas na hora nova. Evento de dia inteiro vira evento com hora (a pessoa
+// escolheu uma), de uma hora.
+//
+// O ASTERISCO FICA: "*" antes do nome é uma marca da equipe cujo significado
+// ainda não foi confirmado (seção 7 do CLAUDE.md). Reescrever o título sem ele
+// apagaria uma informação que o sistema nem sabe ler.
+//
+// CANCELADO SÓ MUDA A COR, para o cinza: é a convenção de cancelamento da
+// própria equipe, e o título fica — a agenda continua dizendo de quem era.
+
+export interface CasoParaAtualizar {
+  caso_id: string;
+  google_event_id: string;
+  versao: number;
+  cancelado: boolean;
+  mae_nome: string;
+  bebe_nome: string | null;
+  pacote_nome: string | null;
+  maternidade_sigla: string | null;
+  click_home: boolean;
+  previsao_em: string | null;
+  cor_calendar: string | null;
+}
+
+interface MomentoGoogle {
+  dateTime?: string;
+  date?: string;
+  timeZone?: string;
+}
+
+export interface EventoDoGoogle {
+  summary?: string;
+  colorId?: string;
+  start?: MomentoGoogle;
+  end?: MomentoGoogle;
+  [campo: string]: unknown;
+}
+
+/** O cinza do Google — o "card cinza" que a equipe usa para cancelar. */
+export const COR_DO_CANCELAMENTO = "8";
+
+function duracaoEmMs(evento: EventoDoGoogle): number {
+  const inicio = evento.start?.dateTime ? Date.parse(evento.start.dateTime) : NaN;
+  const fim = evento.end?.dateTime ? Date.parse(evento.end.dateTime) : NaN;
+  const duracao = fim - inicio;
+  return Number.isFinite(duracao) && duracao > 0 ? duracao : DURACAO_MS;
+}
+
+export function atualizarEventoDoCaso(caso: CasoParaAtualizar, atual: EventoDoGoogle): EventoDoGoogle {
+  if (caso.cancelado) {
+    return { ...atual, colorId: COR_DO_CANCELAMENTO };
+  }
+  if (!caso.pacote_nome || !caso.maternidade_sigla || !caso.previsao_em) {
+    // A trigger não marca caso sem pacote e maternidade, e editar_caso exige
+    // previsão: chegar aqui é defeito, e reescrever o título com buracos seria
+    // pior que não escrever.
+    throw new Error("Caso sem pacote, maternidade ou previsão — o título não se monta.");
+  }
+  const titulo = montarTituloDoEvento({
+    mae_nome: caso.mae_nome,
+    bebe_nome: caso.bebe_nome,
+    pacote_nome: caso.pacote_nome,
+    maternidade_sigla: caso.maternidade_sigla,
+    click_home: caso.click_home,
+  });
+  const asterisco = (atual.summary ?? "").trimStart().startsWith("*");
+  const inicio = new Date(caso.previsao_em);
+  const { colorId: _corAntiga, ...resto } = atual;
+  return {
+    ...resto,
+    summary: asterisco ? `*${titulo}` : titulo,
+    start: { dateTime: inicio.toISOString(), timeZone: "America/Sao_Paulo" },
+    end: { dateTime: new Date(inicio.getTime() + duracaoEmMs(atual)).toISOString(), timeZone: "America/Sao_Paulo" },
+    ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
+  };
+}

@@ -190,6 +190,12 @@ export interface ResumoSync {
    * SISTEMA a partir do Google, este conta o caminho de volta.
    */
   enviados_ao_google: number;
+  /**
+   * Casos que uma PESSOA mudou ou cancelou no sistema e cujo evento no Google
+   * foi atualizado neste ciclo (30/09/2026) — título, hora e cor, ou o cinza
+   * do cancelamento.
+   */
+  atualizados_no_google: number;
   // SEM o título do evento, deliberadamente. O título do Calendar é
   // "MÃE/BEBÊ - PACOTE [MATERNIDADE]" — nome de mãe e de recém-nascido, que
   // a seção 10 do CLAUDE.md trata como dado sensível de saúde e de menor.
@@ -211,6 +217,7 @@ export function novoResumoVazio(): ResumoSync {
     deletados: 0,
     fora_da_janela: 0,
     enviados_ao_google: 0,
+    atualizados_no_google: 0,
     erros: [],
   };
 }

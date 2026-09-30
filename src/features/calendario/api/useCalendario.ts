@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { buscarTudo } from '@/features/quadro/api/useQuadro'
-import { agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
+import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
 import { emBrasilia, inicioDoDiaEmBrasilia, somarDias } from '../lib/datas'
 
@@ -55,6 +55,16 @@ export interface ItemDoCalendario {
   pacote: string | null
   /** Quem está com a etapa; nulo no parto e no prazo. */
   responsavel: string | null
+  /** A etapa por trás do item (hora marcada, entrega combinada); nulo no parto e no prazo. */
+  etapaId: string | null
+  /** O caso já foi entregue (encerrado). Cancelado nem aparece. */
+  encerrado: boolean
+  /**
+   * O Google ainda não acompanhou o que foi feito aqui: o caso criado ainda
+   * não virou evento ('enviando'), ou a edição ainda não chegou ao evento
+   * ('atualizando'). O sync resolve em até um ciclo.
+   */
+  google: 'enviando' | 'atualizando' | null
 }
 
 export interface Feriado {
@@ -91,7 +101,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
   const colunasDoCaso =
     'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti, cor_calendar'
 
-  const [partos, prazos, etapas, feriados] = await Promise.all([
+  const [partos, prazos, etapas, feriados, naFila] = await Promise.all([
     buscarTudo((a, b) =>
       supabase
         .from('quadro_casos')
@@ -134,8 +144,15 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
         .range(a, b),
     ),
     supabase.from('feriados').select('data, descricao').gte('data', inicio).lte('data', fim).order('data'),
+    // O que o Google ainda não acompanhou — poucos casos, só os que alguém
+    // acabou de criar ou mudar. Sem período: a marca é do caso, não do dia.
+    supabase.from('casos').select('id, google_pendente, google_desatualizado').or('google_pendente.eq.true,google_desatualizado.eq.true'),
   ])
   if (feriados.error) throw new Error(feriados.error.message)
+  if (naFila.error) throw new Error(naFila.error.message)
+  const noGoogle = new Map(
+    (naFila.data ?? []).map((c) => [c.id, c.google_pendente ? ('enviando' as const) : ('atualizando' as const)]),
+  )
 
   const itens: ItemDoCalendario[] = []
 
@@ -161,6 +178,9 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       maternidade: c.maternidade_sigla,
       pacote: c.pacote_nome,
       responsavel: null,
+      etapaId: null,
+      encerrado: c.status_operacional === 'encerrado',
+      google: noGoogle.get(c.id) ?? null,
       passou: false,
     })
   }
@@ -184,6 +204,9 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       maternidade: c.maternidade_sigla,
       pacote: c.pacote_nome,
       responsavel: null,
+      etapaId: null,
+      encerrado: false,
+      google: null,
       passou: false,
     })
   }
@@ -208,6 +231,9 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       maternidade: e.caso?.maternidade?.sigla ?? null,
       pacote: e.caso?.pacote?.nome ?? null,
       responsavel: e.responsavel?.nome ?? null,
+      etapaId: e.id,
+      encerrado: e.caso?.status_operacional === 'encerrado',
+      google: null,
       passou: false,
     })
   }
@@ -309,4 +335,80 @@ export function useCriarCaso() {
       return queryClient.invalidateQueries({ queryKey: [CHAVE] })
     },
   })
+}
+
+/**
+ * O CASO COMO ELE ESTÁ NO BANCO, para o formulário de edição — o item do
+ * calendário só traz o que a tela mostra (a sigla, o nome do pacote), e editar
+ * precisa dos ids e da previsão exata.
+ */
+export interface CasoEditavel {
+  id: string
+  maeNome: string
+  bebeNome: string | null
+  pacoteId: string | null
+  maternidadeId: string | null
+  previsaoEm: string | null
+  clickHome: boolean
+  /** Já tem evento no Google (a mudança vai para lá). */
+  noGoogle: boolean
+}
+
+export function useCasoEditavel(casoId: string | null) {
+  return useQuery({
+    queryKey: [CHAVE, 'caso', casoId],
+    enabled: casoId !== null,
+    staleTime: 0,
+    queryFn: async (): Promise<CasoEditavel> => {
+      const { data, error } = await supabase
+        .from('casos')
+        .select('id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, click_home, google_calendar_event_id, google_pendente')
+        .eq('id', casoId ?? '')
+        .single()
+      if (error) throw new Error(error.message)
+      return {
+        id: data.id,
+        maeNome: data.mae_nome,
+        bebeNome: data.bebe_nome,
+        pacoteId: data.pacote_id,
+        maternidadeId: data.maternidade_id,
+        previsaoEm: data.previsao_em,
+        clickHome: data.click_home,
+        noGoogle: data.google_calendar_event_id !== null || data.google_pendente,
+      }
+    },
+  })
+}
+
+/**
+ * EDITAR PELO CALENDÁRIO (`editar_caso`, migration 20260930164416). O caso
+ * muda na hora; o evento do Google acompanha no ciclo seguinte do sync — e até
+ * lá o sync não relê aquele evento, para o título velho não voltar por cima.
+ */
+export function useEditarCasoDoCalendario() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (e: NovoCaso & { casoId: string }): Promise<void> => {
+      const { error } = await supabase.rpc('editar_caso', {
+        p_caso_id: e.casoId,
+        p_mae_nome: e.maeNome,
+        p_bebe_nome: e.bebeNome,
+        p_pacote_id: e.pacoteId,
+        p_maternidade_id: e.maternidadeId,
+        p_previsao_em: `${e.dia}T${e.hora}:00-03:00`,
+        p_click_home: e.clickHome,
+      })
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: (_r, { casoId }) => {
+      agendarRecargaDoCaso(queryClient, casoId)
+      return queryClient.invalidateQueries({ queryKey: [CHAVE] })
+    },
+  })
+}
+
+/** O calendário relê junto com o Quadro depois de uma ação feita por ele. */
+export function useRecarregarCalendario() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: [CHAVE] })
 }

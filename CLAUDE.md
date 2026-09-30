@@ -397,6 +397,7 @@ mover_fase_de_campo(p_caso_etapa_id, p_fase)     -- só entrada e nascimento; qu
 
 -- caso
 criar_caso(p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- pelo calendário; adm (30/09/2026)
+editar_caso(p_caso_id, p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- idem; o Google acompanha (30/09/2026)
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
@@ -434,6 +435,7 @@ metricas_dentro_do_padrao(p_inicio, p_fim)  -- quantas etapas ficaram dentro do 
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 sync_marcar_click_home(p_google_event_id)               -- o "+ CLICK HOME" do título
 sync_casos_para_o_google() / sync_vincular_evento_google(p_caso_id, p_google_event_id) -- o caminho de volta (30/09/2026)
+sync_casos_para_atualizar_no_google() / sync_marcar_google_atualizado(p_caso_id, p_versao, p_resultado) -- a edição e o cancelamento vão ao evento
 ```
 
 **Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` continua por UPDATE
@@ -723,8 +725,22 @@ ciclo seguinte.
   como faz com todo evento conhecido; um título que o parser lesse diferente trocaria o
   checklist sozinho. `evento-do-caso.test.ts` passa toda combinação do cadastro (288) pelo
   parser. **Pacote ou maternidade nova entra nesse teste.**
-- **DEPOIS DE LIGADO, O CASO SEGUE O GOOGLE** — nome, pacote, maternidade e hora. Mudar a hora
-  ainda é no Google, até a próxima etapa (editar pelo calendário e aposentar a leitura).
+- **DEPOIS DE LIGADO, O CASO SEGUE O GOOGLE** — nome e hora (pacote e maternidade o sync nunca
+  troca depois de preenchidos). **E O GOOGLE SEGUE O SISTEMA** desde a migration
+  `20260930164416`: uma mudança feita por uma PESSOA num caso ligado — pelo "Editar caso" do
+  calendário (`editar_caso`), pelo do Quadro (UPDATE direto) ou cancelando — é marcada pela trigger
+  `marcar_caso_para_o_google` (`casos.google_desatualizado`), e o sync, antes de ler a agenda,
+  faz GET do evento e PUT com título, hora e cor novos (`atualizarCasosNoGoogle`). A trigger
+  separa pessoa de sync por `auth.uid()`: o sync não tem usuário, e o que ele escreve veio do
+  Google — marcá-lo mandaria de volta o que acabou de chegar.
+  **ENQUANTO MARCADO, O SYNC NÃO RELÊ AQUELE EVENTO**, e por mais um minuto depois da escrita
+  (`google_escrito_em`) — trava dentro de `sync_upsert_caso` e `sync_cancelar_caso`. O minuto
+  cobre o ciclo que leu a agenda antes da escrita (as execuções podem se sobrepor). Mudança feita
+  no Google nesse minuto não se perde: entra no primeiro ciclo depois. `google_versao` resolve a
+  outra corrida — o sync só desliga a marca da versão que escreveu.
+  **O EVENTO VOLTA INTEIRO** (PUT a partir do GET): descrição, convidados e a DURAÇÃO ficam como a
+  equipe deixou, e o `*` antes do nome também — o sistema não sabe lê-lo e não o apaga. Antes
+  disso, o "Editar caso" do Quadro sempre teve o nome revertido pelo título do Google.
 - **APAGAR OU PINTAR DE CINZA O EVENTO NÃO CANCELA** um caso criado pelo sistema: a criação
   grava `caso_criado` com a pessoa, e `caso_tem_trabalho` conta ação humana. O que nasceu de um
   gesto no sistema se desfaz por `cancelar_caso`.
@@ -732,7 +748,10 @@ ciclo seguinte.
   eventos — nada de agenda nem compartilhamento), e a conta de serviço precisa ter, na agenda,
   "Fazer alterações nos eventos". Sem a permissão a leitura continua e a escrita dá 403: o caso
   fica pendente, com o erro no resumo do sync (sem título, como sempre).
-- **Ainda não faz:** cancelar no sistema não pinta o evento de cinza no Google.
+- **CANCELAR NO SISTEMA PINTA O EVENTO DE CINZA** (30/09/2026) — o card cinza da própria equipe;
+  o título fica. Rascunho pendente descartado NÃO pinta (descartar diz "não é caso", não "o
+  atendimento caiu"), e o caso ainda pendente de ir ao Google simplesmente não vai mais.
+  Um caso não se APAGA (tem `eventos`, append-only): "excluir" na tela é `cancelar_caso`.
 
 ### Implementação
 
@@ -2263,15 +2282,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   (Radix, cva, lucide…) e um segundo sistema de botões, diálogos e selects; é o arranjo do sino
   e da barra lateral. Quatro visões: **Mês**, **Semana** e **Dia** em GRADE DE HORAS (como no
   Google, com a faixa "dia todo" em cima e a grade abrindo nas 6h) e **Lista** por dia. Busca
-  sem acento e três menus de filtro de marcar — Cores, Tipos, Maternidades —, com as etiquetas
+  sem acento e dois menus de filtro de marcar — Tipos e Maternidades; o de Cores saiu a pedido do
+  usuário, porque a cor É a maternidade e o filtro dela já responde pelo nome —, com as etiquetas
   dos ativos e "Limpar" (somam dentro do menu, cortam entre menus, como o relatório externo).
   Passar o mouse num item abre o cartão de detalhes; tocar abre o detalhe, com "Abrir o caso no
   Quadro". A visão e o dia moram no endereço. No celular, o mês mostra bolinhas e a semana rola
   dentro da própria grade.
-  **FICOU DE FORA DO EXEMPLO, DE PROPÓSITO: arrastar para reagendar, editar e apagar.** Um caso
-  ligado ao Google é relido pelo sync a cada 25 segundos, e uma hora mudada aqui VOLTARIA
-  sozinha. Reagendar pelo calendário pede que o sistema atualize o evento no Google — próxima
-  etapa. Não implemente o arrastar antes disso.
+  **EDITAR, CANCELAR E ARRASTAR** (30/09/2026, segunda volta: "poder editar, excluir"). Tinham
+  ficado de fora porque o sync desfaria a mudança; com o Google acompanhando (seção 7), entraram.
+  No detalhe do PARTO: "Editar caso" (adm — o mesmo formulário da criação, aberto no caso) e
+  "Cancelar caso" (atendimento ou adm, com motivo; "Descartar rascunho" no rascunho). Na HORA
+  MARCADA e na ENTREGA COMBINADA: "Mudar horário" (`agendar_etapa`, qualquer um que vê o
+  calendário; não toca no Google, que só tem o parto). O PRAZO DO PACOTE não tem ação — é conta.
+  **ARRASTAR SÓ ABRE O FORMULÁRIO**, já com o dia e a hora de onde o item caiu ("Antes: …"
+  embaixo): um arrasto errado não pode mudar um parto na agenda da equipe inteira. Só no mouse
+  (o arrastar do HTML não existe no toque); no mês e na faixa "dia todo" muda o dia e mantém a
+  hora. O detalhe e o cartão de hover dizem quando o Google ainda não acompanhou ("atualizando
+  no Google").
   **AS CORES SÃO AS DO GOOGLE, EM TODO ITEM**: o banho, o prazo e o vídeo de um caso vêm na cor
   do caso (a regra do cadastro), e o tipo se lê no texto. **O que vem pela frente é COR CHEIA**
   (a primeira versão tingia de leve e o gestor achou "muito apagado"), com o texto branco ou

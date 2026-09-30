@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import clsx from 'clsx'
 import type { Feriado, ItemDoCalendario } from '../api/useCalendario'
 import { NOMES_DOS_DIAS, diaDaSemanaCurto, rotuloDoDia, rotuloDoDiaCompleto } from '../lib/datas'
+import { useAlvoDoArrasto } from '../lib/arrasto'
 import { aparencia } from '../lib/estilos'
 import { CartaoDoItem } from './CartaoDoItem'
 
@@ -15,6 +16,10 @@ import { CartaoDoItem } from './CartaoDoItem'
  * e o que não tem hora (dia todo) mora numa faixa própria em cima. A grade abre
  * rolada nas 6h — a madrugada existe (há parto às 3h), mas abrir na meia-noite
  * esconderia a manhã, que é onde a maior parte do dia acontece.
+ *
+ * ARRASTAR (30/09/2026): o mês e a faixa "dia todo" recebem um item num DIA (a
+ * hora fica), a grade recebe num DIA E HORA. Soltar só abre o formulário — ver
+ * lib/arrasto.ts. A célula que vai receber acende com o contorno da marca.
  */
 
 interface PropsComuns {
@@ -23,7 +28,12 @@ interface PropsComuns {
   feriados: Map<string, Feriado>
   onAbrir: (item: ItemDoCalendario) => void
   onIrParaDia: (dia: string) => void
+  /** Quem pode ser arrastado — decide a página, pelo papel e pelo tipo. */
+  podeArrastar: (item: ItemDoCalendario) => boolean
+  onSoltar?: (item: ItemDoCalendario, dia: string, hora: number | null) => void
 }
+
+const ACESO = 'ring-2 ring-inset ring-marca bg-marca-suave/40'
 
 const VISIVEIS_NO_MES = 3
 const HORAS = Array.from({ length: 24 }, (_, h) => h)
@@ -54,7 +64,18 @@ function NumeroDoDia({ dia, hoje, onIr, grande = false }: { dia: string; hoje: s
 // MÊS
 // ---------------------------------------------------------------------------
 
-export function VisaoMes({ dias, mes, hoje, porDia, feriados, onAbrir, onIrParaDia }: PropsComuns & { dias: string[]; mes: string }) {
+export function VisaoMes({
+  dias,
+  mes,
+  hoje,
+  porDia,
+  feriados,
+  onAbrir,
+  onIrParaDia,
+  podeArrastar,
+  onSoltar,
+}: PropsComuns & { dias: string[]; mes: string }) {
+  const alvo = useAlvoDoArrasto(onSoltar)
   return (
     <div className="overflow-hidden rounded-painel border border-border bg-card">
       <div className="grid grid-cols-7 border-b border-border bg-muted/40">
@@ -73,11 +94,13 @@ export function VisaoMes({ dias, mes, hoje, porDia, feriados, onAbrir, onIrParaD
             <div
               key={dia}
               onClick={() => onIrParaDia(dia)}
+              {...alvo.props(dia, dia, null)}
               className={clsx(
                 'flex min-h-20 cursor-pointer flex-col gap-1 border-border p-1 transition-colors sm:min-h-28 sm:p-1.5',
                 i % 7 !== 6 && 'border-r',
                 i < dias.length - 7 && 'border-b',
                 dia.slice(0, 7) !== mes ? 'bg-muted/40 text-muted-foreground' : feriado ? 'bg-muted/60' : 'hover:bg-muted/40',
+                alvo.sobre === dia && ACESO,
               )}
             >
               <span className="flex items-center gap-1">
@@ -103,7 +126,7 @@ export function VisaoMes({ dias, mes, hoje, porDia, feriados, onAbrir, onIrParaD
               )}
               <span className="hidden min-w-0 flex-col gap-0.5 sm:flex">
                 {itens.slice(0, VISIVEIS_NO_MES).map((item) => (
-                  <CartaoDoItem key={item.chave} item={item} densidade="compacto" onAbrir={onAbrir} />
+                  <CartaoDoItem key={item.chave} item={item} densidade="compacto" onAbrir={onAbrir} arrastavel={podeArrastar(item)} />
                 ))}
                 {sobra > 0 && (
                   <button
@@ -138,8 +161,18 @@ function useRolarParaAsSeis() {
   return ref
 }
 
-export function VisaoSemana({ dias, hoje, porDia, feriados, onAbrir, onIrParaDia }: PropsComuns & { dias: string[] }) {
+export function VisaoSemana({
+  dias,
+  hoje,
+  porDia,
+  feriados,
+  onAbrir,
+  onIrParaDia,
+  podeArrastar,
+  onSoltar,
+}: PropsComuns & { dias: string[] }) {
   const rolagem = useRolarParaAsSeis()
+  const alvo = useAlvoDoArrasto(onSoltar)
   const colunas = 'grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]'
   const temDiaTodo = dias.some((d) => semHora(doDia(porDia, d)).length > 0 || feriados.has(d))
   return (
@@ -155,16 +188,23 @@ export function VisaoSemana({ dias, hoje, porDia, feriados, onAbrir, onIrParaDia
               </div>
             ))}
           </div>
-          {temDiaTodo && (
+          {(temDiaTodo || onSoltar) && (
             <div className={clsx(colunas, 'border-b border-border')}>
               <div className="px-1 py-1.5 text-right text-[10px] text-muted-foreground">dia todo</div>
               {dias.map((dia) => (
-                <div key={dia} className="flex min-w-0 flex-col gap-0.5 border-l border-border p-0.5">
+                <div
+                  key={dia}
+                  {...alvo.props(`todo:${dia}`, dia, null)}
+                  className={clsx(
+                    'flex min-h-7 min-w-0 flex-col gap-0.5 border-l border-border p-0.5',
+                    alvo.sobre === `todo:${dia}` && ACESO,
+                  )}
+                >
                   {feriados.get(dia) && (
                     <span className="truncate rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold">{feriados.get(dia)?.descricao}</span>
                   )}
                   {semHora(doDia(porDia, dia)).map((item) => (
-                    <CartaoDoItem key={item.chave} item={item} densidade="compacto" onAbrir={onAbrir} />
+                    <CartaoDoItem key={item.chave} item={item} densidade="compacto" onAbrir={onAbrir} arrastavel={podeArrastar(item)} />
                   ))}
                 </div>
               ))}
@@ -179,10 +219,15 @@ export function VisaoSemana({ dias, hoje, porDia, feriados, onAbrir, onIrParaDia
                 {dias.map((dia) => (
                   <div
                     key={dia}
-                    className={clsx('flex min-w-0 flex-col gap-0.5 border-t border-l border-border p-0.5', dia === hoje && 'bg-marca-suave/30')}
+                    {...alvo.props(`${dia}@${h}`, dia, h)}
+                    className={clsx(
+                      'flex min-w-0 flex-col gap-0.5 border-t border-l border-border p-0.5',
+                      dia === hoje && 'bg-marca-suave/30',
+                      alvo.sobre === `${dia}@${h}` && ACESO,
+                    )}
                   >
                     {naHora(doDia(porDia, dia), h).map((item) => (
-                      <CartaoDoItem key={item.chave} item={item} densidade="normal" onAbrir={onAbrir} />
+                      <CartaoDoItem key={item.chave} item={item} densidade="normal" onAbrir={onAbrir} arrastavel={podeArrastar(item)} />
                     ))}
                   </div>
                 ))}
@@ -202,8 +247,11 @@ export function VisaoDia({
   feriados,
   onAbrir,
   acoes,
+  podeArrastar,
+  onSoltar,
 }: Omit<PropsComuns, 'onIrParaDia'> & { dia: string; acoes: ReactNode }) {
   const rolagem = useRolarParaAsSeis()
+  const alvo = useAlvoDoArrasto(onSoltar)
   const itens = doDia(porDia, dia)
   const feriado = feriados.get(dia)
   return (
@@ -226,7 +274,7 @@ export function VisaoDia({
           <span className="w-14 flex-shrink-0 pt-2 text-right text-[10px] text-muted-foreground">dia todo</span>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {semHora(itens).map((item) => (
-              <CartaoDoItem key={item.chave} item={item} densidade="detalhado" onAbrir={onAbrir} />
+              <CartaoDoItem key={item.chave} item={item} densidade="detalhado" onAbrir={onAbrir} arrastavel={podeArrastar(item)} />
             ))}
           </div>
         </div>
@@ -237,9 +285,15 @@ export function VisaoDia({
             <div className="-mt-2 w-16 flex-shrink-0 pr-2 text-right text-[11px] text-muted-foreground tabular-nums">
               {h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1 border-t border-l border-border p-1">
+            <div
+              {...alvo.props(`${dia}@${h}`, dia, h)}
+              className={clsx(
+                'flex min-w-0 flex-1 flex-col gap-1 border-t border-l border-border p-1',
+                alvo.sobre === `${dia}@${h}` && ACESO,
+              )}
+            >
               {naHora(itens, h).map((item) => (
-                <CartaoDoItem key={item.chave} item={item} densidade="detalhado" onAbrir={onAbrir} />
+                <CartaoDoItem key={item.chave} item={item} densidade="detalhado" onAbrir={onAbrir} arrastavel={podeArrastar(item)} />
               ))}
             </div>
           </div>
