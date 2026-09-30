@@ -1,8 +1,8 @@
 import { Link } from 'react-router'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
-import type { ItemDoCalendario } from '../api/useCalendario'
-import { rotuloDoDiaCompleto } from '../lib/datas'
+import { useCasoEditavel, useNoQuadro, type ItemDoCalendario } from '../api/useCalendario'
+import { emBrasilia, rotuloDoDiaCompleto } from '../lib/datas'
 import { aparencia } from '../lib/estilos'
 
 /**
@@ -37,8 +37,12 @@ export function DetalheDoItem({
   onFechar: () => void
 }) {
   const a = aparencia(item)
+  const noQuadro = useNoQuadro(item.casoId)
+  // Cesárea e observações só existem no parto — são do caso, não da etapa.
+  const caso = useCasoEditavel(item.tipo === 'parto' ? item.casoId : null)
   const linhas: [string, string | null][] = [
-    ['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : ' · dia todo'}`],
+    ['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : item.tipo === 'parto' ? ' · hora a definir' : ' · dia todo'}`],
+    ['Cesárea', caso.data?.cesareaEm ? `às ${emBrasilia(caso.data.cesareaEm).hora}` : null],
     ['Maternidade', item.maternidade],
     ['Pacote', item.pacote],
     ['Com quem', item.responsavel],
@@ -46,7 +50,7 @@ export function DetalheDoItem({
   ]
   const temAcao = acoes.onEditar ?? acoes.onCancelar ?? acoes.onMudarHorario
   return (
-    <Dialogo titulo={item.nome} rotuloConfirmar="Fechar" soFechar onConfirmar={onFechar} onCancelar={onFechar}>
+    <Dialogo titulo={item.nome} rotuloConfirmar="Fechar" fecharNoCanto onConfirmar={onFechar} onCancelar={onFechar}>
       <div className="space-y-4">
         <span
           className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
@@ -66,6 +70,12 @@ export function DetalheDoItem({
               </div>
             ))}
         </dl>
+        {caso.data?.observacao && (
+          <div className="rounded-xl bg-muted/50 px-3 py-2.5">
+            <div className="text-xs font-semibold text-muted-foreground">Observações</div>
+            <p className="mt-1 text-sm whitespace-pre-line text-foreground">{caso.data.observacao}</p>
+          </div>
+        )}
         {item.google && (
           <p className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground" role="status">
             <span className="size-2 flex-shrink-0 animate-pulse rounded-full bg-marca" aria-hidden="true" />
@@ -91,12 +101,15 @@ export function DetalheDoItem({
             )}
           </div>
         )}
-        <Link
-          to={`/?caso=${item.casoId}`}
-          className="superficie-acento flex min-h-11 w-full items-center justify-center rounded-full text-sm font-bold text-white"
-        >
-          Abrir o caso no Quadro
-        </Link>
+        {/* Só quando o caso ESTÁ no Quadro — ver useNoQuadro. */}
+        {noQuadro.data && (
+          <Link
+            to={`/?caso=${item.casoId}`}
+            className="superficie-acento flex min-h-11 w-full items-center justify-center rounded-full text-sm font-bold text-white"
+          >
+            Abrir o caso no Quadro
+          </Link>
+        )}
       </div>
     </Dialogo>
   )

@@ -28,6 +28,9 @@ export interface CasoParaOGoogle {
   cor_calendar: string | null;
   /** Hora a definir (30/09/2026): o evento é de DIA INTEIRO. */
   previsao_sem_hora?: boolean;
+  /** A hora marcada da cesárea, e as observações do calendário (30/09/2026). */
+  cesarea_em?: string | null;
+  observacao_calendar?: string | null;
 }
 
 /** Sem nome de bebê ainda, o título leva "BEBÊ": o parser exige a barra. */
@@ -79,13 +82,34 @@ function momentos(previsao: string, semHora: boolean, duracaoMs: number) {
   };
 }
 
+/** "14:30" em Brasília. */
+function horaEmSaoPaulo(instante: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .format(new Date(instante));
+}
+
+/**
+ * A DESCRIÇÃO do evento que o SISTEMA criou: as observações escritas no
+ * calendário (o cadastro da família, no template da equipe), a hora da
+ * cesárea, e a marca de origem. Só vale para caso criado pelo sistema — a
+ * descrição de um evento que a equipe criou no Google é dela, e não é
+ * reescrita (ver a migration 20260930192224).
+ */
+export function descricaoDoEvento(caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar">): string {
+  const partes: string[] = [];
+  if (caso.observacao_calendar) partes.push(caso.observacao_calendar);
+  if (caso.cesarea_em) partes.push(`Cesárea às ${horaEmSaoPaulo(caso.cesarea_em)}`);
+  partes.push("Criado pelo calendário do sistema ClickBaby.");
+  return partes.join("\n\n");
+}
+
 export function montarEventoDoCaso(caso: CasoParaOGoogle): Record<string, unknown> {
   return {
     id: idDoEventoDoCaso(caso.caso_id),
     summary: montarTituloDoEvento(caso),
-    // Nada além disto na descrição: o texto do evento fica no Google, e o
-    // que o sistema sabe do caso (situação clínica, links) não sai daqui.
-    description: "Criado pelo calendário do sistema ClickBaby.",
+    // Só o que a pessoa escreveu no calendário para ir à agenda: o que o
+    // sistema sabe do caso (situação clínica, links) não sai daqui.
+    description: descricaoDoEvento(caso),
     ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, DURACAO_MS),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
@@ -129,6 +153,10 @@ export interface CasoParaAtualizar {
   previsao_em: string | null;
   cor_calendar: string | null;
   previsao_sem_hora?: boolean;
+  cesarea_em?: string | null;
+  observacao_calendar?: string | null;
+  /** O caso foi criado pelo sistema: a descrição do evento é nossa. */
+  descricao_do_sistema?: boolean;
 }
 
 interface MomentoGoogle {
@@ -177,6 +205,7 @@ export function atualizarEventoDoCaso(caso: CasoParaAtualizar, atual: EventoDoGo
   return {
     ...resto,
     summary: asterisco ? `*${titulo}` : titulo,
+    ...(caso.descricao_do_sistema ? { description: descricaoDoEvento(caso) } : {}),
     ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, duracaoEmMs(atual)),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };

@@ -468,3 +468,34 @@ Deno.test("click home: evento sem '/' segue ignorado, com ou sem o adicional", (
     "REUNIAO CLICK HOME",
   );
 });
+
+// -----------------------------------------------------------------------
+// OS NOMES POR EXTENSO (30/09/2026) — as grafias da agenda inteira, lida pela
+// primeira vez. Cada uma resolve a maternidade E deixa o pacote casar: era a
+// maternidade desconhecida no fim que levava o pacote junto para o rascunho.
+// -----------------------------------------------------------------------
+
+Deno.test("maternidade pelo nome, com e sem acento, com pacote e sigla certos", () => {
+  const casos: [string, string, string][] = [
+    ["*MARIA CLARA/GAEL - BABY REELS - LUISA MARILAC", "BABY REELS", "MARILAC"],
+    ["ANA/JOSÉ - BASIC - LUIZA DE MARILAC", "BASIC", "MARILAC"],
+    ["PÂMELA/BENJAMIN - BASIC - FÁTIMA", "BASIC", "HNSF"],
+    ["ANA/JOSÉ - MASTER - NOSSA SENHORA DAS GRAÇAS", "MASTER", "HNSG"],
+    ["ANA/JOSÉ - BIRTH + REELS - SANTA CRUZ", "BIRTH + REELS", "HSC"],
+    ["*JULIANA/HELENA - MASTER - BRIGÍDA", "MASTER", "GNDI"],
+    ["ANA/JOSÉ - STANDARD - CURITIBA", "STANDARD", "CWB"],
+    ["ANA/JOSÉ - BABY REELS FÁTIMA", "BABY REELS", "HNSF"],
+  ];
+  for (const [titulo, pacote, sigla] of casos) {
+    const r = parseEventoCalendar(titulo);
+    if (r.tipo !== "caso") throw new Error(`ignorou "${titulo}"`);
+    assertEqual(r.pacote_bruto, pacote, `pacote de "${titulo}"`);
+    assertEqual(r.maternidade_sigla, sigla, `maternidade de "${titulo}"`);
+  }
+});
+
+Deno.test("grafia que ninguém cadastrou continua sem maternidade — vira rascunho, não palpite", () => {
+  const r = parseEventoCalendar("ANA/JOSÉ - BASIC - HOSPITAL QUALQUER");
+  if (r.tipo !== "caso") throw new Error("ignorou");
+  assertEqual(r.maternidade_sigla, null, "sem maternidade");
+});

@@ -676,7 +676,11 @@ ex.: THAYANE/ALICE BIRTH+REELS GNDI
 
 - Mãe e bebê sempre no início, separados por `/`. Alta confiança de parsing.
 - Pacote em vocabulário finito, mapeável contra `pacotes`.
-- Maternidade por sigla ao fim, ou embutida no nome do pacote.
+- Maternidade por sigla ao fim, ou embutida no nome do pacote — ou pelo NOME ("FÁTIMA",
+  "LUISA MARILAC", "SANTA CRUZ"). Os nomes entraram em 30/09/2026, quando a agenda inteira foi
+  lida pela primeira vez e 27 dos 33 rascunhos eram maternidade escrita pelo nome; sem ela
+  reconhecida no fim, o pacote também não casava. A lista é EXPLÍCITA (`MATERNIDADES` em
+  `_shared/parse-evento.ts`): grafia nova continua virando rascunho até entrar lá.
 - Eventos **sem `/`** no título (folgas, aniversários, sorteios, reuniões internas) não são
   casos — o parser descarta.
 - Significado do `*` que antecede alguns nomes: **ainda não confirmado com o cliente**. Não
@@ -2336,6 +2340,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   fechada — daqui não sai rascunho pendente), dia, hora, e New Born. Antes de salvar ele mostra
   o evento como vai aparecer no Google — título e cor.
   O caminho até o Google está na seção 7.
+  **CESÁREA, OBSERVAÇÕES E FOTO/LIVRO** (30/09/2026, pedido do gestor, migration
+  `20260930192224`). O formulário tem HORA PREVISTA (quando a equipe precisa estar lá — a do
+  alerta e a do evento; vazia = hora a definir) e HORA DA CESÁREA (`casos.cesarea_em`, a da
+  cirurgia). OBSERVAÇÕES é `casos.observacao_calendar`, o texto da descrição do evento — o
+  template vem do gestor. FOTO/LIVRO marca a etapa `album` por `adicionar_etapa`, só marca,
+  como o New Born. **A descrição do evento só é escrita no caso que o SISTEMA criou**
+  (`criado_por`): no que veio do Google ela é da equipe (tem CPF, e-mail, médico), e reescrevê-la
+  com um campo que aqui nasceu vazio apagaria o cadastro. O texto não vai para `eventos`.
+  **O DETALHE FECHA NO X** (`Dialogo` ganhou `fecharNoCanto`) e **"Abrir o caso no Quadro" só
+  aparece quando o caso ESTÁ lá** (`useNoQuadro`: não arquivado e dia até amanhã).
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -2437,6 +2451,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
    para o caso. Se vier, tem que ser campo PRÓPRIO (`observacao_calendar`), separado da
    observação interna — senão o sync sobrescreve o que a equipe escreveu.
+   O campo existe desde 30/09/2026 (escrito pelo calendário do sistema) e a importação
+   continua pendente: espera o template do gestor, e traz documento e contato da família para
+   uma tabela legível por toda pessoa ativa — decidir a RLS antes.
 12. **Parser: EVENTO e combinações "OUTROS" não são pacotes.** Os rascunhos pendentes que
     sobraram esperam decisão do dono sobre cadastro e padronização de título, não código.
     Não melhore o parser por heurística — é o "assumir quando ambíguo" que a seção 7 proíbe.

@@ -13,6 +13,7 @@ import {
   atualizarEventoDoCaso,
   BEBE_SEM_NOME,
   COR_DO_CANCELAMENTO,
+  descricaoDoEvento,
   idDoEventoDoCaso,
   montarEventoDoCaso,
   montarTituloDoEvento,
@@ -181,4 +182,17 @@ Deno.test("hora a definir vira evento de DIA INTEIRO, no dia de Brasília", () =
   const atualizado = atualizarEventoDoCaso({ ...CASO_EDITADO, previsao_sem_hora: true }, EVENTO_DA_EQUIPE);
   assertEqual(atualizado.start, { date: "2026-10-14" }, "a edição para hora a definir também vira dia inteiro");
   assertEqual(atualizado.end, { date: "2026-10-15" }, "sem a duração de duas horas");
+});
+
+Deno.test("a descrição leva observações e cesárea — e só é reescrita no caso que o sistema criou", () => {
+  const comCampos = { ...CASO_EDITADO, cesarea_em: "2026-10-14T17:30:00Z", observacao_calendar: "Nome: Ana\nMédico: Plantão" };
+  assertEqual(
+    descricaoDoEvento(comCampos),
+    "Nome: Ana\nMédico: Plantão\n\nCesárea às 14:30\n\nCriado pelo calendário do sistema ClickBaby.",
+    "observações, cesárea em Brasília, origem",
+  );
+  const daEquipe = atualizarEventoDoCaso(comCampos, EVENTO_DA_EQUIPE);
+  assertEqual(daEquipe.description, "quarto 201, levar o cartão 14", "evento da equipe: a descrição dela fica");
+  const doSistema = atualizarEventoDoCaso({ ...comCampos, descricao_do_sistema: true }, EVENTO_DA_EQUIPE);
+  assertEqual((doSistema.description as string).startsWith("Nome: Ana"), true, "evento do sistema: a descrição acompanha");
 });

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { buscarTudo } from '@/features/quadro/api/useQuadro'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
-import { emBrasilia, inicioDoDiaEmBrasilia, somarDias } from '../lib/datas'
+import { emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, somarDias } from '../lib/datas'
 
 /**
  * A LEITURA DO CALENDÁRIO (30/09/2026). Nada novo no banco: tudo o que ele
@@ -313,11 +313,24 @@ export interface NovoCaso {
   dia: string
   /** 'HH:MM', ou vazio = hora a definir (o evento no Google é de dia inteiro). */
   hora: string
+  /** 'HH:MM' da cesárea, no mesmo dia; vazio = sem cesárea marcada. */
+  cesarea: string
+  observacao: string
   clickHome: boolean
+  fotolivro: boolean
 }
 
 /** A previsão que vai para o banco: com hora, o instante; sem, o dia. */
 const previsao = (dia: string, hora: string) => `${dia}T${hora || '00:00'}:00-03:00`
+
+/** Cesárea, observações e Foto/Livro — os campos de 30/09/2026. */
+// Vazio vai OMITIDO: o padrão da RPC é nulo, e nulo é o que limpa o campo na
+// edição (o parâmetro não aceita `null` explícito nos tipos gerados).
+const camposNovos = (n: NovoCaso) => ({
+  ...(n.cesarea ? { p_cesarea_em: `${n.dia}T${n.cesarea}:00-03:00` } : {}),
+  ...(n.observacao.trim() ? { p_observacao: n.observacao.trim() } : {}),
+  p_fotolivro: n.fotolivro,
+})
 
 export function useCriarCaso() {
   const queryClient = useQueryClient()
@@ -331,6 +344,7 @@ export function useCriarCaso() {
         p_previsao_em: previsao(n.dia, n.hora),
         p_click_home: n.clickHome,
         p_sem_hora: n.hora === '',
+        ...camposNovos(n),
       })
       if (error) throw new Error(error.message)
       return data
@@ -355,7 +369,13 @@ export interface CasoEditavel {
   maternidadeId: string | null
   previsaoEm: string | null
   semHora: boolean
+  cesareaEm: string | null
+  observacao: string | null
   clickHome: boolean
+  /** O caso já tem a etapa de Foto/Livro (do pacote ou vendida à parte). */
+  temFotolivro: boolean
+  /** Criado pelo calendário do sistema: a descrição do evento no Google é nossa. */
+  criadoPeloSistema: boolean
   /** Já tem evento no Google (a mudança vai para lá). */
   noGoogle: boolean
 }
@@ -369,7 +389,7 @@ export function useCasoEditavel(casoId: string | null) {
       const { data, error } = await supabase
         .from('casos')
         .select(
-          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, click_home, google_calendar_event_id, google_pendente',
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
         )
         .eq('id', casoId ?? '')
         .single()
@@ -382,7 +402,11 @@ export function useCasoEditavel(casoId: string | null) {
         maternidadeId: data.maternidade_id,
         previsaoEm: data.previsao_em,
         semHora: data.previsao_sem_hora,
+        cesareaEm: data.cesarea_em,
+        observacao: data.observacao_calendar,
         clickHome: data.click_home,
+        temFotolivro: data.etapas.some((e) => e.tipo === 'album'),
+        criadoPeloSistema: data.criado_por !== null,
         noGoogle: data.google_calendar_event_id !== null || data.google_pendente,
       }
     },
@@ -407,6 +431,7 @@ export function useEditarCasoDoCalendario() {
         p_previsao_em: previsao(e.dia, e.hora),
         p_click_home: e.clickHome,
         p_sem_hora: e.hora === '',
+        ...camposNovos(e),
       })
       if (error) throw new Error(error.message)
     },
@@ -421,4 +446,25 @@ export function useEditarCasoDoCalendario() {
 export function useRecarregarCalendario() {
   const queryClient = useQueryClient()
   return () => queryClient.invalidateQueries({ queryKey: [CHAVE] })
+}
+
+/**
+ * O CASO APARECE NO QUADRO? (30/09/2026, pedido do gestor: "o abrir caso no
+ * Quadro não existe para todos os casos"). O Quadro mostra até AMANHÃ, e do
+ * passado só os dias que ainda têm caso aberto (`arquivado`). Um parto de
+ * dezembro, ou um caso entregue há um mês, não tem para onde o botão levar.
+ */
+export function useNoQuadro(casoId: string) {
+  return useQuery({
+    queryKey: [CHAVE, 'no-quadro', casoId],
+    // Sem validade: é uma consulta de uma linha, feita ao abrir o detalhe, e
+    // o dia do caso pode ter mudado pelo sync desde a última vez.
+    staleTime: 0,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase.from('quadro_casos').select('dia, arquivado').eq('id', casoId).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!data || data.arquivado) return false
+      return data.dia === null || data.dia <= somarDias(hojeEmBrasilia(), 1)
+    },
+  })
 }

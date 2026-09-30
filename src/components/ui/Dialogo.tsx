@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Botao } from './Botao'
 import { Alerta } from './Alerta'
+import { IconeX } from './icones'
 
 interface PropsDialogo {
   titulo: string
@@ -24,6 +25,13 @@ interface PropsDialogo {
    * sendo quem fecha; o que muda é a moldura, não o contrato.
    */
   soFechar?: boolean
+  /**
+   * Leitura com um X no canto, SEM rodapé (30/09/2026, o detalhe do
+   * calendário). Para o diálogo que é uma ficha — as ações moram no corpo, e um
+   * "Fechar" grande embaixo competiria com elas. Fechar é o X, o Esc ou o
+   * `onCancelar`.
+   */
+  fecharNoCanto?: boolean
   onConfirmar: () => void
   onCancelar: () => void
 }
@@ -49,6 +57,7 @@ export function Dialogo({
   ocupado = false,
   erro = null,
   soFechar = false,
+  fecharNoCanto = false,
   onConfirmar,
   onCancelar,
 }: PropsDialogo) {
@@ -86,12 +95,25 @@ export function Dialogo({
       className="m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-painel border border-border bg-card p-0 text-foreground shadow-cartao-alto backdrop:bg-marca-forte/45 backdrop:backdrop-blur-sm"
     >
       <div className="space-y-4 p-5 md:p-6">
-        <h2 className="text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-xl font-extrabold tracking-tight text-balance">{titulo}</h2>
+          {fecharNoCanto && (
+            <button
+              type="button"
+              onClick={onCancelar}
+              aria-label="Fechar"
+              className="-mt-1 -mr-2 grid size-11 flex-shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <IconeX className="size-5" />
+            </button>
+          )}
+        </div>
 
         {children}
 
         {erro && <Alerta>{erro}</Alerta>}
 
+        {!fecharNoCanto && (
         <div className="flex justify-end gap-2 pt-1">
           {!soFechar && (
             <Botao variante="fantasma" onClick={onCancelar} disabled={ocupado}>
@@ -106,6 +128,7 @@ export function Dialogo({
             {ocupado ? 'Enviando…' : rotuloConfirmar}
           </Botao>
         </div>
+        )}
       </div>
     </dialog>
   )
