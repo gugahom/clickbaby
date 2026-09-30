@@ -12,7 +12,14 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseEventoCalendar } from "../_shared/parse-evento.ts";
-import { type CasoParaOGoogle, idDoEventoDoCaso, montarEventoDoCaso } from "./evento-do-caso.ts";
+import {
+  atualizarEventoDoCaso,
+  type CasoParaAtualizar,
+  type CasoParaOGoogle,
+  type EventoDoGoogle,
+  idDoEventoDoCaso,
+  montarEventoDoCaso,
+} from "./evento-do-caso.ts";
 import {
   autorizarChamada,
   contabilizarAcao,
@@ -436,6 +443,77 @@ async function enviarCasosAoGoogle(
 }
 
 // -----------------------------------------------------------------------
+// A mudança feita NO SISTEMA num caso que já tem evento (30/09/2026).
+// -----------------------------------------------------------------------
+//
+// Uma pessoa editou (ou cancelou) o caso pelo calendário ou pelo Quadro, e a
+// trigger `marcar_caso_para_o_google` o marcou. Enquanto a marca existe o
+// banco não deixa este sync reler o evento — a agenda está ATRASADA —, e é
+// aqui que ela se desfaz: GET do evento (para não perder o que o sistema não
+// controla), PUT com o título, a hora e a cor novos (ou só o cinza), e a
+// marca desligada NA VERSÃO escrita. Se outra edição chegou no meio, a marca
+// fica e o ciclo seguinte escreve a nova.
+//
+// Evento apagado na agenda (404/410, ou `cancelled`): não há o que atualizar.
+// A marca sai com 'evento_sumiu', e a checagem de deleção cuida do caso como
+// sempre — com as travas de sempre (caso com trabalho não cancela).
+//
+// Roda ANTES da leitura, como a criação, para a leitura já trazer o evento
+// novo.
+async function atualizarCasosNoGoogle(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  accessToken: string,
+  calendarId: string,
+  resumo: ResumoSync,
+): Promise<void> {
+  const { data: marcados, error } = await supabase.rpc("sync_casos_para_atualizar_no_google");
+  if (error) {
+    resumo.erros.push({ evento_id: "-", erro: `sync_casos_para_atualizar_no_google falhou: ${error.message}` });
+    return;
+  }
+
+  for (const caso of (marcados ?? []) as CasoParaAtualizar[]) {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${
+      encodeURIComponent(caso.google_event_id)
+    }`;
+    try {
+      const lido = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      let resultado: "atualizado" | "evento_sumiu" = "atualizado";
+      if (lido.status === 404 || lido.status === 410) {
+        resultado = "evento_sumiu";
+      } else if (!lido.ok) {
+        throw new Error(`Google recusou a leitura do evento (${lido.status})`);
+      } else {
+        const atual = (await lido.json()) as EventoDoGoogle & { status?: string };
+        if (atual.status === "cancelled") {
+          resultado = "evento_sumiu";
+        } else {
+          const escrito = await fetch(url, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify(atualizarEventoDoCaso(caso, atual)),
+          });
+          if (!escrito.ok) throw new Error(`Google recusou a atualização do evento (${escrito.status})`);
+        }
+      }
+      const { error: erroMarcar } = await supabase.rpc("sync_marcar_google_atualizado", {
+        p_caso_id: caso.caso_id,
+        p_versao: caso.versao,
+        p_resultado: resultado,
+      });
+      if (erroMarcar) throw new Error(`sync_marcar_google_atualizado falhou: ${erroMarcar.message}`);
+      if (resultado === "atualizado") resumo.atualizados_no_google++;
+    } catch (erroCaso) {
+      resumo.erros.push({
+        evento_id: caso.google_event_id,
+        erro: erroCaso instanceof Error ? erroCaso.message : String(erroCaso),
+      });
+    }
+  }
+}
+
+// -----------------------------------------------------------------------
 // Handler HTTP
 // -----------------------------------------------------------------------
 
@@ -484,6 +562,7 @@ Deno.serve(async (req) => {
 
     // Primeiro o caminho de volta — ver a nota em enviarCasosAoGoogle.
     await enviarCasosAoGoogle(supabase, accessToken, calendarId, resumo);
+    await atualizarCasosNoGoogle(supabase, accessToken, calendarId, resumo);
 
     const eventos = await buscarEventos(accessToken, calendarId, timeMin, timeMax);
     resumo.total_eventos_lidos = eventos.length;

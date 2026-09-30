@@ -281,6 +281,7 @@ Deno.test("novoResumoVazio começa zerado", () => {
       deletados: 0,
       fora_da_janela: 0,
       enviados_ao_google: 0,
+      atualizados_no_google: 0,
       erros: [],
     },
     "resumo inicial",

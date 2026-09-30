@@ -3,15 +3,15 @@ import { useSearchParams } from 'react-router'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { useAuth } from '@/features/auth/contexto'
-import { podeEditarCadastro } from '@/features/quadro/lib/acoes'
+import { podeEditarCadastro, podeEncerrarCaso } from '@/features/quadro/lib/acoes'
 import { Segmentado } from '@/features/relatorios/components/Segmentado'
 import { useCalendario, type Feriado, type ItemDoCalendario } from './api/useCalendario'
+import { CancelarCasoDialogo, MudarHorarioDialogo } from './components/AcoesDoItem'
 import { ControleDoFeriado } from './components/ControleDoFeriado'
-import { DetalheDoItem } from './components/DetalheDoItem'
+import { DetalheDoItem, type AcoesDoDetalhe } from './components/DetalheDoItem'
 import { FiltrosDoCalendario } from './components/FiltrosDoCalendario'
-import { NovoCasoDialogo } from './components/NovoCasoDialogo'
+import { EditarCasoDialogo, NovoCasoDialogo, type Proposta } from './components/FormularioDoCaso'
 import { VisaoDia, VisaoLista, VisaoMes, VisaoSemana } from './components/Visoes'
-import { corDoParto } from './lib/coresGoogle'
 import {
   deslocar,
   hojeEmBrasilia,
@@ -34,10 +34,20 @@ import { TIPOS } from './lib/estilos'
  * lucide…) e um segundo sistema de botões, diálogos e selects ao lado dos
  * nossos.
  *
- * FICOU DE FORA do exemplo, e de propósito: ARRASTAR para reagendar, editar e
- * apagar. Um caso ligado ao Google é relido pelo sync a cada 25 segundos, e uma
- * hora mudada aqui voltaria sozinha. Reagendar pelo calendário pede que o
- * sistema atualize o evento no Google — é a próxima etapa.
+ * EDITAR, CANCELAR E ARRASTAR (30/09/2026, segunda volta: "poder editar,
+ * excluir"). Tinham ficado de fora porque o sync relê o Google a cada 25
+ * segundos e desfaria a mudança; agora a mudança feita aqui vai para o evento
+ * do Google (migration 20260930164416), e o sync não relê o evento enquanto
+ * isso não acontece. Quem pode o quê:
+ *   - parto: EDITAR é do adm (quem cria), CANCELAR é de atendimento ou adm (a
+ *     regra de `cancelar_caso`) — e cancelar pinta o evento de cinza no Google;
+ *   - hora marcada e entrega combinada: MUDAR O HORÁRIO, qualquer um que vê o
+ *     calendário (`agendar_etapa`); não toca no Google, que só tem o parto;
+ *   - prazo do pacote: nada — é conta, não combinado.
+ * ARRASTAR segue a mesma regra e só abre o formulário já preenchido.
+ *
+ * O FILTRO DE CORES SAIU (pedido do usuário): a cor é a da maternidade, e o
+ * filtro de maternidades já responde a mesma pergunta pelo nome.
  *
  * AS CORES SÃO AS DO GOOGLE (a regra do cadastro: BIRTH vermelho, o resto pela
  * maternidade), todo item de um caso na cor dele. O que vem pela frente é cor
@@ -57,7 +67,8 @@ const semAcento = (t: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
 
-const chaveDaCor = (i: ItemDoCalendario) => i.corDoGoogle ?? 'padrao'
+/** "14:30" com a hora trocada pela da célula onde o item caiu. */
+const naHora = (h: number, antes: string | null) => `${String(h).padStart(2, '0')}:${antes?.slice(3) ?? '00'}`
 
 export function CalendarioPage() {
   const { pessoa } = useAuth()
@@ -68,14 +79,17 @@ export function CalendarioPage() {
   const dataDaUrl = params.get('dia')
   const escolhido = dataDaUrl && /^\d{4}-\d{2}-\d{2}$/.test(dataDaUrl) ? dataDaUrl : hoje
   const ehAdm = podeEditarCadastro(pessoa?.papelSistema ?? '')
+  const cancela = podeEncerrarCaso(pessoa?.papelSistema ?? '')
 
   const [busca, setBusca] = useState('')
-  const [cores, setCores] = useState<string[]>([])
   const [tipos, setTipos] = useState<string[]>([])
   const [maternidades, setMaternidades] = useState<string[]>([])
   const [aberto, setAberto] = useState<ItemDoCalendario | null>(null)
   // O dia com que o formulário de caso novo abre; nulo = fechado.
   const [novoCasoEm, setNovoCasoEm] = useState<string | null>(null)
+  const [editando, setEditando] = useState<{ casoId: string; proposta: Proposta | null } | null>(null)
+  const [cancelando, setCancelando] = useState<ItemDoCalendario | null>(null)
+  const [mudandoHorario, setMudandoHorario] = useState<{ item: ItemDoCalendario; proposta: Proposta | null } | null>(null)
 
   const periodo = periodoDaVisao(visao, escolhido)
   const calendario = useCalendario(periodo.inicio, periodo.fim)
@@ -93,14 +107,6 @@ export function CalendarioPage() {
 
   // As opções dos filtros saem do que ESTÁ no período — uma maternidade sem
   // nada neste mês não ocupa lugar no menu.
-  const opcoesDeCor = useMemo(() => {
-    const vistas = new Map<string, { rotulo: string; cor: string }>()
-    for (const i of todos) {
-      const c = corDoParto(i.corDoGoogle)
-      vistas.set(chaveDaCor(i), { rotulo: c.nome, cor: c.hex })
-    }
-    return [...vistas].map(([valor, o]) => ({ valor, ...o })).sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'))
-  }, [todos])
   const opcoesDeMaternidade = useMemo(
     () =>
       [...new Set(todos.map((i) => i.maternidade).filter((m): m is string => m !== null))]
@@ -112,7 +118,6 @@ export function CalendarioPage() {
   const termo = semAcento(busca.trim())
   const visiveis = todos.filter(
     (i) =>
-      (cores.length === 0 || cores.includes(chaveDaCor(i))) &&
       (tipos.length === 0 || tipos.includes(i.tipo)) &&
       (maternidades.length === 0 || (i.maternidade !== null && maternidades.includes(i.maternidade))) &&
       (termo === '' ||
@@ -129,7 +134,50 @@ export function CalendarioPage() {
         ? rotuloDaSemana(periodo.inicio, periodo.fim)
         : rotuloDoDiaCompleto(escolhido)
 
-  const comum = { hoje, porDia, feriados, onAbrir: setAberto, onIrParaDia: (d: string) => irPara(d, 'dia') }
+  // QUEM PODE O QUÊ, num item — a mesma regra no detalhe e no arrastar.
+  const editavel = (i: ItemDoCalendario) => i.tipo === 'parto' && ehAdm
+  const reagendavel = (i: ItemDoCalendario) => i.etapaId !== null && !i.feito
+  const podeArrastar = (i: ItemDoCalendario) => (editavel(i) && !i.feito && !i.encerrado) || reagendavel(i)
+
+  function acoesDe(i: ItemDoCalendario): AcoesDoDetalhe {
+    const acoes: AcoesDoDetalhe = {}
+    if (editavel(i)) {
+      acoes.onEditar = () => {
+        setAberto(null)
+        setEditando({ casoId: i.casoId, proposta: null })
+      }
+    }
+    if (i.tipo === 'parto' && cancela && !i.encerrado) {
+      acoes.onCancelar = () => {
+        setAberto(null)
+        setCancelando(i)
+      }
+    }
+    if (reagendavel(i)) {
+      acoes.onMudarHorario = () => {
+        setAberto(null)
+        setMudandoHorario({ item: i, proposta: null })
+      }
+    }
+    return acoes
+  }
+
+  function soltar(i: ItemDoCalendario, dia: string, h: number | null) {
+    const hora = h === null ? i.hora : naHora(h, i.hora)
+    if (dia === i.dia && hora === i.hora) return
+    if (i.tipo === 'parto') setEditando({ casoId: i.casoId, proposta: { dia, hora } })
+    else setMudandoHorario({ item: i, proposta: { dia, hora } })
+  }
+
+  const comum = {
+    hoje,
+    porDia,
+    feriados,
+    onAbrir: setAberto,
+    onIrParaDia: (d: string) => irPara(d, 'dia'),
+    podeArrastar,
+    onSoltar: soltar,
+  }
 
   return (
     <div className="mx-auto w-full max-w-[100rem] space-y-4 p-3 md:p-6">
@@ -171,7 +219,6 @@ export function CalendarioPage() {
         busca={busca}
         onBuscar={setBusca}
         grupos={[
-          { id: 'cores', titulo: 'Cores', opcoes: opcoesDeCor, marcados: cores, onMudar: setCores },
           {
             id: 'tipos',
             titulo: 'Tipos',
@@ -207,6 +254,8 @@ export function CalendarioPage() {
               porDia={porDia}
               feriados={feriados}
               onAbrir={setAberto}
+              podeArrastar={podeArrastar}
+              onSoltar={soltar}
               acoes={
                 ehAdm && (
                   <>
@@ -222,7 +271,26 @@ export function CalendarioPage() {
         </div>
       )}
 
-      {aberto && <DetalheDoItem item={aberto} onFechar={() => setAberto(null)} />}
+      {aberto && <DetalheDoItem item={aberto} acoes={acoesDe(aberto)} onFechar={() => setAberto(null)} />}
+      {editando && (
+        <EditarCasoDialogo
+          casoId={editando.casoId}
+          proposta={editando.proposta}
+          onFechar={() => setEditando(null)}
+          onPronto={(dia) => {
+            setEditando(null)
+            if (!periodo.dias.includes(dia)) irPara(dia)
+          }}
+        />
+      )}
+      {cancelando && <CancelarCasoDialogo item={cancelando} onFechar={() => setCancelando(null)} />}
+      {mudandoHorario && (
+        <MudarHorarioDialogo
+          item={mudandoHorario.item}
+          proposta={mudandoHorario.proposta}
+          onFechar={() => setMudandoHorario(null)}
+        />
+      )}
       {novoCasoEm && (
         <NovoCasoDialogo
           diaInicial={novoCasoEm}

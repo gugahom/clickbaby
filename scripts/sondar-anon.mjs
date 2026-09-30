@@ -203,6 +203,20 @@ const RPCS_TRANSICAO = {
   },
   sync_casos_para_o_google: {},
   sync_vincular_evento_google: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_google_event_id: '' },
+  // Editar pelo calendário (20260930164416). Caso inexistente e nome vazio: a
+  // RPC recusa antes de escrever. As duas do sync são só do service_role — e a
+  // segunda, com versão que não existe, não desligaria marca nenhuma.
+  editar_caso: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_mae_nome: '',
+    p_bebe_nome: null,
+    p_pacote_id: null,
+    p_maternidade_id: null,
+    p_previsao_em: null,
+    p_click_home: false,
+  },
+  sync_casos_para_atualizar_no_google: {},
+  sync_marcar_google_atualizado: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_versao: -1, p_resultado: 'atualizado' },
   // As métricas das pessoas (20260929020655). Quem alcançasse estas RPCs leria
   // o desempenho de cada pessoa da equipe — ou reescreveria a régua de tempo.
   metricas_por_etapa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },

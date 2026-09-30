@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import clsx from 'clsx'
 import type { ItemDoCalendario } from '../api/useCalendario'
+import { largar, pegar } from '../lib/arrasto'
 import { aparencia } from '../lib/estilos'
 
 /**
@@ -15,6 +16,9 @@ import { aparencia } from '../lib/estilos'
  * PASSAR O MOUSE abre o cartão de detalhes (onde, pacote, com quem), como no
  * exemplo; TOCAR abre o detalhe completo (`onAbrir`). No celular não há hover:
  * o toque é o caminho, e é o mesmo.
+ *
+ * `arrastavel` liga o arrastar (só no mouse; ver lib/arrasto.ts) — quem decide
+ * é a página, pelo papel de quem está vendo e pelo tipo do item.
  */
 export type Densidade = 'compacto' | 'normal' | 'detalhado'
 
@@ -22,10 +26,12 @@ export function CartaoDoItem({
   item,
   densidade,
   onAbrir,
+  arrastavel = false,
 }: {
   item: ItemDoCalendario
   densidade: Densidade
   onAbrir: (item: ItemDoCalendario) => void
+  arrastavel?: boolean
 }) {
   const a = aparencia(item)
   // Onde abrir o cartão de detalhes: medido no hover, em coordenadas da janela
@@ -49,8 +55,16 @@ export function CartaoDoItem({
     onBlur: () => setCaixa(null),
     'aria-label': `${item.titulo}${item.hora ? ` às ${item.hora}` : ''}: ${item.nome}`,
     style: estilo,
+    ...(arrastavel && {
+      draggable: true,
+      onDragStart: (e: React.DragEvent) => {
+        setCaixa(null)
+        pegar(item, e)
+      },
+      onDragEnd: largar,
+    }),
   }
-  const vazado = !a.cheio && 'text-foreground hover:bg-muted'
+  const vazado = clsx(!a.cheio && 'text-foreground hover:bg-muted', arrastavel && 'cursor-grab active:cursor-grabbing')
 
   let corpo
   if (densidade === 'compacto') {
@@ -94,7 +108,8 @@ export function CartaoDoItem({
         {...comum}
         className={clsx(
           'flex w-full min-w-0 gap-2 rounded-xl px-3 py-2 text-left transition-shadow hover:shadow-lg',
-          vazado ? clsx(vazado, 'border border-border') : '',
+          vazado,
+          !a.cheio && 'border border-border',
         )}
       >
         {bolinha && <span className="mt-1.5 flex">{bolinha}</span>}
@@ -158,7 +173,11 @@ function CartaoDeDetalhes({ item, caixa }: { item: ItemDoCalendario; caixa: DOMR
           <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">com {item.responsavel}</span>
         )}
       </div>
-      <div className="mt-2 text-[11px] text-muted-foreground">Cor na agenda: {a.nome}</div>
+      <div className="mt-2 text-[11px] text-muted-foreground">
+        Cor na agenda: {a.nome}
+        {item.google === 'enviando' && ' · indo para o Google'}
+        {item.google === 'atualizando' && ' · atualizando no Google'}
+      </div>
     </div>
   )
 }

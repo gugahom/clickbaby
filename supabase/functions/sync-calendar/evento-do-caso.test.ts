@@ -9,7 +9,14 @@
 
 import { parseEventoCalendar } from "../_shared/parse-evento.ts";
 import { resolverMaternidadeId, resolverPacoteId } from "./logica.ts";
-import { BEBE_SEM_NOME, idDoEventoDoCaso, montarEventoDoCaso, montarTituloDoEvento } from "./evento-do-caso.ts";
+import {
+  atualizarEventoDoCaso,
+  BEBE_SEM_NOME,
+  COR_DO_CANCELAMENTO,
+  idDoEventoDoCaso,
+  montarEventoDoCaso,
+  montarTituloDoEvento,
+} from "./evento-do-caso.ts";
 
 function assertEqual(actual: unknown, expected: unknown, msg: string) {
   const a = JSON.stringify(actual);
@@ -91,4 +98,66 @@ Deno.test("o evento tem uma hora de duração, o fuso de Brasília, e cor só qu
 
   const semCor = montarEventoDoCaso({ ...base, cor_calendar: null });
   assertEqual("colorId" in semCor, false, "sem cor, a agenda usa a padrão");
+});
+
+// -----------------------------------------------------------------------------
+// A atualização de um evento que já existe (30/09/2026).
+// -----------------------------------------------------------------------------
+
+const CASO_EDITADO = {
+  caso_id: "0f8fad5b-d9cb-469f-a165-70867728950e",
+  google_event_id: "evt1",
+  versao: 3,
+  cancelado: false,
+  mae_nome: "ANA PAULA",
+  bebe_nome: "THÉO",
+  pacote_nome: "BABY REELS",
+  maternidade_sigla: "GNDI",
+  click_home: true,
+  previsao_em: "2026-10-14T18:00:00+00:00",
+  cor_calendar: "5",
+};
+
+const EVENTO_DA_EQUIPE = {
+  id: "evt1",
+  summary: "*ANA/BEBÊ BABY REELS HSC",
+  description: "quarto 201, levar o cartão 14",
+  colorId: "9",
+  start: { dateTime: "2026-10-14T13:00:00Z" },
+  end: { dateTime: "2026-10-14T15:00:00Z" },
+};
+
+Deno.test("a edição reescreve título, hora e cor, e guarda o que o sistema não controla", () => {
+  const novo = atualizarEventoDoCaso(CASO_EDITADO, EVENTO_DA_EQUIPE);
+  assertEqual(novo.summary, "*ANA PAULA/THÉO - BABY REELS + CLICK HOME - GNDI", "título novo, com o asterisco da equipe");
+  assertEqual(novo.description, "quarto 201, levar o cartão 14", "a descrição da equipe fica");
+  assertEqual(novo.colorId, "5", "a cor da regra");
+  assertEqual(novo.start, { dateTime: "2026-10-14T18:00:00.000Z", timeZone: "America/Sao_Paulo" }, "hora nova");
+  assertEqual(novo.end, { dateTime: "2026-10-14T20:00:00.000Z", timeZone: "America/Sao_Paulo" }, "a duração de duas horas fica");
+
+  const lido = parseEventoCalendar(novo.summary as string);
+  if (lido.tipo !== "caso") throw new Error("o parser ignorou o título atualizado");
+  assertEqual([lido.mae, lido.bebe, lido.pacote_bruto, lido.maternidade_sigla, lido.click_home], [
+    "ANA PAULA",
+    "THÉO",
+    "BABY REELS",
+    "GNDI",
+    true,
+  ], "o título atualizado volta igual pelo parser");
+});
+
+Deno.test("sem cor na regra, o evento volta para a cor padrão da agenda", () => {
+  const novo = atualizarEventoDoCaso({ ...CASO_EDITADO, cor_calendar: null }, EVENTO_DA_EQUIPE);
+  assertEqual("colorId" in novo, false, "sem colorId = cor padrão");
+});
+
+Deno.test("evento de dia inteiro vira evento com hora, de uma hora", () => {
+  const novo = atualizarEventoDoCaso(CASO_EDITADO, { summary: "ANA/BEBÊ - BASIC - HSC", start: { date: "2026-10-14" }, end: { date: "2026-10-15" } });
+  assertEqual(novo.end, { dateTime: "2026-10-14T19:00:00.000Z", timeZone: "America/Sao_Paulo" }, "uma hora depois do início");
+  assertEqual((novo.summary as string).startsWith("*"), false, "sem asterisco quando a equipe não pôs");
+});
+
+Deno.test("cancelado só pinta de cinza — título e hora ficam", () => {
+  const novo = atualizarEventoDoCaso({ ...CASO_EDITADO, cancelado: true }, EVENTO_DA_EQUIPE);
+  assertEqual(novo, { ...EVENTO_DA_EQUIPE, colorId: COR_DO_CANCELAMENTO }, "o mesmo evento, cinza");
 });
