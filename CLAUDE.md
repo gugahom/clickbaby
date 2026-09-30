@@ -987,8 +987,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   traz o card novo à tela é o Realtime (escuta INSERT em `casos`), não o refetch — que é a
   rede de segurança para quando o canal cai. Persegui-lo multiplicaria o tráfego do Quadro
   inteiro para cobrir mais depressa uma falha rara.
-  Cria, atualiza, e cancela por card cinza OU por deleção do evento. Evento de dia inteiro
-  (sem hora) não vira caso; um caso JÁ conhecido acompanha o dia mesmo sem hora.
+  Cria, atualiza, e cancela por card cinza OU por deleção do evento.
+  **A AGENDA INTEIRA, COM HORA A DEFINIR** (30/09/2026, pedido do usuário: "preciso que venha
+  TUDO", migration `20260930184200`). Até aqui o sync lia só SEIS SEMANAS para frente, e evento
+  de DIA INTEIRO não virava caso ("sem hora não vira caso", do gestor, 30/08) — medido no dia, 65
+  dos 153 eventos lidos eram assim, a maior parte dos partos futuros, e o banco tinha 8 casos
+  futuros. Agora a janela é de DOZE MESES e o dia inteiro vira caso com `casos.previsao_sem_hora`:
+  `previsao_em` guarda a meia-noite de Brasília daquele dia (o `dia` do Quadro e o filtro do
+  calendário funcionam sem mudança) e a MARCA diz que aquilo não é hora. O argumento de 30/08
+  continua de pé e é por ele que a marca existe: **nada lê essa meia-noite como horário** — o
+  card mostra "hora a definir", o alerta de horário (e o sino) o ignoram, o calendário o põe em
+  "dia todo". A marca vem do Google por `sync_definir_previsao_sem_hora`, à parte (a mesma razão
+  do Click Home), e vai para ele: `criar_caso`/`editar_caso` aceitam `p_sem_hora` e o sync
+  escreve o evento como de dia inteiro. **Com doze meses, o ciclo compara antes de chamar**
+  (`casoJaEstaComoOEvento`): o caso conhecido que já está igual ao evento não vai ao banco.
+  **A CONTA A OBSERVAR:** o Quadro carrega todo caso não arquivado, e os futuros entram nisso. Se
+  a carga pesar, o corte é o Quadro não carregar caso além de amanhã — com o remendo do Realtime
+  (`lib/remendo.ts`) seguindo o mesmo corte, senão tela e recarga discordam.
   **"O EVENTO SUMIU" NÃO É "O CONTRATO CAIU"** (15/09/2026, migration `20260915030822`).
   Investigado em produção: o sync cancelou 45 casos e nenhum foi inventado — todo evento
   estava de fato apagado ou cinza no Calendar. O defeito era a regra. Três casos tinham

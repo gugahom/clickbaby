@@ -104,7 +104,8 @@ function FormularioDoCaso({
   const [pacoteId, setPacoteId] = useState(caso?.pacoteId ?? '')
   const [maternidadeId, setMaternidadeId] = useState(caso?.maternidadeId ?? '')
   const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? '')
-  const [hora, setHora] = useState(proposta?.hora ?? antes?.hora ?? '')
+  // Hora a definir abre com o campo vazio — a meia-noite guardada não é hora.
+  const [hora, setHora] = useState(proposta?.hora ?? (caso?.semHora ? '' : (antes?.hora ?? '')))
   const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
   const [erro, setErro] = useState<string | null>(null)
   const ocupado = criar.isPending || editar.isPending
@@ -117,10 +118,10 @@ function FormularioDoCaso({
     !pacote && 'o pacote',
     !maternidade && 'a maternidade',
     dia === '' && 'o dia',
-    hora === '' && 'a hora',
   ].filter(Boolean) as string[]
   const trocouPacote = caso?.pacoteId != null && pacoteId !== caso.pacoteId
-  const mudouQuando = antes !== null && (dia !== antes.dia || hora !== antes.hora)
+  const horaAntes = caso?.semHora ? '' : (antes?.hora ?? '')
+  const mudouQuando = antes !== null && (dia !== antes.dia || hora !== horaAntes)
 
   // O mesmo formato que o sync escreve no Google (evento-do-caso.ts) — aqui só
   // para MOSTRAR; quem escreve de verdade é o sync.
@@ -194,11 +195,18 @@ function FormularioDoCaso({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <CampoTexto rotulo="Dia" type="date" valor={dia} aoMudar={setDia} {...(dia ? { ajuda: rotuloDoDia(dia) } : {})} />
-          <CampoTexto rotulo="Hora prevista" type="time" valor={hora} aoMudar={setHora} />
+          <CampoTexto
+            rotulo="Hora prevista"
+            type="time"
+            valor={hora}
+            aoMudar={setHora}
+            opcional
+            ajuda={hora === '' ? 'Hora a definir: no Google fica como dia inteiro.' : 'Apague para deixar a definir.'}
+          />
         </div>
         {mudouQuando && antes && (
           <p className="text-xs font-semibold text-foreground">
-            Antes: {rotuloDoDia(antes.dia)}, às {antes.hora}.
+            Antes: {rotuloDoDia(antes.dia)}, {horaAntes ? `às ${horaAntes}` : 'hora a definir'}.
           </p>
         )}
 

@@ -145,7 +145,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.criar_caso('Ana', null, pg_temp.pac('basic'), pg_temp.mat('HSC'), null) $$,
-  'P0001', 'Informe o dia e a hora previstos.', 'C4: sem previsão'
+  'P0001', 'Informe o dia previsto.', 'C4: sem previsão'
 );
 select throws_ok(
   $$ select public.criar_caso('Ana', null, null, pg_temp.mat('HSC'), '2029-06-10 10:00-03') $$,

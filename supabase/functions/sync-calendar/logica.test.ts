@@ -4,6 +4,7 @@
 import {
   autorizarChamada,
   contabilizarAcao,
+  casoJaEstaComoOEvento,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
   eventoTemApenasData,
@@ -448,4 +449,39 @@ Deno.test("o resumo de erros não tem campo de título", () => {
     ["erro", "evento_id"],
     "só id e mensagem — título traz nome de mãe/bebê (seção 10)",
   );
+});
+
+// =============================================================================
+// O atalho do "nada mudou" (30/09/2026, janela de doze meses).
+// =============================================================================
+
+Deno.test("casoJaEstaComoOEvento só pula a RPC quando dá para provar que ela não faria nada", () => {
+  const caso = {
+    google_calendar_event_id: "e1",
+    previsao_em: "2026-10-14T13:00:00+00:00",
+    mae_nome: "ANA",
+    bebe_nome: "BEBÊ",
+    cor_calendar: "9",
+    pacote_id: "p",
+    maternidade_id: "m",
+    click_home: false,
+    previsao_sem_hora: false,
+  };
+  const evento = {
+    mae: "ANA",
+    bebe: "BEBÊ",
+    previsaoEm: "2026-10-14T10:00:00-03:00",
+    cor: "9",
+    cancelado: false,
+    clickHome: false,
+    semHora: false,
+  };
+  assertEqual(casoJaEstaComoOEvento(caso, evento), true, "mesmo instante escrito em outro fuso ainda é igual");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, mae: "ANA PAULA" }), false, "nome mudou");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, previsaoEm: "2026-10-14T11:00:00-03:00" }), false, "hora mudou");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, cor: null }), false, "cor mudou");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, cancelado: true }), false, "card cinza sempre vai para a RPC");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, clickHome: true }), false, "Click Home novo vai para a RPC");
+  assertEqual(casoJaEstaComoOEvento(caso, { ...evento, semHora: true }), false, "perdeu a hora");
+  assertEqual(casoJaEstaComoOEvento({ ...caso, pacote_id: null }, evento), false, "rascunho sempre vai para a RPC");
 });

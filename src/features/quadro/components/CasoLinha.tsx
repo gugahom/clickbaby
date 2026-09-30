@@ -97,7 +97,8 @@ export function CasoLinha({
   const agora = useRelogioDeMinuto()
   const sla = estadoSla(caso, agora)
   const cor = corDoCaso(caso.corCalendar)
-  const hora = formatarHora(caso.previsaoEm)
+  // Hora a definir não mostra hora: a meia-noite guardada é só o dia.
+  const hora = caso.previsaoSemHora ? 'hora a definir' : formatarHora(caso.previsaoEm)
   const alerta = alertaDeHorario(caso, etapas, agora)
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome

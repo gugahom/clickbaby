@@ -99,7 +99,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
   const agora = Date.now()
 
   const colunasDoCaso =
-    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti, cor_calendar'
+    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti, cor_calendar, previsao_sem_hora'
 
   const [partos, prazos, etapas, feriados, naFila] = await Promise.all([
     buscarTudo((a, b) =>
@@ -166,7 +166,8 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       // para 00h30 de um caso aberto na véspera); vale o dia do bloco, que é
       // onde o Quadro o mostra.
       dia: c.dia,
-      hora: quando && quando.dia === c.dia ? quando.hora : null,
+      // Hora a definir é "dia todo" no calendário, como no Google.
+      hora: quando && quando.dia === c.dia && !c.previsao_sem_hora ? quando.hora : null,
       titulo: c.eh_rascunho ? 'Parto · rascunho' : c.nascimento_concluido_em ? 'Nasceu' : 'Parto previsto',
       nome: nomeDoCaso(c.mae_nome, c.bebe_nome),
       detalhe: juntar(c.maternidade_sigla, c.pacote_nome, c.na_uti ? 'UTI' : null),
@@ -310,10 +311,13 @@ export interface NovoCaso {
   maternidadeId: string
   /** 'YYYY-MM-DD' */
   dia: string
-  /** 'HH:MM' */
+  /** 'HH:MM', ou vazio = hora a definir (o evento no Google é de dia inteiro). */
   hora: string
   clickHome: boolean
 }
+
+/** A previsão que vai para o banco: com hora, o instante; sem, o dia. */
+const previsao = (dia: string, hora: string) => `${dia}T${hora || '00:00'}:00-03:00`
 
 export function useCriarCaso() {
   const queryClient = useQueryClient()
@@ -324,8 +328,9 @@ export function useCriarCaso() {
         p_bebe_nome: n.bebeNome,
         p_pacote_id: n.pacoteId,
         p_maternidade_id: n.maternidadeId,
-        p_previsao_em: `${n.dia}T${n.hora}:00-03:00`,
+        p_previsao_em: previsao(n.dia, n.hora),
         p_click_home: n.clickHome,
+        p_sem_hora: n.hora === '',
       })
       if (error) throw new Error(error.message)
       return data
@@ -349,6 +354,7 @@ export interface CasoEditavel {
   pacoteId: string | null
   maternidadeId: string | null
   previsaoEm: string | null
+  semHora: boolean
   clickHome: boolean
   /** Já tem evento no Google (a mudança vai para lá). */
   noGoogle: boolean
@@ -362,7 +368,9 @@ export function useCasoEditavel(casoId: string | null) {
     queryFn: async (): Promise<CasoEditavel> => {
       const { data, error } = await supabase
         .from('casos')
-        .select('id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, click_home, google_calendar_event_id, google_pendente')
+        .select(
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, click_home, google_calendar_event_id, google_pendente',
+        )
         .eq('id', casoId ?? '')
         .single()
       if (error) throw new Error(error.message)
@@ -373,6 +381,7 @@ export function useCasoEditavel(casoId: string | null) {
         pacoteId: data.pacote_id,
         maternidadeId: data.maternidade_id,
         previsaoEm: data.previsao_em,
+        semHora: data.previsao_sem_hora,
         clickHome: data.click_home,
         noGoogle: data.google_calendar_event_id !== null || data.google_pendente,
       }
@@ -395,8 +404,9 @@ export function useEditarCasoDoCalendario() {
         p_bebe_nome: e.bebeNome,
         p_pacote_id: e.pacoteId,
         p_maternidade_id: e.maternidadeId,
-        p_previsao_em: `${e.dia}T${e.hora}:00-03:00`,
+        p_previsao_em: previsao(e.dia, e.hora),
         p_click_home: e.clickHome,
+        p_sem_hora: e.hora === '',
       })
       if (error) throw new Error(error.message)
     },
