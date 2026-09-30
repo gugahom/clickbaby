@@ -22,6 +22,8 @@ import {
 } from "./evento-do-caso.ts";
 import {
   autorizarChamada,
+  type CasoConhecido,
+  casoJaEstaComoOEvento,
   contabilizarAcao,
   COR_CINZA_GOOGLE,
   eventoIndicaCancelamento,
@@ -33,7 +35,6 @@ import {
   previsaoParaCasoConhecido,
   resolverMaternidadeId,
   resolverPacoteId,
-  resolverPrevisaoEm,
   type ResumoSync,
 } from "./logica.ts";
 
@@ -73,7 +74,12 @@ import {
 
 const DIAS_PARA_TRAS_CONSULTA = 21;
 const DIAS_PARA_TRAS_NOVO_CASO = 3;
-const SEMANAS_PARA_FRENTE = 6;
+// A AGENDA INTEIRA (30/09/2026, pedido do usuário: "preciso que venha TUDO").
+// Até aqui eram seis semanas, e o que a equipe marca para depois disso — um
+// parto de dezembro marcado em setembro — nem era lido. Doze meses cobrem uma
+// gestação inteira com folga; a leitura continua paginada, e os eventos que
+// não mudaram não vão ao banco (casoJaEstaComoOEvento, em logica.ts).
+const DIAS_PARA_FRENTE = 365;
 
 // LEITURA E ESCRITA DE EVENTOS desde 30/09/2026: o calendário do sistema cria
 // caso, e o sync escreve o evento correspondente no Google (ver
@@ -224,7 +230,7 @@ async function processarEvento(
   evento: EventoGoogle,
   pacotes: readonly PacoteResumido[],
   maternidades: readonly MaternidadeResumida[],
-  idsAbertosConhecidos: ReadonlySet<string>,
+  conhecidos: ReadonlyMap<string, CasoConhecido>,
   limiteNovoCaso: Date,
 ): Promise<string> {
   const resultadoParse = parseEventoCalendar(evento.summary ?? "");
@@ -240,7 +246,8 @@ async function processarEvento(
   // ABERTOS, não para descobrir histórico do Calendar que o sync nunca viu.
   // Um evento conhecido (já é o event_id de um caso aberto) passa direto —
   // é exatamente o que essa janela ampla precisa continuar cobrindo.
-  const conhecido = idsAbertosConhecidos.has(evento.id);
+  const caso = conhecidos.get(evento.id);
+  const conhecido = caso !== undefined;
 
   if (!conhecido) {
     const inicio = inicioDoEvento(evento.start);
@@ -258,34 +265,38 @@ async function processarEvento(
   // pergunta: a equipe arrasta o card pro dia certo e às vezes perde a hora
   // nesse gesto, e o card não pode continuar mostrando o dia ERRADO só por
   // isso. Ver `previsaoParaCasoConhecido` em logica.ts.
-  const previsaoEm = conhecido
-    ? previsaoParaCasoConhecido(evento.start)
-    : resolverPrevisaoEm(evento.start);
+  //
+  // A HORA A DEFINIR (30/09/2026) estende isso ao evento DESCONHECIDO: o dia
+  // inteiro também vira caso, com `previsao_sem_hora` dizendo que a meia-noite
+  // guardada não é hora nenhuma. Até aqui ele era descartado — 65 dos 153
+  // eventos lidos no dia, a maior parte dos partos futuros da agenda.
+  const previsaoEm = previsaoParaCasoConhecido(evento.start);
+  const semHora = eventoTemApenasData(evento.start);
 
   if (!previsaoEm && !cancelado) {
-    // DIA MARCADO, HORA AINDA NÃO, e o evento é DESCONHECIDO (30/08/2026, a
-    // pedido do gestor). Um evento de dia inteiro (só `date`, sem
-    // `dateTime`) significa que a equipe já sabe o DIA mas ainda não
-    // decidiu a HORA — não é um cadastro incompleto por erro, é um
-    // cadastro incompleto DE PROPÓSITO. O Quadro ordena e destaca por
-    // horário; um card sem hora não tem o que mostrar ali, e mostrar
-    // meia-noite como se fosse hora real inventaria um dado que ninguém
-    // informou.
-    //
-    // Por isso NENHUM caso nasce aqui: nem caso normal, nem rascunho. O
-    // evento volta a ser lido em todo disparo seguinte (está dentro da
-    // janela), e assim que alguém adicionar a hora no Calendar, o próximo
-    // ciclo do cron cria o caso normalmente. Um evento CONHECIDO nunca cai
-    // aqui — `previsaoParaCasoConhecido` só devolve null se não houver
-    // `date` nem `dateTime` nenhum, o que é erro de verdade.
-    if (eventoTemApenasData(evento.start)) {
-      return "sem_horario";
-    }
+    // Nem `date` nem `dateTime`: evento malformado. (Até 30/09/2026 o dia
+    // inteiro de um evento DESCONHECIDO também parava aqui — "sem hora não
+    // vira caso", do gestor, em 30/08. Ver a nota logo acima.)
     throw new Error("Evento sem start.dateTime nem start.date — não dá pra derivar previsao_em.");
   }
 
   const pacoteId = resolverPacoteId(resultadoParse.pacote_bruto, pacotes);
   const maternidadeId = resolverMaternidadeId(resultadoParse.maternidade_sigla, maternidades);
+
+  if (
+    caso &&
+    casoJaEstaComoOEvento(caso, {
+      mae: resultadoParse.mae,
+      bebe: resultadoParse.bebe,
+      previsaoEm,
+      cor: evento.colorId ?? null,
+      cancelado,
+      clickHome: resultadoParse.click_home,
+      semHora,
+    })
+  ) {
+    return "sem_efeito";
+  }
 
   const { data: acao, error } = await supabase.rpc("sync_upsert_caso", {
     p_google_event_id: evento.id,
@@ -313,6 +324,19 @@ async function processarEvento(
   // Erro NÃO derruba o evento: o caso já foi criado/atualizado, e a marca
   // entra no próximo ciclo (a RPC é idempotente). Perder o caso por causa do
   // adicional seria trocar o principal pelo acessório.
+  // A HORA A DEFINIR, também à parte e pelo mesmo motivo do Click Home logo
+  // abaixo. Só quando muda: o caso novo de dia inteiro, ou o conhecido que
+  // ganhou ou perdeu a hora no Google.
+  if (semHora !== (caso?.previsao_sem_hora ?? false)) {
+    const { error: erroHora } = await supabase.rpc("sync_definir_previsao_sem_hora", {
+      p_google_event_id: evento.id,
+      p_sem_hora: semHora,
+    });
+    if (erroHora) {
+      console.error(`sync_definir_previsao_sem_hora falhou: ${erroHora.message}`);
+    }
+  }
+
   if (resultadoParse.click_home) {
     const { error: erroClickHome } = await supabase.rpc("sync_marcar_click_home", {
       p_google_event_id: evento.id,
@@ -555,7 +579,7 @@ Deno.serve(async (req) => {
 
     const agora = Date.now();
     const timeMin = new Date(agora - DIAS_PARA_TRAS_CONSULTA * 24 * 60 * 60 * 1000).toISOString();
-    const timeMax = new Date(agora + SEMANAS_PARA_FRENTE * 7 * 24 * 60 * 60 * 1000).toISOString();
+    const timeMax = new Date(agora + DIAS_PARA_FRENTE * 24 * 60 * 60 * 1000).toISOString();
     const limiteNovoCaso = new Date(agora - DIAS_PARA_TRAS_NOVO_CASO * 24 * 60 * 60 * 1000);
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -580,7 +604,9 @@ Deno.serve(async (req) => {
       // conhecido independente de quão velho `previsao_em` seja.
       supabase
         .from("casos")
-        .select("google_calendar_event_id, previsao_em")
+        .select(
+          "google_calendar_event_id, previsao_em, mae_nome, bebe_nome, cor_calendar, pacote_id, maternidade_id, click_home, previsao_sem_hora",
+        )
         .not("google_calendar_event_id", "is", null)
         .not("status_operacional", "in", "(encerrado,cancelado)"),
     ]);
@@ -589,8 +615,8 @@ Deno.serve(async (req) => {
     if (erroMaternidades) throw new Error(`Falha ao ler maternidades: ${erroMaternidades.message}`);
     if (erroAbertos) throw new Error(`Falha ao ler casos abertos: ${erroAbertos.message}`);
 
-    const casosAbertos = (abertos ?? []) as CasoAbertoResumido[];
-    const idsAbertosConhecidos = new Set(casosAbertos.map((c) => c.google_calendar_event_id));
+    const casosAbertos = (abertos ?? []) as CasoConhecido[];
+    const conhecidos = new Map(casosAbertos.map((c) => [c.google_calendar_event_id, c]));
 
     for (const evento of eventos) {
       try {
@@ -599,13 +625,14 @@ Deno.serve(async (req) => {
           evento,
           pacotes as PacoteResumido[],
           maternidades as MaternidadeResumida[],
-          idsAbertosConhecidos,
+          conhecidos,
           limiteNovoCaso,
         );
+        if (eventoTemApenasData(evento.start) && acao !== "ignorado" && acao !== "fora_da_janela") {
+          resumo.sem_horario++;
+        }
         if (acao === "ignorado") {
           resumo.ignorados++;
-        } else if (acao === "sem_horario") {
-          resumo.sem_horario++;
         } else if (acao === "fora_da_janela") {
           resumo.fora_da_janela++;
         } else {

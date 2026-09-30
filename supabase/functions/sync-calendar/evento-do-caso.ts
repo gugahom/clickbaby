@@ -26,6 +26,8 @@ export interface CasoParaOGoogle {
   click_home: boolean;
   previsao_em: string;
   cor_calendar: string | null;
+  /** Hora a definir (30/09/2026): o evento é de DIA INTEIRO. */
+  previsao_sem_hora?: boolean;
 }
 
 /** Sem nome de bebê ainda, o título leva "BEBÊ": o parser exige a barra. */
@@ -49,16 +51,42 @@ export function idDoEventoDoCaso(casoId: string): string {
   return `cb${casoId.replace(/-/g, "").toLowerCase()}`;
 }
 
+/** O dia em Brasília de um instante, "2026-10-14". */
+export function diaEmSaoPaulo(instante: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(instante));
+}
+
+function diaSeguinte(dia: string): string {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Início e fim do evento. HORA A DEFINIR (30/09/2026) é evento de DIA INTEIRO,
+ * como a equipe já marca no Google: `date` no início e o dia seguinte no fim
+ * (o Google conta o fim de um dia inteiro como exclusivo).
+ */
+function momentos(previsao: string, semHora: boolean, duracaoMs: number) {
+  if (semHora) {
+    const dia = diaEmSaoPaulo(previsao);
+    return { start: { date: dia }, end: { date: diaSeguinte(dia) } };
+  }
+  const inicio = new Date(previsao);
+  return {
+    start: { dateTime: inicio.toISOString(), timeZone: "America/Sao_Paulo" },
+    end: { dateTime: new Date(inicio.getTime() + duracaoMs).toISOString(), timeZone: "America/Sao_Paulo" },
+  };
+}
+
 export function montarEventoDoCaso(caso: CasoParaOGoogle): Record<string, unknown> {
-  const inicio = new Date(caso.previsao_em);
   return {
     id: idDoEventoDoCaso(caso.caso_id),
     summary: montarTituloDoEvento(caso),
     // Nada além disto na descrição: o texto do evento fica no Google, e o
     // que o sistema sabe do caso (situação clínica, links) não sai daqui.
     description: "Criado pelo calendário do sistema ClickBaby.",
-    start: { dateTime: inicio.toISOString(), timeZone: "America/Sao_Paulo" },
-    end: { dateTime: new Date(inicio.getTime() + DURACAO_MS).toISOString(), timeZone: "America/Sao_Paulo" },
+    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, DURACAO_MS),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
 }
@@ -100,6 +128,7 @@ export interface CasoParaAtualizar {
   click_home: boolean;
   previsao_em: string | null;
   cor_calendar: string | null;
+  previsao_sem_hora?: boolean;
 }
 
 interface MomentoGoogle {
@@ -144,13 +173,11 @@ export function atualizarEventoDoCaso(caso: CasoParaAtualizar, atual: EventoDoGo
     click_home: caso.click_home,
   });
   const asterisco = (atual.summary ?? "").trimStart().startsWith("*");
-  const inicio = new Date(caso.previsao_em);
   const { colorId: _corAntiga, ...resto } = atual;
   return {
     ...resto,
     summary: asterisco ? `*${titulo}` : titulo,
-    start: { dateTime: inicio.toISOString(), timeZone: "America/Sao_Paulo" },
-    end: { dateTime: new Date(inicio.getTime() + duracaoEmMs(atual)).toISOString(), timeZone: "America/Sao_Paulo" },
+    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, duracaoEmMs(atual)),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
 }

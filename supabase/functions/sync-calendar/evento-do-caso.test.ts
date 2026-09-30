@@ -161,3 +161,24 @@ Deno.test("cancelado só pinta de cinza — título e hora ficam", () => {
   const novo = atualizarEventoDoCaso({ ...CASO_EDITADO, cancelado: true }, EVENTO_DA_EQUIPE);
   assertEqual(novo, { ...EVENTO_DA_EQUIPE, colorId: COR_DO_CANCELAMENTO }, "o mesmo evento, cinza");
 });
+
+Deno.test("hora a definir vira evento de DIA INTEIRO, no dia de Brasília", () => {
+  const novo = montarEventoDoCaso({
+    caso_id: "0f8fad5b-d9cb-469f-a165-70867728950e",
+    mae_nome: "ANA",
+    bebe_nome: null,
+    pacote_nome: "BASIC",
+    maternidade_sigla: "HSC",
+    click_home: false,
+    // Meia-noite de Brasília = 03h UTC: o dia é 14, não 13.
+    previsao_em: "2026-10-14T03:00:00+00:00",
+    cor_calendar: "9",
+    previsao_sem_hora: true,
+  });
+  assertEqual(novo.start, { date: "2026-10-14" }, "início é o dia");
+  assertEqual(novo.end, { date: "2026-10-15" }, "fim exclusivo, o dia seguinte");
+
+  const atualizado = atualizarEventoDoCaso({ ...CASO_EDITADO, previsao_sem_hora: true }, EVENTO_DA_EQUIPE);
+  assertEqual(atualizado.start, { date: "2026-10-14" }, "a edição para hora a definir também vira dia inteiro");
+  assertEqual(atualizado.end, { date: "2026-10-15" }, "sem a duração de duas horas");
+});

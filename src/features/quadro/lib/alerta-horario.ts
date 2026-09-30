@@ -103,7 +103,9 @@ export function alertaDeHorario(
    * o que está certo: ele tem hora no Calendar e ninguém começou nada.
    */
   const acompanhamentoParado = acompanhamento.every(aguardando)
-  if (caso.previsaoEm && acompanhamentoParado) {
+  // HORA A DEFINIR (30/09/2026): a meia-noite guardada não é hora nenhuma, e
+  // alertar por ela faria todo parto sem hora tocar à meia-noite do seu dia.
+  if (caso.previsaoEm && !caso.previsaoSemHora && acompanhamentoParado) {
     candidatos.push({
       quando: new Date(caso.previsaoEm).getTime(),
       oQue: ROTULO_ETAPA.entrada,

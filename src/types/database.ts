@@ -248,6 +248,7 @@ export type Database = {
           observacao: string | null
           pacote_id: string | null
           previsao_em: string | null
+          previsao_sem_hora: boolean
           reaberto_em: string | null
           situacao_clinica: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega: Database["public"]["Enums"]["status_entrega"]
@@ -280,6 +281,7 @@ export type Database = {
           observacao?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
+          previsao_sem_hora?: boolean
           reaberto_em?: string | null
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
@@ -312,6 +314,7 @@ export type Database = {
           observacao?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
+          previsao_sem_hora?: boolean
           reaberto_em?: string | null
           situacao_clinica?: Database["public"]["Enums"]["situacao_clinica"]
           status_entrega?: Database["public"]["Enums"]["status_entrega"]
@@ -1136,6 +1139,7 @@ export type Database = {
           prazo_entrega_horas: number | null
           prazo_total_horas: number | null
           previsao_em: string | null
+          previsao_sem_hora: boolean | null
           reaberto_em: string | null
           situacao_clinica:
             | Database["public"]["Enums"]["situacao_clinica"]
@@ -1228,6 +1232,7 @@ export type Database = {
           p_maternidade_id: string
           p_pacote_id: string
           p_previsao_em: string
+          p_sem_hora?: boolean
         }
         Returns: string
       }
@@ -1265,6 +1270,7 @@ export type Database = {
           p_maternidade_id: string
           p_pacote_id: string
           p_previsao_em: string
+          p_sem_hora?: boolean
         }
         Returns: string
       }
@@ -1563,6 +1569,10 @@ export type Database = {
           vigente_desde: string
         }[]
       }
+      previsao_do_dia: {
+        Args: { p_previsao: string; p_sem_hora: boolean }
+        Returns: string
+      }
       reabrir_caso: {
         Args: {
           p_caso_id: string
@@ -1648,6 +1658,7 @@ export type Database = {
           maternidade_sigla: string
           pacote_nome: string
           previsao_em: string
+          previsao_sem_hora: boolean
           versao: number
         }[]
       }
@@ -1662,7 +1673,12 @@ export type Database = {
           maternidade_sigla: string
           pacote_nome: string
           previsao_em: string
+          previsao_sem_hora: boolean
         }[]
+      }
+      sync_definir_previsao_sem_hora: {
+        Args: { p_google_event_id: string; p_sem_hora: boolean }
+        Returns: string
       }
       sync_marcar_click_home: {
         Args: { p_google_event_id: string }

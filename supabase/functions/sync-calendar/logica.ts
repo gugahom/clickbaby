@@ -169,7 +169,12 @@ export interface ResumoSync {
   rascunhos: number;
   ignorados: number;
   sem_efeito: number;
-  /** Evento de dia inteiro, ainda sem hora — não virou caso desta vez. */
+  /**
+   * Eventos de DIA INTEIRO (hora a definir) processados neste ciclo. Até
+   * 30/09/2026 eles não viravam caso e eram contados aqui como descartados;
+   * desde então viram caso marcado `previsao_sem_hora`, e o número diz quantos
+   * a agenda tem.
+   */
   sem_horario: number;
   /**
    * Casos cancelados por DELEÇÃO do evento no Calendar, não por card cinza
@@ -350,4 +355,53 @@ export function autorizarChamada(
   }
 
   return { autorizado: true };
+}
+
+// -----------------------------------------------------------------------
+// O caso conhecido JÁ ESTÁ como o evento diz? (30/09/2026)
+// -----------------------------------------------------------------------
+//
+// Com a janela de leitura em DOZE MESES, a agenda passa de ~150 para centenas
+// de eventos por ciclo, e o ciclo roda a cada 25 segundos. Chamar a RPC para
+// cada um — e quase todos devolvem `sem_efeito` — seria uma ida ao banco por
+// evento, em série. Esta comparação responde o mesmo `sem_efeito` sem a ida.
+//
+// Na DÚVIDA, CHAMA: rascunho (pode estar se resolvendo), card cinza, Click Home
+// que o caso ainda não tem — tudo isso vai para a RPC, que é quem decide. O
+// atalho só vale quando dá para provar que a RPC não faria nada.
+
+export interface CasoConhecido {
+  google_calendar_event_id: string;
+  previsao_em: string | null;
+  mae_nome: string;
+  bebe_nome: string | null;
+  cor_calendar: string | null;
+  pacote_id: string | null;
+  maternidade_id: string | null;
+  click_home: boolean;
+  previsao_sem_hora: boolean;
+}
+
+export interface LeituraDoEvento {
+  mae: string;
+  bebe: string | null;
+  previsaoEm: string | null;
+  cor: string | null;
+  cancelado: boolean;
+  clickHome: boolean;
+  semHora: boolean;
+}
+
+export function casoJaEstaComoOEvento(caso: CasoConhecido, evento: LeituraDoEvento): boolean {
+  if (evento.cancelado) return false;
+  if (caso.pacote_id === null || caso.maternidade_id === null) return false;
+  if (evento.clickHome && !caso.click_home) return false;
+  if (caso.previsao_em === null || evento.previsaoEm === null) return false;
+  return (
+    caso.mae_nome === evento.mae &&
+    caso.bebe_nome === evento.bebe &&
+    Date.parse(caso.previsao_em) === Date.parse(evento.previsaoEm) &&
+    (caso.cor_calendar ?? null) === (evento.cor ?? null) &&
+    caso.previsao_sem_hora === evento.semHora
+  );
 }

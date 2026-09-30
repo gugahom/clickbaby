@@ -25,6 +25,11 @@ export interface CasoQuadro {
   bebeNome: string | null
   dia: string | null
   previsaoEm: string | null
+  /**
+   * O parto tem dia e ainda não tem hora (30/09/2026): `previsaoEm` é a
+   * meia-noite daquele dia e NÃO é horário — nada de hora no card nem alerta.
+   */
+  previsaoSemHora: boolean
   corCalendar: string | null
   observacao: string | null
   situacaoClinica: SituacaoClinica
@@ -253,6 +258,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     bebeNome: linha.bebe_nome,
     dia: linha.dia,
     previsaoEm: linha.previsao_em,
+    previsaoSemHora: linha.previsao_sem_hora ?? false,
     corCalendar: linha.cor_calendar,
     observacao: linha.observacao,
     situacaoClinica: linha.situacao_clinica ?? 'aguardando',
