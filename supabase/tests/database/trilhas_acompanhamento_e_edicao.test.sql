@@ -151,26 +151,28 @@ select is(
     where not exists (
       select 1 from public.pacote_etapas pe
       where pe.pacote_id = p.id and pe.etapa_tipo = 'reels')),
-  array['master', 'master-album'],
-  'só os dois MASTER ficam sem reels de fábrica; todos os outros têm'
+  array['master', 'master-album', 'newborn'],
+  'só os dois MASTER (e o NEWBORN, que é só o ensaio) ficam sem reels de fábrica; todos os outros têm'
 );
 
 select is(
   (select count(*)::int from public.pacotes p
     where not exists (
       select 1 from public.pacote_etapas pe
-      where pe.pacote_id = p.id and pe.etapa_tipo = 'edicao_foto')),
+      where pe.pacote_id = p.id and pe.etapa_tipo = 'edicao_foto')
+      and p.slug <> 'newborn'),
   0,
-  'TODO pacote tem edição de fotos'
+  'TODO pacote tem edição de fotos — menos o NEWBORN, cuja edição é a esteira da seção New Born'
 );
 
 select is(
   (select count(*)::int from public.pacotes p
     where not exists (
       select 1 from public.pacote_etapas pe
-      where pe.pacote_id = p.id and pe.etapa_tipo = 'nascimento')),
+      where pe.pacote_id = p.id and pe.etapa_tipo = 'nascimento')
+      and p.slug not in ('evento', 'newborn')),
   0,
-  'e todo pacote tem nascimento — é ele que arma o relógio do SLA e libera a edição'
+  'e todo pacote de PARTO tem nascimento — é ele que arma o relógio do SLA e libera a edição (no EVENTO, quem arma é o acompanhamento)'
 );
 
 

@@ -137,7 +137,11 @@ function anteriorPendente(
      * correto, porque o material que ela edita voltou a ser trabalho em curso.
      */
     const gatilho = etapa.rodada >= 2 ? 'fechamento' : 'nascimento'
-    const dependencia = etapas.find((e) => e.tipo === gatilho && e.rodada === 1)
+    // O EVENTO não tem parto (30/09/2026): o material é o do ACOMPANHAMENTO, e é
+    // ele que libera a edição — como o nascimento libera a do parto.
+    const dependencia =
+      etapas.find((e) => e.tipo === gatilho && e.rodada === 1) ??
+      (gatilho === 'nascimento' ? etapas.find((e) => e.tipo === 'acompanhamento' && e.rodada === 1) : undefined)
 
     // Sem a etapa gatilho não há o que esperar. Devolver null é o
     // comportamento seguro: a tela oferece a ação e o banco decide.

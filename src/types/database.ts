@@ -1135,6 +1135,7 @@ export type Database = {
           maternidade_nome: string | null
           maternidade_sigla: string | null
           motivo_cancelamento: string | null
+          na_secao: boolean | null
           na_uti: boolean | null
           nascimento_concluido_em: string | null
           observacao: string | null
@@ -1750,6 +1751,7 @@ export type Database = {
         | "saida_uti"
         | "alta"
         | "click_home"
+        | "acompanhamento"
       fase_album:
         | "aguardando_pagamento"
         | "aguardando_diagramacao"
@@ -1791,6 +1793,7 @@ export type Database = {
         | "video_master"
         | "fotolivro"
         | "new_born"
+        | "acompanhamento"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       papel_sistema:
         | "operador"
@@ -1985,6 +1988,7 @@ export const Constants = {
         "saida_uti",
         "alta",
         "click_home",
+        "acompanhamento",
       ],
       fase_album: [
         "aguardando_pagamento",
@@ -2030,6 +2034,7 @@ export const Constants = {
         "video_master",
         "fotolivro",
         "new_born",
+        "acompanhamento",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       papel_sistema: [

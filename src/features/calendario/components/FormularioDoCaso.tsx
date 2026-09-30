@@ -117,9 +117,15 @@ function FormularioDoCaso({
   // O MASTER + ÁLBUM já traz o Foto/Livro: a caixa aparece marcada e presa.
   const livroNoPacote = pacote ? /ALBUM/.test(pacote.nome.normalize('NFD').replace(/\p{Diacritic}/gu, '').toUpperCase()) : false
   const maternidade = cadastros.data?.maternidades.find((m) => m.id === maternidadeId)
-  const temBarra = maeNome.includes('/') || bebeNome.includes('/')
+  // EVENTO e NEWBORN (30/09/2026) não são parto: o evento guarda "EVENTO" como
+  // mãe e o NOME do evento no lugar do bebê, e nenhum dos dois leva adicional.
+  const ehEvento = pacote?.nome === 'EVENTO'
+  const ehNewborn = pacote?.nome === 'NEWBORN'
+  const maeEfetiva = ehEvento ? 'EVENTO' : maeNome
+  const temBarra = maeEfetiva.includes('/') || bebeNome.includes('/')
   const falta = [
-    maeNome.trim() === '' && 'o nome da mãe',
+    !ehEvento && maeNome.trim() === '' && 'o nome da mãe',
+    ehEvento && bebeNome.trim() === '' && 'o nome do evento',
     !pacote && 'o pacote',
     !maternidade && 'a maternidade',
     dia === '' && 'o dia',
@@ -130,15 +136,32 @@ function FormularioDoCaso({
 
   // O mesmo formato que o sync escreve no Google (evento-do-caso.ts) — aqui só
   // para MOSTRAR; quem escreve de verdade é o sync.
-  const titulo = `${maeNome.trim().toUpperCase() || 'MÃE'}/${bebeNome.trim().toUpperCase() || 'BEBÊ'} - ${
-    pacote?.nome ?? 'PACOTE'
-  }${clickHome ? ' + CLICK HOME' : ''} - ${maternidade?.sigla ?? 'MATERNIDADE'}`
+  const sigla = maternidade?.sigla ?? 'MATERNIDADE'
+  const bebeTitulo = bebeNome.trim().toUpperCase() || 'BEBÊ'
+  const titulo = ehEvento
+    ? `EVENTO/${bebeNome.trim().toUpperCase() || 'NOME DO EVENTO'} - ${sigla}`
+    : ehNewborn
+      ? `NEWBORN/${maeNome.trim().toUpperCase() || 'MÃE'}/${bebeTitulo} - ${sigla}`
+      : `${maeNome.trim().toUpperCase() || 'MÃE'}/${bebeTitulo} - ${pacote?.nome ?? 'PACOTE'}${
+          clickHome ? ' + CLICK HOME' : ''
+        } - ${sigla}`
   const cor = corDoGoogle(pacote?.cor_calendar ?? maternidade?.cor_calendar)
 
   function salvar() {
     if (falta.length > 0 || temBarra) return
     setErro(null)
-    const dados = { maeNome, bebeNome, pacoteId, maternidadeId, dia, hora, cesarea, observacao, clickHome, fotolivro }
+    const dados = {
+      maeNome: maeEfetiva,
+      bebeNome,
+      pacoteId,
+      maternidadeId,
+      dia,
+      hora,
+      cesarea: ehEvento || ehNewborn ? '' : cesarea,
+      observacao,
+      clickHome: clickHome && !ehEvento && !ehNewborn,
+      fotolivro: fotolivro && !ehEvento && !ehNewborn,
+    }
     const feito = caso ? editar.mutateAsync({ ...dados, casoId: caso.id }) : criar.mutateAsync(dados)
     feito
       .then(() => onPronto(dia))
@@ -166,8 +189,12 @@ function FormularioDoCaso({
     >
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso} />
-          <CampoTexto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional ajuda="Se ainda não tiver nome, deixe vazio." />
+          {!ehEvento && <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso} />}
+          {ehEvento ? (
+            <CampoTexto rotulo="Nome do evento" valor={bebeNome} aoMudar={setBebeNome} ajuda="Ex.: MKT, 60 ANOS, ENFERMAGEM." />
+          ) : (
+            <CampoTexto rotulo="Bebê" valor={bebeNome} aoMudar={setBebeNome} opcional ajuda="Se ainda não tiver nome, deixe vazio." />
+          )}
         </div>
         {temBarra && <p className="text-sm font-semibold text-atrasado">O nome não pode ter barra (/): ela separa mãe e bebê na agenda.</p>}
 
@@ -208,14 +235,16 @@ function FormularioDoCaso({
             opcional
             ajuda={hora === '' ? 'Hora a definir: no Google fica como dia inteiro.' : 'Apague para deixar a definir.'}
           />
-          <CampoTexto
-            rotulo="Hora da cesárea"
-            type="time"
-            valor={cesarea}
-            aoMudar={setCesarea}
-            opcional
-            ajuda="A hora marcada da cirurgia, no mesmo dia."
-          />
+          {!ehEvento && !ehNewborn && (
+            <CampoTexto
+              rotulo="Hora da cesárea"
+              type="time"
+              valor={cesarea}
+              aoMudar={setCesarea}
+              opcional
+              ajuda="A hora marcada da cirurgia, no mesmo dia."
+            />
+          )}
         </div>
         {mudouQuando && antes && (
           <p className="text-xs font-semibold text-foreground">
@@ -223,43 +252,48 @@ function FormularioDoCaso({
           </p>
         )}
 
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
-          <input
-            type="checkbox"
-            checked={clickHome}
-            disabled={caso?.clickHome === true}
-            onChange={(e) => setClickHome(e.target.checked)}
-            className="size-5 accent-marca"
-          />
-          <span className="text-sm">
-            <span className="font-semibold text-foreground">New Born</span>
-            <span className="text-muted-foreground">
-              {caso?.clickHome
-                ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção New Born.'
-                : ' — o ensaio Click Home foi vendido junto'}
-            </span>
-          </span>
-        </label>
+        {!ehEvento && !ehNewborn && (
+          <>
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
+              <input
+                type="checkbox"
+                checked={clickHome}
+                disabled={caso?.clickHome === true}
+                onChange={(e) => setClickHome(e.target.checked)}
+                className="size-5 accent-marca"
+              />
+              <span className="text-sm">
+                <span className="font-semibold text-foreground">New Born</span>
+                <span className="text-muted-foreground">
+                  {caso?.clickHome
+                    ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção New Born.'
+                    : ' — o ensaio Click Home foi vendido junto'}
+                </span>
+              </span>
+            </label>
 
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
-          <input
-            type="checkbox"
-            checked={fotolivro || livroNoPacote}
-            disabled={caso?.temFotolivro === true || livroNoPacote}
-            onChange={(e) => setFotolivro(e.target.checked)}
-            className="size-5 accent-marca"
-          />
-          <span className="text-sm">
-            <span className="font-semibold text-foreground">Foto/Livro</span>
-            <span className="text-muted-foreground">
-              {livroNoPacote
-                ? ' — já vem no pacote.'
-                : caso?.temFotolivro
-                  ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção Foto/Livro.'
-                  : ' — o fotolivro foi vendido junto'}
-            </span>
-          </span>
-        </label>
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
+              <input
+                type="checkbox"
+                checked={fotolivro || livroNoPacote}
+                disabled={caso?.temFotolivro === true || livroNoPacote}
+                onChange={(e) => setFotolivro(e.target.checked)}
+                className="size-5 accent-marca"
+              />
+              <span className="text-sm">
+                <span className="font-semibold text-foreground">Foto/Livro</span>
+                <span className="text-muted-foreground">
+                  {livroNoPacote
+                    ? ' — já vem no pacote.'
+                    : caso?.temFotolivro
+                      ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção Foto/Livro.'
+                      : ' — o fotolivro foi vendido junto'}
+                </span>
+              </span>
+            </label>
+
+          </>
+        )}
 
         <label className="block">
           <span className="text-sm font-medium">

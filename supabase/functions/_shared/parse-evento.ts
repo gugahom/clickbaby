@@ -49,6 +49,12 @@ const PACOTES_CANONICOS = [
   "MASTER+ALBUM",
   "BIRTH",
   "BIRTH+REELS",
+  // Não são parto (30/09/2026): o EVENTO e o ensaio NEWBORN. Entram na lista
+  // para o título que o PRÓPRIO sistema escreve voltar igual; os títulos da
+  // equipe são reconhecidos pelo começo — ver `PREFIXO_EVENTO` e
+  // `PREFIXO_NEWBORN`.
+  "EVENTO",
+  "NEWBORN",
 ] as const;
 
 // Maternidades conhecidas (seção 7 do CLAUDE.md).
@@ -166,6 +172,33 @@ function extrairMaternidadeDoFim(
 // na agenda; \s* entre as palavras cobre "CLICKHOME" digitado junto.
 const CLICK_HOME = /\s*[-+]?\s*CLICK\s*HOME\b/i;
 
+// EVENTO E NEWBORN PELO COMEÇO DO TÍTULO (30/09/2026, decisão do gestor).
+//
+// A equipe marca os dois na mesma agenda dos partos, e até aqui o parser os
+// lia como parto: "EVENTO/MKT - BASIC - HSC" virava um BASIC de uma mãe
+// chamada EVENTO; "NEWBORN/ANA/JOSÉ - BABY REELS - HSC", um parto de uma mãe
+// chamada NEWBORN. O pacote escrito no meio NÃO vale nos dois: no evento é o
+// que foi vendido à parte, no newborn é o pacote do PARTO daquela família — o
+// caso do ensaio tem o pacote dele.
+//   EVENTO/NOME - … - MATERNIDADE     (ou "EVENTO - NOME - MATERNIDADE")
+//     -> mãe "EVENTO", o nome do evento no lugar do bebê, pacote EVENTO
+//   NEWBORN/MÃE/BEBÊ - … - MATERNIDADE
+//     -> mãe e bebê da família, pacote NEWBORN
+const PREFIXO_EVENTO = /^EVENTO\s*[/-]\s*/i;
+const PREFIXO_NEWBORN = /^NEW\s*BORN\s*\/\s*/i;
+
+/** A maternidade no ÚLTIMO segmento, inteiro ou no fim dele. */
+function maternidadeDoUltimo(segmentos: string[]): string | null {
+  const ultimo = segmentos[segmentos.length - 1];
+  if (!ultimo) return null;
+  return combinaComSigla(ultimo) ??
+    extrairMaternidadeDoFim(ultimo.split(" ").filter((p) => p.length > 0))?.sigla ??
+    null;
+}
+
+const segmentar = (texto: string) =>
+  texto.split(/\s*-\s*/).map((s) => s.trim()).filter((s) => s.length > 0);
+
 export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
   let texto = titulo.trim();
 
@@ -179,6 +212,34 @@ export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
   // parse — nenhuma decisão é tomada com base na presença dele.
   if (texto.startsWith("*")) {
     texto = texto.slice(1).trim();
+  }
+
+  if (PREFIXO_EVENTO.test(texto)) {
+    const segmentos = segmentar(texto.replace(PREFIXO_EVENTO, ""));
+    if (segmentos.length === 0) return { tipo: "ignorar" };
+    return {
+      tipo: "caso",
+      mae: "EVENTO",
+      bebe: segmentos[0],
+      pacote_bruto: "EVENTO",
+      maternidade_sigla: segmentos.length > 1 ? maternidadeDoUltimo(segmentos.slice(1)) : null,
+      click_home: clickHome,
+    };
+  }
+
+  if (PREFIXO_NEWBORN.test(texto)) {
+    const resto = texto.replace(PREFIXO_NEWBORN, "");
+    const barra = resto.indexOf("/");
+    if (barra === -1) return { tipo: "ignorar" };
+    const segmentos = segmentar(resto.slice(barra + 1));
+    return {
+      tipo: "caso",
+      mae: resto.slice(0, barra).trim(),
+      bebe: segmentos[0] ?? "",
+      pacote_bruto: "NEWBORN",
+      maternidade_sigla: segmentos.length > 1 ? maternidadeDoUltimo(segmentos.slice(1)) : null,
+      click_home: clickHome,
+    };
   }
 
   const indiceBarra = texto.indexOf("/");

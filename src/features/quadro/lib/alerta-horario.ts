@@ -108,7 +108,11 @@ export function alertaDeHorario(
   if (caso.previsaoEm && !caso.previsaoSemHora && acompanhamentoParado) {
     candidatos.push({
       quando: new Date(caso.previsaoEm).getTime(),
-      oQue: ROTULO_ETAPA.entrada,
+      // EVENTO e NEWBORN não têm entrada (30/09/2026): o que chega na hora é o
+      // acompanhamento deles.
+      oQue: acompanhamento.some((e) => e.tipo === 'acompanhamento')
+        ? ROTULO_ETAPA.acompanhamento
+        : ROTULO_ETAPA.entrada,
     })
   }
 

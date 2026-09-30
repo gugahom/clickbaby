@@ -385,6 +385,9 @@ export function casosComClickHomeAberto(
       // Encerrado fica; cancelado sai — `mover_click_home` recusa cancelado, e
       // mostrar o cartão seria oferecer botão que o banco nega.
       if (caso.statusOperacional === 'cancelado') return false
+      // O NEWBORN só chega à seção depois do ensaio (30/09/2026, pedido do
+      // gestor): antes disso ele é o card do dia no Quadro, com o play.
+      if (caso.pacoteSlug === 'newborn' && !caso.naSecao && !caso.ehTerminal) return false
       return ensaiosAbertos(etapasPorCaso.get(caso.id) ?? []).length > 0
     })
     // Pela esteira, como o fotolivro: o prazo do pacote é do parto e venceu
