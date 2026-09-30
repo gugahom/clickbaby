@@ -21,7 +21,7 @@ export const ROTULO_DA_COLUNA: Record<ColunaDoConcluido, string> = {
 export const EXPLICACAO_DA_COLUNA: Record<ColunaDoConcluido, string> = {
   entregues: `Entregues há menos de ${DIAS_ATE_A_AVALIACAO} dias. A família ainda está com o material fresco.`,
   avaliacao: `Passaram ${DIAS_ATE_A_AVALIACAO} dias da entrega: é a hora de procurar a família e pedir a avaliação.`,
-  concluidos: 'Avaliação feita — e os casos cancelados, que não têm família para avaliar.',
+  concluidos: 'Avaliação feita — e os casos cancelados e os BIRTH, que não passam pela avaliação.',
 }
 
 /**
@@ -44,6 +44,11 @@ export const EXPLICACAO_DA_COLUNA: Record<ColunaDoConcluido, string> = {
  */
 export function colunaDoConcluido(caso: CasoQuadro, agora: Date): ColunaDoConcluido {
   if (caso.statusOperacional === 'cancelado') return 'concluidos'
+  // O BIRTH NÃO PASSA PELA AVALIAÇÃO (30/09/2026, pedido do gestor): ele é feito
+  // sem contrato, para tentar a venda — a ligação dos quinze dias é para a
+  // família que contratou. Encerrado, vai direto para a terceira coluna, e é
+  // lá que o link da venda se acrescenta (ver Entregaveis).
+  if ((caso.pacoteSlug ?? '').startsWith('birth')) return 'concluidos'
   if (caso.avaliacaoEm !== null) return 'concluidos'
   if (caso.encerradoEm === null) return 'concluidos'
 

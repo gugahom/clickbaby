@@ -1805,6 +1805,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   planilha já resolveu.
   **CANCELADO VAI DIRETO PARA "CONCLUÍDOS"** (decisão do gestor): contrato que caiu não tem
   família para avaliar.
+  **O BIRTH TAMBÉM** (30/09/2026, decisão do gestor): é feito sem contrato, para tentar a venda,
+  e não passa pela avaliação. E é na aba Concluídos que a VENDA dele entra: um BIRTH encerrado
+  aceita link novo, só **Google Drive** (tipo `google_drive`, migration `20260930202028`) e
+  **WeTransfer** — `registrar_entregavel` sempre aceitou caso em qualquer estado; quem limitava
+  era a tela.
   **E A ABA FICOU RESTRITA** ao mesmo par de papéis — atendimento e adm, ou seja, todo papel
   menos `operador` (`podeVerConcluidos`). Isso NÃO fere a invariante 3.1, que proíbe filtrar
   TRABALHO por tipo de pessoa: é permissão de tela por papel administrativo, como a Equipe

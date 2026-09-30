@@ -1843,6 +1843,7 @@ export type Database = {
         | "video"
         | "video_wetransfer"
         | "click_home"
+        | "google_drive"
       turno: "diurno" | "noturno" | "comercial"
     }
     CompositeTypes: {
@@ -2090,6 +2091,7 @@ export const Constants = {
         "video",
         "video_wetransfer",
         "click_home",
+        "google_drive",
       ],
       turno: ["diurno", "noturno", "comercial"],
     },
