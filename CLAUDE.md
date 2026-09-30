@@ -2258,32 +2258,41 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   COMBINADA (vídeo, Foto/Livro, New Born — o `previsao_em` da seção lateral) e PRAZO DO PACOTE
   (só de caso ainda não ENVIADO; vermelho quando venceu). Cancelado não aparece; o nascimento
   não vira item de etapa, porque o caso já é o item do parto.
-  **Mês e semana**, com a agenda do dia escolhido ao lado (o arranjo do relatório interno);
-  tocar num item abre o caso no Quadro (`/?caso=`). No celular, a grade do mês mostra só
-  bolinhas de cor, e a agenda desce. A visão e o dia moram no endereço.
-  **FERIADO SE MARCA NA AGENDA DO DIA**, só pelo ADM (`podeEditarCadastro`, espelho de
+  **O DESENHO É O DO EXEMPLO QUE O GESTOR MANDOU** (30/09/2026, "nosso calendário vai virar"
+  um `EventManager` de shadcn), feito com as PEÇAS DA CASA — o exemplo traria sete pacotes
+  (Radix, cva, lucide…) e um segundo sistema de botões, diálogos e selects; é o arranjo do sino
+  e da barra lateral. Quatro visões: **Mês**, **Semana** e **Dia** em GRADE DE HORAS (como no
+  Google, com a faixa "dia todo" em cima e a grade abrindo nas 6h) e **Lista** por dia. Busca
+  sem acento e três menus de filtro de marcar — Cores, Tipos, Maternidades —, com as etiquetas
+  dos ativos e "Limpar" (somam dentro do menu, cortam entre menus, como o relatório externo).
+  Passar o mouse num item abre o cartão de detalhes; tocar abre o detalhe, com "Abrir o caso no
+  Quadro". A visão e o dia moram no endereço. No celular, o mês mostra bolinhas e a semana rola
+  dentro da própria grade.
+  **FICOU DE FORA DO EXEMPLO, DE PROPÓSITO: arrastar para reagendar, editar e apagar.** Um caso
+  ligado ao Google é relido pelo sync a cada 25 segundos, e uma hora mudada aqui VOLTARIA
+  sozinha. Reagendar pelo calendário pede que o sistema atualize o evento no Google — próxima
+  etapa. Não implemente o arrastar antes disso.
+  **AS CORES SÃO AS DO GOOGLE, EM TODO ITEM**: o banho, o prazo e o vídeo de um caso vêm na cor
+  do caso (a regra do cadastro), e o tipo se lê no texto. **O que vem pela frente é COR CHEIA**
+  (a primeira versão tingia de leve e o gestor achou "muito apagado"), com o texto branco ou
+  escuro de mais contraste (`textoSobre`: o branco do Google fica abaixo de 3:1 no Banana e no
+  Pavão). **O que já passou, ou já foi feito, fica em FUNDO BRANCO COM A BOLINHA da cor** —
+  pedido dele, "como no calendar", depois de ver e recusar uma versão ESMAECIDA (opacidade), que
+  lia como defeito. A exceção é o PRAZO VENCIDO SEM ENVIO, vermelho cheio mesmo no passado. A
+  regra é `aparencia`, em `lib/estilos.ts`. Sem cor, a padrão da agenda (Pavão: no print do
+  Google da equipe, a HNSF aparece assim). O seed fictício grava a cor pela regra do cadastro.
+  **FERIADO SE MARCA NA VISÃO DO DIA**, só pelo ADM (`podeEditarCadastro`, espelho de
   `eh_adm()` — a policy `feriados_escrita_adm` já existia, e o INSERT/DELETE é direto, como todo
   cadastro). Ele muda o prazo dos dois MASTER na hora, porque `quadro_casos` recalcula
   `vence_em` na leitura: conferido no local, um MASTER nascido em 09/10 vence em 23/10 e, com
-  12/10 marcado, em 26/10. Por isso o Quadro recarrega junto e a frase embaixo do botão avisa.
+  12/10 marcado, em 26/10. Por isso o Quadro recarrega junto, e o botão avisa no `title`.
   Sem Realtime próprio: o calendário relê a cada 2 minutos — o que muda nele muda no Quadro.
-  **CRIA CASO** (segunda volta do mesmo dia, "ele está entrando para substituir"): "+ Novo
-  caso" no alto e "+ Novo caso neste dia" na agenda, só para o adm (`eh_adm`, os quatro papéis
-  administrativos — o atendimento vê e não cria). O formulário é o título do Google em campos:
-  mãe, bebê (opcional), pacote e maternidade em LISTA COM BUSCA (pedido do gestor; a busca só
-  filtra, o valor sai de lista fechada — daqui não sai rascunho pendente), dia, hora, e New
-  Born. Antes de salvar ele mostra o evento como vai aparecer no Google — título e cor.
-  **OS PARTOS VÊM NA COR DO GOOGLE** (pedido do gestor: "as cores não foram trazidas"), em COR
-  CHEIA na grade e na semana (a primeira versão tingia de leve e ele achou "muito apagado"),
-  com o texto branco ou escuro que tiver mais contraste com cada cor (`textoSobre`: o branco do
-  Google fica abaixo de 3:1 no Banana e no Pavão), e barra colorida na agenda do dia — a mesma
-  organização que a equipe lê na agenda dela.
-  **O QUE JÁ PASSOU CHAMA MENOS ATENÇÃO**, como no Google (pedido do gestor): item cujo horário
-  ficou para trás (ou o dia, quando não tem hora), ou que já foi feito, fica esmaecido em todas
-  as visões (`esmaecido`, em `lib/estilos.ts`). A exceção é o PRAZO VENCIDO SEM ENVIO, que
-  continua em vermelho forte: está no passado e é o que ainda pede alguém. Sem cor, a padrão da agenda (Pavão: no print do Google da
-  equipe, a HNSF, que não tem cor, aparece assim). Os outros tipos de item seguem com as cores
-  da casa. O seed fictício passou a gravar a cor pela regra do cadastro.
+  **CRIA CASO** ("ele está entrando para substituir"): "+ Novo caso" no alto e "+ Novo caso
+  neste dia" na visão do dia, só para o adm (`eh_adm`, os quatro papéis administrativos — o
+  atendimento vê e não cria). O formulário é o título do Google em campos: mãe, bebê
+  (opcional), pacote e maternidade em LISTA COM BUSCA (a busca só filtra, o valor sai de lista
+  fechada — daqui não sai rascunho pendente), dia, hora, e New Born. Antes de salvar ele mostra
+  o evento como vai aparecer no Google — título e cor.
   O caminho até o Google está na seção 7.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,

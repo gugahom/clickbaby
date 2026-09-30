@@ -48,7 +48,7 @@ export function emBrasilia(instante: string): { dia: string; hora: string } {
 /** A meia-noite de Brasília daquele dia, como instante — para filtrar timestamptz. */
 export const inicioDoDiaEmBrasilia = (data: string) => `${data}T00:00:00-03:00`
 
-export type Visao = 'mes' | 'semana'
+export type Visao = 'mes' | 'semana' | 'dia' | 'lista'
 
 /**
  * O PERÍODO DA TELA. O mês é a GRADE inteira — de domingo a sábado, com as
@@ -59,6 +59,17 @@ export type Visao = 'mes' | 'semana'
 export function periodoDaVisao(visao: Visao, ancora: string): { inicio: string; fim: string; dias: string[] } {
   let inicio: string
   let total: number
+  if (visao === 'dia') {
+    return { inicio: ancora, fim: ancora, dias: [ancora] }
+  }
+  if (visao === 'lista') {
+    // A lista é o MÊS, sem as pontas dos vizinhos que a grade mostra.
+    const primeiro = `${ancora.slice(0, 7)}-01`
+    const ultimo = somarDias(`${proximoMes(ancora.slice(0, 7))}-01`, -1)
+    const n = Math.round((emUtc(ultimo).getTime() - emUtc(primeiro).getTime()) / 86_400_000) + 1
+    const dias = Array.from({ length: n }, (_, i) => somarDias(primeiro, i))
+    return { inicio: primeiro, fim: ultimo, dias }
+  }
   if (visao === 'semana') {
     inicio = somarDias(ancora, -diaDaSemana(ancora))
     total = 7
@@ -80,6 +91,7 @@ export function proximoMes(mes: string): string {
 
 /** A âncora da próxima tela: um mês ou uma semana para frente (ou para trás). */
 export function deslocar(visao: Visao, ancora: string, sentido: 1 | -1): string {
+  if (visao === 'dia') return somarDias(ancora, sentido)
   if (visao === 'semana') return somarDias(ancora, 7 * sentido)
   const mes = ancora.slice(0, 7)
   if (sentido === 1) return `${proximoMes(mes)}-01`
@@ -111,3 +123,17 @@ export const rotuloDoDia = (data: string) => formatar(data, { weekday: 'long', d
 export const diaDaSemanaCurto = (data: string) => formatar(data, { weekday: 'short' })
 
 export const NOMES_DOS_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+/** "Quarta-feira, 14 de outubro de 2026" */
+export const rotuloDoDiaCompleto = (data: string) => {
+  const t = formatar(data, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+/** "out" */
+export const mesCurto = (data: string) => formatar(data, { month: 'short' })
+
+/** A hora e o minuto de agora em Brasília, "14:05" — para a linha do "agora" nas grades de hora. */
+export function horaEmBrasilia(): string {
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date())
+}

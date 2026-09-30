@@ -44,8 +44,17 @@ export interface ItemDoCalendario {
   /** Prazo que passou sem envio. */
   vencido: boolean
   rascunho: boolean
-  /** A cor do evento no Google (colorId), só nos partos — a da agenda da equipe. */
+  /**
+   * A cor do evento do CASO no Google (colorId). Todo item de um caso usa a
+   * cor dele — o banho da Ana é da cor do parto da Ana —, e o tipo se lê no
+   * texto ("Banho", "Vence o prazo"), como no Google.
+   */
   corDoGoogle: string | null
+  /** Para os filtros. */
+  maternidade: string | null
+  pacote: string | null
+  /** Quem está com a etapa; nulo no parto e no prazo. */
+  responsavel: string | null
 }
 
 export interface Feriado {
@@ -113,7 +122,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       supabase
         .from('caso_etapas')
         .select(
-          'id, caso_id, tipo, trilha, status, previsao_em, caso:casos!caso_etapas_caso_id_fkey(mae_nome, bebe_nome, status_operacional), responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome)',
+          'id, caso_id, tipo, trilha, status, previsao_em, caso:casos!caso_etapas_caso_id_fkey(mae_nome, bebe_nome, status_operacional, cor_calendar, maternidade:maternidades(sigla), pacote:pacotes(nome)), responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome)',
           { count: 'exact' },
         )
         .gte('previsao_em', de)
@@ -149,6 +158,9 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       vencido: false,
       rascunho: c.eh_rascunho === true,
       corDoGoogle: c.cor_calendar,
+      maternidade: c.maternidade_sigla,
+      pacote: c.pacote_nome,
+      responsavel: null,
       passou: false,
     })
   }
@@ -168,7 +180,10 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       feito: false,
       vencido: new Date(c.vence_em).getTime() < agora && !c.na_uti,
       rascunho: false,
-      corDoGoogle: null,
+      corDoGoogle: c.cor_calendar,
+      maternidade: c.maternidade_sigla,
+      pacote: c.pacote_nome,
+      responsavel: null,
       passou: false,
     })
   }
@@ -189,7 +204,10 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       feito: e.status === 'concluida',
       vencido: false,
       rascunho: false,
-      corDoGoogle: null,
+      corDoGoogle: e.caso?.cor_calendar ?? null,
+      maternidade: e.caso?.maternidade?.sigla ?? null,
+      pacote: e.caso?.pacote?.nome ?? null,
+      responsavel: e.responsavel?.nome ?? null,
       passou: false,
     })
   }
