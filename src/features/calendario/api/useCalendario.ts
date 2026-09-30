@@ -42,6 +42,8 @@ export interface ItemDoCalendario {
   /** Prazo que passou sem envio. */
   vencido: boolean
   rascunho: boolean
+  /** A cor do evento no Google (colorId), só nos partos — a da agenda da equipe. */
+  corDoGoogle: string | null
 }
 
 export interface Feriado {
@@ -76,7 +78,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
   const agora = Date.now()
 
   const colunasDoCaso =
-    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti'
+    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti, cor_calendar'
 
   const [partos, prazos, etapas, feriados] = await Promise.all([
     buscarTudo((a, b) =>
@@ -144,6 +146,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       feito: c.nascimento_concluido_em !== null,
       vencido: false,
       rascunho: c.eh_rascunho === true,
+      corDoGoogle: c.cor_calendar,
     })
   }
 
@@ -162,6 +165,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       feito: false,
       vencido: new Date(c.vence_em).getTime() < agora && !c.na_uti,
       rascunho: false,
+      corDoGoogle: null,
     })
   }
 
@@ -181,6 +185,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       feito: e.status === 'concluida',
       vencido: false,
       rascunho: false,
+      corDoGoogle: null,
     })
   }
 
@@ -229,6 +234,46 @@ export function useTirarFeriado() {
     mutationFn: async (data: string) => {
       const { error } = await supabase.from('feriados').delete().eq('data', data)
       if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      agendarRecargaDoQuadro(queryClient)
+      return queryClient.invalidateQueries({ queryKey: [CHAVE] })
+    },
+  })
+}
+
+/**
+ * CRIAR CASO PELO CALENDÁRIO (`criar_caso`, migration 20260930092734). O caso
+ * nasce com as etapas do pacote e PENDENTE de ir ao Google: o sync escreve o
+ * evento no ciclo seguinte (até ~25 segundos). A previsão vai com o fuso de
+ * Brasília explícito — sem ele, o navegador de quem cria decidiria o horário.
+ */
+export interface NovoCaso {
+  maeNome: string
+  bebeNome: string
+  pacoteId: string
+  maternidadeId: string
+  /** 'YYYY-MM-DD' */
+  dia: string
+  /** 'HH:MM' */
+  hora: string
+  clickHome: boolean
+}
+
+export function useCriarCaso() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (n: NovoCaso): Promise<string> => {
+      const { data, error } = await supabase.rpc('criar_caso', {
+        p_mae_nome: n.maeNome,
+        p_bebe_nome: n.bebeNome,
+        p_pacote_id: n.pacoteId,
+        p_maternidade_id: n.maternidadeId,
+        p_previsao_em: `${n.dia}T${n.hora}:00-03:00`,
+        p_click_home: n.clickHome,
+      })
+      if (error) throw new Error(error.message)
+      return data
     },
     onSuccess: () => {
       agendarRecargaDoQuadro(queryClient)

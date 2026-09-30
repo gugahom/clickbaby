@@ -184,6 +184,12 @@ export interface ResumoSync {
    * (que é sobre o TÍTULO não ter '/', não sobre a IDADE do evento).
    */
   fora_da_janela: number;
+  /**
+   * Casos criados pelo CALENDÁRIO DO SISTEMA que viraram evento no Google neste
+   * ciclo (30/09/2026). Não entram em `criados`: aquele conta caso novo NO
+   * SISTEMA a partir do Google, este conta o caminho de volta.
+   */
+  enviados_ao_google: number;
   // SEM o título do evento, deliberadamente. O título do Calendar é
   // "MÃE/BEBÊ - PACOTE [MATERNIDADE]" — nome de mãe e de recém-nascido, que
   // a seção 10 do CLAUDE.md trata como dado sensível de saúde e de menor.
@@ -204,6 +210,7 @@ export function novoResumoVazio(): ResumoSync {
     sem_horario: 0,
     deletados: 0,
     fora_da_janela: 0,
+    enviados_ao_google: 0,
     erros: [],
   };
 }

@@ -396,6 +396,7 @@ pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabr
 mover_fase_de_campo(p_caso_etapa_id, p_fase)     -- só entrada e nascimento; qualquer pessoa ativa
 
 -- caso
+criar_caso(p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- pelo calendário; adm (30/09/2026)
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
@@ -432,6 +433,7 @@ metricas_dentro_do_padrao(p_inicio, p_fim)  -- quantas etapas ficaram dentro do 
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 sync_marcar_click_home(p_google_event_id)               -- o "+ CLICK HOME" do título
+sync_casos_para_o_google() / sync_vincular_evento_google(p_caso_id, p_google_event_id) -- o caminho de volta (30/09/2026)
 ```
 
 **Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` continua por UPDATE
@@ -691,11 +693,46 @@ O cliente sinaliza cancelamento colorindo o evento de cinza no Calendar. O sync 
 cor e chama `sync_cancelar_caso`, preenchendo `motivo_cancelamento` com um texto padrão (ex.:
 `"Cancelado via Google Calendar (card cinza)"`). Elimina o retrabalho de cancelar duas vezes.
 
-### Cor herdada, não interpretada
+### Cor herdada, não interpretada — e, desde 30/09/2026, com regra para ESCREVER
 
 `casos.cor_calendar` guarda a cor do evento como veio, sem tentar decodificar o que significa
-(é organização interna do cliente — provavelmente por maternidade ou responsável). O Quadro
-só herda e exibe.
+(é organização interna do cliente). O Quadro só herda e exibe.
+
+Para o sistema ESCREVER um evento (o caminho de volta, logo abaixo), a cor precisou de regra,
+e ela foi MEDIDA nos 317 casos do remoto, não suposta: **BIRTH e BIRTH + REELS são tomate
+(11) em qualquer maternidade**; o resto segue a MATERNIDADE — GNDI banana (5), HSC mirtilo
+(9), HNSG uva (3), CWB manjericão (10), HNSF a cor padrão da agenda. Rocio, Mackenzie e
+Marilac ficaram sem cor por falta de padrão. A regra mora no CADASTRO
+(`pacotes.cor_calendar` ganha de `maternidades.cor_calendar`), e uma constraint proíbe o
+grafite (8): ele é o card cinza, e um evento criado com ele seria cancelado pelo próprio sync.
+
+### O caminho de volta: caso criado no sistema vira evento no Google (30/09/2026)
+
+O calendário do sistema cria caso (`criar_caso`, só adm) e ele vai para o Google — que
+continua completo como contingência, decisão do usuário. **Quem escreve é o próprio sync**,
+não uma Edge Function nova: `criar_caso` marca `casos.google_pendente`, e no começo de cada
+ciclo `enviarCasosAoGoogle` lê os pendentes (`sync_casos_para_o_google`, por função e não pela
+tabela — o GRANT de `service_role` em `casos` diverge entre local e remoto, dívida #5), cria o
+evento e liga o id (`sync_vincular_evento_google`). O que falhar fica pendente e volta no
+ciclo seguinte.
+- **O ID DO EVENTO VEM DO ID DO CASO** ("cb" + o uuid sem hífens). O Google aceita id
+  escolhido pelo cliente, e isso torna a escrita idempotente: a segunda tentativa recebe 409 e
+  só liga. Sem isso, uma queda entre criar o evento e ligá-lo deixaria evento duplicado.
+- **O TÍTULO VOLTA IGUAL**: "MÃE/BEBÊ - PACOTE[ + CLICK HOME] - SIGLA", com "BEBÊ" quando não
+  há nome. Depois de ligado, o sync relê o título a cada ciclo e ATUALIZA o caso a partir dele,
+  como faz com todo evento conhecido; um título que o parser lesse diferente trocaria o
+  checklist sozinho. `evento-do-caso.test.ts` passa toda combinação do cadastro (288) pelo
+  parser. **Pacote ou maternidade nova entra nesse teste.**
+- **DEPOIS DE LIGADO, O CASO SEGUE O GOOGLE** — nome, pacote, maternidade e hora. Mudar a hora
+  ainda é no Google, até a próxima etapa (editar pelo calendário e aposentar a leitura).
+- **APAGAR OU PINTAR DE CINZA O EVENTO NÃO CANCELA** um caso criado pelo sistema: a criação
+  grava `caso_criado` com a pessoa, e `caso_tem_trabalho` conta ação humana. O que nasceu de um
+  gesto no sistema se desfaz por `cancelar_caso`.
+- **ESCOPO E PERMISSÃO**: o token passou de `calendar.readonly` para `calendar.events` (só
+  eventos — nada de agenda nem compartilhamento), e a conta de serviço precisa ter, na agenda,
+  "Fazer alterações nos eventos". Sem a permissão a leitura continua e a escrita dá 403: o caso
+  fica pendente, com o erro no resumo do sync (sem título, como sempre).
+- **Ainda não faz:** cancelar no sistema não pinta o evento de cinza no Google.
 
 ### Implementação
 
@@ -2230,6 +2267,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `vence_em` na leitura: conferido no local, um MASTER nascido em 09/10 vence em 23/10 e, com
   12/10 marcado, em 26/10. Por isso o Quadro recarrega junto e a frase embaixo do botão avisa.
   Sem Realtime próprio: o calendário relê a cada 2 minutos — o que muda nele muda no Quadro.
+  **CRIA CASO** (segunda volta do mesmo dia, "ele está entrando para substituir"): "+ Novo
+  caso" no alto e "+ Novo caso neste dia" na agenda, só para o adm (`eh_adm`, os quatro papéis
+  administrativos — o atendimento vê e não cria). O formulário é o título do Google em campos:
+  mãe, bebê (opcional), pacote e maternidade em PÍLULAS de escolha (seção 6 — daqui não sai
+  rascunho pendente), dia, hora, e New Born. Antes de salvar ele mostra o evento como vai
+  aparecer no Google — título e cor. Nos partos, a agenda do dia mostra a bolinha da cor do
+  Google. O caminho até o Google está na seção 7.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha

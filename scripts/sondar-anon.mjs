@@ -190,6 +190,19 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
   sync_marcar_click_home: { p_google_event_id: 'sonda' },
+  // Criar caso pelo calendário (20260930092734). Argumentos que a RPC recusa
+  // antes de escrever (sem nome, sem pacote), para a sonda nunca criar nada nem
+  // no pior caso. As duas do sync são só do service_role.
+  criar_caso: {
+    p_mae_nome: '',
+    p_bebe_nome: null,
+    p_pacote_id: null,
+    p_maternidade_id: null,
+    p_previsao_em: null,
+    p_click_home: false,
+  },
+  sync_casos_para_o_google: {},
+  sync_vincular_evento_google: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_google_event_id: '' },
   // As métricas das pessoas (20260929020655). Quem alcançasse estas RPCs leria
   // o desempenho de cada pessoa da equipe — ou reescreveria a régua de tempo.
   metricas_por_etapa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },

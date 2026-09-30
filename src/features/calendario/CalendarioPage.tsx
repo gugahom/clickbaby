@@ -7,6 +7,7 @@ import { podeEditarCadastro } from '@/features/quadro/lib/acoes'
 import { Segmentado } from '@/features/relatorios/components/Segmentado'
 import { useCalendario, type Feriado, type ItemDoCalendario, type TipoDeItem } from './api/useCalendario'
 import { AgendaDoDia } from './components/AgendaDoDia'
+import { NovoCasoDialogo } from './components/NovoCasoDialogo'
 import { ColunasDaSemana, GradeDoMes } from './components/GradeDoCalendario'
 import {
   deslocar,
@@ -26,9 +27,10 @@ import { TIPOS } from './lib/estilos'
  * pacote de quem ainda não foi enviado. E marca FERIADO, que a tabela esperava
  * desde 27/08 (dívida #9).
  *
- * As próximas etapas, em PRs próprias: a ESCALA de plantão (na seção Equipe,
- * pedido do gestor) e marcar o parto aqui mesmo. O Google Calendar continua
- * sendo a entrada dos casos até lá.
+ * CRIA CASO desde 30/09/2026 (segunda volta, "ele está entrando para
+ * substituir"): o ADM marca o parto aqui, e o sync escreve o evento no Google
+ * — que continua completo como contingência. Ver `NovoCasoDialogo`. A ESCALA
+ * de plantão (na seção Equipe) é a próxima etapa.
  *
  * QUEM VÊ: todos menos as fotógrafas (decisão do gestor) — o mesmo recorte da
  * aba Concluídos (`podeVerConcluidos`). É regra de TELA: a RLS não mudou.
@@ -47,6 +49,9 @@ export function CalendarioPage() {
   const dataDaUrl = params.get('dia')
   const escolhido = dataDaUrl && /^\d{4}-\d{2}-\d{2}$/.test(dataDaUrl) ? dataDaUrl : hoje
   const [escondidos, setEscondidos] = useState<Set<TipoDeItem>>(new Set())
+  // O dia com que o formulário de caso novo abre; nulo = fechado.
+  const [novoCasoEm, setNovoCasoEm] = useState<string | null>(null)
+  const ehAdm = podeEditarCadastro(pessoa?.papelSistema ?? '')
 
   const periodo = periodoDaVisao(visao, escolhido)
   const calendario = useCalendario(periodo.inicio, periodo.fim)
@@ -114,6 +119,11 @@ export function CalendarioPage() {
           onTrocar={(v) => irPara(escolhido, v)}
         />
         {calendario.isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
+        {ehAdm && (
+          <Botao variante="primario" className="ml-auto" onClick={() => setNovoCasoEm(escolhido)}>
+            + Novo caso
+          </Botao>
+        )}
       </div>
 
       {/* A LEGENDA É O FILTRO: tocar num tipo esconde ou mostra. */}
@@ -179,10 +189,21 @@ export function CalendarioPage() {
               dia={escolhido}
               itens={porDia.get(escolhido) ?? []}
               feriado={feriados.get(escolhido)}
-              podeMarcarFeriado={podeEditarCadastro(pessoa?.papelSistema ?? '')}
+              podeMarcarFeriado={ehAdm}
+              onNovoCaso={ehAdm ? () => setNovoCasoEm(escolhido) : undefined}
             />
           </div>
         </div>
+      )}
+      {novoCasoEm && (
+        <NovoCasoDialogo
+          diaInicial={novoCasoEm}
+          onFechar={() => setNovoCasoEm(null)}
+          onCriado={(dia) => {
+            setNovoCasoEm(null)
+            irPara(dia)
+          }}
+        />
       )}
     </div>
   )

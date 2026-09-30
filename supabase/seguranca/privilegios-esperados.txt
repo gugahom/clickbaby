@@ -17,6 +17,7 @@ GRANT ALL ON FUNCTION public.concluir_etapa_com_entregaveis(p_caso_etapa_id uuid
 GRANT ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.confirmar_entrega_do_click_home(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.confirmar_entrega_do_video(p_caso_etapa_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.criar_caso(p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_click_home boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_padrao_de_tempo(p_etapa_tipo public.etapa_tipo, p_minutos integer) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_pontos_do_item(p_item public.item_de_pontuacao, p_pontos numeric) TO authenticated;
@@ -109,6 +110,7 @@ REVOKE ALL ON FUNCTION public.configurar_segredo_do_sync(p_nome text, p_valor te
 REVOKE ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.confirmar_entrega_do_click_home(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.confirmar_entrega_do_video(p_caso_etapa_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.criar_caso(p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_click_home boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_padrao_de_tempo(p_etapa_tipo public.etapa_tipo, p_minutos integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_pontos_do_item(p_item public.item_de_pontuacao, p_pontos numeric) FROM PUBLIC;
@@ -175,7 +177,9 @@ REVOKE ALL ON FUNCTION public.retornar_da_uti(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.somar_dias_uteis(p_inicio timestamp with time zone, p_dias integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.sync_cancelar_caso(p_google_event_id text, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_casos_para_o_google() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.sync_marcar_click_home(p_google_event_id text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.sync_upsert_caso(p_google_event_id text, p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_cor_calendar text, p_cancelado boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_vincular_evento_google(p_caso_id uuid, p_google_event_id text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.tipo_tem_segunda_rodada(p_tipo public.etapa_tipo) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) FROM PUBLIC;

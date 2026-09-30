@@ -5,6 +5,7 @@ import { Botao } from '@/components/ui/Botao'
 import { IconeCheck } from '@/components/ui/icones'
 import { useMarcarFeriado, useTirarFeriado, type Feriado, type ItemDoCalendario } from '../api/useCalendario'
 import { rotuloDoDia } from '../lib/datas'
+import { corDoGoogle } from '../lib/coresGoogle'
 import { estiloDoItem } from '../lib/estilos'
 
 /**
@@ -23,11 +24,14 @@ export function AgendaDoDia({
   itens,
   feriado,
   podeMarcarFeriado,
+  onNovoCaso,
 }: {
   dia: string
   itens: ItemDoCalendario[]
   feriado: Feriado | undefined
   podeMarcarFeriado: boolean
+  /** Presente só para quem cria caso (o ADM). */
+  onNovoCaso?: (() => void) | undefined
 }) {
   return (
     <section className="rounded-painel border border-border bg-card p-4" aria-label={`Agenda de ${rotuloDoDia(dia)}`}>
@@ -67,7 +71,17 @@ export function AgendaDoDia({
                       {item.titulo}
                       {item.vencido && ' · vencido'}
                     </span>
-                    <span className="mt-0.5 block truncate font-semibold text-foreground">{item.nome}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 font-semibold text-foreground">
+                      {/* A bolinha da cor do evento no Google: a mesma que a equipe vê lá. */}
+                      {corDoGoogle(item.corDoGoogle) && (
+                        <span
+                          className="size-2.5 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: corDoGoogle(item.corDoGoogle)?.hex }}
+                          title={`Cor na agenda do Google: ${corDoGoogle(item.corDoGoogle)?.nome}`}
+                        />
+                      )}
+                      <span className="truncate">{item.nome}</span>
+                    </span>
                     <span className="block truncate text-xs text-muted-foreground">{item.detalhe}</span>
                   </span>
                 </Link>
@@ -75,6 +89,12 @@ export function AgendaDoDia({
             )
           })}
         </ul>
+      )}
+
+      {onNovoCaso && (
+        <Botao variante="contorno" className="mt-3 w-full" onClick={onNovoCaso}>
+          + Novo caso neste dia
+        </Botao>
       )}
 
       {podeMarcarFeriado && (
