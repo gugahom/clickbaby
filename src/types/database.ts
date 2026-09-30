@@ -235,6 +235,7 @@ export type Database = {
           criado_por: string | null
           encerrado_em: string | null
           google_calendar_event_id: string | null
+          google_pendente: boolean
           id: string
           liberado_para_entrega_em: string | null
           liberado_para_entrega_por: string | null
@@ -263,6 +264,7 @@ export type Database = {
           criado_por?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
+          google_pendente?: boolean
           id?: string
           liberado_para_entrega_em?: string | null
           liberado_para_entrega_por?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           criado_por?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
+          google_pendente?: boolean
           id?: string
           liberado_para_entrega_em?: string | null
           liberado_para_entrega_por?: string | null
@@ -751,6 +754,7 @@ export type Database = {
       maternidades: {
         Row: {
           ativo: boolean
+          cor_calendar: string | null
           created_at: string
           id: string
           nome: string
@@ -759,6 +763,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cor_calendar?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -767,6 +772,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cor_calendar?: string | null
           created_at?: string
           id?: string
           nome?: string
@@ -848,6 +854,7 @@ export type Database = {
       pacotes: {
         Row: {
           ativo: boolean
+          cor_calendar: string | null
           created_at: string
           id: string
           nome: string
@@ -858,6 +865,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cor_calendar?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -868,6 +876,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cor_calendar?: string | null
           created_at?: string
           id?: string
           nome?: string
@@ -1201,6 +1210,17 @@ export type Database = {
       confirmar_entrega_do_video: {
         Args: { p_caso_etapa_id: string }
         Returns: undefined
+      }
+      criar_caso: {
+        Args: {
+          p_bebe_nome: string
+          p_click_home?: boolean
+          p_mae_nome: string
+          p_maternidade_id: string
+          p_pacote_id: string
+          p_previsao_em: string
+        }
+        Returns: string
       }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
       definir_padrao_de_tempo: {
@@ -1594,6 +1614,19 @@ export type Database = {
         Args: { p_google_event_id: string; p_motivo?: string }
         Returns: string
       }
+      sync_casos_para_o_google: {
+        Args: never
+        Returns: {
+          bebe_nome: string
+          caso_id: string
+          click_home: boolean
+          cor_calendar: string
+          mae_nome: string
+          maternidade_sigla: string
+          pacote_nome: string
+          previsao_em: string
+        }[]
+      }
       sync_marcar_click_home: {
         Args: { p_google_event_id: string }
         Returns: string
@@ -1609,6 +1642,10 @@ export type Database = {
           p_pacote_id: string
           p_previsao_em: string
         }
+        Returns: string
+      }
+      sync_vincular_evento_google: {
+        Args: { p_caso_id: string; p_google_event_id: string }
         Returns: string
       }
       tipo_tem_segunda_rodada: {

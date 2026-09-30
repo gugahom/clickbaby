@@ -4,16 +4,21 @@ import { supabase } from '@/lib/supabase'
 export interface PacoteOpcao {
   id: string
   nome: string
+  /** A cor do evento no Google, quando o pacote tem uma (os dois BIRTH). */
+  cor_calendar: string | null
 }
 
 export interface MaternidadeOpcao {
   id: string
   sigla: string
   nome: string
+  /** A cor do evento no Google para esta maternidade. */
+  cor_calendar: string | null
 }
 
 /**
- * Pacotes e maternidades para os seletores de completar rascunho.
+ * Pacotes e maternidades para os seletores de completar rascunho e de criar
+ * caso pelo calendário (que também lê a cor de cada um).
  *
  * Cadastro muda em escala de meses, então o cache é longo. Não entra na query
  * do Quadro porque não muda com ela: o Quadro invalida a cada ação, e
@@ -28,8 +33,8 @@ export function useCadastros(ativo: boolean) {
     staleTime: 30 * 60 * 1000,
     queryFn: async () => {
       const [pacotes, maternidades] = await Promise.all([
-        supabase.from('pacotes').select('id, nome').eq('ativo', true).order('nome'),
-        supabase.from('maternidades').select('id, sigla, nome').eq('ativo', true).order('sigla'),
+        supabase.from('pacotes').select('id, nome, cor_calendar').eq('ativo', true).order('nome'),
+        supabase.from('maternidades').select('id, sigla, nome, cor_calendar').eq('ativo', true).order('sigla'),
       ])
       if (pacotes.error) throw pacotes.error
       if (maternidades.error) throw maternidades.error

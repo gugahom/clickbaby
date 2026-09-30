@@ -180,6 +180,13 @@ begin
       returning id into v_caso;
       v_criados := v_criados + 1;
 
+      -- A cor do evento no Google, pela regra do cadastro (20260930092734):
+      -- sem ela o calendário local mostraria todo parto na cor padrão.
+      update public.casos c
+         set cor_calendar = coalesce(p.cor_calendar, m.cor_calendar)
+        from public.pacotes p, public.maternidades m
+       where c.id = v_caso and p.id = c.pacote_id and m.id = c.maternidade_id;
+
       -- Quem vai à maternidade: escolha ponderada pelo peso de campo.
       select p.id into v_campo from perfil p
        cross join lateral generate_series(1, p.campo)

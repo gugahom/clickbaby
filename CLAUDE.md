@@ -396,6 +396,7 @@ pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabr
 mover_fase_de_campo(p_caso_etapa_id, p_fase)     -- só entrada e nascimento; qualquer pessoa ativa
 
 -- caso
+criar_caso(p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- pelo calendário; adm (30/09/2026)
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
@@ -432,6 +433,7 @@ metricas_dentro_do_padrao(p_inicio, p_fim)  -- quantas etapas ficaram dentro do 
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
 sync_marcar_click_home(p_google_event_id)               -- o "+ CLICK HOME" do título
+sync_casos_para_o_google() / sync_vincular_evento_google(p_caso_id, p_google_event_id) -- o caminho de volta (30/09/2026)
 ```
 
 **Ainda NÃO existe:** `atualizar_situacao_clinica`. `situacao_clinica` continua por UPDATE
@@ -500,6 +502,7 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
     /auth
     /relatorios      o relatório interno das pessoas (28/09/2026) e, em /externo, o da
                      operação inteira com filtros (29/09/2026) — ver a seção 13
+    /calendario      partos, horas marcadas, prazos e feriados (30/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -690,11 +693,46 @@ O cliente sinaliza cancelamento colorindo o evento de cinza no Calendar. O sync 
 cor e chama `sync_cancelar_caso`, preenchendo `motivo_cancelamento` com um texto padrão (ex.:
 `"Cancelado via Google Calendar (card cinza)"`). Elimina o retrabalho de cancelar duas vezes.
 
-### Cor herdada, não interpretada
+### Cor herdada, não interpretada — e, desde 30/09/2026, com regra para ESCREVER
 
 `casos.cor_calendar` guarda a cor do evento como veio, sem tentar decodificar o que significa
-(é organização interna do cliente — provavelmente por maternidade ou responsável). O Quadro
-só herda e exibe.
+(é organização interna do cliente). O Quadro só herda e exibe.
+
+Para o sistema ESCREVER um evento (o caminho de volta, logo abaixo), a cor precisou de regra,
+e ela foi MEDIDA nos 317 casos do remoto, não suposta: **BIRTH e BIRTH + REELS são tomate
+(11) em qualquer maternidade**; o resto segue a MATERNIDADE — GNDI banana (5), HSC mirtilo
+(9), HNSG uva (3), CWB manjericão (10), HNSF a cor padrão da agenda. Rocio, Mackenzie e
+Marilac ficaram sem cor por falta de padrão. A regra mora no CADASTRO
+(`pacotes.cor_calendar` ganha de `maternidades.cor_calendar`), e uma constraint proíbe o
+grafite (8): ele é o card cinza, e um evento criado com ele seria cancelado pelo próprio sync.
+
+### O caminho de volta: caso criado no sistema vira evento no Google (30/09/2026)
+
+O calendário do sistema cria caso (`criar_caso`, só adm) e ele vai para o Google — que
+continua completo como contingência, decisão do usuário. **Quem escreve é o próprio sync**,
+não uma Edge Function nova: `criar_caso` marca `casos.google_pendente`, e no começo de cada
+ciclo `enviarCasosAoGoogle` lê os pendentes (`sync_casos_para_o_google`, por função e não pela
+tabela — o GRANT de `service_role` em `casos` diverge entre local e remoto, dívida #5), cria o
+evento e liga o id (`sync_vincular_evento_google`). O que falhar fica pendente e volta no
+ciclo seguinte.
+- **O ID DO EVENTO VEM DO ID DO CASO** ("cb" + o uuid sem hífens). O Google aceita id
+  escolhido pelo cliente, e isso torna a escrita idempotente: a segunda tentativa recebe 409 e
+  só liga. Sem isso, uma queda entre criar o evento e ligá-lo deixaria evento duplicado.
+- **O TÍTULO VOLTA IGUAL**: "MÃE/BEBÊ - PACOTE[ + CLICK HOME] - SIGLA", com "BEBÊ" quando não
+  há nome. Depois de ligado, o sync relê o título a cada ciclo e ATUALIZA o caso a partir dele,
+  como faz com todo evento conhecido; um título que o parser lesse diferente trocaria o
+  checklist sozinho. `evento-do-caso.test.ts` passa toda combinação do cadastro (288) pelo
+  parser. **Pacote ou maternidade nova entra nesse teste.**
+- **DEPOIS DE LIGADO, O CASO SEGUE O GOOGLE** — nome, pacote, maternidade e hora. Mudar a hora
+  ainda é no Google, até a próxima etapa (editar pelo calendário e aposentar a leitura).
+- **APAGAR OU PINTAR DE CINZA O EVENTO NÃO CANCELA** um caso criado pelo sistema: a criação
+  grava `caso_criado` com a pessoa, e `caso_tem_trabalho` conta ação humana. O que nasceu de um
+  gesto no sistema se desfaz por `cancelar_caso`.
+- **ESCOPO E PERMISSÃO**: o token passou de `calendar.readonly` para `calendar.events` (só
+  eventos — nada de agenda nem compartilhamento), e a conta de serviço precisa ter, na agenda,
+  "Fazer alterações nos eventos". Sem a permissão a leitura continua e a escrita dá 403: o caso
+  fica pendente, com o erro no resumo do sync (sem título, como sempre).
+- **Ainda não faz:** cancelar no sistema não pinta o evento de cinza no Google.
 
 ### Implementação
 
@@ -2202,6 +2240,47 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   e só UM atalho de período acende (em 30/09, "este mês" e "últimos 30 dias" eram iguais e
   acendiam juntos).
   **Fica para as próximas voltas:** buscas salvas.
+- **O CALENDÁRIO** (`/quadro/calendario`, 30/09/2026, item 5 da fila do gestor). Todos os
+  papéis MENOS `operador` (decisão do gestor), pela guarda `RotaAdministrativa`, que usa a
+  mesma regra da aba Concluídos (`podeVerConcluidos`) — regra de tela, a RLS não mudou.
+  **É A PRIMEIRA DE TRÊS ETAPAS**, combinadas com o usuário: (1) MOSTRAR o que o banco já sabe;
+  (2) a ESCALA de plantão, registrada na seção Equipe (pedido do gestor: "a gestão sabe os
+  turnos"), usando a tabela `escalas` que existe vazia desde o schema inicial; (3) marcar o
+  parto no próprio sistema, com o Google Calendar recebendo uma cópia (o gestor quer o Google
+  como contingência). Até a etapa 3, o Google continua sendo a ENTRADA dos casos pelo sync.
+  **O medo da gestão ("perder todos os dados") foi respondido pelo backup noturno**, não pelo
+  Google — ver "Backup" na seção 11 e `docs/backup.md`.
+  **SEM MIGRATION:** tudo o que ele mostra já é legível — três consultas por período
+  (`quadro_casos` pelo `dia` e pelo `vence_em`, `caso_etapas` pela `previsao_em`) mais
+  `feriados`, com `buscarTudo` e ordenação total. Quatro tipos de item, uma cor cada (a legenda
+  é também o filtro): PARTO (previsão do caso; "Nasceu" esmaecido quando já nasceu; rascunho
+  marcado), HORA MARCADA (banho, fechamento e as outras de campo, com o responsável), ENTREGA
+  COMBINADA (vídeo, Foto/Livro, New Born — o `previsao_em` da seção lateral) e PRAZO DO PACOTE
+  (só de caso ainda não ENVIADO; vermelho quando venceu). Cancelado não aparece; o nascimento
+  não vira item de etapa, porque o caso já é o item do parto.
+  **Mês e semana**, com a agenda do dia escolhido ao lado (o arranjo do relatório interno);
+  tocar num item abre o caso no Quadro (`/?caso=`). No celular, a grade do mês mostra só
+  bolinhas de cor, e a agenda desce. A visão e o dia moram no endereço.
+  **FERIADO SE MARCA NA AGENDA DO DIA**, só pelo ADM (`podeEditarCadastro`, espelho de
+  `eh_adm()` — a policy `feriados_escrita_adm` já existia, e o INSERT/DELETE é direto, como todo
+  cadastro). Ele muda o prazo dos dois MASTER na hora, porque `quadro_casos` recalcula
+  `vence_em` na leitura: conferido no local, um MASTER nascido em 09/10 vence em 23/10 e, com
+  12/10 marcado, em 26/10. Por isso o Quadro recarrega junto e a frase embaixo do botão avisa.
+  Sem Realtime próprio: o calendário relê a cada 2 minutos — o que muda nele muda no Quadro.
+  **CRIA CASO** (segunda volta do mesmo dia, "ele está entrando para substituir"): "+ Novo
+  caso" no alto e "+ Novo caso neste dia" na agenda, só para o adm (`eh_adm`, os quatro papéis
+  administrativos — o atendimento vê e não cria). O formulário é o título do Google em campos:
+  mãe, bebê (opcional), pacote e maternidade em LISTA COM BUSCA (pedido do gestor; a busca só
+  filtra, o valor sai de lista fechada — daqui não sai rascunho pendente), dia, hora, e New
+  Born. Antes de salvar ele mostra o evento como vai aparecer no Google — título e cor.
+  **OS PARTOS VÊM NA COR DO GOOGLE** (pedido do gestor: "as cores não foram trazidas"), em COR
+  CHEIA na grade e na semana (a primeira versão tingia de leve e ele achou "muito apagado"),
+  com o texto branco ou escuro que tiver mais contraste com cada cor (`textoSobre`: o branco do
+  Google fica abaixo de 3:1 no Banana e no Pavão), e barra colorida na agenda do dia — a mesma
+  organização que a equipe lê na agenda dela. Sem cor, a padrão da agenda (Pavão: no print do Google da
+  equipe, a HNSF, que não tem cor, aparece assim). Os outros tipos de item seguem com as cores
+  da casa. O seed fictício passou a gravar a cor pela regra do cadastro.
+  O caminho até o Google está na seção 7.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -2296,7 +2375,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    pós-produção sem `iniciado_em` é recusada pelo banco. O texto antigo desta dívida e o da
    seção 9 descreviam o mundo de antes dela.)
 9. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
-   `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
+   `somar_dias_uteis`, e portanto o prazo dos dois MASTER. Desde 30/09/2026 o ADM marca e
+   desmarca feriado pelo Calendário; o que falta é a gestão dizer QUAIS.
 10. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
    empresa, que não existe. O app vive em `/quadro`.
 11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem

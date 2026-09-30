@@ -12,6 +12,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseEventoCalendar } from "../_shared/parse-evento.ts";
+import { type CasoParaOGoogle, idDoEventoDoCaso, montarEventoDoCaso } from "./evento-do-caso.ts";
 import {
   autorizarChamada,
   contabilizarAcao,
@@ -67,7 +68,15 @@ const DIAS_PARA_TRAS_CONSULTA = 21;
 const DIAS_PARA_TRAS_NOVO_CASO = 3;
 const SEMANAS_PARA_FRENTE = 6;
 
-const ESCOPO_CALENDAR_SOMENTE_LEITURA = "https://www.googleapis.com/auth/calendar.readonly";
+// LEITURA E ESCRITA DE EVENTOS desde 30/09/2026: o calendário do sistema cria
+// caso, e o sync escreve o evento correspondente no Google (ver
+// enviarCasosAoGoogle). O escopo é o de EVENTOS, não o da agenda inteira: o
+// sync não cria nem apaga agenda, não muda compartilhamento, nada além de
+// eventos. E o escopo sozinho não basta — a conta de serviço precisa ter, no
+// compartilhamento da agenda, "Fazer alterações nos eventos". Sem isso a
+// leitura segue funcionando e a escrita devolve 403, e o caso fica pendente
+// até a permissão existir.
+const ESCOPO_CALENDAR_EVENTOS = "https://www.googleapis.com/auth/calendar.events";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 interface ContaServicoGoogle {
@@ -115,7 +124,7 @@ async function obterAccessToken(contaServico: ContaServicoGoogle): Promise<strin
   const header = { alg: "RS256", typ: "JWT" };
   const payload = {
     iss: contaServico.client_email,
-    scope: ESCOPO_CALENDAR_SOMENTE_LEITURA,
+    scope: ESCOPO_CALENDAR_EVENTOS,
     aud: GOOGLE_TOKEN_URL,
     iat: agora,
     exp: agora + 3600,
@@ -371,6 +380,62 @@ async function cancelarEventosDeletados(
 }
 
 // -----------------------------------------------------------------------
+// O caminho de volta: casos criados NO SISTEMA viram evento no Google.
+// -----------------------------------------------------------------------
+//
+// Roda ANTES da leitura dos eventos, de propósito: o evento que acabou de ser
+// escrito já vem na leitura seguinte com o id ligado ao caso, e nenhum dos
+// dois lados o estranha — nem o intake (é um id conhecido) nem a checagem de
+// deleção.
+//
+// Um caso que falhar fica PENDENTE e volta no próximo ciclo; o id escolhido
+// pelo sistema faz a segunda tentativa não duplicar o evento (409 = já existe,
+// só liga). O erro vai para o resumo SEM título, pelo mesmo motivo de sempre.
+async function enviarCasosAoGoogle(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  accessToken: string,
+  calendarId: string,
+  resumo: ResumoSync,
+): Promise<void> {
+  const { data: pendentes, error } = await supabase.rpc("sync_casos_para_o_google");
+  if (error) {
+    resumo.erros.push({ evento_id: "-", erro: `sync_casos_para_o_google falhou: ${error.message}` });
+    return;
+  }
+
+  for (const caso of (pendentes ?? []) as CasoParaOGoogle[]) {
+    const eventoId = idDoEventoDoCaso(caso.caso_id);
+    try {
+      const resposta = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify(montarEventoDoCaso(caso)),
+        },
+      );
+      // 409: o evento já existe — um ciclo anterior o criou e caiu antes de
+      // ligar. Não é erro: é exatamente o que o id determinístico previne.
+      if (!resposta.ok && resposta.status !== 409) {
+        throw new Error(`Google recusou o evento (${resposta.status})`);
+      }
+      const { error: erroVincular } = await supabase.rpc("sync_vincular_evento_google", {
+        p_caso_id: caso.caso_id,
+        p_google_event_id: eventoId,
+      });
+      if (erroVincular) throw new Error(`sync_vincular_evento_google falhou: ${erroVincular.message}`);
+      resumo.enviados_ao_google++;
+    } catch (erroCaso) {
+      resumo.erros.push({
+        evento_id: eventoId,
+        erro: erroCaso instanceof Error ? erroCaso.message : String(erroCaso),
+      });
+    }
+  }
+}
+
+// -----------------------------------------------------------------------
 // Handler HTTP
 // -----------------------------------------------------------------------
 
@@ -415,10 +480,13 @@ Deno.serve(async (req) => {
     const timeMax = new Date(agora + SEMANAS_PARA_FRENTE * 7 * 24 * 60 * 60 * 1000).toISOString();
     const limiteNovoCaso = new Date(agora - DIAS_PARA_TRAS_NOVO_CASO * 24 * 60 * 60 * 1000);
 
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Primeiro o caminho de volta — ver a nota em enviarCasosAoGoogle.
+    await enviarCasosAoGoogle(supabase, accessToken, calendarId, resumo);
+
     const eventos = await buscarEventos(accessToken, calendarId, timeMin, timeMax);
     resumo.total_eventos_lidos = eventos.length;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const [
       { data: pacotes, error: erroPacotes },
@@ -509,9 +577,11 @@ Deno.serve(async (req) => {
 //    -- o runtime da Edge Function já injeta os dois automaticamente.
 //
 // 2. IMPORTANTE, fora do código: a conta de serviço precisa ser
-//    convidada como leitora do calendário (Configurações do Calendar ->
-//    "Compartilhar com pessoas específicas" -> adicionar o client_email
-//    da service account, permissão "Ver todos os detalhes do evento").
+//    convidada na agenda (Configurações do Calendar -> "Compartilhar com
+//    pessoas específicas" -> o client_email da service account) com a
+//    permissão "Fazer alterações nos eventos" desde 30/09/2026 — antes era
+//    "Ver todos os detalhes do evento", que basta para ler e não para o
+//    calendário do sistema escrever os casos que ele cria.
 //    Sem isso, toda chamada à API retorna 404/403 mesmo com a
 //    autenticação certa.
 //

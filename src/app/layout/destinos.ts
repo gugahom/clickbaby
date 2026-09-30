@@ -1,9 +1,11 @@
 import {
+  IconeCalendario,
   IconeDespesa,
   IconeEquipe,
   IconeKanban,
   IconeRelatorio,
 } from '@/components/ui/icones'
+import { podeVerConcluidos } from '@/features/quadro/lib/acoes'
 
 /**
  * PARA ONDE SE PODE IR, numa tabela só.
@@ -87,6 +89,19 @@ export function destinosDe(papel: string | undefined): Destino[] {
       Icone: IconeKanban,
     },
   ]
+
+  // O Calendário é de todos menos as fotógrafas (30/09/2026, decisão do
+  // gestor) — o recorte de `RotaAdministrativa`. Fica na Operação: é a agenda
+  // do trabalho, não um número sobre ele.
+  if (podeVerConcluidos(papel ?? '')) {
+    destinos.push({
+      para: '/calendario',
+      rotulo: 'Calendário',
+      grupo: 'operacao',
+      descricao: 'Partos, horas marcadas, prazos e feriados',
+      Icone: IconeCalendario,
+    })
+  }
 
   // Equipe e Relatórios são da gestão; Despesas, do financeiro e da gestão —
   // quem RECOLHE o gasto. Quem lança lança no card, e não precisa desta porta.
