@@ -72,15 +72,24 @@ const PACOTES_CANONICOS = [
 // não batia com nada e sobrava grudada no pacote). A SIGLA NO BANCO
 // continua GNDI — é o valor de `maternidades.sigla` que view, RPC e chip
 // do cartão já usam; só o que o parser aceita LER do título mudou.
+// OS NOMES POR EXTENSO (30/09/2026). Com a agenda inteira lida pela primeira
+// vez, 27 dos 33 rascunhos que nasceram tinham a maternidade escrita pelo NOME
+// — "FÁTIMA", "LUISA MARILAC" (com S, sem o "DE") — e, sem maternidade
+// reconhecida no fim, o pacote também não casava ("BABY REELS LUISA MARILAC"),
+// então o caso chegava sem os dois. As formas abaixo são o nome de cada uma no
+// CADASTRO (`maternidades.nome`) e as grafias que a equipe usa na agenda. É
+// lista explícita, não aproximação: uma grafia nova continua virando rascunho
+// até entrar aqui (seção 7 do CLAUDE.md). O acento não importa — `normalizar`
+// o tira dos dois lados.
 const MATERNIDADES = [
-  { sigla: "GNDI", formas: ["GNDI", "BRIGIDA"] },
-  { sigla: "HSC", formas: ["HSC"] },
-  { sigla: "HNSG", formas: ["HNSG"] },
-  { sigla: "HNSF", formas: ["HNSF"] },
-  { sigla: "CWB", formas: ["CWB"] },
-  { sigla: "ROCIO", formas: ["ROCIO"] },
+  { sigla: "GNDI", formas: ["GNDI", "BRIGIDA", "SANTA BRIGIDA"] },
+  { sigla: "HSC", formas: ["HSC", "SANTA CRUZ", "HOSPITAL SANTA CRUZ"] },
+  { sigla: "HNSG", formas: ["HNSG", "NOSSA SENHORA DAS GRACAS", "GRACAS"] },
+  { sigla: "HNSF", formas: ["HNSF", "NOSSA SENHORA DE FATIMA", "FATIMA"] },
+  { sigla: "CWB", formas: ["CWB", "HOSPITAL CURITIBA", "CURITIBA"] },
+  { sigla: "ROCIO", formas: ["ROCIO", "HOSPITAL DO ROCIO"] },
   { sigla: "MACKENZIE", formas: ["MACKENZIE", "MACK"] },
-  { sigla: "MARILAC", formas: ["LUIZA DE MARILAC", "MARILAC"] },
+  { sigla: "MARILAC", formas: ["LUIZA DE MARILAC", "LUISA DE MARILAC", "LUIZA MARILAC", "LUISA MARILAC", "MARILAC"] },
 ] as const;
 
 // Exportado para o sync (supabase/functions/sync-calendar) reusar na hora

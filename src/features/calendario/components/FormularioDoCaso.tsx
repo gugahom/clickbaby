@@ -106,11 +106,16 @@ function FormularioDoCaso({
   const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? '')
   // Hora a definir abre com o campo vazio — a meia-noite guardada não é hora.
   const [hora, setHora] = useState(proposta?.hora ?? (caso?.semHora ? '' : (antes?.hora ?? '')))
+  const [cesarea, setCesarea] = useState(caso?.cesareaEm ? emBrasilia(caso.cesareaEm).hora : '')
+  const [observacao, setObservacao] = useState(caso?.observacao ?? '')
   const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
+  const [fotolivro, setFotolivro] = useState(caso?.temFotolivro ?? false)
   const [erro, setErro] = useState<string | null>(null)
   const ocupado = criar.isPending || editar.isPending
 
   const pacote = cadastros.data?.pacotes.find((p) => p.id === pacoteId)
+  // O MASTER + ÁLBUM já traz o Foto/Livro: a caixa aparece marcada e presa.
+  const livroNoPacote = pacote ? /ALBUM/.test(pacote.nome.normalize('NFD').replace(/\p{Diacritic}/gu, '').toUpperCase()) : false
   const maternidade = cadastros.data?.maternidades.find((m) => m.id === maternidadeId)
   const temBarra = maeNome.includes('/') || bebeNome.includes('/')
   const falta = [
@@ -133,7 +138,7 @@ function FormularioDoCaso({
   function salvar() {
     if (falta.length > 0 || temBarra) return
     setErro(null)
-    const dados = { maeNome, bebeNome, pacoteId, maternidadeId, dia, hora, clickHome }
+    const dados = { maeNome, bebeNome, pacoteId, maternidadeId, dia, hora, cesarea, observacao, clickHome, fotolivro }
     const feito = caso ? editar.mutateAsync({ ...dados, casoId: caso.id }) : criar.mutateAsync(dados)
     feito
       .then(() => onPronto(dia))
@@ -203,6 +208,14 @@ function FormularioDoCaso({
             opcional
             ajuda={hora === '' ? 'Hora a definir: no Google fica como dia inteiro.' : 'Apague para deixar a definir.'}
           />
+          <CampoTexto
+            rotulo="Hora da cesárea"
+            type="time"
+            valor={cesarea}
+            aoMudar={setCesarea}
+            opcional
+            ajuda="A hora marcada da cirurgia, no mesmo dia."
+          />
         </div>
         {mudouQuando && antes && (
           <p className="text-xs font-semibold text-foreground">
@@ -225,6 +238,44 @@ function FormularioDoCaso({
                 ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção New Born.'
                 : ' — o ensaio Click Home foi vendido junto'}
             </span>
+          </span>
+        </label>
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border px-3">
+          <input
+            type="checkbox"
+            checked={fotolivro || livroNoPacote}
+            disabled={caso?.temFotolivro === true || livroNoPacote}
+            onChange={(e) => setFotolivro(e.target.checked)}
+            className="size-5 accent-marca"
+          />
+          <span className="text-sm">
+            <span className="font-semibold text-foreground">Foto/Livro</span>
+            <span className="text-muted-foreground">
+              {livroNoPacote
+                ? ' — já vem no pacote.'
+                : caso?.temFotolivro
+                  ? ' — já faz parte do caso. Se não vai acontecer, dispense na seção Foto/Livro.'
+                  : ' — o fotolivro foi vendido junto'}
+            </span>
+          </span>
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium">
+            Observações <span className="font-normal text-muted-foreground">(opcional)</span>
+          </span>
+          <textarea
+            value={observacao}
+            onChange={(e) => setObservacao(e.target.value)}
+            rows={4}
+            maxLength={4000}
+            className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-base"
+          />
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {!caso || caso.criadoPeloSistema
+              ? 'Vai na descrição do evento no Google.'
+              : 'Fica no sistema. A descrição do evento no Google é da equipe e não muda.'}
           </span>
         </label>
 

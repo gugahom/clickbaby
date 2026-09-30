@@ -229,6 +229,7 @@ export type Database = {
           avaliacao_em: string | null
           avaliacao_por: string | null
           bebe_nome: string | null
+          cesarea_em: string | null
           click_home: boolean
           cor_calendar: string | null
           created_at: string
@@ -246,6 +247,7 @@ export type Database = {
           maternidade_id: string | null
           motivo_cancelamento: string | null
           observacao: string | null
+          observacao_calendar: string | null
           pacote_id: string | null
           previsao_em: string | null
           previsao_sem_hora: boolean
@@ -262,6 +264,7 @@ export type Database = {
           avaliacao_em?: string | null
           avaliacao_por?: string | null
           bebe_nome?: string | null
+          cesarea_em?: string | null
           click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
@@ -279,6 +282,7 @@ export type Database = {
           maternidade_id?: string | null
           motivo_cancelamento?: string | null
           observacao?: string | null
+          observacao_calendar?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
           previsao_sem_hora?: boolean
@@ -295,6 +299,7 @@ export type Database = {
           avaliacao_em?: string | null
           avaliacao_por?: string | null
           bebe_nome?: string | null
+          cesarea_em?: string | null
           click_home?: boolean
           cor_calendar?: string | null
           created_at?: string
@@ -312,6 +317,7 @@ export type Database = {
           maternidade_id?: string | null
           motivo_cancelamento?: string | null
           observacao?: string | null
+          observacao_calendar?: string | null
           pacote_id?: string | null
           previsao_em?: string | null
           previsao_sem_hora?: boolean
@@ -1227,9 +1233,12 @@ export type Database = {
       criar_caso: {
         Args: {
           p_bebe_nome: string
+          p_cesarea_em?: string
           p_click_home?: boolean
+          p_fotolivro?: boolean
           p_mae_nome: string
           p_maternidade_id: string
+          p_observacao?: string
           p_pacote_id: string
           p_previsao_em: string
           p_sem_hora?: boolean
@@ -1265,9 +1274,12 @@ export type Database = {
         Args: {
           p_bebe_nome: string
           p_caso_id: string
+          p_cesarea_em?: string
           p_click_home?: boolean
+          p_fotolivro?: boolean
           p_mae_nome: string
           p_maternidade_id: string
+          p_observacao?: string
           p_pacote_id: string
           p_previsao_em: string
           p_sem_hora?: boolean
@@ -1651,11 +1663,14 @@ export type Database = {
           bebe_nome: string
           cancelado: boolean
           caso_id: string
+          cesarea_em: string
           click_home: boolean
           cor_calendar: string
+          descricao_do_sistema: boolean
           google_event_id: string
           mae_nome: string
           maternidade_sigla: string
+          observacao_calendar: string
           pacote_nome: string
           previsao_em: string
           previsao_sem_hora: boolean
@@ -1667,10 +1682,12 @@ export type Database = {
         Returns: {
           bebe_nome: string
           caso_id: string
+          cesarea_em: string
           click_home: boolean
           cor_calendar: string
           mae_nome: string
           maternidade_sigla: string
+          observacao_calendar: string
           pacote_nome: string
           previsao_em: string
           previsao_sem_hora: boolean
