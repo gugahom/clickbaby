@@ -27,3 +27,14 @@ export const CORES_DO_GOOGLE: Record<string, { nome: string; hex: string }> = {
 export function corDoGoogle(id: string | null | undefined): { nome: string; hex: string } | null {
   return id ? (CORES_DO_GOOGLE[id] ?? null) : null
 }
+
+/**
+ * A cor de um caso SEM cor própria: a da agenda. No print do Google da equipe
+ * (30/09/2026), os casos da HNSF — que não têm cor — aparecem em Pavão.
+ */
+export const COR_PADRAO_DA_AGENDA = { nome: 'Pavão (padrão da agenda)', hex: '#039BE5' }
+
+/** A cor com que um parto aparece: a do evento no Google, ou a padrão da agenda. */
+export function corDoParto(id: string | null | undefined): { nome: string; hex: string } {
+  return corDoGoogle(id) ?? COR_PADRAO_DA_AGENDA
+}

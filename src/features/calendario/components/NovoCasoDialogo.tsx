@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import clsx from 'clsx'
+import { useState, type ReactNode } from 'react'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCriarCaso } from '../api/useCalendario'
-import { corDoGoogle } from '../lib/coresGoogle'
+import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
 import { rotuloDoDia } from '../lib/datas'
 
 /**
@@ -17,6 +17,11 @@ import { rotuloDoDia } from '../lib/datas'
  * ESCOLHIDOS, não digitados (seção 6): o parser do sync precisa adivinhar
  * "BABY RELS" e, quando não consegue, o caso vira rascunho pendente. Daqui ele
  * sai sempre inteiro, com o checklist certo.
+ *
+ * LISTA COM BUSCA, e não pílulas (segunda volta do gestor): digitar "hs" e
+ * ver HSC e HNSG é mais rápido que caçar a pílula entre dezessete — e a busca
+ * só FILTRA, o valor continua escolhido de uma lista fechada. Cada opção traz
+ * a bolinha da cor que ela dá no Google.
  *
  * A COR VEM SOZINHA, pela regra do cadastro (BIRTH é tomate; o resto segue a
  * maternidade), e o formulário a mostra antes de salvar, junto com o título
@@ -91,14 +96,20 @@ export function NovoCasoDialogo({
           valor={pacoteId}
           aoMudar={setPacoteId}
           carregando={cadastros.isPending}
-          opcoes={(cadastros.data?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome }))}
+          buscarPor="Buscar pacote"
+          opcoes={(cadastros.data?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor_calendar }))}
         />
         <Escolha
           rotulo="Maternidade"
           valor={maternidadeId}
           aoMudar={setMaternidadeId}
           carregando={cadastros.isPending}
-          opcoes={(cadastros.data?.maternidades ?? []).map((m) => ({ valor: m.id, rotulo: m.sigla, dica: m.nome }))}
+          buscarPor="Buscar maternidade"
+          opcoes={(cadastros.data?.maternidades ?? []).map((m) => ({
+            valor: m.id,
+            rotulo: `${m.sigla} — ${m.nome}`,
+            cor: m.cor_calendar,
+          }))}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -124,7 +135,7 @@ export function NovoCasoDialogo({
           <div className="mt-1 flex items-center gap-2">
             <span
               className="size-3 flex-shrink-0 rounded-full border border-border"
-              style={{ backgroundColor: cor?.hex ?? 'transparent' }}
+              style={{ backgroundColor: corDoParto(pacote?.cor_calendar ?? maternidade?.cor_calendar).hex }}
               aria-hidden="true"
             />
             <span className="min-w-0 truncate font-semibold text-foreground">{titulo}</span>
@@ -145,9 +156,9 @@ export function NovoCasoDialogo({
 }
 
 /**
- * Uma lista curta de escolhas em pílulas: nove pacotes e oito maternidades
- * cabem à vista, e um toque escolhe — sem abrir menu, que num diálogo pequeno
- * é um segundo painel por cima do primeiro.
+ * Uma lista fechada com busca (o `Dropdown` da casa, `buscavel`). A bolinha de
+ * cada opção é a cor que ela dá no Google; sem regra, só o contorno — a cor
+ * padrão da agenda.
  */
 function Escolha({
   rotulo,
@@ -155,39 +166,39 @@ function Escolha({
   aoMudar,
   opcoes,
   carregando,
+  buscarPor,
 }: {
   rotulo: string
   valor: string
   aoMudar: (v: string) => void
-  opcoes: { valor: string; rotulo: string; dica?: string }[]
+  opcoes: { valor: string; rotulo: string; cor: string | null }[]
   carregando: boolean
+  buscarPor: string
 }) {
+  const bolinha = (cor: string | null): ReactNode => (
+    <span
+      className="block size-3 rounded-full border border-border"
+      style={{ backgroundColor: cor ? corDoParto(cor).hex : 'transparent' }}
+      aria-hidden="true"
+    />
+  )
   return (
-    <fieldset>
-      <legend className="text-sm font-medium">{rotulo}</legend>
-      {carregando ? (
-        <p className="mt-1.5 text-sm text-muted-foreground">Carregando…</p>
-      ) : (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {opcoes.map((o) => (
-            <button
-              key={o.valor}
-              type="button"
-              aria-pressed={valor === o.valor}
-              title={o.dica}
-              onClick={() => aoMudar(o.valor)}
-              className={clsx(
-                'min-h-10 rounded-full border px-3.5 text-sm transition-colors',
-                valor === o.valor
-                  ? 'border-marca bg-marca font-bold text-white'
-                  : 'border-border font-medium text-foreground hover:border-marca/40 hover:bg-marca-suave',
-              )}
-            >
-              {o.rotulo}
-            </button>
-          ))}
-        </div>
-      )}
-    </fieldset>
+    // <div> e não <label>, como no editor de cadastro: um label envolvendo o
+    // botão do gatilho abriria a lista ao tocar no rótulo.
+    <div>
+      <span className="text-sm font-medium">{rotulo}</span>
+      <div className="mt-1.5">
+        <Dropdown
+          buscavel
+          larguraCheia
+          placeholderBusca={buscarPor}
+          rotulo={carregando ? 'Carregando…' : `Escolha ${rotulo.toLowerCase() === 'pacote' ? 'o pacote' : 'a maternidade'}`}
+          desabilitado={carregando}
+          selecionado={valor || undefined}
+          onEscolher={(item) => aoMudar(item.id)}
+          itens={opcoes.map((o) => ({ id: o.valor, rotulo: o.rotulo, icone: bolinha(o.cor) }))}
+        />
+      </div>
+    </div>
   )
 }

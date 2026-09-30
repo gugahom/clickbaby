@@ -5,7 +5,7 @@ import { Botao } from '@/components/ui/Botao'
 import { IconeCheck } from '@/components/ui/icones'
 import { useMarcarFeriado, useTirarFeriado, type Feriado, type ItemDoCalendario } from '../api/useCalendario'
 import { rotuloDoDia } from '../lib/datas'
-import { corDoGoogle } from '../lib/coresGoogle'
+import { corDoParto } from '../lib/coresGoogle'
 import { estiloDoItem } from '../lib/estilos'
 
 /**
@@ -64,24 +64,20 @@ export function AgendaDoDia({
                   <span className="w-11 flex-shrink-0 pt-0.5 text-sm font-bold text-foreground tabular-nums">
                     {item.hora ?? '—'}
                   </span>
-                  <span className={clsx('mt-1 w-1 self-stretch flex-shrink-0 rounded-full', estilo.marca)} aria-hidden="true" />
+                  {/* A barra do parto é a cor do evento no Google, como na agenda da equipe. */}
+                  <span
+                    className={clsx('mt-1 w-1 self-stretch flex-shrink-0 rounded-full', (item.tipo !== 'parto' || item.vencido) && estilo.marca)}
+                    style={item.tipo === 'parto' && !item.vencido ? { backgroundColor: corDoParto(item.corDoGoogle).hex } : undefined}
+                    title={item.tipo === 'parto' ? `Cor na agenda do Google: ${corDoParto(item.corDoGoogle).nome}` : undefined}
+                    aria-hidden="true"
+                  />
                   <span className="min-w-0 flex-1">
                     <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-px text-[11px] font-bold', estilo.pilula)}>
                       {item.feito && <IconeCheck className="size-3" />}
                       {item.titulo}
                       {item.vencido && ' · vencido'}
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1.5 font-semibold text-foreground">
-                      {/* A bolinha da cor do evento no Google: a mesma que a equipe vê lá. */}
-                      {corDoGoogle(item.corDoGoogle) && (
-                        <span
-                          className="size-2.5 flex-shrink-0 rounded-full"
-                          style={{ backgroundColor: corDoGoogle(item.corDoGoogle)?.hex }}
-                          title={`Cor na agenda do Google: ${corDoGoogle(item.corDoGoogle)?.nome}`}
-                        />
-                      )}
-                      <span className="truncate">{item.nome}</span>
-                    </span>
+                    <span className="mt-0.5 block truncate font-semibold text-foreground">{item.nome}</span>
                     <span className="block truncate text-xs text-muted-foreground">{item.detalhe}</span>
                   </span>
                 </Link>

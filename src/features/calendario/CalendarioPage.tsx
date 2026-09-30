@@ -17,6 +17,7 @@ import {
   rotuloDoMes,
   type Visao,
 } from './lib/datas'
+import { corDoParto } from './lib/coresGoogle'
 import { TIPOS } from './lib/estilos'
 
 /**
@@ -141,7 +142,17 @@ export function CalendarioPage() {
                 ligado ? 'border-border bg-card text-foreground' : 'border-dashed border-border text-muted-foreground line-through',
               )}
             >
-              <span className={clsx('size-2.5 rounded-full', t.marca, !ligado && 'opacity-40')} aria-hidden="true" />
+              {t.id === 'parto' ? (
+                // Os partos vêm na cor do Google de cada caso: a legenda mostra
+                // que são várias, em vez de prometer uma que não existe.
+                <span className={clsx('flex -space-x-1', !ligado && 'opacity-40')} aria-hidden="true">
+                  {['11', '9', '5'].map((c) => (
+                    <span key={c} className="size-2.5 rounded-full ring-1 ring-card" style={{ backgroundColor: corDoParto(c).hex }} />
+                  ))}
+                </span>
+              ) : (
+                <span className={clsx('size-2.5 rounded-full', t.marca, !ligado && 'opacity-40')} aria-hidden="true" />
+              )}
               {t.legenda}
               <span className="text-muted-foreground tabular-nums">{contagem(t.id)}</span>
             </button>

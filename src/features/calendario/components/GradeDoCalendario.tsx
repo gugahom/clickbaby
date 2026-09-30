@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { Feriado, ItemDoCalendario } from '../api/useCalendario'
 import { NOMES_DOS_DIAS, diaDaSemanaCurto, rotuloDoDia } from '../lib/datas'
+import { corDoParto } from '../lib/coresGoogle'
 import { estiloDoItem } from '../lib/estilos'
 
 /**
@@ -80,7 +81,11 @@ export function GradeDoMes({ dias, mes, hoje, escolhido, porDia, feriados, onEsc
               {itens.length > 0 && (
                 <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden="true">
                   {itens.slice(0, 6).map((item) => (
-                    <span key={item.chave} className={clsx('size-1.5 rounded-full', estiloDoItem(item).marca)} />
+                    <span
+                      key={item.chave}
+                      className={clsx('size-1.5 rounded-full', item.tipo !== 'parto' && estiloDoItem(item).marca)}
+                      style={item.tipo === 'parto' ? { backgroundColor: corDoParto(item.corDoGoogle).hex } : undefined}
+                    />
                   ))}
                 </span>
               )}
@@ -142,32 +147,57 @@ export function ColunasDaSemana({ dias, hoje, escolhido, porDia, feriados, onEsc
   )
 }
 
+/**
+ * Como a pílula se pinta. O PARTO vem na cor do Google: bolinha cheia e fundo
+ * tingido de leve com ela, texto na cor normal — é o desenho do Google, e o
+ * texto não depende de o amarelo "Banana" ter contraste sobre branco. Os outros
+ * tipos usam as cores da casa (`estiloDoItem`).
+ */
+function aparencia(item: ItemDoCalendario): { classe: string; fundo?: { backgroundColor: string }; bolinha?: string } {
+  if (item.tipo !== 'parto' || item.vencido) return { classe: estiloDoItem(item).pilula }
+  const cor = corDoParto(item.corDoGoogle).hex
+  return { classe: 'text-foreground', fundo: { backgroundColor: `${cor}24` }, bolinha: cor }
+}
+
 function PilulaDoItem({ item, comDetalhe = false }: { item: ItemDoCalendario; comDetalhe?: boolean }) {
-  const estilo = estiloDoItem(item)
+  const a = aparencia(item)
+  const bolinha = a.bolinha && (
+    <span className="mt-[3px] size-2 flex-shrink-0 self-start rounded-full" style={{ backgroundColor: a.bolinha }} />
+  )
   // NA SEMANA a coluna é estreita (sete ao lado da agenda): hora e tipo em
   // cima, e o nome embaixo QUEBRANDO em duas linhas — cortado em "TESTE CA…"
   // ele não dizia de quem era.
   if (comDetalhe) {
     return (
-      <span className={clsx('block min-w-0 rounded-md px-1.5 py-1 text-[11px] leading-tight', estilo.pilula, item.feito && 'opacity-55')}>
-        <span className="block truncate font-normal opacity-90">
-          {item.hora && <span className="font-bold tabular-nums">{item.hora} · </span>}
-          {item.titulo}
+      <span
+        className={clsx('flex min-w-0 gap-1 rounded-md px-1.5 py-1 text-[11px] leading-tight', a.classe, item.feito && 'opacity-55')}
+        style={a.fundo}
+      >
+        {bolinha}
+        <span className="min-w-0">
+          <span className="block truncate font-normal opacity-90">
+            {item.hora && <span className="font-bold tabular-nums">{item.hora} · </span>}
+            {item.titulo}
+          </span>
+          <span className="line-clamp-2 font-semibold break-words">{item.nome}</span>
         </span>
-        <span className="line-clamp-2 font-semibold break-words">{item.nome}</span>
       </span>
     )
   }
   return (
     <span
       className={clsx(
-        'block min-w-0 truncate rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-semibold',
-        estilo.pilula,
+        'flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-semibold',
+        a.classe,
         item.feito && 'opacity-55',
       )}
+      style={a.fundo}
     >
-      {item.hora && <span className="tabular-nums">{item.hora} </span>}
-      {item.nome}
+      {bolinha && <span className="size-2 flex-shrink-0 rounded-full" style={{ backgroundColor: a.bolinha }} />}
+      <span className="truncate">
+        {item.hora && <span className="tabular-nums">{item.hora} </span>}
+        {item.nome}
+      </span>
     </span>
   )
 }

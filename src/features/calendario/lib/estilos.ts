@@ -7,6 +7,11 @@ import type { ItemDoCalendario, TipoDeItem } from '../api/useCalendario'
  * A cor nunca está sozinha: toda pílula traz a hora e o nome, e a agenda do
  * dia escreve o tipo por extenso ("Parto previsto", "Vence o prazo"). A
  * legenda do alto é também o filtro — tocar num tipo esconde ou mostra.
+ *
+ * O PARTO É A EXCEÇÃO (30/09/2026, pedido do gestor: "as cores não foram
+ * trazidas para o nosso calendário"): ele aparece na COR DO EVENTO NO GOOGLE —
+ * BIRTH vermelho, HSC azul, GNDI amarelo… —, a organização que a equipe já lê
+ * de relance na agenda dela. Ver `corDoParto`.
  */
 export const TIPOS: {
   id: TipoDeItem

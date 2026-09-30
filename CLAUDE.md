@@ -2270,10 +2270,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **CRIA CASO** (segunda volta do mesmo dia, "ele está entrando para substituir"): "+ Novo
   caso" no alto e "+ Novo caso neste dia" na agenda, só para o adm (`eh_adm`, os quatro papéis
   administrativos — o atendimento vê e não cria). O formulário é o título do Google em campos:
-  mãe, bebê (opcional), pacote e maternidade em PÍLULAS de escolha (seção 6 — daqui não sai
-  rascunho pendente), dia, hora, e New Born. Antes de salvar ele mostra o evento como vai
-  aparecer no Google — título e cor. Nos partos, a agenda do dia mostra a bolinha da cor do
-  Google. O caminho até o Google está na seção 7.
+  mãe, bebê (opcional), pacote e maternidade em LISTA COM BUSCA (pedido do gestor; a busca só
+  filtra, o valor sai de lista fechada — daqui não sai rascunho pendente), dia, hora, e New
+  Born. Antes de salvar ele mostra o evento como vai aparecer no Google — título e cor.
+  **OS PARTOS VÊM NA COR DO GOOGLE** (pedido do gestor: "as cores não foram trazidas"): bolinha
+  e fundo tingido na grade e na semana, barra colorida na agenda do dia — a mesma organização
+  que a equipe lê na agenda dela. Sem cor, a padrão da agenda (Pavão: no print do Google da
+  equipe, a HNSF, que não tem cor, aparece assim). Os outros tipos de item seguem com as cores
+  da casa. O seed fictício passou a gravar a cor pela regra do cadastro.
+  O caminho até o Google está na seção 7.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
