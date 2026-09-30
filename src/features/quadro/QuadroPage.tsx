@@ -291,7 +291,10 @@ export function QuadroPage() {
      * mostrando cartões que ninguém mais vai tocar, e "0 de 4 concluídos"
      * mediria a entrega do ADM em vez do trabalho do turno.
      */
-    const noQuadro = casos.filter((c) => c.liberadoParaEntregaEm === null)
+    // O NEWBORN com o ensaio feito também sai (30/09/2026): o que sobrou dele é
+    // a esteira da seção New Born, e o card no dia seria trabalho que ninguém
+    // mais vai tocar ali — a mesma razão do enviado.
+    const noQuadro = casos.filter((c) => c.liberadoParaEntregaEm === null && !c.naSecao)
 
     // A urgência entra POR CIMA da ordem por hora, não no lugar dela: quem não
     // está em alerta mantém a posição cronológica. Ver ordenarPorUrgencia.

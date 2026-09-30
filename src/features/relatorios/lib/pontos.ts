@@ -17,6 +17,7 @@ export const ITENS_DE_PONTUACAO: { id: ItemDePontuacao; rotulo: string; categori
   { id: 'encontro_irmaos', rotulo: 'Encontro de irmãos', categoria: 'Acompanhamento', detalhe: 'Etapa acrescentada ao caso.' },
   { id: 'saida_uti', rotulo: 'Saída da UTI', categoria: 'Acompanhamento', detalhe: 'Etapa acrescentada ao caso.' },
   { id: 'alta', rotulo: 'Alta', categoria: 'Acompanhamento', detalhe: 'Etapa acrescentada ao caso.' },
+  { id: 'acompanhamento', rotulo: 'Evento / ensaio', categoria: 'Acompanhamento', detalhe: 'A cobertura de um EVENTO ou o ensaio NEWBORN na casa da família.' },
   { id: 'foto_parto', rotulo: 'Foto parto', categoria: 'Edição', detalhe: 'Edição das fotos do parto (rodada 1).' },
   { id: 'foto_bf', rotulo: 'Foto B+F', categoria: 'Edição', detalhe: 'Edição das fotos de banho e fechamento (rodada 2).' },
   { id: 'foto_revisao', rotulo: 'Foto revisão', categoria: 'Edição', detalhe: 'Edição de fotos de um caso reaberto (rodada 3 em diante).' },

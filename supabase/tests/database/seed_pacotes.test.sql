@@ -14,9 +14,9 @@ insert into public.maternidades (nome, sigla)
 values ('Maternidade Seed Test', 'SEEDTEST');
 
 select is(
-  (select count(*)::int from public.pacotes),
+  (select count(*)::int from public.pacotes where slug not in ('evento', 'newborn')),
   9,
-  'seed cria os 9 pacotes'
+  'seed cria os 9 pacotes de parto (EVENTO e NEWBORN entraram em 30/09/2026, na migration 20260930200425)'
 );
 
 -- Eram 7 dias corridos, valor que o próprio seed marcava como provisório.
@@ -43,8 +43,8 @@ select is(
 
 select is(
   (select array_agg(slug order by slug) from public.pacotes where prazo_entrega = interval '48 hours'),
-  array['baby-reels', 'basic', 'basic-reels-contrato', 'basic-reels-venda', 'standard'],
-  'os 5 pacotes de intervalo restantes entregam em 48h'
+  array['baby-reels', 'basic', 'basic-reels-contrato', 'basic-reels-venda', 'evento', 'standard'],
+  'os 5 pacotes de intervalo restantes entregam em 48h, e o EVENTO também'
 );
 
 -- Um caso por pacote, via slug — a trigger gera as caso_etapas na hora.

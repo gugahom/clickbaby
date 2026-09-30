@@ -30,6 +30,11 @@ export interface CasoQuadro {
    * meia-noite daquele dia e NÃO é horário — nada de hora no card nem alerta.
    */
   previsaoSemHora: boolean
+  /**
+   * O NEWBORN cujo ensaio já foi feito (30/09/2026): sai do Quadro e vive só na
+   * seção New Born, até a galeria ser entregue. Calculado na view.
+   */
+  naSecao: boolean
   corCalendar: string | null
   observacao: string | null
   situacaoClinica: SituacaoClinica
@@ -259,6 +264,7 @@ export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
     dia: linha.dia,
     previsaoEm: linha.previsao_em,
     previsaoSemHora: linha.previsao_sem_hora ?? false,
+    naSecao: linha.na_secao ?? false,
     corCalendar: linha.cor_calendar,
     observacao: linha.observacao,
     situacaoClinica: linha.situacao_clinica ?? 'aguardando',
@@ -434,6 +440,9 @@ export const ROTULO_ETAPA: Record<EtapaTipo, string> = {
   // pacote, e é essa grafia que o parser procura. Os dois nomes são a mesma
   // coisa — mesmo arranjo de `album`/"Foto/Livro".
   click_home: 'New Born',
+  // A etapa única de campo do EVENTO e do ensaio NEWBORN (30/09/2026): play e
+  // concluir, sem as fases de parto de entrada e nascimento.
+  acompanhamento: 'Acompanhamento',
   // Só existem via "acrescentar etapa" (31/08/2026) — nenhum pacote as
   // inclui de fábrica. Ver migration 20260831133153.
   encontro_irmaos: 'Encontro de irmãos',

@@ -45,6 +45,12 @@ const DURACAO_MS = 60 * 60 * 1000;
  * qualquer ponto do título.
  */
 export function montarTituloDoEvento(caso: Pick<CasoParaOGoogle, "mae_nome" | "bebe_nome" | "pacote_nome" | "maternidade_sigla" | "click_home">): string {
+  // EVENTO e NEWBORN no formato em que a EQUIPE os escreve (30/09/2026): é o
+  // que o parser reconhece pelo começo, e é o que a agenda já mostra.
+  if (caso.pacote_nome === "EVENTO") return `EVENTO/${caso.bebe_nome ?? "EVENTO"} - ${caso.maternidade_sigla}`;
+  if (caso.pacote_nome === "NEWBORN") {
+    return `NEWBORN/${caso.mae_nome}/${caso.bebe_nome ?? BEBE_SEM_NOME} - ${caso.maternidade_sigla}`;
+  }
   const pacote = caso.click_home ? `${caso.pacote_nome} + CLICK HOME` : caso.pacote_nome;
   return `${caso.mae_nome}/${caso.bebe_nome ?? BEBE_SEM_NOME} - ${pacote} - ${caso.maternidade_sigla}`;
 }

@@ -499,3 +499,37 @@ Deno.test("grafia que ninguém cadastrou continua sem maternidade — vira rascu
   if (r.tipo !== "caso") throw new Error("ignorou");
   assertEqual(r.maternidade_sigla, null, "sem maternidade");
 });
+
+// -----------------------------------------------------------------------
+// EVENTO e NEWBORN pelo começo do título (30/09/2026).
+// -----------------------------------------------------------------------
+
+Deno.test("EVENTO: o nome do evento no lugar do bebê, pacote EVENTO, e o pacote do meio não vale", () => {
+  const casos: [string, string, string | null][] = [
+    ["EVENTO/MKT - BASIC- HSC", "MKT", "HSC"],
+    ["EVENTO/60 ANOS - BASIC - HSC", "60 ANOS", "HSC"],
+    ["EVENTO - ENFERMAGEM - HSC", "ENFERMAGEM", "HSC"],
+    ["EVENTO/AUDITÓRIO", "AUDITÓRIO", null],
+    ["EVENTO/LIDERANÇA - FÁTIMA", "LIDERANÇA", "HNSF"],
+  ];
+  for (const [titulo, nome, sigla] of casos) {
+    const r = parseEventoCalendar(titulo);
+    if (r.tipo !== "caso") throw new Error(`ignorou "${titulo}"`);
+    assertEqual([r.mae, r.bebe, r.pacote_bruto, r.maternidade_sigla], ["EVENTO", nome, "EVENTO", sigla], titulo);
+  }
+});
+
+Deno.test("NEWBORN: mãe e bebê da família, pacote NEWBORN — o pacote do parto escrito no meio não vale", () => {
+  const r = parseEventoCalendar("NEWBORN/SABRINA/LUIZA - BABY REELS - HSC");
+  if (r.tipo !== "caso") throw new Error("ignorou");
+  assertEqual([r.mae, r.bebe, r.pacote_bruto, r.maternidade_sigla], ["SABRINA", "LUIZA", "NEWBORN", "HSC"], "newborn");
+  const semPacote = parseEventoCalendar("NEW BORN/ANA/JOSÉ - LUISA MARILAC");
+  if (semPacote.tipo !== "caso") throw new Error("ignorou");
+  assertEqual([semPacote.mae, semPacote.pacote_bruto, semPacote.maternidade_sigla], ["ANA", "NEWBORN", "MARILAC"], "sem pacote no meio");
+});
+
+Deno.test("título que só PARECE evento continua sendo parto", () => {
+  const r = parseEventoCalendar("EVENTUAL/ANA - BASIC - HSC");
+  if (r.tipo !== "caso") throw new Error("ignorou");
+  assertEqual([r.mae, r.pacote_bruto], ["EVENTUAL", "BASIC"], "EVENTUAL não é EVENTO");
+});

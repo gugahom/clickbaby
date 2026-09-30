@@ -35,6 +35,8 @@ const PACOTES = [
   "MASTER",
   "MASTER + ÁLBUM",
   "STANDARD",
+  "EVENTO",
+  "NEWBORN",
 ].map((nome, i) => ({ id: `p${i}`, nome }));
 
 const MATERNIDADES = ["CWB", "GNDI", "HNSF", "HNSG", "HSC", "MACKENZIE", "MARILAC", "ROCIO"].map((sigla, i) => ({
@@ -65,7 +67,15 @@ Deno.test("todo título escrito pelo sistema volta ao mesmo pacote, maternidade,
               maternidade: resolverMaternidadeId(lido.maternidade_sigla, MATERNIDADES),
               click_home: lido.click_home,
             },
-            { mae: "ANA MARIA", bebe: bebe ?? BEBE_SEM_NOME, pacote: p.id, maternidade: m.id, click_home: clickHome },
+            {
+              // O EVENTO guarda "EVENTO" como mãe e o nome do evento no lugar do bebê.
+              mae: p.nome === "EVENTO" ? "EVENTO" : "ANA MARIA",
+              bebe: bebe ?? (p.nome === "EVENTO" ? "EVENTO" : BEBE_SEM_NOME),
+              pacote: p.id,
+              maternidade: m.id,
+              // No EVENTO e no NEWBORN o título não leva o CLICK HOME: o adicional é de parto.
+              click_home: p.nome === "EVENTO" || p.nome === "NEWBORN" ? false : clickHome,
+            },
             `ida e volta de "${titulo}"`,
           );
           conferidos++;
@@ -73,7 +83,7 @@ Deno.test("todo título escrito pelo sistema volta ao mesmo pacote, maternidade,
       }
     }
   }
-  assertEqual(conferidos, 9 * 8 * 2 * 2, "combinações conferidas");
+  assertEqual(conferidos, 11 * 8 * 2 * 2, "combinações conferidas");
 });
 
 Deno.test("o id do evento só usa o alfabeto que o Google aceita, e é sempre o mesmo para o mesmo caso", () => {

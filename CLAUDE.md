@@ -78,6 +78,22 @@ atendimento de um lado, operação interna do outro. Ela não é só rótulo de 
 | BIRTH                    |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
 | BIRTH + REELS            |         | ✓          |       |            | ✓           | ✓     |            |       | 24h           |
 
+**EVENTO e NEWBORN** (30/09/2026, decisão do gestor, migrations `20260930200345` e
+`20260930200425`) são pacotes do cadastro, mas NÃO são parto — ficam fora da tabela acima:
+- **EVENTO** — `acompanhamento` (a etapa única de campo, play e concluir), `edicao_foto` e
+  `reels`. Prazo de 48h, contado da conclusão do ACOMPANHAMENTO (não há nascimento; a view usa
+  um ou outro em `vence_em`, e `nascimento_concluido_em` continua sendo só do parto). A edição
+  espera o acompanhamento como a do parto espera o nascimento (`anteriorPendente`).
+- **NEWBORN** — o ensaio na casa de uma família que já teve o parto: `acompanhamento` e
+  `click_home`, sem prazo de pacote. Concluído o ensaio, `quadro_casos.na_secao` o tira do Quadro
+  e ele vive só na seção New Born; `confirmar_entrega_do_click_home` o ENCERRA (pela
+  `confirmar_entrega` de sempre). Medido em 30/09: os 7 newborns da agenda tinham, cada um, o
+  caso do parto da mesma família — e nenhum desses partos tinha o Click Home marcado.
+- O parser os reconhece PELO COMEÇO do título ("EVENTO/NOME - … - MAT", "EVENTO - NOME - MAT",
+  "NEWBORN/MÃE/BEBÊ - … - MAT"), e o pacote escrito no meio não vale. No EVENTO a mãe é "EVENTO"
+  e o nome do evento fica no lugar do bebê. Casos que já existiam com esses títulos não mudaram:
+  o sync não troca pacote preenchido.
+
 **REELS e VÍDEO são etapas diferentes** (confirmado 27/08/2026, migration
 `20260827140400`). `reels` é o vertical curto; `edicao_video` é o HORIZONTAL, só
 nos dois MASTER. Até essa data todo pacote usava `edicao_video` para o que na
@@ -2454,7 +2470,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    O campo existe desde 30/09/2026 (escrito pelo calendário do sistema) e a importação
    continua pendente: espera o template do gestor, e traz documento e contato da família para
    uma tabela legível por toda pessoa ativa — decidir a RLS antes.
-12. **Parser: EVENTO e combinações "OUTROS" não são pacotes.** Os rascunhos pendentes que
+12. **Parser: combinações "OUTROS" não são pacotes.** (O EVENTO virou pacote em 30/09/2026 —
+    ver a seção 2.) Os rascunhos pendentes que
     sobraram esperam decisão do dono sobre cadastro e padronização de título, não código.
     Não melhore o parser por heurística — é o "assumir quando ambíguo" que a seção 7 proíbe.
     O NEWBORN saiu desta lista em 22/09/2026: ele é o "CLICK HOME", virou ADICIONAL (uma
