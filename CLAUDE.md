@@ -2273,9 +2273,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   mãe, bebê (opcional), pacote e maternidade em LISTA COM BUSCA (pedido do gestor; a busca só
   filtra, o valor sai de lista fechada — daqui não sai rascunho pendente), dia, hora, e New
   Born. Antes de salvar ele mostra o evento como vai aparecer no Google — título e cor.
-  **OS PARTOS VÊM NA COR DO GOOGLE** (pedido do gestor: "as cores não foram trazidas"): bolinha
-  e fundo tingido na grade e na semana, barra colorida na agenda do dia — a mesma organização
-  que a equipe lê na agenda dela. Sem cor, a padrão da agenda (Pavão: no print do Google da
+  **OS PARTOS VÊM NA COR DO GOOGLE** (pedido do gestor: "as cores não foram trazidas"), em COR
+  CHEIA na grade e na semana (a primeira versão tingia de leve e ele achou "muito apagado"),
+  com o texto branco ou escuro que tiver mais contraste com cada cor (`textoSobre`: o branco do
+  Google fica abaixo de 3:1 no Banana e no Pavão), e barra colorida na agenda do dia — a mesma
+  organização que a equipe lê na agenda dela. Sem cor, a padrão da agenda (Pavão: no print do Google da
   equipe, a HNSF, que não tem cor, aparece assim). Os outros tipos de item seguem com as cores
   da casa. O seed fictício passou a gravar a cor pela regra do cadastro.
   O caminho até o Google está na seção 7.

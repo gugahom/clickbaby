@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { Feriado, ItemDoCalendario } from '../api/useCalendario'
 import { NOMES_DOS_DIAS, diaDaSemanaCurto, rotuloDoDia } from '../lib/datas'
-import { corDoParto } from '../lib/coresGoogle'
+import { corDoParto, textoSobre } from '../lib/coresGoogle'
 import { estiloDoItem } from '../lib/estilos'
 
 /**
@@ -148,56 +148,43 @@ export function ColunasDaSemana({ dias, hoje, escolhido, porDia, feriados, onEsc
 }
 
 /**
- * Como a pílula se pinta. O PARTO vem na cor do Google: bolinha cheia e fundo
- * tingido de leve com ela, texto na cor normal — é o desenho do Google, e o
- * texto não depende de o amarelo "Banana" ter contraste sobre branco. Os outros
- * tipos usam as cores da casa (`estiloDoItem`).
+ * Como a pílula se pinta. O PARTO vem na COR CHEIA do seu evento no Google
+ * (segunda volta do gestor: "tá muito apagado" — o fundo tingido de leve lia
+ * como pastel), com o texto que tiver mais contraste com ela (`textoSobre`). Já
+ * nascido, ele só perde um pouco de força: esmaecido demais, o mês que passou
+ * inteiro parecia desligado. Os outros tipos usam as cores da casa.
  */
-function aparencia(item: ItemDoCalendario): { classe: string; fundo?: { backgroundColor: string }; bolinha?: string } {
-  if (item.tipo !== 'parto' || item.vencido) return { classe: estiloDoItem(item).pilula }
+function aparencia(item: ItemDoCalendario): { classe: string; fundo?: { backgroundColor: string; color: string } } {
+  if (item.tipo !== 'parto' || item.vencido) {
+    return { classe: clsx(estiloDoItem(item).pilula, item.feito && 'opacity-55') }
+  }
   const cor = corDoParto(item.corDoGoogle).hex
-  return { classe: 'text-foreground', fundo: { backgroundColor: `${cor}24` }, bolinha: cor }
+  return { classe: clsx(item.feito && 'opacity-80'), fundo: { backgroundColor: cor, color: textoSobre(cor) } }
 }
 
 function PilulaDoItem({ item, comDetalhe = false }: { item: ItemDoCalendario; comDetalhe?: boolean }) {
   const a = aparencia(item)
-  const bolinha = a.bolinha && (
-    <span className="mt-[3px] size-2 flex-shrink-0 self-start rounded-full" style={{ backgroundColor: a.bolinha }} />
-  )
   // NA SEMANA a coluna é estreita (sete ao lado da agenda): hora e tipo em
   // cima, e o nome embaixo QUEBRANDO em duas linhas — cortado em "TESTE CA…"
   // ele não dizia de quem era.
   if (comDetalhe) {
     return (
-      <span
-        className={clsx('flex min-w-0 gap-1 rounded-md px-1.5 py-1 text-[11px] leading-tight', a.classe, item.feito && 'opacity-55')}
-        style={a.fundo}
-      >
-        {bolinha}
-        <span className="min-w-0">
-          <span className="block truncate font-normal opacity-90">
-            {item.hora && <span className="font-bold tabular-nums">{item.hora} · </span>}
-            {item.titulo}
-          </span>
-          <span className="line-clamp-2 font-semibold break-words">{item.nome}</span>
+      <span className={clsx('block min-w-0 rounded-md px-1.5 py-1 text-[11px] leading-tight', a.classe)} style={a.fundo}>
+        <span className="block truncate font-normal opacity-90">
+          {item.hora && <span className="font-bold tabular-nums">{item.hora} · </span>}
+          {item.titulo}
         </span>
+        <span className="line-clamp-2 font-semibold break-words">{item.nome}</span>
       </span>
     )
   }
   return (
     <span
-      className={clsx(
-        'flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-semibold',
-        a.classe,
-        item.feito && 'opacity-55',
-      )}
+      className={clsx('block min-w-0 truncate rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-semibold', a.classe)}
       style={a.fundo}
     >
-      {bolinha && <span className="size-2 flex-shrink-0 rounded-full" style={{ backgroundColor: a.bolinha }} />}
-      <span className="truncate">
-        {item.hora && <span className="tabular-nums">{item.hora} </span>}
-        {item.nome}
-      </span>
+      {item.hora && <span className="tabular-nums">{item.hora} </span>}
+      {item.nome}
     </span>
   )
 }

@@ -38,3 +38,19 @@ export const COR_PADRAO_DA_AGENDA = { nome: 'Pavão (padrão da agenda)', hex: '
 export function corDoParto(id: string | null | undefined): { nome: string; hex: string } {
   return corDoGoogle(id) ?? COR_PADRAO_DA_AGENDA
 }
+
+/**
+ * O TEXTO SOBRE A COR CHEIA: branco ou quase-preto, o que tiver MAIS contraste
+ * (fórmula de luminância do WCAG). O Google põe branco em tudo, e no Banana e
+ * no Pavão isso fica abaixo de 3:1 — ilegível no celular, ao sol, de relance.
+ */
+export function textoSobre(hex: string): string {
+  const canal = (i: number) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }
+  const l = 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5)
+  const contraBranco = 1.05 / (l + 0.05)
+  const contraEscuro = (l + 0.05) / 0.0625 // #1a1a2e ≈ luminância 0.0125
+  return contraBranco >= contraEscuro ? '#ffffff' : '#1a1a2e'
+}
