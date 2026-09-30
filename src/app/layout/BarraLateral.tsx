@@ -1,5 +1,7 @@
-import { NavLink } from 'react-router'
+import { useState } from 'react'
+import { NavLink, matchPath, useLocation } from 'react-router'
 import clsx from 'clsx'
+import { Chevron } from '@/components/ui/icones'
 import { agruparDestinos, ROTULO_DO_GRUPO, type Destino } from './destinos'
 
 /**
@@ -98,9 +100,13 @@ export function BarraLateral({ destinos }: { destinos: Destino[] }) {
               )}
 
               <div className="flex flex-col gap-0.5">
-                {doGrupo.map((destino) => (
-                  <ItemDaBarra key={destino.para} destino={destino} />
-                ))}
+                {doGrupo.map((destino) =>
+                  destino.filhos ? (
+                    <GrupoDaBarra key={destino.para} destino={destino} />
+                  ) : (
+                    <ItemDaBarra key={destino.para} destino={destino} />
+                  ),
+                )}
               </div>
             </div>
           ))}
@@ -146,6 +152,78 @@ function ItemDaBarra({ destino }: { destino: Destino }) {
         {destino.rotulo}
       </RotuloQueSome>
     </NavLink>
+  )
+}
+
+/**
+ * UM DESTINO QUE ABRE (29/09/2026, pedido do gestor: Relatórios com "interno"
+ * e "externo" dentro).
+ *
+ * O PAI É UM BOTÃO, NÃO UM LINK: tocar nele abre e fecha a lista, e é nos
+ * filhos que se vai. Ele já nasce aberto quando se está numa tela de dentro —
+ * sem isso a barra esconderia justamente onde a pessoa está.
+ *
+ * COM A BARRA FECHADA OS FILHOS SOMEM (`hidden` fora do hover e do foco): eles
+ * não têm ícone, e com a barra estreita seriam linhas vazias entre os ícones —
+ * o mesmo buraco que os rótulos de grupo evitam. Fechada, é o pai que diz
+ * "você está aqui", com a pílula branca de sempre.
+ */
+function GrupoDaBarra({ destino }: { destino: Destino }) {
+  const { Icone } = destino
+  const { pathname } = useLocation()
+  const filhos = destino.filhos ?? []
+  const dentro = filhos.some((f) => matchPath({ path: f.para, end: f.fim ?? false }, pathname))
+  const [aberto, setAberto] = useState(dentro)
+  const mostrar = aberto || dentro
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !(a || dentro))}
+        aria-expanded={mostrar}
+        title={destino.descricao}
+        className={clsx(
+          'flex min-h-9 w-full items-center gap-3 rounded-full px-2.5 text-left transition-colors',
+          dentro ? 'bg-white text-marca-forte shadow-sm' : 'text-white/65 hover:bg-white/10 hover:text-white',
+        )}
+      >
+        <Icone className="size-5 flex-shrink-0" />
+        <RotuloQueSome className="flex-1 truncate text-sm font-bold tracking-tight">{destino.rotulo}</RotuloQueSome>
+        <RotuloQueSome>
+          <Chevron className={clsx('size-4 transition-transform', mostrar && 'rotate-180')} />
+        </RotuloQueSome>
+      </button>
+
+      {mostrar && (
+        <div className="hidden flex-col gap-0.5 py-1 pl-6 group-focus-within:flex group-hover:flex">
+          {filhos.map((f) => (
+            <NavLink
+              key={f.para}
+              to={f.para}
+              end={f.fim ?? false}
+              title={f.descricao}
+              className={({ isActive }) =>
+                clsx(
+                  'flex min-h-8 items-center gap-2 rounded-full px-3 text-sm whitespace-nowrap transition-colors',
+                  isActive ? 'bg-white/15 font-bold text-white' : 'font-medium text-white/60 hover:bg-white/10 hover:text-white',
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={clsx('size-1.5 flex-shrink-0 rounded-full', isActive ? 'bg-white' : 'bg-white/30')}
+                    aria-hidden="true"
+                  />
+                  {f.rotulo}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

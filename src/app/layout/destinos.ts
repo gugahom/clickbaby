@@ -19,6 +19,22 @@ import {
  */
 export type GrupoDeDestino = 'operacao' | 'gestao'
 
+/**
+ * Um destino DENTRO de outro (29/09/2026, pedido do gestor: "essa parte de
+ * relatórios pode ser um dropdown que vem com essas duas opções, de interno e
+ * externo"). Na barra lateral eles abrem embaixo do pai; na faixa do celular,
+ * que não tem onde abrir nada, viram pílulas próprias com o nome completo.
+ */
+export interface SubDestino {
+  para: string
+  /** O nome dentro do grupo aberto: "Interno". */
+  rotulo: string
+  /** O nome sozinho, na faixa do celular: "Relatório interno". */
+  rotuloCompleto: string
+  fim?: boolean
+  descricao: string
+}
+
 export interface Destino {
   /** O caminho, relativo ao basename `/quadro`. */
   para: string
@@ -33,6 +49,8 @@ export interface Destino {
   fim?: boolean
   /** O que a tela faz. É o título do link quando o ícone está sozinho. */
   descricao: string
+  /** Com filhos, o destino vira um grupo que abre — ver `SubDestino`. */
+  filhos?: SubDestino[]
 }
 
 /**
@@ -92,16 +110,32 @@ export function destinosDe(papel: string | undefined): Destino[] {
     })
   }
 
-  // Relatórios nasceu VAZIA (28/09/2026, pedido do gestor). Ela aparece na
-  // barra mesmo assim: a aba é o lugar onde as telas novas vão chegar, e é
-  // dele o pedido de criá-la antes do conteúdo.
+  // Relatórios nasceu VAZIA (28/09/2026, pedido do gestor), ganhou o relatório
+  // interno (das pessoas) e, em 29/09, o externo (da operação inteira) — e
+  // virou um grupo que abre nos dois. O interno continua em /relatorios, para
+  // nenhum link antigo quebrar.
   if (papel === 'gestao') {
     destinos.push({
       para: '/relatorios',
       rotulo: 'Relatórios',
       grupo: 'gestao',
-      descricao: 'Os números da operação',
+      descricao: 'Os números da equipe e da operação',
       Icone: IconeRelatorio,
+      filhos: [
+        {
+          para: '/relatorios',
+          rotulo: 'Interno',
+          rotuloCompleto: 'Relatório interno',
+          fim: true,
+          descricao: 'A equipe: produção, prazo, pontos',
+        },
+        {
+          para: '/relatorios/externo',
+          rotulo: 'Externo',
+          rotuloCompleto: 'Relatório externo',
+          descricao: 'A operação inteira, com filtros',
+        },
+      ],
     })
   }
 

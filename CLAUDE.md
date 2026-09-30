@@ -422,6 +422,9 @@ metricas_serie_da_equipe(p_inicio, p_fim, p_grao, p_pessoa_id)  -- os 6 KPIs por
 metricas_fases_de_campo(p_inicio, p_fim)  -- tempo em cada fase do campo, por pessoa (29/09/2026)
 metricas_pontos_por_pessoa(p_inicio, p_fim)  -- o ranking por pontos, já dividido (29/09/2026)
 pontos_por_item_vigentes() / definir_pontos_do_item(p_item, p_pontos)  -- a régua dos pontos; linha nova, nunca UPDATE
+
+-- relatório EXTERNO — a operação inteira, com filtros (29/09/2026; ver seção 13) — SÓ GESTÃO, leitura
+operacao_buscar(p_filtros, p_ordem, p_limite, p_deslocamento) / operacao_facetas(p_filtros) / operacao_resumo(p_filtros)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
 
 -- só service_role (Edge Function do sync)
@@ -493,7 +496,8 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
   /features
     /quadro          hoje é praticamente o app inteiro
     /auth
-    /relatorios      o relatório interno das pessoas (28/09/2026) — ver a seção 13
+    /relatorios      o relatório interno das pessoas (28/09/2026) e, em /externo, o da
+                     operação inteira com filtros (29/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -2097,6 +2101,50 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   dia, `?hoje=real` volta à data de verdade, e um selo no topo diz qual está valendo. `hojeDoRelatorio` (em `lib/metricas.ts`)
   lê o parâmetro atrás de `import.meta.env.DEV`, que vira `false` no build — conferido: a
   leitura da URL não existe no bundle publicado.
+- **RELATÓRIOS — O RELATÓRIO EXTERNO, A OPERAÇÃO INTEIRA** (`/quadro/relatorios/externo`, só
+  `gestao`; 29/09/2026, migration `20260929233525`). O interno olha a EQUIPE; este olha os
+  CASOS. O que importa nele, nas palavras do gestor, são os FILTROS: "como SóCarrão ou
+  Webmotors, um filtro bem completo (…) de misturar vários tipos de filtros para chegar num
+  denominador comum". A referência foi estudada na SóCarrão (a Webmotors bloqueia robô, e não
+  se contorna).
+  **É BUSCA FACETADA, o modelo dos classificados:** dentro de um grupo as opções SOMAM (HSC ou
+  HNSG), entre grupos CORTAM (HSC e atrasado), e cada opção mostra QUANTOS CASOS daria com todos
+  os OUTROS filtros marcados e sem o do próprio grupo — é o que deixa misturar sem cair num
+  resultado vazio. Os aplicados viram etiquetas com × no alto, com "Limpar filtros".
+  **OS GRUPOS:** período do atendimento (com atalhos: este mês, mês passado, 30 dias, este ano,
+  tudo), situação (em andamento, em Entregáveis, entregue, cancelado pela equipe, cancelado pela
+  AGENDA — o sync só escreve dois textos fixos de motivo, e é por eles que se separa —,
+  rascunho), prazo (enviado no prazo, enviado atrasado, vencido sem envio, dentro do prazo, sem
+  prazo; conta no ENVIO, e caso encerrado antes de 06/09 usa o encerramento), maternidade,
+  pacote, QUEM FEZ + NA ETAPA (dois grupos de UMA condição: "a Jade fez o PARTO" é diferente
+  de "a Jade fez alguma coisa"), adicionais, termo de imagem, horário do parto (turnos), dia da
+  semana, ocorrências Sim/Não (UTI, passagem de turno, reaberto, avaliação, despesa), faixas
+  (horas do parto ao envio, valor de despesa) e busca por nome sem acento.
+  **UMA REGRA PARA AS TRÊS FUNÇÕES** (`operacao_marcas`): lê o `jsonb` UMA vez e devolve, por
+  caso, uma marca por grupo e quantos falharam. Lista e resumo são os casos sem falha; a
+  contagem do grupo X são os casos em que só X falhou, ou nenhum. A primeira versão avaliava a
+  regra caso a caso e grupo a grupo, relendo o `jsonb`: 8 segundos para as facetas de 1.800
+  casos fictícios. Com as marcas, 105ms sem filtro nenhum e ~30ms num mês. A view
+  `operacao_dos_casos` (sem GRANT, lida só pelas funções) traz os atributos de cada caso, em
+  cima de `quadro_casos`.
+  **NÃO HÁ PISO DE DATA**, ao contrário do interno: aquele mede PESSOAS e começa em 01/10/2026;
+  este acha CASOS, e um caso de agosto continua sendo um caso que alguém vai querer achar. A
+  tela abre no mês corrente (no local, com a data simulada do interno).
+  **TUDO MORA NO ENDEREÇO** (filtros, ordem, página): um link leva a busca junto, e o "voltar"
+  do navegador desfaz o último filtro — os classificados de referência não fazem isso.
+  **TOCAR NUM CASO ABRE O CASO NO QUADRO** (`/?caso=`), que já sabe achá-lo — no dia, em
+  Entregáveis ou nos Concluídos. A lista é paginada NO BANCO (50 por vez, ordenação total com o
+  id no fim) e traz o total do recorte; em cima dela, os NÚMEROS DO RECORTE (casos, partos, %
+  no prazo, mediana parto→envio, despesas, cancelados), que é o que um relatório tem e um
+  classificado não. Os nomes das opções abertas vêm do CADASTRO, para a etiqueta de uma
+  maternidade marcada que zerou ainda dizer qual era.
+  **NA BARRA LATERAL, "Relatórios" VIROU UM GRUPO QUE ABRE** (pedido do gestor: "um dropdown com
+  as duas opções, interno e externo"): o pai é botão, os filhos aparecem com a barra aberta e
+  nascem abertos quando se está numa tela de dentro; fechada, é o pai que acende. Na faixa do
+  celular cada filho vira pílula com o nome completo ("Relatório interno"). O interno continua
+  em `/relatorios`. Os filhos moram em `Destino.filhos` (`destinos.ts`), a mesma tabela única.
+  **Fica para as próximas voltas:** exportar o recorte em CSV, buscas salvas, e agrupar por
+  maternidade/pacote.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -2131,8 +2179,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    cliente. Exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT e
    teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
    sem avisar no dia em que um endereço fugisse do padrão.
-3. **O relatório EXTERNO ainda não existe** (operação, filtros de busca específica). O
-   interno — produtividade por pessoa — entrou em 28/09/2026. E `escalas` continua vazia: sem
+3. **O relatório EXTERNO nasceu em 29/09/2026** (a operação inteira, com filtros); faltam
+   exportar, buscas salvas e agrupamentos. E `escalas` continua vazia: sem
    turno registrado, não há "vazão por turno" (o plano previa), só "dias com trabalho", que é
    mais fraco. Preencher escalas NÃO é registro de ponto (seção 9): é a escala planejada.
 4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto

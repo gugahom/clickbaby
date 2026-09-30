@@ -184,6 +184,13 @@ export type Database = {
             foreignKeyName: "caso_etapas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "quadro_casos"
             referencedColumns: ["id"]
           },
@@ -406,6 +413,13 @@ export type Database = {
             foreignKeyName: "despesas_caso_id_fkey"
             columns: ["caso_id"]
             isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
             referencedRelation: "quadro_casos"
             referencedColumns: ["id"]
           },
@@ -483,6 +497,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fila_edicao"
             referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "entregaveis_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "entregaveis_caso_id_fkey"
@@ -620,6 +641,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fila_edicao"
             referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "eventos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "eventos_caso_id_fkey"
@@ -1012,6 +1040,51 @@ export type Database = {
           },
         ]
       }
+      operacao_dos_casos: {
+        Row: {
+          adicionais: string[] | null
+          avaliado: boolean | null
+          bebe_nome: string | null
+          dia: string | null
+          dia_semana: number | null
+          fotografou_o_parto: string | null
+          horas_ate_envio: number | null
+          id: string | null
+          mae_nome: string | null
+          maternidade_id: string | null
+          maternidade_nome: string | null
+          maternidade_sigla: string | null
+          nasceu: boolean | null
+          nome_de_busca: string | null
+          pacote_id: string | null
+          pacote_nome: string | null
+          passou_uti: boolean | null
+          prazo: string | null
+          previsao_em: string | null
+          reaberto: boolean | null
+          situacao: string | null
+          termo: string | null
+          teve_handoff: boolean | null
+          total_despesas: number | null
+          turno: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casos_maternidade_id_fkey"
+            columns: ["maternidade_id"]
+            isOneToOne: false
+            referencedRelation: "maternidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casos_pacote_id_fkey"
+            columns: ["pacote_id"]
+            isOneToOne: false
+            referencedRelation: "pacotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quadro_casos: {
         Row: {
           arquivado: boolean | null
@@ -1190,6 +1263,10 @@ export type Database = {
       }
       liberar_para_entrega: { Args: { p_caso_id: string }; Returns: undefined }
       limpar_notificacoes_gerais: { Args: never; Returns: string }
+      lista_do_filtro: {
+        Args: { p_chave: string; p_filtros: Json }
+        Returns: string[]
+      }
       marcar_fotolivro_enviado: {
         Args: { p_caso_etapa_id: string }
         Returns: undefined
@@ -1317,6 +1394,76 @@ export type Database = {
           p_fase: Database["public"]["Enums"]["status_etapa"]
         }
         Returns: undefined
+      }
+      operacao_buscar: {
+        Args: {
+          p_deslocamento?: number
+          p_filtros: Json
+          p_limite?: number
+          p_ordem?: string
+        }
+        Returns: {
+          adicionais: string[]
+          bebe_nome: string
+          dia: string
+          fotografou_o_parto: string
+          horas_ate_envio: number
+          id: string
+          mae_nome: string
+          maternidade_sigla: string
+          pacote_nome: string
+          passou_uti: boolean
+          prazo: string
+          reaberto: boolean
+          situacao: string
+          termo: string
+          total: number
+          total_despesas: number
+        }[]
+      }
+      operacao_facetas: {
+        Args: { p_filtros: Json }
+        Returns: {
+          contagem: number
+          grupo: string
+          rotulo: string
+          valor: string
+        }[]
+      }
+      operacao_marcas: {
+        Args: { p_filtros: Json }
+        Returns: {
+          falhas: number
+          id: string
+          m_adicionais: boolean
+          m_avaliado: boolean
+          m_com_despesa: boolean
+          m_dias_semana: boolean
+          m_handoff: boolean
+          m_maternidades: boolean
+          m_pacotes: boolean
+          m_prazos: boolean
+          m_reaberto: boolean
+          m_situacoes: boolean
+          m_termos: boolean
+          m_trabalho: boolean
+          m_trabalho_sem_etapas: boolean
+          m_trabalho_sem_pessoas: boolean
+          m_turnos: boolean
+          m_uti: boolean
+        }[]
+      }
+      operacao_resumo: {
+        Args: { p_filtros: Json }
+        Returns: {
+          cancelados: number
+          casos: number
+          enviados: number
+          mediana_horas_ate_envio: number
+          no_prazo: number
+          partos: number
+          total_despesas: number
+        }[]
       }
       ordem_padrao_da_etapa: {
         Args: { p_tipo: Database["public"]["Enums"]["etapa_tipo"] }
