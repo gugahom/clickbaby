@@ -6,7 +6,7 @@ import { IconeCheck } from '@/components/ui/icones'
 import { useMarcarFeriado, useTirarFeriado, type Feriado, type ItemDoCalendario } from '../api/useCalendario'
 import { rotuloDoDia } from '../lib/datas'
 import { corDoParto } from '../lib/coresGoogle'
-import { estiloDoItem } from '../lib/estilos'
+import { esmaecido, estiloDoItem } from '../lib/estilos'
 
 /**
  * O DIA ESCOLHIDO, por extenso. É aqui que cada item diz o que é ("Parto
@@ -58,7 +58,7 @@ export function AgendaDoDia({
                   to={`/?caso=${item.casoId}`}
                   className={clsx(
                     'flex items-start gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-muted/60',
-                    item.feito && 'opacity-60',
+                    esmaecido(item) && 'opacity-50',
                   )}
                 >
                   <span className="w-11 flex-shrink-0 pt-0.5 text-sm font-bold text-foreground tabular-nums">

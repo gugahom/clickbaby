@@ -2277,7 +2277,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   CHEIA na grade e na semana (a primeira versão tingia de leve e ele achou "muito apagado"),
   com o texto branco ou escuro que tiver mais contraste com cada cor (`textoSobre`: o branco do
   Google fica abaixo de 3:1 no Banana e no Pavão), e barra colorida na agenda do dia — a mesma
-  organização que a equipe lê na agenda dela. Sem cor, a padrão da agenda (Pavão: no print do Google da
+  organização que a equipe lê na agenda dela.
+  **O QUE JÁ PASSOU CHAMA MENOS ATENÇÃO**, como no Google (pedido do gestor): item cujo horário
+  ficou para trás (ou o dia, quando não tem hora), ou que já foi feito, fica esmaecido em todas
+  as visões (`esmaecido`, em `lib/estilos.ts`). A exceção é o PRAZO VENCIDO SEM ENVIO, que
+  continua em vermelho forte: está no passado e é o que ainda pede alguém. Sem cor, a padrão da agenda (Pavão: no print do Google da
   equipe, a HNSF, que não tem cor, aparece assim). Os outros tipos de item seguem com as cores
   da casa. O seed fictício passou a gravar a cor pela regra do cadastro.
   O caminho até o Google está na seção 7.

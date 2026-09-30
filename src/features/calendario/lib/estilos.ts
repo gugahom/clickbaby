@@ -32,6 +32,20 @@ export const TIPOS: {
 
 const ATRASADO = { pilula: 'bg-atrasado/10 text-atrasado', marca: 'bg-atrasado' }
 
+/**
+ * O QUE JÁ PASSOU CHAMA MENOS ATENÇÃO, como no Google Calendar (pedido do
+ * gestor, 30/09/2026): o item cujo horário ficou para trás — ou o dia inteiro,
+ * quando não tem hora — perde a força; o que vem pela frente continua na cor
+ * cheia. A agenda é para olhar PARA FRENTE, e um mês que já aconteceu disputava
+ * o olho com a semana que vem.
+ *
+ * A EXCEÇÃO É O PRAZO VENCIDO SEM ENVIO: ele está no passado e é exatamente o
+ * que ainda pede alguém — esmaecê-lo seria esconder o atraso.
+ */
+export function esmaecido(item: ItemDoCalendario): boolean {
+  return (item.passou || item.feito) && !item.vencido
+}
+
 export function estiloDoItem(item: ItemDoCalendario): { pilula: string; marca: string } {
   // Prazo que passou sem envio fala a língua do atraso no Quadro: vermelho.
   if (item.vencido) return ATRASADO
