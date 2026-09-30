@@ -1,5 +1,5 @@
 /**
- * CSV PARA A PLANILHA DO FINANCEIRO.
+ * CSV PARA A PLANILHA — a do financeiro (Despesas) e a do relatório externo.
  *
  * O arquivo vai ser aberto no Excel em português, e três detalhes decidem se ele
  * abre legível ou vira uma coluna só com tudo grudado:

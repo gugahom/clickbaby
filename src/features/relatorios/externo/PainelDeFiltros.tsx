@@ -375,21 +375,25 @@ function Periodo({
     { rotulo: 'Este ano', de: `${hoje.slice(0, 4)}-01-01`, ate: `${hoje.slice(0, 4)}-12-31` },
     { rotulo: 'Tudo' },
   ]
+  // Só UM atalho acende: em 30 de setembro "este mês" e "últimos 30 dias" são o
+  // mesmo intervalo, e dois botões acesos parecem dois filtros somados.
+  const ativo = atalhos.find((a) => (a.de ?? '') === (filtros.de ?? '') && (a.ate ?? '') === (filtros.ate ?? ''))
+  const campoDeData = 'h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm tabular-nums'
   return (
-    <section className="space-y-2 px-4 py-3">
+    <section className="space-y-2.5 px-4 py-3">
       <div className="text-sm font-bold text-foreground">Período do atendimento</div>
       <div className="flex flex-wrap gap-1.5">
         {atalhos.map((a) => {
-          const ativo = (a.de ?? '') === (filtros.de ?? '') && (a.ate ?? '') === (filtros.ate ?? '')
+          const aceso = a === ativo
           return (
             <button
               key={a.rotulo}
               type="button"
-              aria-pressed={ativo}
+              aria-pressed={aceso}
               onClick={() => onMudar({ ...filtros, de: a.de, ate: a.ate })}
               className={clsx(
                 'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                ativo
+                aceso
                   ? 'border-marca bg-marca font-bold text-white'
                   : 'border-border font-medium text-muted-foreground hover:border-marca/40 hover:text-marca',
               )}
@@ -399,21 +403,27 @@ function Periodo({
           )
         })}
       </div>
-      <div className="flex items-center gap-2">
+      {/* Um campo por linha: lado a lado, os dois cortavam o ano ("01/09/202"). */}
+      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+        <label htmlFor="periodo-de" className="text-xs font-semibold text-muted-foreground">
+          De
+        </label>
         <input
+          id="periodo-de"
           type="date"
-          aria-label="De"
           value={filtros.de ?? ''}
           onChange={(e) => onMudar({ ...filtros, de: e.target.value || undefined })}
-          className="h-9 w-full min-w-0 rounded-xl border border-border bg-background px-2 text-sm tabular-nums"
+          className={campoDeData}
         />
-        <span className="text-xs text-muted-foreground">até</span>
+        <label htmlFor="periodo-ate" className="text-xs font-semibold text-muted-foreground">
+          Até
+        </label>
         <input
+          id="periodo-ate"
           type="date"
-          aria-label="Até"
           value={filtros.ate ?? ''}
           onChange={(e) => onMudar({ ...filtros, ate: e.target.value || undefined })}
-          className="h-9 w-full min-w-0 rounded-xl border border-border bg-background px-2 text-sm tabular-nums"
+          className={campoDeData}
         />
       </div>
     </section>

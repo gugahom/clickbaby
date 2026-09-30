@@ -368,6 +368,7 @@ export function usePadroesDeTempo() {
 /**
  * Define a régua de uma etapa, valendo a partir de hoje. No mesmo dia,
  * substitui (é correção); depois, é linha nova e a anterior fica no histórico.
+ * Recarrega também o "dentro do padrão", que depende da régua.
  */
 export function useDefinirPadrao() {
   const queryClient = useQueryClient()
@@ -375,6 +376,40 @@ export function useDefinirPadrao() {
     mutationFn: async ({ tipo, minutos }: { tipo: EtapaTipo; minutos: number }) => {
       await chamar(supabase.rpc('definir_padrao_de_tempo', { p_etapa_tipo: tipo, p_minutos: minutos }))
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [CHAVE, 'padroes'] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [CHAVE, 'padroes'] }),
+        queryClient.invalidateQueries({ queryKey: [CHAVE, 'dentro-do-padrao'] }),
+      ]),
+  })
+}
+
+/**
+ * DENTRO DO PADRÃO — ver `metricas_dentro_do_padrao` (migration
+ * 20260930052252). Por pessoa e etapa: das medidas, quantas tinham padrão para
+ * comparar e quantas ficaram dentro dele. A equipe é a soma das pessoas.
+ */
+export interface DentroDoPadrao {
+  pessoaId: string
+  tipo: EtapaTipo
+  medidas: number
+  comPadrao: number
+  dentro: number
+}
+
+export function useDentroDoPadrao({ inicio, fim }: Periodo) {
+  return useQuery({
+    queryKey: [CHAVE, 'dentro-do-padrao', inicio, fim],
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<DentroDoPadrao[]> => {
+      const linhas = await chamar(supabase.rpc('metricas_dentro_do_padrao', { p_inicio: inicio, p_fim: fim }))
+      return (linhas ?? []).map((l) => ({
+        pessoaId: l.pessoa_id,
+        tipo: l.tipo,
+        medidas: l.medidas,
+        comPadrao: l.com_padrao,
+        dentro: l.dentro,
+      }))
+    },
   })
 }

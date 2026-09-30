@@ -425,7 +425,9 @@ pontos_por_item_vigentes() / definir_pontos_do_item(p_item, p_pontos)  -- a rég
 
 -- relatório EXTERNO — a operação inteira, com filtros (29/09/2026; ver seção 13) — SÓ GESTÃO, leitura
 operacao_buscar(p_filtros, p_ordem, p_limite, p_deslocamento) / operacao_facetas(p_filtros) / operacao_resumo(p_filtros)
+operacao_grafico(p_filtros, p_eixo)  -- o recorte por dia, mês ou dimensão: o gráfico e a planilha (30/09/2026)
 padroes_de_tempo() / definir_padrao_de_tempo(p_etapa_tipo, p_minutos)   -- a régua; linha nova, nunca UPDATE
+metricas_dentro_do_padrao(p_inicio, p_fim)  -- quantas etapas ficaram dentro do padrão, por pessoa (30/09/2026)
 
 -- só service_role (Edge Function do sync)
 sync_upsert_caso(...) / sync_cancelar_caso(p_google_event_id, p_motivo)
@@ -2072,8 +2074,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   é "Mais pontos"; o perfil ganhou o bloco de pontos por item, com quantas etapas e quantas
   foram divididas. A contagem de etapas do bloco de pontos pode passar a de "Produção por
   etapa": aquela conta só o responsável, esta conta quem pôs a mão.
-  PADRÕES DE TEMPO — uma linha por etapa: mediana da equipe, padrão em vigor, campo para
-  definir (a mediana é a marca-d'água; o número é da gestão).
+  PADRÕES DE TEMPO — uma linha por etapa: padrão em vigor, mediana da equipe no mês, quantas
+  ficaram DENTRO do padrão, e o campo para definir (o número é da gestão).
+  **A RÉGUA PASSOU A SER USADA** (30/09/2026, pedido do gestor: "uma forma de eles escolherem
+  os padrões que esperam (…) para que seja feito nessa média", migration `20260930052252`).
+  Até aqui ela era guardada e ninguém a lia — e a aba só listava etapa com medição no mês, então
+  em produção, antes de 01/10, ela abria em "nada medido" sem deixar definir nada. Agora TODA
+  etapa aparece (campo e edição separados), o padrão se escolhe em HORAS e MINUTOS, a mediana
+  do mês vira o atalho "usar 1h35", e `metricas_dentro_do_padrao` conta, por pessoa e etapa,
+  quantas medidas ficaram dentro dele: a aba mostra a equipe ("52% · 64 de 124") e o perfil de
+  cada pessoa ganhou a coluna "No padrão" ("5/6", âmbar abaixo da metade — ali há cor, porque a
+  régua é a que a própria gestão escolheu).
+  **O PADRÃO É O DA DATA DA CONCLUSÃO**, e antes da primeira régua de uma etapa vale a primeira:
+  sem isso, o padrão definido em novembro deixaria outubro sem comparação nenhuma. É o arranjo
+  da régua de pontos, que vale desde 01/10 mesmo definida depois. **Por etapa, não por pacote**
+  (perguntado ao gestor em 30/09): a coluna `pacote_id` de `padroes_tempo` continua sem uso.
   A variação só aparece quando o mês anterior tem dado — em outubro de 2026 ele é setembro,
   antes do piso, e um "+100%" contra zero seria mentira com cara de conquista.
   **"VOLTOU PARA AJUSTE"** soma `caso_reaberto` (crédito da última rodada concluída do tipo
@@ -2143,8 +2158,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   nascem abertos quando se está numa tela de dentro; fechada, é o pai que acende. Na faixa do
   celular cada filho vira pílula com o nome completo ("Relatório interno"). O interno continua
   em `/relatorios`. Os filhos moram em `Destino.filhos` (`destinos.ts`), a mesma tabela única.
-  **Fica para as próximas voltas:** exportar o recorte em CSV, buscas salvas, e agrupar por
-  maternidade/pacote.
+  **O RECORTE VIRA GRÁFICO E PLANILHA** (30/09/2026, segunda volta do gestor: "todo filtro
+  colocado virar gráfico E planilha para exportar", migration `20260930052252`). Uma chave
+  "Casos · Gráfico" troca a lista pelo gráfico do MESMO recorte, e os seis cartões de números
+  viram botões que escolhem o que se desenha. O eixo é o TEMPO (dia a dia até 62 dias, mês a mês
+  acima disso ou em "tudo", com o gráfico da casa do relatório interno) ou uma DIMENSÃO
+  (maternidade, pacote, situação, prazo, quem fez o parto, turno, dia da semana, termo), em
+  barras deitadas — é o "agrupar por" que ficou pendente. Tocar numa barra MARCA aquela opção
+  como filtro, menos em "quem fez o parto" (o banco agrupa pelo nome; o filtro é por pessoa).
+  `operacao_grafico` devolve os mesmos números de `operacao_resumo` pedaço a pedaço, com a
+  mediana refeita no banco: somar as linhas dá o resumo, e o teste G2 trava isso.
+  **"Exportar planilha"** tem duas saídas, no formato da de Despesas (`lib/csv.ts`, que saiu de
+  `features/despesas` para ser das duas): os CASOS do recorte, todos e não só a página (de 200
+  em 200 até o total), e os NÚMEROS por trás do gráfico, no eixo escolhido. A dos casos leva
+  nome de mãe e bebê — é por isso que ela só existe atrás da gestão (seção 10).
+  **A TABELA RESPIRA** (mesmo pedido: "muito coladinho"): mais espaço entre as colunas, um vão
+  maior entre os números e "Parto por", e maternidade e pacote numa coluna de duas linhas — sem
+  isso a tabela rolava de lado em telas de ~1300px. O nome é a única coluna que encolhe (quebra
+  em duas linhas). As datas do período ficaram uma por linha, porque lado a lado cortavam o ano,
+  e só UM atalho de período acende (em 30/09, "este mês" e "últimos 30 dias" eram iguais e
+  acendiam juntos).
+  **Fica para as próximas voltas:** buscas salvas.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -2179,8 +2213,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    cliente. Exibi-lo pede uma view `security definer` restrita a `eh_adm()`, com GRANT e
    teste próprios. Derivar do nome funcionaria para as catorze contas de hoje e mentiria
    sem avisar no dia em que um endereço fugisse do padrão.
-3. **O relatório EXTERNO nasceu em 29/09/2026** (a operação inteira, com filtros); faltam
-   exportar, buscas salvas e agrupamentos. E `escalas` continua vazia: sem
+3. **O relatório EXTERNO nasceu em 29/09/2026** (a operação inteira, com filtros) e ganhou
+   gráfico, agrupamento e planilha em 30/09; faltam as buscas salvas. E `escalas` continua vazia: sem
    turno registrado, não há "vazão por turno" (o plano previa), só "dias com trabalho", que é
    mais fraco. Preencher escalas NÃO é registro de ponto (seção 9): é a escala planejada.
 4. **`atualizar_situacao_clinica` sem RPC.** `situacao_clinica` continua por UPDATE direto

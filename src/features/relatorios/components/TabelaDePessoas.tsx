@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import clsx from 'clsx'
 import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
+import type { PadraoNoPerfil } from './PerfilDaPessoa'
 import type { LinhaDaPessoa } from '../lib/kpis'
 import { primeiroNome } from '../lib/metricas'
 import { formatarPontos } from '../lib/pontos'
@@ -57,6 +58,7 @@ export function TabelaDePessoas({
   porEtapa,
   fases,
   pontos,
+  padrao,
   rotuloDoPeriodo,
 }: {
   linhas: LinhaDaPessoa[]
@@ -64,6 +66,7 @@ export function TabelaDePessoas({
   porEtapa: MetricaPorEtapa[]
   fases: FaseDaPessoa[]
   pontos: PontosDaPessoa[]
+  padrao: PadraoNoPerfil
   /** Como a frase do perfil termina: "em dezembro de 2027". */
   rotuloDoPeriodo: string
 }) {
@@ -230,6 +233,7 @@ export function TabelaDePessoas({
               porEtapa={porEtapa}
               fases={fases}
               pontos={pontos}
+              padrao={padrao}
               rotuloDoPeriodo={rotuloDoPeriodo}
               onFechar={fechar}
             />

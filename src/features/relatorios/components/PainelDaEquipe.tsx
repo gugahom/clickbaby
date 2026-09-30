@@ -78,6 +78,10 @@ export function PainelDaEquipe({
               selecionado={pessoaId ?? 'equipe'}
               onEscolher={(item) => onTrocarPessoa(item.id === 'equipe' ? null : item.id)}
               itens={[{ id: 'equipe', rotulo: 'Toda a equipe' }, ...pessoas.map((p) => ({ id: p.id, rotulo: p.nome }))]}
+              // Largura FIXA: medido pelo conteúdo, o seletor encolhia até o
+              // nome escolhido ("Ama…"), e a lista aberta — que copia a largura
+              // do botão — cortava "Toda a equipe" e a própria busca.
+              className="w-56"
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">

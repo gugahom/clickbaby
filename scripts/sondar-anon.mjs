@@ -209,6 +209,9 @@ const RPCS_TRANSICAO = {
   operacao_buscar: { p_filtros: {}, p_ordem: 'recentes', p_limite: 1, p_deslocamento: 0 },
   operacao_facetas: { p_filtros: {} },
   operacao_resumo: { p_filtros: {} },
+  // O gráfico do recorte e o padrão em uso (20260930052252).
+  operacao_grafico: { p_filtros: {}, p_eixo: 'dia' },
+  metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC

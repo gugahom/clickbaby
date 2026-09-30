@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import {
+  useDentroDoPadrao,
   useFasesDeCampo,
   useMetricasPorEtapa,
   useMetricasPorPessoa,
+  usePadroesDeTempo,
   usePontosPorPessoa,
   type Periodo,
 } from '../api/useMetricas'
@@ -71,7 +73,9 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
   const pessoas = useMetricasPorPessoa(periodo)
   const fases = useFasesDeCampo(periodo)
   const pontos = usePontosPorPessoa(periodo)
-  const consultas = [porEtapa, pessoas, fases, pontos]
+  const dentroDoPadrao = useDentroDoPadrao(periodo)
+  const padroes = usePadroesDeTempo()
+  const consultas = [porEtapa, pessoas, fases, pontos, dentroDoPadrao, padroes]
   const erro = consultas.find((c) => c.error)?.error
   const carregando = consultas.some((c) => c.isPending)
   const atualizando = consultas.some((c) => c.isPlaceholderData)
@@ -153,6 +157,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
             porEtapa={porEtapa.data ?? []}
             fases={fases.data ?? []}
             pontos={pontos.data ?? []}
+            padrao={{ dentro: dentroDoPadrao.data ?? [], vigentes: padroes.data ?? [] }}
             rotuloDoPeriodo={rotuloDoPeriodo}
           />
         </div>

@@ -1284,6 +1284,16 @@ export type Database = {
           tipo: Database["public"]["Enums"]["etapa_tipo"]
         }[]
       }
+      metricas_dentro_do_padrao: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: {
+          com_padrao: number
+          dentro: number
+          medidas: number
+          pessoa_id: string
+          tipo: Database["public"]["Enums"]["etapa_tipo"]
+        }[]
+      }
       metricas_fases_de_campo: {
         Args: { p_fim: string; p_inicio: string }
         Returns: {
@@ -1428,6 +1438,20 @@ export type Database = {
           grupo: string
           rotulo: string
           valor: string
+        }[]
+      }
+      operacao_grafico: {
+        Args: { p_eixo: string; p_filtros: Json }
+        Returns: {
+          cancelados: number
+          casos: number
+          chave: string
+          enviados: number
+          mediana_horas_ate_envio: number
+          no_prazo: number
+          partos: number
+          rotulo: string
+          total_despesas: number
         }[]
       }
       operacao_marcas: {

@@ -162,7 +162,14 @@ export function RelatoriosPage() {
             <AbaPessoas mes={mes} periodoDoMes={periodo} hoje={hoje} />
           )}
           {aba === 'pontuacao' && <TabelaDePontuacao />}
-          {aba === 'padroes' && <PadroesDeTempo equipe={equipe.data ?? []} padroes={padroes.data ?? []} />}
+          {aba === 'padroes' && (
+            <PadroesDeTempo
+              equipe={equipe.data ?? []}
+              padroes={padroes.data ?? []}
+              periodo={periodo}
+              rotuloDoPeriodo={`em ${rotuloDoMes(mes).toLowerCase()}`}
+            />
+          )}
         </div>
       )}
     </div>
