@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import type { Feriado, ItemDoCalendario } from '../api/useCalendario'
 import { NOMES_DOS_DIAS, diaDaSemanaCurto, rotuloDoDia } from '../lib/datas'
 import { corDoParto, textoSobre } from '../lib/coresGoogle'
-import { estiloDoItem } from '../lib/estilos'
+import { esmaecido, estiloDoItem } from '../lib/estilos'
 
 /**
  * A GRADE DO MÊS e as SETE COLUNAS DA SEMANA. As duas são a mesma pergunta —
@@ -83,7 +83,11 @@ export function GradeDoMes({ dias, mes, hoje, escolhido, porDia, feriados, onEsc
                   {itens.slice(0, 6).map((item) => (
                     <span
                       key={item.chave}
-                      className={clsx('size-1.5 rounded-full', item.tipo !== 'parto' && estiloDoItem(item).marca)}
+                      className={clsx(
+                        'size-1.5 rounded-full',
+                        item.tipo !== 'parto' && estiloDoItem(item).marca,
+                        esmaecido(item) && 'opacity-45',
+                      )}
                       style={item.tipo === 'parto' ? { backgroundColor: corDoParto(item.corDoGoogle).hex } : undefined}
                     />
                   ))}
@@ -150,16 +154,16 @@ export function ColunasDaSemana({ dias, hoje, escolhido, porDia, feriados, onEsc
 /**
  * Como a pílula se pinta. O PARTO vem na COR CHEIA do seu evento no Google
  * (segunda volta do gestor: "tá muito apagado" — o fundo tingido de leve lia
- * como pastel), com o texto que tiver mais contraste com ela (`textoSobre`). Já
- * nascido, ele só perde um pouco de força: esmaecido demais, o mês que passou
- * inteiro parecia desligado. Os outros tipos usam as cores da casa.
+ * como pastel), com o texto que tiver mais contraste com ela (`textoSobre`). Os
+ * outros tipos usam as cores da casa. O que JÁ PASSOU, de qualquer tipo, perde a
+ * força — ver `esmaecido`.
  */
 function aparencia(item: ItemDoCalendario): { classe: string; fundo?: { backgroundColor: string; color: string } } {
   if (item.tipo !== 'parto' || item.vencido) {
-    return { classe: clsx(estiloDoItem(item).pilula, item.feito && 'opacity-55') }
+    return { classe: clsx(estiloDoItem(item).pilula, esmaecido(item) && 'opacity-45') }
   }
   const cor = corDoParto(item.corDoGoogle).hex
-  return { classe: clsx(item.feito && 'opacity-80'), fundo: { backgroundColor: cor, color: textoSobre(cor) } }
+  return { classe: clsx(esmaecido(item) && 'opacity-45'), fundo: { backgroundColor: cor, color: textoSobre(cor) } }
 }
 
 function PilulaDoItem({ item, comDetalhe = false }: { item: ItemDoCalendario; comDetalhe?: boolean }) {

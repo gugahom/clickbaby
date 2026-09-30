@@ -39,6 +39,8 @@ export interface ItemDoCalendario {
   casoId: string
   /** O parto já nasceu; a etapa já foi concluída. */
   feito: boolean
+  /** O horário (ou o dia, sem hora) já ficou para trás — ver `esmaecido`. */
+  passou: boolean
   /** Prazo que passou sem envio. */
   vencido: boolean
   rascunho: boolean
@@ -147,6 +149,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       vencido: false,
       rascunho: c.eh_rascunho === true,
       corDoGoogle: c.cor_calendar,
+      passou: false,
     })
   }
 
@@ -166,6 +169,7 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       vencido: new Date(c.vence_em).getTime() < agora && !c.na_uti,
       rascunho: false,
       corDoGoogle: null,
+      passou: false,
     })
   }
 
@@ -186,8 +190,15 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       vencido: false,
       rascunho: false,
       corDoGoogle: null,
+      passou: false,
     })
   }
+
+  // O QUE JÁ PASSOU, em relação a AGORA em Brasília. Calculado na leitura, que
+  // se refaz a cada 2 minutos — precisão mais que suficiente para esmaecer.
+  const agoraEmBrasilia = emBrasilia(new Date(agora).toISOString())
+  const marcoDeAgora = `${agoraEmBrasilia.dia} ${agoraEmBrasilia.hora}`
+  for (const item of itens) item.passou = `${item.dia} ${item.hora ?? '23:59'}` < marcoDeAgora
 
   // Dentro do dia: o que tem hora, pela hora; o dia todo por último.
   itens.sort((a, b) => (a.dia + (a.hora ?? '99')).localeCompare(b.dia + (b.hora ?? '99')))
