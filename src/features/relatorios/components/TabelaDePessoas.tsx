@@ -1,5 +1,8 @@
 import { useRef, useState } from 'react'
 import clsx from 'clsx'
+import { useAuth } from '@/features/auth/contexto'
+import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
+import { useFotosDaEquipe } from '../api/useMetricas'
 import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
 import type { PadraoNoPerfil } from './PerfilDaPessoa'
 import type { LinhaDaPessoa } from '../lib/kpis'
@@ -7,6 +10,7 @@ import { primeiroNome } from '../lib/metricas'
 import { formatarPontos } from '../lib/pontos'
 import { Cartao } from './PainelDaEquipe'
 import { PerfilDaPessoa } from './PerfilDaPessoa'
+import { RankingDePontos } from './RankingDePontos'
 
 type Coluna = 'pontos' | 'partos' | 'edicoes' | 'taxaPrazo' | 'ajustes' | 'dias'
 
@@ -49,6 +53,11 @@ const TELA_LARGA = '(min-width: 1280px)'
  * que passou de mão dividida entre quem a fez (migration 20260929210556). A
  * tabela nasce ordenada por eles; as outras colunas continuam a um toque.
  *
+ * O RANKING POR PONTOS GANHOU CARA PRÓPRIA (30/09/2026): coroas, retratos e
+ * a variação de posição, no alto da aba — ver `RankingDePontos`. Ele tomou o
+ * lugar do destaque "Mais pontos", que dizia só o primeiro; tocar numa linha
+ * dele abre o mesmo perfil que a tabela abre.
+ *
  * "NO PRAZO" PEDE AMOSTRA: abaixo de 5 fotos e reels com prazo a célula fica
  * "—" e vai para o fim da ordem. 3 de 3 não é melhor que 18 de 20.
  */
@@ -60,6 +69,7 @@ export function TabelaDePessoas({
   pontos,
   padrao,
   rotuloDoPeriodo,
+  ranking,
 }: {
   linhas: LinhaDaPessoa[]
   pessoas: MetricaPorPessoa[]
@@ -69,12 +79,29 @@ export function TabelaDePessoas({
   padrao: PadraoNoPerfil
   /** Como a frase do perfil termina: "em dezembro de 2027". */
   rotuloDoPeriodo: string
+  /**
+   * O ranking lê a lista SEM a busca por nome (procurar alguém não o põe em
+   * primeiro) e os pontos do período anterior, para a variação.
+   */
+  ranking: {
+    linhas: LinhaDaPessoa[]
+    anteriores: { pessoaId: string; pontos: number }[] | undefined
+    rotuloDaComparacao: string
+  }
 }) {
   const [coluna, setColuna] = useState<Coluna>('pontos')
   const [crescente, setCrescente] = useState(false)
   const [aberta, setAberta] = useState<string | null>(null)
   const [fechado, setFechado] = useState(false)
   const perfil = useRef<HTMLDivElement>(null)
+  const { pessoa: eu } = useAuth()
+  const caminhos = useFotosDaEquipe().data
+  const assinadas = useUrlsDasFotos([...(caminhos?.values() ?? [])]).data
+  const fotos = new Map<string, string>()
+  for (const [pessoaId, caminho] of caminhos ?? []) {
+    const url = assinadas?.get(caminho)
+    if (url) fotos.set(pessoaId, url)
+  }
 
   if (linhas.length === 0) {
     return (
@@ -139,9 +166,24 @@ export function TabelaDePessoas({
 
   return (
     <div className="space-y-4">
-      <Destaques linhas={linhas} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <RankingDePontos
+          linhas={ranking.linhas}
+          anteriores={ranking.anteriores}
+          rotuloDaComparacao={ranking.rotuloDaComparacao}
+          fotos={fotos}
+          euId={eu?.id}
+          selecionadaId={selecionada?.pessoaId}
+          onEscolher={abrir}
+        />
+        <Destaques linhas={linhas} />
+      </div>
 
-      <div className={clsx('grid gap-4', selecionada && 'xl:grid-cols-[minmax(0,1fr)_30rem]')}>
+      {/* Coluna `minmax(0,1fr)` no celular: sem ela a grade cresce até a largura
+          da tabela, e a página rolava de lado (a tabela tem a própria rolagem). */}
+      <div
+        className={clsx('grid grid-cols-[minmax(0,1fr)] gap-4', selecionada && 'xl:grid-cols-[minmax(0,1fr)_30rem]')}
+      >
         <Cartao titulo="Pessoas" className="h-full">
           <div className="-mx-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -267,8 +309,9 @@ function Celula({
 }
 
 /**
- * OS TRÊS DESTAQUES do mês — o "ranking" lido num olhar. Um número por
- * cartão, e o nome de quem o fez.
+ * OS TRÊS DESTAQUES do mês. Um número por cartão, e o nome de quem o fez.
+ * Ficam AO LADO do ranking por pontos, empilhados, e esticam até a altura
+ * dele. "Mais pontos" saiu: é a primeira linha do ranking.
  */
 function Destaques({ linhas }: { linhas: LinhaDaPessoa[] }) {
   const topo = <K extends keyof LinhaDaPessoa>(campo: K, desempate?: (l: LinhaDaPessoa) => number) =>
@@ -276,13 +319,11 @@ function Destaques({ linhas }: { linhas: LinhaDaPessoa[] }) {
       .filter((l) => typeof l[campo] === 'number' && (l[campo] as number) > 0)
       .sort((a, b) => (b[campo] as number) - (a[campo] as number) || (desempate ? desempate(b) - desempate(a) : 0))[0]
 
-  const maisPontos = topo('pontos')
   const partos = topo('partos')
   const edicoes = topo('edicoes')
   const prazo = topo('taxaPrazo', (l) => l.comPrazo)
 
   const cartoes = [
-    maisPontos && { rotulo: 'Mais pontos', nome: maisPontos.nome, valor: formatarPontos(maisPontos.pontos) },
     partos && { rotulo: 'Mais partos', nome: partos.nome, valor: String(partos.partos) },
     edicoes && { rotulo: 'Mais edições', nome: edicoes.nome, valor: String(edicoes.edicoes) },
     prazo &&
@@ -296,7 +337,7 @@ function Destaques({ linhas }: { linhas: LinhaDaPessoa[] }) {
   if (cartoes.length === 0) return null
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid auto-rows-fr gap-3 sm:grid-cols-3 lg:grid-cols-1">
       {cartoes.map((c) => (
         <div key={c.rotulo} className="flex items-center justify-between gap-3 rounded-painel border border-border bg-card p-4">
           <div className="min-w-0">

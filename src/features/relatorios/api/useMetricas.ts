@@ -312,6 +312,22 @@ export function usePontosPorPessoa({ inicio, fim }: Periodo) {
   })
 }
 
+/**
+ * O RETRATO DE CADA PESSOA, para o ranking (30/09/2026). Só o CAMINHO no
+ * bucket: a URL se assina na hora, com `useUrlsDasFotos`, como em todo o app.
+ */
+export function useFotosDaEquipe() {
+  return useQuery({
+    queryKey: [CHAVE, 'fotos'],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<Map<string, string>> => {
+      const { data, error } = await supabase.from('pessoas').select('id, foto_path').not('foto_path', 'is', null)
+      if (error) throw error
+      return new Map((data ?? []).flatMap((p) => (p.foto_path ? [[p.id, p.foto_path] as const] : [])))
+    },
+  })
+}
+
 export interface PesoDoItem {
   item: ItemDePontuacao
   pontos: number

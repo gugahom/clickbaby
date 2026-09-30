@@ -102,6 +102,13 @@
   --color-grafico: var(--grafico);
   --color-grafico-atrasado: var(--grafico-atrasado);
   --color-grafico-comparacao: var(--grafico-comparacao);
+  /* As medalhas do ranking por pontos — ver o bloco `--ouro` no :root. */
+  --color-ouro: var(--ouro);
+  --color-ouro-traco: var(--ouro-traco);
+  --color-prata: var(--prata);
+  --color-prata-traco: var(--prata-traco);
+  --color-bronze: var(--bronze);
+  --color-bronze-traco: var(--bronze-traco);
   --color-logo-azul: var(--logo-azul);
   --color-logo-manteiga: var(--logo-manteiga);
   --color-logo-cinza: var(--logo-cinza);
@@ -214,6 +221,18 @@
   --grafico: oklch(0.55 0.15 262);
   --grafico-atrasado: oklch(0.53 0.21 25);
   --grafico-comparacao: oklch(0.6 0.2 357);
+
+  /* AS MEDALHAS DO RANKING (30/09/2026, gamificação pedida pela gestão).
+     Ouro, prata e bronze só existem nas coroas dos três primeiros, e nunca
+     sozinhos: a posição está escrita ao lado. O preenchimento é claro para ler
+     como metal; o TRAÇO é a mesma matiz escurecida, e é ele que segura a
+     forma sobre o cartão branco — ouro cheio sobre branco fica abaixo de 2:1. */
+  --ouro: oklch(0.83 0.15 86);
+  --ouro-traco: oklch(0.56 0.12 75);
+  --prata: oklch(0.86 0.012 260);
+  --prata-traco: oklch(0.56 0.02 260);
+  --bronze: oklch(0.66 0.12 45);
+  --bronze-traco: oklch(0.45 0.1 40);
 
   /* AS MESMAS TRÊS, MAIS ESCURAS, para texto sobre pílula tingida.
   
@@ -399,6 +418,14 @@
   --grafico: oklch(0.66 0.15 255);
   --grafico-atrasado: oklch(0.63 0.2 22);
   --grafico-comparacao: oklch(0.64 0.19 357);
+  /* Medalhas no escuro: o preenchimento já se destaca do card, e o traço só
+     arremata a borda. */
+  --ouro: oklch(0.84 0.15 86);
+  --ouro-traco: oklch(0.68 0.13 80);
+  --prata: oklch(0.86 0.012 260);
+  --prata-traco: oklch(0.68 0.015 260);
+  --bronze: oklch(0.68 0.12 45);
+  --bronze-traco: oklch(0.55 0.1 40);
   --rascunho: oklch(0.83 0.13 85);
   --rascunho-fundo: oklch(0.28 0.05 85 / 35%);
   --rascunho-borda: oklch(0.5 0.09 85 / 45%);

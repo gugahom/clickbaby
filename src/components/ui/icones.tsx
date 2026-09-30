@@ -595,3 +595,18 @@ export function IconeRelogio({ className }: PropsIcone) {
     </svg>
   )
 }
+
+/**
+ * Coroa do ranking por pontos (30/09/2026). Cheia, e não em traço como o resto:
+ * a cor dela é a medalha (ouro, prata, bronze), e um contorno de 2px não teria
+ * área para mostrar cor nenhuma. O contorno vem de quem a usa (`stroke-*`),
+ * para o ouro não sumir sobre o cartão branco.
+ */
+export function IconeCoroa({ className }: PropsIcone) {
+  return (
+    <svg viewBox="0 0 24 24" strokeWidth="1.5" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M3.5 8.5 8 12l4-6.5 4 6.5 4.5-3.5L19 18H5L3.5 8.5Z" />
+      <path d="M5.5 20.5h13" fill="none" strokeLinecap="round" />
+    </svg>
+  )
+}

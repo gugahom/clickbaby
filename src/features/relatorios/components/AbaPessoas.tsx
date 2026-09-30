@@ -10,7 +10,7 @@ import {
   type Periodo,
 } from '../api/useMetricas'
 import { ETAPAS_DE_EDICAO, linhasDasPessoas } from '../lib/kpis'
-import { INICIO_DAS_METRICAS, dataCurta, rotuloDoMes, somarDias } from '../lib/metricas'
+import { INICIO_DAS_METRICAS, dataCurta, deslocarMes, periodoDoMes as doMes, rotuloDoMes, somarDias } from '../lib/metricas'
 import { Segmentado } from './Segmentado'
 import { TabelaDePessoas } from './TabelaDePessoas'
 
@@ -69,10 +69,28 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
           ? 'hoje'
           : `de ${dataCurta(periodo.inicio)} a ${dataCurta(periodo.fim)}`
 
+  // O PERÍODO ANTERIOR, de mesmo tamanho, para a variação do ranking. O banco
+  // aplica o piso de 01/10/2026 por dentro: antes dele volta vazio, e o
+  // ranking não mostra variação nenhuma.
+  const duracao = Math.round((Date.parse(periodo.fim) - Date.parse(periodo.inicio)) / 86_400_000) + 1
+  const anterior: Periodo =
+    modo === 'mes'
+      ? doMes(deslocarMes(mes, -1))
+      : { inicio: somarDias(periodo.inicio, -duracao), fim: somarDias(periodo.inicio, -1) }
+  const rotuloDaComparacao =
+    modo === 'mes'
+      ? 'vs mês anterior'
+      : modo === '7dias'
+        ? 'vs 7 dias anteriores'
+        : modo === 'hoje'
+          ? 'vs ontem'
+          : 'vs período anterior'
+
   const porEtapa = useMetricasPorEtapa(periodo)
   const pessoas = useMetricasPorPessoa(periodo)
   const fases = useFasesDeCampo(periodo)
   const pontos = usePontosPorPessoa(periodo)
+  const pontosAntes = usePontosPorPessoa(anterior)
   const dentroDoPadrao = useDentroDoPadrao(periodo)
   const padroes = usePadroesDeTempo()
   const consultas = [porEtapa, pessoas, fases, pontos, dentroDoPadrao, padroes]
@@ -88,11 +106,19 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
     else fezCampo.add(m.pessoaId)
   }
   const procurado = semAcento(busca.trim())
-  const linhas = linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [], pontos.data ?? []).filter(
-    (l) =>
-      (trabalho === 'todos' || (trabalho === 'campo' ? fezCampo : fezEdicao).has(l.pessoaId)) &&
-      (procurado === '' || semAcento(l.nome).includes(procurado)),
+  const doTrabalho = linhasDasPessoas(porEtapa.data ?? [], pessoas.data ?? [], pontos.data ?? []).filter(
+    (l) => trabalho === 'todos' || (trabalho === 'campo' ? fezCampo : fezEdicao).has(l.pessoaId),
   )
+  const linhas = doTrabalho.filter((l) => procurado === '' || semAcento(l.nome).includes(procurado))
+
+  // Os pontos de antes, somados por pessoa. Com o filtro de trabalho a
+  // comparação some: o período anterior não foi recortado do mesmo jeito.
+  const somaAntes = new Map<string, number>()
+  for (const p of pontosAntes.data ?? []) somaAntes.set(p.pessoaId, (somaAntes.get(p.pessoaId) ?? 0) + p.pontos)
+  const anteriores =
+    trabalho === 'todos' && pontosAntes.data && !pontosAntes.isPlaceholderData
+      ? [...somaAntes].map(([pessoaId, pts]) => ({ pessoaId, pontos: Math.round(pts * 100) / 100 }))
+      : undefined
 
   return (
     <div className="space-y-4">
@@ -159,6 +185,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
             pontos={pontos.data ?? []}
             padrao={{ dentro: dentroDoPadrao.data ?? [], vigentes: padroes.data ?? [] }}
             rotuloDoPeriodo={rotuloDoPeriodo}
+            ranking={{ linhas: doTrabalho, anteriores, rotuloDaComparacao }}
           />
         </div>
       )}
