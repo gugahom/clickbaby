@@ -1,6 +1,6 @@
 import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
 import { dataCurta } from '../lib/metricas'
-import { rotuloFixo, type FiltrosDaOperacao, type Ordem } from './filtros'
+import { ROTULO_DO_LINK, rotuloDoEquipamento, rotuloFixo, type FiltrosDaOperacao, type Ordem } from './filtros'
 import {
   COLUNA_DO_EIXO,
   graoDoTempo,
@@ -24,6 +24,11 @@ import { lerGraficoDaOperacao, lerTodosOsCasos } from './useOperacao'
  * A planilha dos casos leva NOME DE MÃE E BEBÊ, e é por isso que ela só existe
  * aqui, atrás da gestão (seção 10 do CLAUDE.md): o arquivo sai do sistema, e
  * quem o baixa passa a responder por ele.
+ *
+ * OS LINKS VÃO SÓ PELO TIPO (30/09/2026, decisão do gestor): a coluna diz
+ * "Google Photos, WeTransfer", nunca o endereço. O link é a chave da galeria da
+ * família, e um arquivo encaminhado abriria todas elas. Na tela, sim, ele é
+ * clicável — lá quem vê é a gestão logada.
  */
 
 const ADICIONAL: Record<string, string> = { new_born: 'New Born', fotolivro: 'Foto/Livro', video_master: 'Vídeo MASTER' }
@@ -53,6 +58,8 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       'Adicionais',
       'Passou pela UTI',
       'Voltou para ajuste',
+      'Links',
+      'Equipamento',
     ],
     casos.map((c) => [
       c.dia ? dataCurta(c.dia) : '',
@@ -69,6 +76,8 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       c.adicionais.map((a) => ADICIONAL[a] ?? a).join(', '),
       SIM_NAO(c.passouUti),
       SIM_NAO(c.reaberto),
+      [...new Set(c.links.map((l) => ROTULO_DO_LINK[l.tipo] ?? l.tipo))].join(', '),
+      c.equipamentos.map(rotuloDoEquipamento).join(', '),
     ]),
   )
   baixarCsv(nomeDoArquivo(f, ''), csv)
