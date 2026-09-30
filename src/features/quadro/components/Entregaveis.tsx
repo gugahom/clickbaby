@@ -35,7 +35,17 @@ const ROTULO_TIPO: Record<TipoEntregavel, string> = {
   // família escolhe as fotos do Click Home. Tipo próprio porque não é o álbum
   // do parto — são dois endereços, em dois momentos.
   click_home: 'Galeria do New Born',
+  // O material do BIRTH vendido depois da entrega (30/09/2026).
+  google_drive: 'Google Drive',
 }
+
+/**
+ * O BIRTH VENDIDO DEPOIS DA ENTREGA (30/09/2026, pedido do gestor). O BIRTH é
+ * feito sem contrato para tentar a venda; quando ela acontece, o material vai
+ * por Google Drive ou WeTransfer, com o caso já encerrado. Só nesse caso a aba
+ * Concluídos aceita link novo, e só esses dois tipos.
+ */
+const TIPOS_DA_VENDA_DO_BIRTH: TipoEntregavel[] = ['google_drive', 'wetransfer']
 
 interface PropsEntregaveis {
   caso: CasoQuadro
@@ -64,7 +74,11 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
   const registrar = useRegistrarEntregavel()
 
   const [dialogoAberto, setDialogoAberto] = useState(false)
-  const [tipo, setTipo] = useState<TipoEntregavel>('google_photos')
+  const vendaDoBirth = (caso.pacoteSlug ?? '').startsWith('birth') && caso.statusOperacional === 'encerrado'
+  const tiposOferecidos = vendaDoBirth
+    ? TIPOS_DA_VENDA_DO_BIRTH
+    : (Object.keys(ROTULO_TIPO) as TipoEntregavel[]).filter((t) => t !== 'google_drive')
+  const [tipo, setTipo] = useState<TipoEntregavel>(vendaDoBirth ? 'google_drive' : 'google_photos')
   const [url, setUrl] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
@@ -110,7 +124,7 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
         </ul>
       )}
 
-      {!caso.ehTerminal && (
+      {(!caso.ehTerminal || vendaDoBirth) && (
         <Botao
           onClick={() => {
             setErro(null)
@@ -143,9 +157,9 @@ export function Entregaveis({ caso, aberto, onMudou }: PropsEntregaveis) {
                 rotulo="Selecione o tipo"
                 selecionado={tipo}
                 onEscolher={(item) => setTipo(item.id as TipoEntregavel)}
-                itens={Object.entries(ROTULO_TIPO).map(([valor, rot]) => ({
+                itens={tiposOferecidos.map((valor) => ({
                   id: valor,
-                  rotulo: rot,
+                  rotulo: ROTULO_TIPO[valor],
                 }))}
               />
             </div>

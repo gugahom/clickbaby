@@ -1,0 +1,21 @@
+-- =============================================================================
+-- GOOGLE DRIVE COMO TIPO DE LINK — o BIRTH vendido depois da entrega
+-- (30/09/2026, pedido do gestor)
+-- =============================================================================
+--
+-- O BIRTH é feito sem contrato, para apresentar aos pais e tentar a venda (seção
+-- 2 do CLAUDE.md). Quando a venda acontece, o material vai por Google Drive ou
+-- WeTransfer — e isso é DEPOIS de o caso ter sido entregue e encerrado. O
+-- gestor pediu que esses links se acrescentem na aba Concluídos, no próprio
+-- caso BIRTH.
+--
+-- O WeTransfer já é tipo de link; o Google Drive não era, e tipo próprio é a
+-- regra de sempre: a lista de links diz O QUE é cada endereço.
+--
+-- NADA MAIS MUDA NO BANCO: `registrar_entregavel` sempre aceitou caso em
+-- qualquer estado — quem limitava a caso aberto era a tela —, e o link novo de
+-- um caso encerrado nasce sem confirmação, então quem o pôs pode apagá-lo se
+-- errou (`remover_entregavel` só recusa link confirmado).
+-- =============================================================================
+
+alter type public.tipo_entregavel add value 'google_drive';
