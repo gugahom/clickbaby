@@ -3,6 +3,8 @@ import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
 import { RotaDeGestao } from './guards/RotaDeGestao'
 import { RotaDoFinanceiro } from './guards/RotaDoFinanceiro'
+import { RotaAdministrativa } from './guards/RotaAdministrativa'
+import { CalendarioPage } from '@/features/calendario/CalendarioPage'
 import { DespesasPage } from '@/features/despesas/DespesasPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { QuadroPage } from '@/features/quadro/QuadroPage'
@@ -62,6 +64,11 @@ export const router = createBrowserRouter(
               // guarda própria, para não abrir a Equipe junto.
               element: <RotaDoFinanceiro />,
               children: [{ path: 'despesas', element: <DespesasPage /> }],
+            },
+            {
+              // O calendário é de todos menos as fotógrafas (30/09/2026).
+              element: <RotaAdministrativa />,
+              children: [{ path: 'calendario', element: <CalendarioPage /> }],
             },
           ],
         },

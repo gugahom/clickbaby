@@ -500,6 +500,7 @@ uma tarefa parecer exigir servidor próprio, pare e pergunte.
     /auth
     /relatorios      o relatório interno das pessoas (28/09/2026) e, em /externo, o da
                      operação inteira com filtros (29/09/2026) — ver a seção 13
+    /calendario      partos, horas marcadas, prazos e feriados (30/09/2026) — ver a seção 13
     -- previstas, ainda não existem: /casos /entregaveis /painel
     -- /fila-edicao foi REMOVIDA a pedido do gestor (a view e os testes ficaram)
   /components/ui       componentes base compartilhados
@@ -2202,6 +2203,33 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   e só UM atalho de período acende (em 30/09, "este mês" e "últimos 30 dias" eram iguais e
   acendiam juntos).
   **Fica para as próximas voltas:** buscas salvas.
+- **O CALENDÁRIO** (`/quadro/calendario`, 30/09/2026, item 5 da fila do gestor). Todos os
+  papéis MENOS `operador` (decisão do gestor), pela guarda `RotaAdministrativa`, que usa a
+  mesma regra da aba Concluídos (`podeVerConcluidos`) — regra de tela, a RLS não mudou.
+  **É A PRIMEIRA DE TRÊS ETAPAS**, combinadas com o usuário: (1) MOSTRAR o que o banco já sabe;
+  (2) a ESCALA de plantão, registrada na seção Equipe (pedido do gestor: "a gestão sabe os
+  turnos"), usando a tabela `escalas` que existe vazia desde o schema inicial; (3) marcar o
+  parto no próprio sistema, com o Google Calendar recebendo uma cópia (o gestor quer o Google
+  como contingência). Até a etapa 3, o Google continua sendo a ENTRADA dos casos pelo sync.
+  **O medo da gestão ("perder todos os dados") foi respondido pelo backup noturno**, não pelo
+  Google — ver "Backup" na seção 11 e `docs/backup.md`.
+  **SEM MIGRATION:** tudo o que ele mostra já é legível — três consultas por período
+  (`quadro_casos` pelo `dia` e pelo `vence_em`, `caso_etapas` pela `previsao_em`) mais
+  `feriados`, com `buscarTudo` e ordenação total. Quatro tipos de item, uma cor cada (a legenda
+  é também o filtro): PARTO (previsão do caso; "Nasceu" esmaecido quando já nasceu; rascunho
+  marcado), HORA MARCADA (banho, fechamento e as outras de campo, com o responsável), ENTREGA
+  COMBINADA (vídeo, Foto/Livro, New Born — o `previsao_em` da seção lateral) e PRAZO DO PACOTE
+  (só de caso ainda não ENVIADO; vermelho quando venceu). Cancelado não aparece; o nascimento
+  não vira item de etapa, porque o caso já é o item do parto.
+  **Mês e semana**, com a agenda do dia escolhido ao lado (o arranjo do relatório interno);
+  tocar num item abre o caso no Quadro (`/?caso=`). No celular, a grade do mês mostra só
+  bolinhas de cor, e a agenda desce. A visão e o dia moram no endereço.
+  **FERIADO SE MARCA NA AGENDA DO DIA**, só pelo ADM (`podeEditarCadastro`, espelho de
+  `eh_adm()` — a policy `feriados_escrita_adm` já existia, e o INSERT/DELETE é direto, como todo
+  cadastro). Ele muda o prazo dos dois MASTER na hora, porque `quadro_casos` recalcula
+  `vence_em` na leitura: conferido no local, um MASTER nascido em 09/10 vence em 23/10 e, com
+  12/10 marcado, em 26/10. Por isso o Quadro recarrega junto e a frase embaixo do botão avisa.
+  Sem Realtime próprio: o calendário relê a cada 2 minutos — o que muda nele muda no Quadro.
 - **Perfil** (`/quadro/perfil`), de qualquer pessoa logada, no menu do nome ("Editar
   perfil"). **Troca a senha**, exigindo a atual — o Supabase não exige; a exigência é nossa,
   porque os CEL CLICK trocam de mão com a sessão aberta. E **troca a foto**, pela canetinha
@@ -2296,7 +2324,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    pós-produção sem `iniciado_em` é recusada pelo banco. O texto antigo desta dívida e o da
    seção 9 descreviam o mundo de antes dela.)
 9. **`feriados` está vazia** — a lista que a operação respeita nunca foi confirmada. Afeta
-   `somar_dias_uteis`, e portanto o prazo dos dois MASTER.
+   `somar_dias_uteis`, e portanto o prazo dos dois MASTER. Desde 30/09/2026 o ADM marca e
+   desmarca feriado pelo Calendário; o que falta é a gestão dizer QUAIS.
 10. **Raiz do domínio dá 404.** `clickbaby.com.br/` está reservada para a landing da
    empresa, que não existe. O app vive em `/quadro`.
 11. **Observação do Calendar não é importada.** O `description` do evento do Google não vem
