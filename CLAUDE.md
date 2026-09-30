@@ -2194,6 +2194,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   é "Mais pontos"; o perfil ganhou o bloco de pontos por item, com quantas etapas e quantas
   foram divididas. A contagem de etapas do bloco de pontos pode passar a de "Produção por
   etapa": aquela conta só o responsável, esta conta quem pôs a mão.
+  **O RANKING GANHOU CARA DE PÓDIO** (30/09/2026, pedido do gestor: a empresa quer começar a
+  trabalhar com GAMIFICAÇÃO). No alto da aba Pessoas, `RankingDePontos`: posição, COROA de ouro,
+  prata e bronze pousada no retrato dos três primeiros (por posição — empate em primeiro leva
+  duas de ouro), nome, pontos, uma barra contra os pontos do líder ("quanto falta para
+  alcançar") e quantas posições cada um SUBIU ou DESCEU contra o período anterior de mesmo
+  tamanho. Veio de um exemplo de leaderboard com shadcn e lucide, feito com as peças da casa
+  (`IconeCoroa`, `Avatar`, tokens `--ouro`/`--prata`/`--bronze`); o "nível" e a liga do exemplo
+  saíram a pedido dele ("só o nome mesmo"). Mostra os cinco primeiros e a própria pessoa depois
+  de um "…" se ficou de fora; o resto abre num toque, e tocar numa linha abre o perfil. A BUSCA
+  POR NOME NÃO O RECORTA (procurar alguém não o põe em primeiro); o filtro de trabalho sim, e aí
+  a variação some, porque o período anterior não foi recortado igual. A variação também some
+  quando o período anterior não tem ponto nenhum — em outubro de 2026 ele é setembro, antes do
+  piso. Ele tomou o lugar do destaque "Mais pontos"; os outros três ficam ao lado, empilhados.
   PADRÕES DE TEMPO — uma linha por etapa: padrão em vigor, mediana da equipe no mês, quantas
   ficaram DENTRO do padrão, e o campo para definir (o número é da gestão).
   **A RÉGUA PASSOU A SER USADA** (30/09/2026, pedido do gestor: "uma forma de eles escolherem
