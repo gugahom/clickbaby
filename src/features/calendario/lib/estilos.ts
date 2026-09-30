@@ -1,54 +1,46 @@
 import type { ItemDoCalendario, TipoDeItem } from '../api/useCalendario'
+import { corDoParto, textoSobre } from './coresGoogle'
 
 /**
- * UMA COR POR TIPO DE ITEM, todas tiradas dos tokens da casa — a mesma
- * linguagem do Quadro, onde "em andamento" é azul e "atenção" é âmbar.
- *
- * A cor nunca está sozinha: toda pílula traz a hora e o nome, e a agenda do
- * dia escreve o tipo por extenso ("Parto previsto", "Vence o prazo"). A
- * legenda do alto é também o filtro — tocar num tipo esconde ou mostra.
- *
- * O PARTO É A EXCEÇÃO (30/09/2026, pedido do gestor: "as cores não foram
- * trazidas para o nosso calendário"): ele aparece na COR DO EVENTO NO GOOGLE —
- * BIRTH vermelho, HSC azul, GNDI amarelo… —, a organização que a equipe já lê
- * de relance na agenda dela. Ver `corDoParto`.
+ * OS TIPOS DE ITEM, para o filtro "Tipos" e para o texto do cartão. A COR não
+ * é do tipo: todo item de um caso usa a cor do caso no Google (o banho da Ana
+ * é da cor do parto da Ana), e o tipo se lê no texto, como no Google.
  */
-export const TIPOS: {
-  id: TipoDeItem
-  legenda: string
-  pilula: string
-  marca: string
-}[] = [
-  { id: 'parto', legenda: 'Partos', pilula: 'bg-andamento/12 text-andamento-tinta', marca: 'bg-andamento' },
-  { id: 'hora_marcada', legenda: 'Banho e fechamento', pilula: 'bg-marca-suave text-marca', marca: 'bg-marca' },
-  {
-    id: 'entrega_combinada',
-    legenda: 'Vídeo, Foto/Livro e New Born',
-    pilula: 'bg-acento-suave text-acento-forte',
-    marca: 'bg-acento',
-  },
-  { id: 'prazo', legenda: 'Prazos de entrega', pilula: 'bg-atencao/15 text-atencao-tinta', marca: 'bg-atencao' },
+export const TIPOS: { id: TipoDeItem; legenda: string }[] = [
+  { id: 'parto', legenda: 'Partos' },
+  { id: 'hora_marcada', legenda: 'Banho e fechamento' },
+  { id: 'entrega_combinada', legenda: 'Vídeo, Foto/Livro e New Born' },
+  { id: 'prazo', legenda: 'Prazos de entrega' },
 ]
 
-const ATRASADO = { pilula: 'bg-atrasado/10 text-atrasado', marca: 'bg-atrasado' }
+/** O vermelho do atraso — o mesmo "Tomate" do Google, que já é a cor de alarme da equipe. */
+const VERMELHO_DO_ATRASO = '#D50000'
 
-/**
- * O QUE JÁ PASSOU CHAMA MENOS ATENÇÃO, como no Google Calendar (pedido do
- * gestor, 30/09/2026): o item cujo horário ficou para trás — ou o dia inteiro,
- * quando não tem hora — perde a força; o que vem pela frente continua na cor
- * cheia. A agenda é para olhar PARA FRENTE, e um mês que já aconteceu disputava
- * o olho com a semana que vem.
- *
- * A EXCEÇÃO É O PRAZO VENCIDO SEM ENVIO: ele está no passado e é exatamente o
- * que ainda pede alguém — esmaecê-lo seria esconder o atraso.
- */
-export function esmaecido(item: ItemDoCalendario): boolean {
-  return (item.passou || item.feito) && !item.vencido
+export interface Aparencia {
+  /** A cor do caso (ou a do atraso). */
+  hex: string
+  nome: string
+  /** Cor cheia (o que vem pela frente) ou fundo branco com a bolinha (o que passou). */
+  cheio: boolean
+  /** O texto sobre a cor cheia — branco ou escuro, o de mais contraste. */
+  texto: string
 }
 
-export function estiloDoItem(item: ItemDoCalendario): { pilula: string; marca: string } {
-  // Prazo que passou sem envio fala a língua do atraso no Quadro: vermelho.
-  if (item.vencido) return ATRASADO
-  const t = TIPOS.find((x) => x.id === item.tipo) ?? TIPOS[0]!
-  return { pilula: t.pilula, marca: t.marca }
+/**
+ * COMO UM ITEM SE PINTA — o desenho do Google Calendar (pedido do gestor,
+ * 30/09/2026, depois de ver o esmaecido: "ficou ruim, vamos mais como no
+ * calendar"):
+ *   * o que VEM PELA FRENTE é a pílula na COR CHEIA do caso;
+ *   * o que JÁ PASSOU (ou já foi feito) fica em FUNDO BRANCO, só com a
+ *     BOLINHA da cor ao lado do texto — continua legível e continua dizendo de
+ *     que maternidade é, só que sem disputar o olho com a semana que vem;
+ *   * o PRAZO VENCIDO SEM ENVIO é a exceção: vermelho cheio, mesmo no passado,
+ *     porque é o que ainda pede alguém.
+ */
+export function aparencia(item: ItemDoCalendario): Aparencia {
+  if (item.vencido) {
+    return { hex: VERMELHO_DO_ATRASO, nome: 'Atrasado', cheio: true, texto: textoSobre(VERMELHO_DO_ATRASO) }
+  }
+  const cor = corDoParto(item.corDoGoogle)
+  return { hex: cor.hex, nome: cor.nome, cheio: !(item.passou || item.feito), texto: textoSobre(cor.hex) }
 }
