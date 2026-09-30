@@ -828,6 +828,29 @@ O remoto recebe apenas o que já passou no local. Mesmo assim, mostre o SQL/diff
 As chaves do Supabase local são fixas e públicas (iguais em qualquer máquina) — nunca vão
 para `.env`, git ou qualquer lugar. O `.env` aponta para o remoto.
 
+### Backup — a cópia de fora (30/09/2026)
+
+O guia completo, para a gestão, é `docs/backup.md`. O que importa para quem mexe no código:
+
+- **Duas camadas.** O Supabase guarda uma cópia diária por 7 dias, DENTRO do projeto
+  (conferido com `supabase backups list`: backup físico diário, sem PITR). A de fora é o
+  fluxo `.github/workflows/backup-noturno.yml`: toda madrugada, `supabase db dump` de
+  papéis, estrutura e dados (inclui `auth.users`), conferido por
+  `scripts/conferir-backup.mjs`, criptografado com `age` e guardado no bucket R2
+  `clickbaby-backup` (`diario/` 60 dias, `mensal/` 1 ano, por regra do bucket).
+- **O GitHub só tem a chave PÚBLICA.** Ele tranca e não abre; a privada fica com a gestão,
+  fora do GitHub e da Cloudflare. Não troque isso por uma senha simétrica em segredo do
+  repositório: o segredo que tranca passaria a abrir também.
+- **Nada do conteúdo vai para o log.** O conferidor imprime só contagens. Um `cat`, um
+  `head` ou um "mostra uma linha de exemplo" num passo de depuração vaza nome de mãe e bebê
+  num log que qualquer colaborador do repositório lê.
+- **Não leva os arquivos do Storage** (capas do fotolivro, fotos de perfil). É o próximo
+  passo, se a gestão quiser.
+- **Tabela nova que não pode faltar** no backup entra em `OBRIGATORIAS` do conferidor.
+- **O teste de restauração é manual** e pede um alvo DESCARTÁVEL (projeto Supabase de teste
+  ou uma pilha local separada). Esvaziar o banco local de desenvolvimento para carregar a
+  cópia por cima foi recusado pela trava de ações destrutivas em 30/09 — e com razão.
+
 ### Definição de pronto
 
 Uma tarefa só está pronta quando:
@@ -2235,7 +2258,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    mesmo jeito — por acaso, no meio de outra tarefa.
 6. **Sem workflow de CI para `db push` — nem para `functions deploy`.** O `db push` é
    manual e já ficou para trás de um merge três vezes, chegando ao gestor como "está
-   bugado". O gestor já aprovou construir o workflow; falta fazer.
+   bugado". O gestor já aprovou construir o workflow; falta fazer. (O primeiro workflow do
+   repositório entrou em 30/09/2026 e é o do BACKUP, não o de deploy — ver "Backup" na
+   seção 11.)
    **O deploy de Edge Function tem o mesmo buraco, e é PIOR de enxergar.** Em 04/09/2026 a
    `admin-pessoas` estava publicada e ATIVA, e mesmo assim o cadastro pela tela nunca
    funcionou em produção: faltava CORS. O `supabase functions serve` responde ao preflight
