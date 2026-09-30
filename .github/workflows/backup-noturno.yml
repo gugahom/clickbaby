@@ -1,0 +1,107 @@
+# BACKUP NOTURNO DO BANCO, FORA DO SUPABASE (30/09/2026, pedido da gestão:
+# "o medo é o sistema um dia cair ou perder todos os dados e ficar sem nada").
+#
+# O Supabase já guarda uma cópia diária por uma semana — mas DENTRO do mesmo
+# projeto: se a conta ou o projeto se perder, as cópias vão junto. Esta é a
+# cópia de fora: toda madrugada o banco inteiro (papéis, estrutura, dados e as
+# contas de login) é copiado, conferido, CRIPTOGRAFADO e guardado num bucket da
+# Cloudflare R2 da empresa. O passo a passo — onde fica, como acessar, como
+# restaurar, como dar acesso à equipe — está em docs/backup.md.
+#
+# A CRIPTOGRAFIA É COM CHAVE PÚBLICA (age). Este fluxo só conhece a metade
+# PÚBLICA: consegue trancar, não consegue abrir. A chave que abre fica com a
+# gestão, fora do GitHub e fora da Cloudflare — quem roubar o bucket, ou os
+# segredos deste repositório, leva um arquivo ilegível. O arquivo tem dado de
+# saúde e de menor (seção 10 do CLAUDE.md), e por isso nada dele vai para o log:
+# o script de conferência imprime só contagens.
+#
+# SEGREDOS E VARIÁVEIS (Settings → Secrets and variables → Actions):
+#   secrets.SUPABASE_DB_URL       conexão do Session pooler, com a senha do banco
+#   secrets.R2_ACCOUNT_ID         id da conta Cloudflare
+#   secrets.R2_ACCESS_KEY_ID      token de API do R2, só leitura e escrita no bucket
+#   secrets.R2_SECRET_ACCESS_KEY
+#   vars.R2_BUCKET                nome do bucket (clickbaby-backup)
+#   vars.BACKUP_CHAVE_PUBLICA     a chave PÚBLICA do age ("age1…") — não é segredo
+#
+# Se falhar, o GitHub manda e-mail para quem por último mexeu no agendamento
+# deste arquivo.
+
+name: Backup noturno
+
+on:
+  schedule:
+    # 07:00 UTC = 04:00 em Brasília: a hora mais parada da operação, e depois
+    # da cópia interna do próprio Supabase (~01:50).
+    - cron: '0 7 * * *'
+  # O botão "Run workflow", para o primeiro teste e para uma cópia fora de hora
+  # antes de uma mudança grande.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-noturno
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Versão TRAVADA, a mesma do ambiente local: o `db dump` de uma versão
+      # nova pode mudar o formato sem ninguém pedir (ver a dívida #6 sobre
+      # biblioteca sem versão nas Edge Functions).
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+
+      - name: Instalar o age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Copiar o banco
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p copia
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f copia/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f copia/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f copia/data.sql --use-copy --data-only
+
+      - name: Conferir a cópia
+        run: node scripts/conferir-backup.mjs copia
+
+      - name: Empacotar e criptografar
+        env:
+          BACKUP_CHAVE_PUBLICA: ${{ vars.BACKUP_CHAVE_PUBLICA }}
+        run: |
+          test -n "$BACKUP_CHAVE_PUBLICA" || { echo "Falta a variável BACKUP_CHAVE_PUBLICA."; exit 1; }
+          arquivo="clickbaby_$(date -u +%Y-%m-%d).tar.gz.age"
+          tar -czf - -C copia . | age -r "$BACKUP_CHAVE_PUBLICA" -o "$arquivo"
+          # A cópia aberta não sobrevive a este passo.
+          rm -rf copia
+          echo "ARQUIVO=$arquivo" >> "$GITHUB_ENV"
+          echo "Arquivo criptografado: $(du -h "$arquivo" | cut -f1)"
+
+      - name: Guardar na Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # O R2 fala o protocolo do S3, mas as somas de verificação novas que
+          # o AWS CLI manda por padrão não são obrigatórias ali.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          # diario/ é apagado sozinho depois de 60 dias (regra no bucket, ver
+          # docs/backup.md). No dia 1, uma cópia também vai para mensal/, que
+          # fica guardada por um ano.
+          aws s3 cp "$ARQUIVO" "s3://$R2_BUCKET/diario/$ARQUIVO" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          if [ "$(date -u +%d)" = "01" ]; then
+            aws s3 cp "$ARQUIVO" "s3://$R2_BUCKET/mensal/$ARQUIVO" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          fi
+          echo "Guardado em $R2_BUCKET/diario/$ARQUIVO"
