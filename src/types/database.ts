@@ -1074,9 +1074,11 @@ export type Database = {
           bebe_nome: string | null
           dia: string | null
           dia_semana: number | null
+          equipamentos: string[] | null
           fotografou_o_parto: string | null
           horas_ate_envio: number | null
           id: string | null
+          links: string[] | null
           mae_nome: string | null
           maternidade_id: string | null
           maternidade_nome: string | null
@@ -1474,11 +1476,15 @@ export type Database = {
         }
         Returns: {
           adicionais: string[]
+          avaliado: boolean
           bebe_nome: string
           dia: string
+          dia_semana: number
+          equipamentos: string[]
           fotografou_o_parto: string
           horas_ate_envio: number
           id: string
+          links: Json
           mae_nome: string
           maternidade_sigla: string
           pacote_nome: string
@@ -1487,8 +1493,11 @@ export type Database = {
           reaberto: boolean
           situacao: string
           termo: string
+          teve_handoff: boolean
           total: number
           total_despesas: number
+          trabalho: Json
+          turno: string
         }[]
       }
       operacao_facetas: {
@@ -1523,7 +1532,9 @@ export type Database = {
           m_avaliado: boolean
           m_com_despesa: boolean
           m_dias_semana: boolean
+          m_equipamentos: boolean
           m_handoff: boolean
+          m_links: boolean
           m_maternidades: boolean
           m_pacotes: boolean
           m_prazos: boolean

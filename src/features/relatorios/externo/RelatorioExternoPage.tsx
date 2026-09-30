@@ -12,13 +12,18 @@ import { exportarCasos, exportarNumeros } from './exportar'
 import {
   GRUPOS_DE_LISTA,
   GRUPOS_SIM_NAO,
+  ORDEM_PADRAO,
   ORDENS,
+  ROTULO_DO_LINK,
   TITULO_DO_GRUPO,
+  colunasDosFiltros,
   escreverNoEndereco,
+  rotuloDoEquipamento,
   lerDoEndereco,
   quantosFiltros,
   rotuloFixo,
   semFiltros,
+  type ColunaDoFiltro,
   type FiltrosDaOperacao,
   type GrupoDeLista,
   type Ordem,
@@ -59,6 +64,12 @@ import {
  * chave "Casos · Gráfico" troca a lista pelo gráfico do mesmo recorte, e
  * "Exportar planilha" leva os casos, ou os números por trás do gráfico, para o
  * Excel. A visão, o eixo e o número escolhidos também moram no endereço.
+ *
+ * CADA FILTRO VIRA UMA COLUNA (30/09/2026, terceira volta do gestor): a lista
+ * abre com quatro colunas fixas — data, mãe/bebê, maternidade, pacote — e cada
+ * filtro aplicado acrescenta a sua à direita, na ordem em que foi aplicado
+ * (`colunasDosFiltros`). Tirou o filtro, a coluna sai. E a lista abre do MAIS
+ * ANTIGO para o mais recente.
  */
 type Visao = 'casos' | 'grafico'
 const METRICAS_IDS = Object.keys(METRICAS) as Metrica[]
@@ -76,7 +87,7 @@ export function RelatorioExternoPage() {
   const [{ hoje, simulado }] = useState(hojeDoRelatorio)
   const [params, setParams] = useSearchParams()
   const filtros = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
-  const ordem = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : 'recentes') as Ordem
+  const ordem = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
   const pagina = Math.max(1, Number(params.get('pagina')) || 1)
   const visao: Visao = params.get('ver') === 'grafico' ? 'grafico' : 'casos'
   const eixo = (EIXOS.some((e) => e.id === params.get('eixo')) ? params.get('eixo') : 'tempo') as Eixo
@@ -109,7 +120,7 @@ export function RelatorioExternoPage() {
     const n = extras.metrica ?? metrica
     const fo = extras.forma ?? forma
     return escreverNoEndereco(f, {
-      ordem: o === 'recentes' ? undefined : o,
+      ordem: o === ORDEM_PADRAO ? undefined : o,
       pagina: p > 1 ? String(p) : undefined,
       ver: v === 'grafico' ? 'grafico' : undefined,
       eixo: e === 'tempo' ? undefined : e,
@@ -222,7 +233,12 @@ export function RelatorioExternoPage() {
                 />
               ) : (
                 <>
-                  <ListaDeCasos casos={busca.data?.casos} carregando={busca.isPending} />
+                  <ListaDeCasos
+                    casos={busca.data?.casos}
+                    carregando={busca.isPending}
+                    colunas={colunasDosFiltros(filtros)}
+                    filtros={filtros}
+                  />
                   {total > POR_PAGINA && (
                     <Paginacao pagina={pagina} total={total} onIr={(p) => irPara({ pagina: p })} />
                   )}
@@ -492,9 +508,166 @@ const PRAZO: Record<string, { rotulo: string; cor: string }> = {
   sem_prazo: { rotulo: '—', cor: 'text-muted-foreground' },
 }
 
-const MARCA_DO_ADICIONAL: Record<string, string> = { new_born: 'NB', fotolivro: 'FL', video_master: 'VM' }
+const ADICIONAL: Record<string, string> = { new_born: 'New Born', fotolivro: 'Foto/Livro', video_master: 'Vídeo MASTER' }
 
-function ListaDeCasos({ casos, carregando }: { casos: CasoDaOperacao[] | undefined; carregando: boolean }) {
+/** O título de cada coluna que um filtro acrescenta. */
+function tituloDaColuna(c: ColunaDoFiltro): string {
+  switch (c.tipo) {
+    case 'link':
+      return ROTULO_DO_LINK[c.link]
+    case 'trabalho':
+      return 'Quem fez'
+    case 'grupo':
+      return c.grupo === 'turnos' ? 'Horário' : TITULO_DO_GRUPO[c.grupo]
+    case 'simNao':
+      return { uti: 'UTI', handoff: 'Passagem de turno', reaberto: 'Voltou para ajuste', avaliado: 'Avaliação', com_despesa: 'Despesas' }[c.grupo]
+    case 'faixa':
+      return c.faixa === 'horas' ? 'Parto → envio' : 'Despesas'
+  }
+}
+
+const chaveDaColuna = (c: ColunaDoFiltro) =>
+  c.tipo === 'link' ? `link:${c.link}` : c.tipo === 'grupo' || c.tipo === 'simNao' ? c.grupo : c.tipo === 'faixa' ? c.faixa : c.tipo
+
+const simNao = (v: boolean) => (v ? 'Sim' : 'Não')
+
+/** O que uma coluna de filtro mostra num caso. */
+function CelulaDaColuna({ coluna, caso, filtros }: { coluna: ColunaDoFiltro; caso: CasoDaOperacao; filtros: FiltrosDaOperacao }) {
+  const traco = <span className="text-muted-foreground">—</span>
+  switch (coluna.tipo) {
+    case 'link': {
+      const links = caso.links.filter((l) => l.tipo === coluna.link)
+      if (links.length === 0) return traco
+      return (
+        <div className="space-y-1">
+          {links.map((l) => (
+            <LinkNaCelula key={l.url} url={l.url} />
+          ))}
+        </div>
+      )
+    }
+    case 'trabalho': {
+      // Só o que o filtro pediu: as pessoas marcadas, nas etapas marcadas.
+      const { pessoas, etapas } = filtros.listas
+      const feitos = caso.trabalho.filter(
+        (t) => (pessoas.length === 0 || pessoas.includes(t.pessoaId)) && (etapas.length === 0 || etapas.includes(t.etapa)),
+      )
+      const linhas = [...new Set(feitos.map((t) => `${ROTULO_ETAPA[t.etapa as EtapaTipo] ?? t.etapa}: ${t.pessoa}`))]
+      if (linhas.length === 0) return traco
+      return (
+        <div className="space-y-0.5 text-xs">
+          {linhas.map((l) => (
+            <div key={l} className="whitespace-nowrap">
+              {l}
+            </div>
+          ))}
+        </div>
+      )
+    }
+    case 'grupo':
+      switch (coluna.grupo) {
+        case 'situacoes':
+          return <Selo {...(SITUACAO[caso.situacao] ?? { rotulo: caso.situacao, cor: '' })} />
+        case 'prazos':
+          return <span className={clsx('whitespace-nowrap', PRAZO[caso.prazo]?.cor)}>{PRAZO[caso.prazo]?.rotulo ?? caso.prazo}</span>
+        case 'termos':
+          return <span className="whitespace-nowrap">{rotuloFixo('termos', caso.termo) ?? caso.termo}</span>
+        case 'equipamentos': {
+          if (caso.equipamentos.length === 0) return traco
+          const marcados = filtros.listas.equipamentos
+          return (
+            <div className="space-y-0.5 text-xs">
+              {caso.equipamentos.map((e) => (
+                <div key={e} className={clsx('whitespace-nowrap', marcados.includes(e) ? 'font-bold text-foreground' : 'text-muted-foreground')}>
+                  {rotuloDoEquipamento(e)}
+                </div>
+              ))}
+            </div>
+          )
+        }
+        case 'adicionais':
+          return caso.adicionais.length === 0 ? traco : <span className="text-xs">{caso.adicionais.map((a) => ADICIONAL[a] ?? a).join(', ')}</span>
+        case 'turnos':
+          return caso.turno ? <span className="whitespace-nowrap">{rotuloFixo('turnos', caso.turno)}</span> : traco
+        case 'dias_semana':
+          return caso.diaSemana ? <span>{rotuloFixo('dias_semana', String(caso.diaSemana))}</span> : traco
+      }
+      return traco
+    case 'simNao':
+      switch (coluna.grupo) {
+        case 'uti':
+          return <span>{simNao(caso.passouUti)}</span>
+        case 'handoff':
+          return <span>{simNao(caso.teveHandoff)}</span>
+        case 'reaberto':
+          return <span>{simNao(caso.reaberto)}</span>
+        case 'avaliado':
+          return <span>{simNao(caso.avaliado)}</span>
+        case 'com_despesa':
+          return <span className="tabular-nums">{caso.totalDespesas > 0 ? formatarMoeda(caso.totalDespesas) : 'Não'}</span>
+      }
+      return traco
+    case 'faixa':
+      return coluna.faixa === 'horas' ? (
+        <span className="tabular-nums">{caso.horasAteEnvio === null ? '—' : `${caso.horasAteEnvio.toLocaleString('pt-BR')}h`}</span>
+      ) : (
+        <span className="tabular-nums">{caso.totalDespesas > 0 ? formatarMoeda(caso.totalDespesas) : '—'}</span>
+      )
+  }
+}
+
+/**
+ * O LINK DE ENTREGA NUMA CÉLULA: clicável e com copiar (decisão do gestor). Ele
+ * é a chave da galeria da família — por isso só existe aqui, atrás da gestão, e
+ * a planilha exportada não o leva. O clique não abre o caso junto.
+ */
+function LinkNaCelula({ url }: { url: string }) {
+  const [copiado, setCopiado] = useState(false)
+  let curto = url
+  try {
+    const u = new URL(url)
+    curto = u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? '/…' : '')
+  } catch {
+    // Link que não é URL válida aparece como veio.
+  }
+  return (
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={url}
+        className="max-w-40 truncate text-xs font-semibold text-marca hover:underline"
+      >
+        {curto}
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(url).then(() => {
+            setCopiado(true)
+            window.setTimeout(() => setCopiado(false), 1500)
+          })
+        }}
+        className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+      >
+        {copiado ? 'Copiado' : 'Copiar'}
+      </button>
+    </div>
+  )
+}
+
+function ListaDeCasos({
+  casos,
+  carregando,
+  colunas,
+  filtros,
+}: {
+  casos: CasoDaOperacao[] | undefined
+  carregando: boolean
+  colunas: ColunaDoFiltro[]
+  filtros: FiltrosDaOperacao
+}) {
   const navegar = useNavigate()
   if (carregando && !casos) return <p className="py-16 text-center text-sm text-muted-foreground">Carregando…</p>
   if (!casos || casos.length === 0) {
@@ -507,26 +680,23 @@ function ListaDeCasos({ casos, carregando }: { casos: CasoDaOperacao[] | undefin
 
   const abrir = (id: string) => navegar(`/?caso=${id}`)
   const nome = (c: CasoDaOperacao) => (c.bebeNome ? `${c.maeNome} · ${c.bebeNome}` : c.maeNome)
-  const marcas = (c: CasoDaOperacao) =>
-    [...c.adicionais.map((a) => MARCA_DO_ADICIONAL[a] ?? a), ...(c.passouUti ? ['UTI'] : []), ...(c.reaberto ? ['Reaberto'] : [])]
 
   return (
     <div className="rounded-painel border border-border bg-card">
-      {/* Computador: tabela. Celular: cartões — a tabela de oito colunas não cabe. */}
+      {/* Computador: tabela, com as colunas dos filtros à direita. Celular: cartões. */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground">
               <th className="py-3 pr-3 pl-4 font-semibold">Data</th>
               <th className="px-3 py-3 font-semibold">Mãe · bebê</th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">Maternidade · pacote</th>
-              <th className="px-3 py-3 font-semibold">Situação</th>
-              <th className="px-3 py-3 font-semibold">Prazo</th>
-              <th className="w-24 py-3 pr-3 pl-6 text-right leading-tight font-semibold">
-                <span className="whitespace-nowrap">Parto →</span> envio
-              </th>
-              <th className="px-3 py-3 text-right font-semibold whitespace-nowrap">Despesas</th>
-              <th className="py-3 pr-4 pl-8 font-semibold">Parto por</th>
+              <th className="px-3 py-3 font-semibold">Maternidade</th>
+              <th className="px-3 py-3 font-semibold">Pacote</th>
+              {colunas.map((c) => (
+                <th key={chaveDaColuna(c)} className="border-l border-border/60 px-3 py-3 font-semibold whitespace-nowrap text-foreground">
+                  {tituloDaColuna(c)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -539,8 +709,8 @@ function ListaDeCasos({ casos, carregando }: { casos: CasoDaOperacao[] | undefin
                 <td className="py-3 pr-3 pl-4 whitespace-nowrap text-muted-foreground tabular-nums">
                   {c.dia ? dataCurta(c.dia) : '—'}
                 </td>
-                {/* `max-w-0` com largura em %: o nome é a única coluna que encolhe (quebra em
-                    duas linhas, com o nome inteiro no `title`), e a tabela para de rolar de lado. */}
+                {/* `max-w-0` com largura em %: o nome é a coluna que encolhe (quebra em
+                    duas linhas, com o nome inteiro no `title`). */}
                 <td className="w-[28%] max-w-0 px-3 py-3">
                   <Link
                     to={`/?caso=${c.id}`}
@@ -550,33 +720,14 @@ function ListaDeCasos({ casos, carregando }: { casos: CasoDaOperacao[] | undefin
                   >
                     {nome(c)}
                   </Link>
-                  {marcas(c).length > 0 && (
-                    <div className="mt-0.5 flex flex-wrap gap-1">
-                      {marcas(c).map((m) => (
-                        <span key={m} className="rounded bg-foreground/6 px-1 text-[10px] font-bold text-muted-foreground">
-                          {m}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </td>
-                {/* Uma coluna, duas linhas: separadas, as duas somavam ~230px de
-                    largura, e quem pagava era o nome, cortado em telas de 1300px. */}
-                <td className="px-3 py-3 whitespace-nowrap">
-                  <div className="font-semibold text-foreground">{c.maternidadeSigla ?? '—'}</div>
-                  <div className="text-xs text-muted-foreground">{c.pacoteNome ?? 'sem pacote'}</div>
-                </td>
-                <td className="px-3 py-3">
-                  <Selo {...(SITUACAO[c.situacao] ?? { rotulo: c.situacao, cor: '' })} />
-                </td>
-                <td className={clsx('px-3 py-3 whitespace-nowrap', PRAZO[c.prazo]?.cor)}>{PRAZO[c.prazo]?.rotulo ?? c.prazo}</td>
-                <td className="px-3 py-3 text-right whitespace-nowrap tabular-nums">
-                  {c.horasAteEnvio === null ? '—' : `${c.horasAteEnvio.toLocaleString('pt-BR')}h`}
-                </td>
-                <td className="px-3 py-3 text-right whitespace-nowrap tabular-nums">
-                  {c.totalDespesas > 0 ? formatarMoeda(c.totalDespesas) : '—'}
-                </td>
-                <td className="max-w-44 truncate py-3 pr-4 pl-8 text-muted-foreground">{c.fotografouOParto ?? '—'}</td>
+                <td className="px-3 py-3 font-semibold whitespace-nowrap text-foreground">{c.maternidadeSigla ?? '—'}</td>
+                <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{c.pacoteNome ?? 'sem pacote'}</td>
+                {colunas.map((col) => (
+                  <td key={chaveDaColuna(col)} className="border-l border-border/60 px-3 py-3 align-top">
+                    <CelulaDaColuna coluna={col} caso={c} filtros={filtros} />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -586,23 +737,26 @@ function ListaDeCasos({ casos, carregando }: { casos: CasoDaOperacao[] | undefin
       <ul className="divide-y divide-border md:hidden">
         {casos.map((c) => (
           <li key={c.id}>
-            <Link to={`/?caso=${c.id}`} className="block space-y-1 px-4 py-3 hover:bg-muted/50">
-              <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate font-semibold text-foreground">{nome(c)}</span>
-                <Selo {...(SITUACAO[c.situacao] ?? { rotulo: c.situacao, cor: '' })} />
-              </div>
+            <div role="link" tabIndex={0} onClick={() => abrir(c.id)} onKeyDown={(e) => e.key === 'Enter' && abrir(c.id)} className="block cursor-pointer space-y-1.5 px-4 py-3 hover:bg-muted/50">
+              <div className="min-w-0 truncate font-semibold text-foreground">{nome(c)}</div>
               <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                 <span className="tabular-nums">{c.dia ? dataCurta(c.dia) : '—'}</span>
                 <span>{c.maternidadeSigla ?? '—'}</span>
                 <span>{c.pacoteNome ?? '—'}</span>
-                <span className={PRAZO[c.prazo]?.cor}>{PRAZO[c.prazo]?.rotulo}</span>
-                {marcas(c).map((m) => (
-                  <span key={m} className="font-bold">
-                    {m}
-                  </span>
-                ))}
               </div>
-            </Link>
+              {colunas.length > 0 && (
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+                  {colunas.map((col) => (
+                    <div key={chaveDaColuna(col)} className="contents">
+                      <dt className="text-muted-foreground">{tituloDaColuna(col)}</dt>
+                      <dd className="min-w-0">
+                        <CelulaDaColuna coluna={col} caso={c} filtros={filtros} />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
           </li>
         ))}
       </ul>

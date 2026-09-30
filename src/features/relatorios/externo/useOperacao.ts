@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database, Json } from '@/types/database'
-import { paraOBanco, type FiltrosDaOperacao, type Ordem } from './filtros'
+import { paraOBanco, type FiltrosDaOperacao, type Ordem, type TipoDeLink } from './filtros'
 import type { Eixo, LinhaDoGrafico } from './grafico'
 
 /**
@@ -31,6 +31,17 @@ export interface CasoDaOperacao {
   adicionais: string[]
   passouUti: boolean
   reaberto: boolean
+  // O que as colunas dos filtros mostram (30/09/2026).
+  turno: string | null
+  diaSemana: number | null
+  avaliado: boolean
+  teveHandoff: boolean
+  /** "cel:CEL CLICK 3", "cartao:14 HSC" — ver `rotuloDoEquipamento`. */
+  equipamentos: string[]
+  /** Os links COM endereço, só da página. A planilha não os leva. */
+  links: { tipo: TipoDeLink; url: string }[]
+  /** Quem fez cada etapa (não dispensada) do caso. */
+  trabalho: { etapa: string; pessoaId: string; pessoa: string }[]
 }
 
 export interface PaginaDaOperacao {
@@ -86,6 +97,17 @@ function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
     adicionais: l.adicionais ?? [],
     passouUti: l.passou_uti,
     reaberto: l.reaberto,
+    turno: l.turno,
+    diaSemana: l.dia_semana,
+    avaliado: l.avaliado,
+    teveHandoff: l.teve_handoff,
+    equipamentos: l.equipamentos ?? [],
+    links: (l.links as { tipo: TipoDeLink; url: string }[] | null) ?? [],
+    trabalho: ((l.trabalho as { etapa: string; pessoa_id: string; pessoa: string }[] | null) ?? []).map((t) => ({
+      etapa: t.etapa,
+      pessoaId: t.pessoa_id,
+      pessoa: t.pessoa,
+    })),
   }
 }
 

@@ -2298,6 +2298,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   em duas linhas). As datas do período ficaram uma por linha, porque lado a lado cortavam o ano,
   e só UM atalho de período acende (em 30/09, "este mês" e "últimos 30 dias" eram iguais e
   acendiam juntos).
+  **CADA FILTRO VIRA UMA COLUNA** (30/09/2026, terceira volta do gestor, migration
+  `20260930204404`). A lista abre com QUATRO colunas fixas — data, mãe/bebê, maternidade,
+  pacote — e DOS MAIS ANTIGOS para os mais recentes (no mesmo dia, pela hora). Cada grupo que
+  ganha filtro acrescenta a sua à direita, NA ORDEM EM QUE FOI APLICADO; tirou o filtro, a
+  coluna sai. A ordem mora no ENDEREÇO (a ordem dos parâmetros, que `escreverNoEndereco`
+  preserva), então um link leva as colunas junto. Cada TIPO de link marcado é uma coluna
+  própria; "Quem fez" e "Na etapa" dividem uma; maternidade e pacote já são fixas
+  (`colunasDosFiltros`, em `filtros.ts`). No celular, as colunas viram linhas do cartão.
+  **DOIS GRUPOS NOVOS:** LINKS (os tipos de link de entrega do caso, ou "sem nenhum link") e
+  EQUIPAMENTO (o CEL CLICK e o cartão de memória lançados no card, `cartao_video` e
+  `cartao_foto`, em maiúsculas e sem espaço sobrando — "cel:CEL CLICK 3", "cartao:14 HSC").
+  **O LINK NA COLUNA É CLICÁVEL, COM COPIAR; NA PLANILHA, SÓ O TIPO** (decisões do gestor): o
+  link é a chave da galeria da família, e um arquivo encaminhado abriria todas. A busca devolve
+  o endereço só da página da tela.
+  **TUDO NASCE FECHADO** no painel, o período inclusive (com o recorte no título); abre sozinho
+  só o grupo que chega com filtro marcado. Ordem dos grupos, do gestor: período, links, termo,
+  situação, prazo, maternidade, pacote, quem fez, na etapa, equipamento, e o resto.
   **Fica para as próximas voltas:** buscas salvas.
 - **O CALENDÁRIO** (`/quadro/calendario`, 30/09/2026, item 5 da fila do gestor). Todos os
   papéis MENOS `operador` (decisão do gestor), pela guarda `RotaAdministrativa`, que usa a

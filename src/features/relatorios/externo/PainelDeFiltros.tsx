@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Chevron } from '@/components/ui/icones'
-import { deslocarMes, periodoDoMes, somarDias } from '../lib/metricas'
+import { dataCurta, deslocarMes, periodoDoMes, somarDias } from '../lib/metricas'
 import {
   GRUPOS_SIM_NAO,
   OPCOES_FIXAS,
@@ -26,6 +26,12 @@ import type { Facetas } from './useOperacao'
  *
  * Opção com ZERO continua na lista, apagada: sumir mudaria a ordem a cada
  * marca, e a pessoa perderia o lugar. A marcada nunca some.
+ *
+ * TUDO NASCE FECHADO (30/09/2026, pedido do gestor), o período inclusive — que
+ * mostra o recorte no próprio título. Só abre sozinho o grupo que já chega com
+ * filtro marcado (um link compartilhado), para não esconder o que recorta.
+ * A ORDEM também é dele: período, links, termo, situação, prazo, maternidade,
+ * pacote, quem fez (com a etapa), equipamento, e o resto.
  */
 
 const VISIVEIS_ANTES_DO_VER_MAIS = 6
@@ -72,7 +78,7 @@ export function PainelDeFiltros({
     onMudar({ ...filtros, listas: { ...filtros.listas, [grupo]: nova } })
   }
 
-  const lista = (grupo: GrupoDeLista, aberto = false, buscavel = false) => (
+  const lista = (grupo: GrupoDeLista, buscavel = false) => (
     <ListaDoGrupo
       key={grupo}
       titulo={TITULO_DO_GRUPO[grupo]}
@@ -80,7 +86,6 @@ export function PainelDeFiltros({
       marcadas={filtros.listas[grupo]}
       onAlternar={(v) => alternar(grupo, v)}
       onLimpar={() => onMudar({ ...filtros, listas: { ...filtros.listas, [grupo]: [] } })}
-      abertoDeInicio={aberto}
       buscavel={buscavel}
     />
   )
@@ -88,14 +93,16 @@ export function PainelDeFiltros({
   return (
     <div className="divide-y divide-border rounded-painel border border-border bg-card">
       <Periodo filtros={filtros} hoje={hoje} onMudar={onMudar} />
-      {lista('situacoes', true)}
-      {lista('prazos', true)}
-      {lista('maternidades', true, true)}
-      {lista('pacotes', true)}
-      {lista('pessoas', false, true)}
-      {lista('etapas')}
-      {lista('adicionais')}
+      {lista('links')}
       {lista('termos')}
+      {lista('situacoes')}
+      {lista('prazos')}
+      {lista('maternidades', true)}
+      {lista('pacotes')}
+      {lista('pessoas', true)}
+      {lista('etapas')}
+      {lista('equipamentos', true)}
+      {lista('adicionais')}
       {lista('turnos')}
       {lista('dias_semana')}
       <Secao titulo="Ocorrências" contagem={GRUPOS_SIM_NAO.filter((g) => filtros.simNao[g] !== undefined).length}>
@@ -149,19 +156,20 @@ export function PainelDeFiltros({
 function Secao({
   titulo,
   contagem = 0,
-  abertoDeInicio = false,
+  resumo,
   onLimpar,
   children,
 }: {
   titulo: string
   contagem?: number
-  abertoDeInicio?: boolean
+  /** Uma linha miúda sob o título, para dizer o que vale sem abrir (o período). */
+  resumo?: string | undefined
   onLimpar?: (() => void) | undefined
   children: ReactNode
 }) {
   // Grupo com filtro marcado abre sozinho: fechado, esconderia justamente o
   // que está recortando a lista.
-  const [aberto, setAberto] = useState(abertoDeInicio || contagem > 0)
+  const [aberto, setAberto] = useState(contagem > 0)
   return (
     <section className="px-4 py-3">
       <div className="flex items-center gap-2">
@@ -171,7 +179,10 @@ function Secao({
           aria-expanded={aberto}
           className="flex min-h-9 flex-1 items-center gap-2 text-left text-sm font-bold text-foreground"
         >
-          {titulo}
+          <span className="min-w-0">
+            {titulo}
+            {resumo && <span className="block text-xs font-medium text-muted-foreground">{resumo}</span>}
+          </span>
           {contagem > 0 && (
             <span className="rounded-full bg-marca px-1.5 text-[11px] leading-5 font-bold text-white tabular-nums">
               {contagem}
@@ -196,7 +207,6 @@ function ListaDoGrupo({
   marcadas,
   onAlternar,
   onLimpar,
-  abertoDeInicio,
   buscavel,
 }: {
   titulo: string
@@ -204,7 +214,6 @@ function ListaDoGrupo({
   marcadas: string[]
   onAlternar: (valor: string) => void
   onLimpar: () => void
-  abertoDeInicio: boolean
   buscavel: boolean
 }) {
   const [todas, setTodas] = useState(false)
@@ -216,7 +225,7 @@ function ListaDoGrupo({
   const escondidasMarcadas = filtradas.filter((o) => !visiveis.includes(o) && marcadas.includes(o.valor))
 
   return (
-    <Secao titulo={titulo} contagem={marcadas.length} abertoDeInicio={abertoDeInicio} onLimpar={onLimpar}>
+    <Secao titulo={titulo} contagem={marcadas.length} onLimpar={onLimpar}>
       {buscavel && opcoes.length > VISIVEIS_ANTES_DO_VER_MAIS && (
         <input
           type="search"
@@ -379,54 +388,58 @@ function Periodo({
   // mesmo intervalo, e dois botões acesos parecem dois filtros somados.
   const ativo = atalhos.find((a) => (a.de ?? '') === (filtros.de ?? '') && (a.ate ?? '') === (filtros.ate ?? ''))
   const campoDeData = 'h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm tabular-nums'
+  const resumo = ativo
+    ? ativo.rotulo
+    : `${filtros.de ? dataCurta(filtros.de) : '…'} a ${filtros.ate ? dataCurta(filtros.ate) : '…'}`
   return (
-    <section className="space-y-2.5 px-4 py-3">
-      <div className="text-sm font-bold text-foreground">Período do atendimento</div>
-      <div className="flex flex-wrap gap-1.5">
-        {atalhos.map((a) => {
-          const aceso = a === ativo
-          return (
-            <button
-              key={a.rotulo}
-              type="button"
-              aria-pressed={aceso}
-              onClick={() => onMudar({ ...filtros, de: a.de, ate: a.ate })}
-              className={clsx(
-                'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                aceso
-                  ? 'border-marca bg-marca font-bold text-white'
-                  : 'border-border font-medium text-muted-foreground hover:border-marca/40 hover:text-marca',
-              )}
-            >
-              {a.rotulo}
-            </button>
-          )
-        })}
+    <Secao titulo="Período do atendimento" resumo={resumo}>
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap gap-1.5">
+          {atalhos.map((a) => {
+            const aceso = a === ativo
+            return (
+              <button
+                key={a.rotulo}
+                type="button"
+                aria-pressed={aceso}
+                onClick={() => onMudar({ ...filtros, de: a.de, ate: a.ate })}
+                className={clsx(
+                  'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                  aceso
+                    ? 'border-marca bg-marca font-bold text-white'
+                    : 'border-border font-medium text-muted-foreground hover:border-marca/40 hover:text-marca',
+                )}
+              >
+                {a.rotulo}
+              </button>
+            )
+          })}
+        </div>
+        {/* Um campo por linha: lado a lado, os dois cortavam o ano ("01/09/202"). */}
+        <div className="grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
+          <label htmlFor="periodo-de" className="text-xs font-semibold text-muted-foreground">
+            De
+          </label>
+          <input
+            id="periodo-de"
+            type="date"
+            value={filtros.de ?? ''}
+            onChange={(e) => onMudar({ ...filtros, de: e.target.value || undefined })}
+            className={campoDeData}
+          />
+          <label htmlFor="periodo-ate" className="text-xs font-semibold text-muted-foreground">
+            Até
+          </label>
+          <input
+            id="periodo-ate"
+            type="date"
+            value={filtros.ate ?? ''}
+            onChange={(e) => onMudar({ ...filtros, ate: e.target.value || undefined })}
+            className={campoDeData}
+          />
+        </div>
       </div>
-      {/* Um campo por linha: lado a lado, os dois cortavam o ano ("01/09/202"). */}
-      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2">
-        <label htmlFor="periodo-de" className="text-xs font-semibold text-muted-foreground">
-          De
-        </label>
-        <input
-          id="periodo-de"
-          type="date"
-          value={filtros.de ?? ''}
-          onChange={(e) => onMudar({ ...filtros, de: e.target.value || undefined })}
-          className={campoDeData}
-        />
-        <label htmlFor="periodo-ate" className="text-xs font-semibold text-muted-foreground">
-          Até
-        </label>
-        <input
-          id="periodo-ate"
-          type="date"
-          value={filtros.ate ?? ''}
-          onChange={(e) => onMudar({ ...filtros, ate: e.target.value || undefined })}
-          className={campoDeData}
-        />
-      </div>
-    </section>
+    </Secao>
   )
 }
 
