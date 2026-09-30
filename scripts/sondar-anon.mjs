@@ -363,6 +363,11 @@ const FORMA = {
   // sonda recebia 42703 (coluna inexistente), que o Postgres devolve ANTES de
   // olhar permissão — e não dizia nada sobre o visitante ser barrado.
   notificacoes_vistas: { chave: 'pessoa_id' },
+  // A view do relatório externo (20260929233525) tem `id` e não tem
+  // `created_at`: com o padrão, o PostgREST devolvia PGRST204 (coluna
+  // inexistente) e a sonda acusava falha — foi o que aconteceu no push de
+  // 29/09/2026, com o anon de fato sem privilégio nenhum na view.
+  operacao_dos_casos: { coluna: 'mae_nome', valor: 'sonda' },
 }
 
 for (const { nome, view } of TABELAS) {
