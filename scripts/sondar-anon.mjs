@@ -209,6 +209,9 @@ const RPCS_TRANSICAO = {
   operacao_buscar: { p_filtros: {}, p_ordem: 'recentes', p_limite: 1, p_deslocamento: 0 },
   operacao_facetas: { p_filtros: {} },
   operacao_resumo: { p_filtros: {} },
+  // O gráfico do recorte e o padrão em uso (20260930052252).
+  operacao_grafico: { p_filtros: {}, p_eixo: 'dia' },
+  metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
   // As fases do trabalho de campo (20260928183313). Quem alcançasse esta RPC
@@ -363,6 +366,11 @@ const FORMA = {
   // sonda recebia 42703 (coluna inexistente), que o Postgres devolve ANTES de
   // olhar permissão — e não dizia nada sobre o visitante ser barrado.
   notificacoes_vistas: { chave: 'pessoa_id' },
+  // A view do relatório externo (20260929233525) tem `id` e não tem
+  // `created_at`: com o padrão, o PostgREST devolvia PGRST204 (coluna
+  // inexistente) e a sonda acusava falha — foi o que aconteceu no push de
+  // 29/09/2026, com o anon de fato sem privilégio nenhum na view.
+  operacao_dos_casos: { coluna: 'mae_nome', valor: 'sonda' },
 }
 
 for (const { nome, view } of TABELAS) {

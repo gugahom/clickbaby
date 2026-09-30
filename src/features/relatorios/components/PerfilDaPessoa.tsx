@@ -5,7 +5,14 @@ import { IconeX } from '@/components/ui/icones'
 import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
 import { FASES_DA_ETAPA, ROTULO_FASE_CAMPO, type EtapaTipo } from '@/features/quadro/types'
 import { iniciais } from '@/lib/iniciais'
-import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
+import type {
+  DentroDoPadrao,
+  FaseDaPessoa,
+  MetricaPorEtapa,
+  MetricaPorPessoa,
+  PadraoDeTempo,
+  PontosDaPessoa,
+} from '../api/useMetricas'
 import { ETAPAS_DE_EDICAO, type LinhaDaPessoa } from '../lib/kpis'
 import { ORDEM_DAS_ETAPAS, formatarMinutos, rotuloDaEtapa } from '../lib/metricas'
 import { ITENS_DE_PONTUACAO, formatarPontos, pontosComUnidade } from '../lib/pontos'
@@ -30,13 +37,28 @@ import { ITENS_DE_PONTUACAO, formatarPontos, pontosComUnidade } from '../lib/pon
  * relógio, a linha diz quantas tiveram: uma média de 3 edições de 20 não é a
  * média das 20. A comparação com a equipe é NEUTRA, sem verde nem vermelho:
  * editar mais rápido não é, sozinho, editar melhor.
+ *
+ * O PADRÃO DE TEMPO entra na produção (30/09/2026, pedido do gestor: "os
+ * padrões que esperam (…) para que seja feito nessa média"): embaixo do tempo
+ * médio, o padrão em vigor, e ao lado, quantas das medidas ficaram dentro dele.
+ * Aqui há cor, ao contrário da comparação com a equipe: o padrão é a régua que
+ * a própria gestão escolheu, e ficar abaixo da metade dela é o que ela pediu
+ * para enxergar.
  */
+export interface PadraoNoPerfil {
+  /** De todo mundo, no período. */
+  dentro: DentroDoPadrao[]
+  /** A régua em vigor hoje, uma por etapa. */
+  vigentes: PadraoDeTempo[]
+}
+
 export function PerfilDaPessoa({
   linha,
   pessoa,
   porEtapa,
   fases,
   pontos,
+  padrao,
   rotuloDoPeriodo,
   onFechar,
 }: {
@@ -47,6 +69,7 @@ export function PerfilDaPessoa({
   fases: FaseDaPessoa[]
   /** Os pontos de todo mundo no período — os desta pessoa saem daqui. */
   pontos: PontosDaPessoa[]
+  padrao: PadraoNoPerfil
   /** Como a frase termina: "em dezembro de 2027", "nos últimos 7 dias". */
   rotuloDoPeriodo: string
   /** O "xiszinho" (pedido do gestor): fecha o perfil e a tabela ocupa a largura. */
@@ -58,6 +81,10 @@ export function PerfilDaPessoa({
     const medidas = todas.reduce((acc, m) => acc + m.medidas, 0)
     return medidas > 0 ? todas.reduce((acc, m) => acc + m.somaMin, 0) / medidas : null
   }
+
+  const dentroDaPessoa = (tipo: EtapaTipo) =>
+    padrao.dentro.find((d) => d.pessoaId === linha.pessoaId && d.tipo === tipo)
+  const padraoDa = (tipo: EtapaTipo) => padrao.vigentes.find((p) => p.tipo === tipo)
 
   const producao = ORDEM_DAS_ETAPAS.map((tipo) => daPessoa.find((m) => m.tipo === tipo)).filter(
     (m): m is MetricaPorEtapa => m !== undefined && m.concluidas > 0,
@@ -174,6 +201,7 @@ export function PerfilDaPessoa({
                 <th className="pb-1.5 text-right font-semibold">Feitas</th>
                 <th className="pb-1.5 text-right font-semibold">Tempo médio</th>
                 <th className="pb-1.5 pl-2 text-right font-semibold">Equipe</th>
+                <th className="pb-1.5 pl-2 text-right font-semibold">No padrão</th>
               </tr>
             </thead>
             <tbody>
@@ -195,8 +223,16 @@ export function PerfilDaPessoa({
                       )}
                     </td>
                     <td className="py-2 text-right font-semibold text-foreground">{m.concluidas}</td>
-                    <td className="py-2 text-right font-bold text-foreground">{formatarMinutos(media)}</td>
+                    <td className="py-2 text-right">
+                      <div className="font-bold text-foreground">{formatarMinutos(media)}</div>
+                      {padraoDa(m.tipo) && (
+                        <div className="text-xs text-muted-foreground">padrão {formatarMinutos(padraoDa(m.tipo)?.minutos ?? null)}</div>
+                      )}
+                    </td>
                     <td className="py-2 pl-2 text-right text-muted-foreground">{formatarMinutos(mediaDaEquipe(m.tipo))}</td>
+                    <td className="py-2 pl-2 text-right">
+                      <NoPadrao d={dentroDaPessoa(m.tipo)} />
+                    </td>
                   </tr>
                 )
               })}
@@ -282,4 +318,20 @@ function Bloco({ titulo, nota, children }: { titulo: string; nota?: string; chil
 
 function Vazio({ children }: { children: ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>
+}
+
+/** "8 de 10" dentro do padrão; âmbar abaixo da metade. Sem régua, um traço. */
+function NoPadrao({ d }: { d: DentroDoPadrao | undefined }) {
+  if (!d || d.comPadrao === 0) {
+    return <span className="text-muted-foreground" title="Sem padrão definido para esta etapa">—</span>
+  }
+  const abaixo = d.dentro / d.comPadrao < 0.5
+  return (
+    <span
+      className={clsx('font-semibold', abaixo ? 'text-atencao-tinta' : 'text-foreground')}
+      title={`${d.dentro} de ${d.comPadrao} etapas medidas dentro do padrão`}
+    >
+      {d.dentro}/{d.comPadrao}
+    </span>
+  )
 }

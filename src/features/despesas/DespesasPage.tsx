@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { formatarMoeda, hojeNoFuso } from '@/lib/formato'
 import { useRelatorioDespesas, type LinhaDoRelatorio } from './api/useRelatorioDespesas'
-import { baixarCsv, montarCsv, numeroParaCsv } from './lib/csv'
+import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
 
 /** '2026-09' -> 'setembro de 2026'. Meio-dia UTC para nenhum fuso empurrar o mês. */
 function rotuloDoMes(mes: string): string {

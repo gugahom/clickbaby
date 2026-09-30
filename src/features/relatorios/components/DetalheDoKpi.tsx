@@ -249,7 +249,7 @@ function Selo({ variacao, contra }: { variacao: Variacao; contra: string }) {
   )
 }
 
-function IconeLinha() {
+export function IconeLinha() {
   return (
     <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
       <path d="M1.5 12.5 5.5 7.5 8.5 10 14.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -257,7 +257,7 @@ function IconeLinha() {
   )
 }
 
-function IconeBarras() {
+export function IconeBarras() {
   return (
     <svg viewBox="0 0 16 16" className="size-4" fill="currentColor" aria-hidden="true">
       <rect x="2" y="8" width="3" height="6" rx="1" />

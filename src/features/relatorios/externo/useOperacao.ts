@@ -1,7 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Json } from '@/types/database'
+import type { Database, Json } from '@/types/database'
 import { paraOBanco, type FiltrosDaOperacao, type Ordem } from './filtros'
+import type { Eixo, LinhaDoGrafico } from './grafico'
 
 /**
  * A LEITURA DO RELATÓRIO EXTERNO — três funções do banco, o mesmo filtro
@@ -66,6 +67,28 @@ async function chamar<T>(consulta: PromiseLike<{ data: T | null; error: { messag
   return data as T
 }
 
+type LinhaDaBusca = Database['public']['Functions']['operacao_buscar']['Returns'][number]
+
+function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
+  return {
+    id: l.id,
+    maeNome: l.mae_nome,
+    bebeNome: l.bebe_nome,
+    dia: l.dia,
+    maternidadeSigla: l.maternidade_sigla,
+    pacoteNome: l.pacote_nome,
+    situacao: l.situacao,
+    prazo: l.prazo,
+    horasAteEnvio: numero(l.horas_ate_envio),
+    totalDespesas: numero(l.total_despesas) ?? 0,
+    termo: l.termo,
+    fotografouOParto: l.fotografou_o_parto,
+    adicionais: l.adicionais ?? [],
+    passouUti: l.passou_uti,
+    reaberto: l.reaberto,
+  }
+}
+
 export function useBuscaDaOperacao(filtros: FiltrosDaOperacao, ordem: Ordem, pagina: number) {
   const f = paraOBanco(filtros)
   return useQuery({
@@ -82,23 +105,7 @@ export function useBuscaDaOperacao(filtros: FiltrosDaOperacao, ordem: Ordem, pag
       )
       return {
         total: linhas?.[0]?.total ?? 0,
-        casos: (linhas ?? []).map((l) => ({
-          id: l.id,
-          maeNome: l.mae_nome,
-          bebeNome: l.bebe_nome,
-          dia: l.dia,
-          maternidadeSigla: l.maternidade_sigla,
-          pacoteNome: l.pacote_nome,
-          situacao: l.situacao,
-          prazo: l.prazo,
-          horasAteEnvio: numero(l.horas_ate_envio),
-          totalDespesas: numero(l.total_despesas) ?? 0,
-          termo: l.termo,
-          fotografouOParto: l.fotografou_o_parto,
-          adicionais: l.adicionais ?? [],
-          passouUti: l.passou_uti,
-          reaberto: l.reaberto,
-        })),
+        casos: (linhas ?? []).map(paraCaso),
       }
     },
   })
@@ -165,4 +172,61 @@ export function useResumoDaOperacao(filtros: FiltrosDaOperacao) {
       }
     },
   })
+}
+
+/**
+ * O RECORTE QUEBRADO para o gráfico: no tempo (dia ou mês) ou por uma dimensão.
+ * Só busca com a visão de gráfico aberta — a lista de casos não precisa dele.
+ */
+export function useGraficoDaOperacao(filtros: FiltrosDaOperacao, eixo: EixoDoBanco, habilitado: boolean) {
+  const f = paraOBanco(filtros)
+  return useQuery({
+    queryKey: ['operacao', 'grafico', f, eixo],
+    enabled: habilitado,
+    placeholderData: keepPreviousData,
+    queryFn: () => lerGraficoDaOperacao(filtros, eixo),
+  })
+}
+
+export type EixoDoBanco = Exclude<Eixo, 'tempo'> | 'dia' | 'mes'
+
+export async function lerGraficoDaOperacao(filtros: FiltrosDaOperacao, eixo: EixoDoBanco): Promise<LinhaDoGrafico[]> {
+  const linhas = await chamar(
+    supabase.rpc('operacao_grafico', { p_filtros: paraOBanco(filtros) as Json, p_eixo: eixo }),
+  )
+  return (linhas ?? []).map((l) => ({
+    chave: l.chave,
+    rotulo: l.rotulo,
+    casos: l.casos,
+    partos: l.partos,
+    enviados: l.enviados,
+    noPrazo: l.no_prazo,
+    medianaHorasAteEnvio: numero(l.mediana_horas_ate_envio),
+    totalDespesas: numero(l.total_despesas) ?? 0,
+    cancelados: l.cancelados,
+  }))
+}
+
+/**
+ * TODOS os casos do recorte, para a planilha: a lista da tela é de 50 em 50, e
+ * a exportação vai de 200 em 200 (o teto da função) até o total. A ordenação é
+ * total no banco (id no fim), então nenhuma página repete ou pula caso.
+ */
+export async function lerTodosOsCasos(filtros: FiltrosDaOperacao, ordem: Ordem): Promise<CasoDaOperacao[]> {
+  const LOTE = 200
+  const todos: CasoDaOperacao[] = []
+  for (let deslocamento = 0; ; deslocamento += LOTE) {
+    const linhas = await chamar(
+      supabase.rpc('operacao_buscar', {
+        p_filtros: paraOBanco(filtros) as Json,
+        p_ordem: ordem,
+        p_limite: LOTE,
+        p_deslocamento: deslocamento,
+      }),
+    )
+    todos.push(...(linhas ?? []).map(paraCaso))
+    const total = linhas?.[0]?.total ?? 0
+    if (!linhas || linhas.length === 0 || todos.length >= total) break
+  }
+  return todos
 }
