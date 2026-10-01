@@ -3,6 +3,9 @@ import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { ModalAmplo } from '@/components/ui/ModalAmplo'
+import { TELAS, telasEfetivas } from '@/features/auth/telas'
+import { hojeNoFuso } from '@/lib/formato'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Alerta } from '@/components/ui/Alerta'
 import { CampoTexto } from '@/components/ui/CampoTexto'
@@ -18,13 +21,16 @@ import {
   useTrocarFotoDaPessoa,
 } from '../api/useAcoesDaPessoa'
 import { EscalaDaPessoa } from './EscalaDaPessoa'
+import { somarDia, useEscalaDaPessoa } from '../api/useEscala'
 import { TelasDaPessoa } from './TelasDaPessoa'
 import {
   COR_LUGAR,
   PAPEIS,
   ROTULO_LUGAR,
   ROTULO_PAPEL,
+  diaCurto,
   formatarDuracao,
+  horaEmBrasilia,
   relativo,
 } from '../lib/apresentacao'
 
@@ -44,10 +50,17 @@ import {
  * consegue entrar, o que ela está segurando agora, e o que eu posso fazer com
  * ela." Nenhuma das quatro precisa de acordo nenhum para ser verdade.
  *
- * MAIS PODER PARA A GESTÃO (30/09/2026, pedido do gestor): a ficha passou a
- * mudar a FOTO e o NOME de qualquer pessoa (o lápis no cabeçalho), as TELAS
- * que ela vê e a ESCALA de plantão dela. Quem faz tudo isso é quem tem a tela
- * Equipe — o banco confere a mesma lista.
+ * MAIS PODER PARA A GESTÃO (30/09/2026, pedido do gestor): mudar a FOTO e o
+ * NOME de qualquer pessoa, as TELAS que ela vê e a ESCALA de plantão dela.
+ * Quem faz tudo isso é quem tem a tela Equipe — o banco confere a mesma lista.
+ *
+ * E AS AÇÕES MORAM NUM MODAL (mesmo dia, segunda volta do gestor: "tudo isso
+ * de ações com os funcionários pode virar um modal, ao invés desse campo à
+ * direita"). A coluna ficou com o RESUMO — quem é, o que está segurando, se
+ * entra, que telas vê, a escala das próximas semanas — e o botão "Gerenciar"
+ * abre o modal com foto, nome, telas, escala, papel e desativar. A coluna não
+ * some porque uma lista sem detalhe ao lado ficaria "vazia demais", nas
+ * palavras dele; o que saiu dela foi o que se MEXE, não o que se LÊ.
  */
 export function FichaDaPessoa({
   pessoa,
@@ -57,18 +70,16 @@ export function FichaDaPessoa({
   foto: string | null
 }) {
   const apelido = pessoa.apelidos[0]
+  const [gerenciando, setGerenciando] = useState(false)
 
   return (
     <div className="space-y-3">
       <section className="overflow-hidden rounded-cartao border border-border bg-card shadow-cartao">
         <div className="superficie-cabecalho px-4 pt-4 pb-5 text-white">
           <div className="flex items-center gap-3">
-            <FotoEditavel pessoa={pessoa} foto={foto} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <h2 className="truncate text-xl font-extrabold tracking-tight">{pessoa.nome}</h2>
-                <NomeEditavel pessoa={pessoa} />
-              </div>
+            <Avatar nome={pessoa.nome} fotoUrl={foto} className="size-12 text-sm" />
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-extrabold tracking-tight">{pessoa.nome}</h2>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-white/70">
                 <span>{ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}</span>
                 {apelido && <span>· “{apelido}”</span>}
@@ -84,11 +95,61 @@ export function FichaDaPessoa({
 
       {pessoa.emMaos.length > 0 && <EmMaos etapas={pessoa.emMaos} />}
 
-      <Acesso pessoa={pessoa} />
-      <TelasDaPessoa pessoa={pessoa} />
-      <EscalaDaPessoa pessoa={pessoa} />
-      <Acoes pessoa={pessoa} />
+      <Acesso pessoa={pessoa} onGerenciar={() => setGerenciando(true)} />
+
+      {gerenciando && <GerenciarPessoa pessoa={pessoa} foto={foto} onFechar={() => setGerenciando(false)} />}
     </div>
+  )
+}
+
+/**
+ * O MODAL DE GERENCIAR (30/09/2026). Tudo o que MUDA a pessoa: foto e nome no
+ * alto, telas e papel de um lado, escala do outro — duas colunas para caber na
+ * tela sem virar uma rolagem comprida, como o formulário de caso da agenda.
+ * Os blocos são os mesmos componentes de antes, só mudaram de lugar.
+ */
+function GerenciarPessoa({
+  pessoa,
+  foto,
+  onFechar,
+}: {
+  pessoa: PessoaDaEquipe
+  foto: string | null
+  onFechar: () => void
+}) {
+  const apelido = pessoa.apelidos[0]
+
+  return (
+    <ModalAmplo titulo="Gerenciar pessoa" tamanho="ficha" onFechar={onFechar}>
+      <div className="h-full overflow-y-auto">
+        <div className="superficie-cabecalho px-4 py-4 text-white md:px-5">
+          <div className="flex items-center gap-3">
+            <FotoEditavel pessoa={pessoa} foto={foto} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <h3 className="truncate text-xl font-extrabold tracking-tight">{pessoa.nome}</h3>
+                <NomeEditavel pessoa={pessoa} />
+              </div>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-white/70">
+                <span>{ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}</span>
+                {apelido && <span>· “{apelido}”</span>}
+                <span>· {pessoa.ativo ? 'Ativa' : 'Inativa'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 p-4 md:grid-cols-2 md:items-start md:p-5">
+          <div className="space-y-4">
+            <TelasDaPessoa pessoa={pessoa} />
+          </div>
+          <div className="space-y-4">
+            <EscalaDaPessoa pessoa={pessoa} />
+            <Acoes pessoa={pessoa} onExcluida={onFechar} />
+          </div>
+        </div>
+      </div>
+    </ModalAmplo>
   )
 }
 
@@ -100,10 +161,17 @@ export function FichaDaPessoa({
  * simplesmente não tem como fazer login, e quem a cadastrou não descobre até
  * alguém reclamar.
  */
-function Acesso({ pessoa }: { pessoa: PessoaDaEquipe }) {
+function Acesso({ pessoa, onGerenciar }: { pessoa: PessoaDaEquipe; onGerenciar: () => void }) {
+  const telas = telasEfetivas(pessoa.telas, pessoa.papelSistema)
+  const hoje = hojeNoFuso()
+  const { data: plantoes } = useEscalaDaPessoa(pessoa.id, hoje, somarDia(hoje, 27))
+  // O relógio de minuto da casa: o "próximo" anda sozinho quando um plantão acaba.
+  const agora = useRelogioDeMinuto().getTime()
+  const proximo = plantoes?.find((p) => new Date(p.fim).getTime() > agora)
+
   return (
     <section className="rounded-cartao border border-border bg-card p-4 shadow-cartao">
-      <h3 className="rotulo-sobrescrito text-acento">Acesso</h3>
+      <h3 className="rotulo-sobrescrito text-acento">Acesso e escala</h3>
 
       <dl className="mt-3 space-y-2 text-sm">
         <Linha rotulo="Consegue entrar">
@@ -134,7 +202,37 @@ function Acesso({ pessoa }: { pessoa: PessoaDaEquipe }) {
             {pessoa.ativo ? 'Ativa' : 'Inativa'}
           </span>
         </Linha>
+
+        <Linha rotulo={pessoa.telas === null ? 'Telas (padrão)' : 'Telas'}>
+          <span className="font-semibold">
+            {telas.length === 0 ? 'Nenhuma' : TELAS.filter((t) => telas.includes(t.id)).map((t) => t.rotulo).join(', ')}
+          </span>
+        </Linha>
+
+        <Linha rotulo="Próximo plantão">
+          <span className="font-semibold tabular-nums">
+            {proximo ? (
+              <span className="capitalize">
+                {diaCurto(proximo.data)}, {horaEmBrasilia(proximo.inicio)}–{horaEmBrasilia(proximo.fim)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">nenhum lançado</span>
+            )}
+          </span>
+        </Linha>
+        {plantoes && plantoes.length > 0 && (
+          <Linha rotulo="Nas 4 semanas">
+            <span className="font-semibold tabular-nums">
+              {plantoes.length} {plantoes.length === 1 ? 'plantão' : 'plantões'}
+            </span>
+          </Linha>
+        )}
       </dl>
+
+      <Botao variante="primario" onClick={onGerenciar} className="mt-4 w-full justify-center">
+        <IconeCaneta className="size-4" />
+        Gerenciar {pessoa.nome.split(' ')[0]}
+      </Botao>
 
       {/* O e-mail é a pergunta que segue naturalmente desta caixa. Dizer onde
           ele está evita que alguém conclua que o dado se perdeu. */}
@@ -270,7 +368,7 @@ function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
  * resto o banco recusa, e recusa de propósito (ver `useExcluirPessoa`). Um
  * botão vermelho permanente que quase sempre falha ensina a errar.
  */
-function Acoes({ pessoa }: { pessoa: PessoaDaEquipe }) {
+function Acoes({ pessoa, onExcluida }: { pessoa: PessoaDaEquipe; onExcluida: () => void }) {
   const definirAtivo = useDefinirAtivo()
   const definirPapel = useDefinirPapel()
   const excluir = useExcluirPessoa()
@@ -324,7 +422,7 @@ function Acoes({ pessoa }: { pessoa: PessoaDaEquipe }) {
           <p className="mt-1 text-xs text-muted-foreground">
             O papel decide o que a pessoa FAZ nos casos (atendimento e adm
             cancelam caso e editam cadastro; operação, não) e o padrão de telas
-            dela. As telas se ajustam na caixa acima.
+            dela. As telas se ajustam na caixa Telas.
           </p>
         </div>
 
@@ -409,7 +507,7 @@ function Acoes({ pessoa }: { pessoa: PessoaDaEquipe }) {
           ocupado={excluir.isPending}
           erro={erro}
           onCancelar={() => setConfirmando(null)}
-          onConfirmar={() => executar(excluir.mutateAsync({ pessoaId: pessoa.id }))}
+          onConfirmar={() => executar(excluir.mutateAsync({ pessoaId: pessoa.id }).then(onExcluida))}
         >
           <p className="text-sm text-muted-foreground">
             Somem o cadastro e a conta de acesso, sem desfazer. Use isto só para

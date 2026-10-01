@@ -180,6 +180,8 @@ export function EquipePage() {
             <div ref={ficha} className="lg:sticky lg:top-4">
               {selecionada && (
                 <FichaDaPessoa
+                  // Uma ficha por pessoa: trocar de pessoa não herda o modal aberto.
+                  key={selecionada.id}
                   pessoa={selecionada}
                   foto={
                     (selecionada.fotoPath && fotos?.get(selecionada.fotoPath)) || null

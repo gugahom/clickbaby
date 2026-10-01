@@ -14,25 +14,10 @@ import {
   useRemoverPlantao,
   type NovoPlantao,
 } from '../api/useEscala'
+import { diaCurto, horaEmBrasilia } from '../lib/apresentacao'
 
 /** Quantos dias para a frente a ficha mostra. */
 const JANELA = 28
-
-/** '2026-10-01' -> 'qua, 01/10'. */
-function diaCurto(data: string): string {
-  const d = new Date(`${data}T12:00:00Z`)
-  const semana = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' }).format(d).replace('.', '')
-  return `${semana}, ${data.slice(8, 10)}/${data.slice(5, 7)}`
-}
-
-/** Um instante -> 'HH:MM' em Brasília. */
-function horaEmBrasilia(instante: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Sao_Paulo',
-  }).format(new Date(instante))
-}
 
 const horas = (minutos: number) => {
   const h = Math.floor(minutos / 60)

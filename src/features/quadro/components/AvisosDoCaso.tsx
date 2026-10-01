@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
-import { IconeAviso, IconeLixeira, IconeOlho } from '@/components/ui/icones'
+import { IconeAviso, IconeCaneta, IconeLixeira, IconeOlho } from '@/components/ui/icones'
+import { AnotarDialogo } from './AnotarDialogo'
 import { DialogoExcluirAviso } from './DialogoExcluirAviso'
+import { useAnotarEtapa } from '../api/useAcoes'
+import { mensagemDeErro } from '../lib/erros'
 import { ROTULO_ETAPA, rotuloDaRodada, type EtapaQuadro, type EtapaTipo } from '../types'
 
 /**
@@ -72,6 +75,9 @@ interface PropsAvisosDoCaso {
 export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
   const [aberto, setAberto] = useState(false)
   const [excluindo, setExcluindo] = useState<EtapaQuadro | null>(null)
+  const [editando, setEditando] = useState<EtapaQuadro | null>(null)
+  const [erroAoEditar, setErroAoEditar] = useState<string | null>(null)
+  const anotar = useAnotarEtapa()
 
   const avisos = etapas.filter(
     (e) =>
@@ -164,8 +170,21 @@ export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
                     {etapa.observacao}
                   </p>
                 </div>
-                {/* Excluir mora AQUI, onde o aviso é lido por extenso: é quem
-                    acabou de cumpri-lo que sabe que ele pode sair. */}
+                {/* EDITAR E EXCLUIR MORAM AQUI, onde o aviso é lido por extenso:
+                    é quem acabou de lê-lo que sabe que ele mudou ou que pode
+                    sair. Editar entrou em 30/09/2026 (pedido do gestor: "editar
+                    o alerta no próprio alerta detalhado, ao invés de ter que ir
+                    para o card") — é o mesmo diálogo do "Editar aviso" do menu
+                    da etapa, e a mesma RPC. */}
+                <BotaoIcone
+                  rotulo={`Editar o aviso de ${nomeDaEtapa(etapa)}`}
+                  onClick={() => {
+                    setErroAoEditar(null)
+                    setEditando(etapa)
+                  }}
+                >
+                  <IconeCaneta className="size-4" />
+                </BotaoIcone>
                 <BotaoIcone
                   rotulo={`Excluir o aviso de ${nomeDaEtapa(etapa)}`}
                   tom="pendencia"
@@ -181,6 +200,26 @@ export function AvisosDoCaso({ etapas }: PropsAvisosDoCaso) {
 
       {/* Irmão do diálogo dos avisos, e não filho: um <dialog> aberto por
           cima do outro entra no topo da pilha sozinho. */}
+      {editando && (
+        <AnotarDialogo
+          etapa={editando}
+          ocupado={anotar.isPending}
+          erro={erroAoEditar}
+          onCancelar={() => setEditando(null)}
+          onConfirmar={(observacao) => {
+            setErroAoEditar(null)
+            anotar
+              .mutateAsync({ casoEtapaId: editando.id, observacao })
+              .then(() => {
+                // Apagou o texto do último aviso? A faixa some; o diálogo dela sai junto.
+                if (observacao.trim() === '' && avisos.length <= 1) setAberto(false)
+                setEditando(null)
+              })
+              .catch((e) => setErroAoEditar(mensagemDeErro(e)))
+          }}
+        />
+      )}
+
       {excluindo && (
         <DialogoExcluirAviso
           etapa={excluindo}

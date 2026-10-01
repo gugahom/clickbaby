@@ -1757,7 +1757,9 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **Três vermelhos no card, separados pela FORMA:** horário estourando pinta o cartão inteiro
   e gira o anel da borda; a atribuída é pílula com iniciais; o aviso é pílula com megafone.
 - **O AVISO SE EXCLUI** (21/09/2026, pedido do gestor): lixeira em cada aviso do diálogo que
-  a faixa abre, e "Excluir aviso" no menu da etapa. É `anotar_etapa` com texto em branco — o
+  a faixa abre, e "Excluir aviso" no menu da etapa. **E SE EDITA ALI TAMBÉM** (30/09/2026,
+  pedido do gestor: "editar o alerta no próprio alerta detalhado, ao invés de ter que ir para o
+  card"): lápis ao lado da lixeira, abrindo o mesmo `AnotarDialogo` do "Editar aviso" do menu. É `anotar_etapa` com texto em branco — o
   banco sempre apagou assim, e o texto antigo fica em `observacao_removida`. Antes a única
   porta era apagar o texto à mão em "Editar aviso".
 - **O TERMO DE USO DE IMAGEM** (22/09/2026, pedido do gestor, migration `20260922183631`).
@@ -2081,7 +2083,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 - **Equipe** (`/quadro/equipe`), de quem tem a tela Equipe. Desde 30/09/2026 a ficha também
   muda FOTO (pasta `avatares/equipe/<pessoa_id>/`, `definir_foto_da_pessoa`) e NOME/APELIDO de
   qualquer pessoa, as TELAS e a ESCALA — ver os dois itens acima —, e os grupos "Sem acesso" e
-  "Inativas" nascem FECHADOS (pedido do gestor: "para não ficar poluindo"). Cadastro com ações: a lista separa
+  "Inativas" nascem FECHADOS (pedido do gestor: "para não ficar poluindo").
+  **O QUE SE MEXE MORA NUM MODAL** (mesmo dia, segunda volta do gestor): a coluna da direita
+  ficou com o RESUMO (quem é, o que segura agora, se entra, telas, próximo plantão) e o botão
+  "Gerenciar", que abre `GerenciarPessoa` (sobre `ModalAmplo`, tamanho `ficha`) com foto, nome,
+  telas, escala, papel, desativar e excluir, em duas colunas. A coluna não sumiu porque uma
+  lista sem detalhe ao lado ficaria "vazia demais", nas palavras dele. O texto abaixo descreve a
+  ficha de antes, com as ações na coluna. Cadastro com ações: a lista separa
   **Equipe**, **Sem acesso** e **Inativas** (as duas últimas são exceções que pedem ação),
   e o estado ao vivo é um selo na linha. Selecionar alguém abre a ficha com o que ela tem
   em mãos (etapa + nome do caso + há quanto tempo), os dados de acesso, e as ações:
