@@ -1,5 +1,8 @@
 import { createContext, use } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
+
+type Tela = Database['public']['Enums']['tela']
 
 /** A pessoa do domínio vinculada ao usuário autenticado. */
 export interface PessoaLogada {
@@ -11,6 +14,11 @@ export interface PessoaLogada {
    * assina na hora (ver `useUrlDaFoto`). `null` enquanto ninguém subiu foto.
    */
   fotoPath: string | null
+  /**
+   * As telas escolhidas pela gestão; `null` = o padrão do papel. Ler sempre
+   * por `useTelas`/`telasEfetivas`, nunca direto.
+   */
+  telas: Tela[] | null
 }
 
 /** Recarrega a pessoa do banco. Depois de trocar a foto, é o que atualiza o chip. */

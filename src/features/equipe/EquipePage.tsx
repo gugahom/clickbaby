@@ -1,8 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/ui/Avatar'
 import { Botao } from '@/components/ui/Botao'
-import { IconeAdicionar } from '@/components/ui/icones'
+import { Chevron, IconeAdicionar } from '@/components/ui/icones'
+import { Sanfona } from '@/components/ui/Sanfona'
 import { useEquipe, type PessoaDaEquipe } from './api/useEquipe'
 import { NovaPessoaDialogo } from './components/NovaPessoaDialogo'
 import { FichaDaPessoa } from './components/FichaDaPessoa'
@@ -28,6 +29,11 @@ import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
  *
  * MESTRE E DETALHE, como o Quadro: lista à esquerda, ficha à direita. Usar a
  * mesma forma é o que faz as duas telas parecerem o mesmo produto.
+ *
+ * "SEM ACESSO" E "INATIVAS" NASCEM FECHADAS (30/09/2026, pedido do gestor:
+ * "para não ficar poluindo muito a tela"). O título com a contagem continua à
+ * vista — a exceção não some —, e a lista abre num toque. Abrem sozinhas
+ * quando a pessoa escolhida está dentro delas.
  */
 type Grupo = 'equipe' | 'sem-acesso' | 'inativa'
 
@@ -148,21 +154,13 @@ export function EquipePage() {
           <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
             <div className="space-y-5">
               {grupos.map(({ grupo, pessoas: doGrupo }) => (
-                <section key={grupo}>
-                  <h2 className="flex flex-wrap items-baseline gap-x-2 px-1">
-                    <span className="rotulo-sobrescrito text-acento">
-                      {TITULO_DO_GRUPO[grupo]}
-                    </span>
-                    <span className="text-sm font-bold tabular-nums text-muted-foreground">
-                      {doGrupo.length}
-                    </span>
-                    {LEGENDA_DO_GRUPO[grupo] && (
-                      <span className="text-xs text-muted-foreground">
-                        {LEGENDA_DO_GRUPO[grupo]}
-                      </span>
-                    )}
-                  </h2>
-
+                <GrupoDaEquipe
+                  key={grupo}
+                  grupo={grupo}
+                  quantas={doGrupo.length}
+                  fechavel={grupo !== 'equipe'}
+                  temEscolhida={doGrupo.some((p) => p.id === selecionada?.id)}
+                >
                   <ul className="mt-2 space-y-1.5">
                     {doGrupo.map((p) => (
                       <li key={p.id}>
@@ -175,13 +173,15 @@ export function EquipePage() {
                       </li>
                     ))}
                   </ul>
-                </section>
+                </GrupoDaEquipe>
               ))}
             </div>
 
             <div ref={ficha} className="lg:sticky lg:top-4">
               {selecionada && (
                 <FichaDaPessoa
+                  // Uma ficha por pessoa: trocar de pessoa não herda o modal aberto.
+                  key={selecionada.id}
                   pessoa={selecionada}
                   foto={
                     (selecionada.fotoPath && fotos?.get(selecionada.fotoPath)) || null
@@ -193,6 +193,70 @@ export function EquipePage() {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Um grupo da lista. O principal fica sempre aberto; os de exceção abrem num
+ * toque, com o título e a contagem sempre à vista.
+ */
+function GrupoDaEquipe({
+  grupo,
+  quantas,
+  fechavel,
+  temEscolhida,
+  children,
+}: {
+  grupo: Grupo
+  quantas: number
+  fechavel: boolean
+  temEscolhida: boolean
+  children: ReactNode
+}) {
+  const [aberto, setAberto] = useState(false)
+  const id = useId()
+  const visivel = !fechavel || aberto || temEscolhida
+
+  const titulo = (
+    <>
+      <span className="rotulo-sobrescrito text-acento">{TITULO_DO_GRUPO[grupo]}</span>
+      <span className="text-sm font-bold tabular-nums text-muted-foreground">{quantas}</span>
+      {LEGENDA_DO_GRUPO[grupo] && (
+        <span className="text-xs text-muted-foreground">{LEGENDA_DO_GRUPO[grupo]}</span>
+      )}
+    </>
+  )
+
+  if (!fechavel) {
+    return (
+      <section>
+        <h2 className="flex flex-wrap items-baseline gap-x-2 px-1">{titulo}</h2>
+        {children}
+      </section>
+    )
+  }
+
+  return (
+    <section className="rounded-cartao border border-border/70 bg-card/40">
+      <h2>
+        <button
+          type="button"
+          id={`${id}-titulo`}
+          aria-expanded={visivel}
+          aria-controls={id}
+          onClick={() => setAberto((v) => !v)}
+          className="flex min-h-11 w-full flex-wrap items-center gap-x-2 px-3 text-left"
+        >
+          {titulo}
+          <Chevron
+            className={clsx('ml-auto size-4 text-muted-foreground transition-transform', visivel && 'rotate-180')}
+          />
+        </button>
+      </h2>
+      <Sanfona aberto={visivel} id={id} rotuladoPor={`${id}-titulo`}>
+        <div className="px-2 pb-2">{children}</div>
+      </Sanfona>
+    </section>
   )
 }
 

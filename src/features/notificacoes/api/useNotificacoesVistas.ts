@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase'
  *
  *   `vistoEm`         separa "novidade" de "eu já sei disso" — é o que acende o
  *                     contador.
- *   `geraisLimpasEm`  esconde as GERAIS nascidas até ali — é o "Limpar gerais".
+ *   `geraisLimpasEm`  era o "Limpar gerais" — sem uso desde 30/09/2026, quando
+ *                     as gerais saíram do sino.
  *
  * A RLS filtra para a própria linha, então `maybeSingle` é honesto: ou existe
  * a minha, ou não existe nenhuma (quem nunca abriu o sino).
@@ -64,20 +65,5 @@ export function useMarcarVistas() {
         geraisLimpasEm: atual?.geraisLimpasEm ?? null,
         vistoEm,
       })),
-  })
-}
-
-/** "Limpar gerais": esconde as gerais que existem agora, e marca o sino como visto. */
-export function useLimparGerais() {
-  const cliente = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (): Promise<string> => {
-      const { data, error } = await supabase.rpc('limpar_notificacoes_gerais')
-      if (error) throw error
-      return data as string
-    },
-    onSuccess: (agora) =>
-      cliente.setQueryData<MarcasDoSino>(CHAVE, { vistoEm: agora, geraisLimpasEm: agora }),
   })
 }

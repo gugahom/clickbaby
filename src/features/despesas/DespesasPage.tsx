@@ -21,6 +21,23 @@ function deslocarMes(mes: string, delta: number): string {
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
 }
 
+/**
+ * O FILTRO POR TIPO (30/09/2026, pedido do gestor: "filtrar por refeição —
+ * é importante para eles verem os casos que têm refeição"). Os tipos marcados
+ * SOMAM: marcar Refeição e Outro mostra os casos com qualquer um dos dois.
+ * Nada marcado é tudo. O total, os números e o CSV passam a ser do recorte, e
+ * o valor que aparece em cada caso é só o dos tipos marcados — um caso com
+ * Uber e refeição, filtrado por refeição, mostra quanto foi a refeição.
+ */
+type TipoDoFiltro = 'uberIda' | 'uberVolta' | 'refeicao' | 'outro'
+
+const TIPOS_DO_FILTRO: { id: TipoDoFiltro; rotulo: string }[] = [
+  { id: 'refeicao', rotulo: 'Refeição' },
+  { id: 'outro', rotulo: 'Outro' },
+  { id: 'uberIda', rotulo: 'Uber ida' },
+  { id: 'uberVolta', rotulo: 'Uber volta' },
+]
+
 /** '2026-09-10' -> '10/09'. */
 function diaCurto(dia: string): string {
   const [, m, d] = dia.split('-')
@@ -47,13 +64,33 @@ export function DespesasPage() {
   const mesAtual = hojeNoFuso().slice(0, 7)
   const [mes, setMes] = useState(mesAtual)
   const { data: linhas, isPending, error } = useRelatorioDespesas(mes)
+  const [tipos, setTipos] = useState<TipoDoFiltro[]>([])
 
-  const lista = linhas ?? []
+  // O recorte: com tipo marcado, só os casos que têm algum deles, e cada caso
+  // só com o valor desses tipos (os outros zerados). Sem tipo marcado, tudo.
+  const lista = (linhas ?? []).flatMap((l): LinhaDoRelatorio[] => {
+    if (tipos.length === 0) return [l]
+    const recorte: LinhaDoRelatorio = {
+      ...l,
+      uberIda: tipos.includes('uberIda') ? l.uberIda : 0,
+      uberVolta: tipos.includes('uberVolta') ? l.uberVolta : 0,
+      refeicao: tipos.includes('refeicao') ? l.refeicao : 0,
+      outro: tipos.includes('outro') ? l.outro : 0,
+    }
+    recorte.total = recorte.uberIda + recorte.uberVolta + recorte.refeicao + recorte.outro
+    return recorte.total > 0 ? [recorte] : []
+  })
   const soma = (campo: keyof Pick<LinhaDoRelatorio, 'total' | 'uberIda' | 'uberVolta' | 'refeicao' | 'outro'>) =>
     lista.reduce((acc, l) => acc + l[campo], 0)
 
   const totalDoMes = soma('total')
+  // Com filtro, o número de lançamentos do caso inteiro mentiria sobre o
+  // recorte (ele conta os Uber também) — some o rodapé de lançamentos.
   const lancamentos = lista.reduce((acc, l) => acc + l.lancamentos, 0)
+
+  function alternarTipo(t: TipoDoFiltro) {
+    setTipos((atuais) => (atuais.includes(t) ? atuais.filter((x) => x !== t) : [...atuais, t]))
+  }
 
   function exportar() {
     const csv = montarCsv(
@@ -73,7 +110,7 @@ export function DespesasPage() {
         String(l.lancamentos),
       ]),
     )
-    baixarCsv(`despesas-${mes}.csv`, csv)
+    baixarCsv(`despesas-${mes}${tipos.length > 0 ? `-${tipos.join('-')}` : ''}.csv`, csv)
   }
 
   return (
@@ -115,16 +152,49 @@ export function DespesasPage() {
         <p className="text-sm text-muted-foreground">Somando o mês…</p>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <Numero rotulo="Total do mês" valor={formatarMoeda(totalDoMes)} destaque />
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo de despesa">
+            <span className="text-sm text-muted-foreground">Tipo</span>
+            {TIPOS_DO_FILTRO.map((t) => {
+              const ativo = tipos.includes(t.id)
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={ativo}
+                  onClick={() => alternarTipo(t.id)}
+                  className={clsx(
+                    'min-h-9 rounded-full border px-3.5 text-sm font-semibold transition-colors',
+                    ativo
+                      ? 'border-marca bg-marca text-white'
+                      : 'border-border bg-card text-foreground hover:border-marca/40',
+                  )}
+                >
+                  {t.rotulo}
+                </button>
+              )
+            })}
+            {tipos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setTipos([])}
+                className="min-h-9 px-2 text-sm font-semibold text-marca hover:underline"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+
+          <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+            <Numero rotulo={tipos.length > 0 ? 'Total do filtro' : 'Total do mês'} valor={formatarMoeda(totalDoMes)} destaque />
             <Numero rotulo="Casos com gasto" valor={String(lista.length)} />
             <Numero rotulo="Uber" valor={formatarMoeda(soma('uberIda') + soma('uberVolta'))} />
-            <Numero rotulo="Refeição e outros" valor={formatarMoeda(soma('refeicao') + soma('outro'))} />
+            <Numero rotulo="Refeição" valor={formatarMoeda(soma('refeicao'))} />
+            <Numero rotulo="Outros" valor={formatarMoeda(soma('outro'))} />
           </section>
 
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {lancamentos} {lancamentos === 1 ? 'lançamento' : 'lançamentos'}
+              {tipos.length === 0 && `${lancamentos} ${lancamentos === 1 ? 'lançamento' : 'lançamentos'}`}
             </span>
             {/* Sem linha, sem arquivo: um CSV só com cabeçalho abriria no Excel
                 parecendo que a exportação quebrou. */}
@@ -135,7 +205,9 @@ export function DespesasPage() {
 
           {lista.length === 0 ? (
             <p className="rounded-painel border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              Nenhuma despesa lançada em casos de {rotuloDoMes(mes)}.
+              {tipos.length > 0
+                ? `Nenhum caso de ${rotuloDoMes(mes)} com despesa desse tipo.`
+                : `Nenhuma despesa lançada em casos de ${rotuloDoMes(mes)}.`}
             </p>
           ) : (
             <ul className="space-y-2">

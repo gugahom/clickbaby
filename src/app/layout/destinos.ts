@@ -5,7 +5,7 @@ import {
   IconeKanban,
   IconeRelatorio,
 } from '@/components/ui/icones'
-import { podeVerConcluidos } from '@/features/quadro/lib/acoes'
+import type { Tela } from '@/features/auth/telas'
 
 /**
  * PARA ONDE SE PODE IR, numa tabela só.
@@ -15,9 +15,10 @@ import { podeVerConcluidos } from '@/features/quadro/lib/acoes'
  * computador, a faixa no celular —, as condições teriam que ser escritas duas
  * vezes, e a primeira tela nova entraria numa delas e não na outra.
  *
- * QUEM VÊ O QUÊ é o mesmo recorte das guardas de rota (`RotaDeGestao`,
- * `RotaDoFinanceiro`): um destino que a guarda devolveria é porta pintada na
- * parede. Ao criar rota nova, a entrada aqui e a guarda mudam juntas.
+ * QUEM VÊ O QUÊ é a LISTA DE TELAS da pessoa (30/09/2026 — até ali era o
+ * papel), a mesma que `RotaDaTela` confere na rota: um destino que a guarda
+ * devolveria é porta pintada na parede. Ao criar rota nova, a tela entra no
+ * enum `tela`, em `TELAS` e aqui.
  */
 export type GrupoDeDestino = 'operacao' | 'gestao'
 
@@ -74,26 +75,27 @@ export const ROTULO_DO_GRUPO: Record<GrupoDeDestino, string> = {
  * ícone ao lado a discordância ficaria pior: nenhum desenho representa
  * "Painel".
  *
- * O papel é `string` e não `PapelSistema`: ele chega do contexto de auth como
- * veio do banco, e o recorte aqui é por comparação de igualdade — apertar o
- * tipo pediria uma conversão no chamador que não afirma nada de novo.
+ * O padrão de cada papel (quando a gestão não escolheu) está em
+ * `telasPadraoDoPapel`: o Quadro para todos, o Calendário para quem não é
+ * fotógrafa, Despesas do financeiro e da gestão, Equipe e Relatórios da gestão.
  */
-export function destinosDe(papel: string | undefined): Destino[] {
-  const destinos: Destino[] = [
-    {
+export function destinosDe(telas: Set<Tela>): Destino[] {
+  const destinos: Destino[] = []
+
+  if (telas.has('quadro')) {
+    destinos.push({
       para: '/',
       rotulo: 'Quadro',
       grupo: 'operacao',
       fim: true,
       descricao: 'Os casos do dia',
       Icone: IconeKanban,
-    },
-  ]
+    })
+  }
 
-  // O Calendário é de todos menos as fotógrafas (30/09/2026, decisão do
-  // gestor) — o recorte de `RotaAdministrativa`. Fica na Operação: é a agenda
-  // do trabalho, não um número sobre ele.
-  if (podeVerConcluidos(papel ?? '')) {
+  // O Calendário fica na Operação: é a agenda do trabalho, não um número
+  // sobre ele.
+  if (telas.has('calendario')) {
     destinos.push({
       para: '/calendario',
       rotulo: 'Calendário',
@@ -103,9 +105,9 @@ export function destinosDe(papel: string | undefined): Destino[] {
     })
   }
 
-  // Equipe e Relatórios são da gestão; Despesas, do financeiro e da gestão —
-  // quem RECOLHE o gasto. Quem lança lança no card, e não precisa desta porta.
-  if (papel === 'gestao') {
+  // Despesas é de quem RECOLHE o gasto. Quem lança lança no card, e não
+  // precisa desta porta.
+  if (telas.has('equipe')) {
     destinos.push({
       para: '/equipe',
       rotulo: 'Equipe',
@@ -115,7 +117,7 @@ export function destinosDe(papel: string | undefined): Destino[] {
     })
   }
 
-  if (papel === 'gestao' || papel === 'financeiro') {
+  if (telas.has('despesas')) {
     destinos.push({
       para: '/despesas',
       rotulo: 'Despesas',
@@ -129,7 +131,7 @@ export function destinosDe(papel: string | undefined): Destino[] {
   // interno (das pessoas) e, em 29/09, o externo (da operação inteira) — e
   // virou um grupo que abre nos dois. O interno continua em /relatorios, para
   // nenhum link antigo quebrar.
-  if (papel === 'gestao') {
+  if (telas.has('relatorios')) {
     destinos.push({
       para: '/relatorios',
       rotulo: 'Relatórios',

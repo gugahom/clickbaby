@@ -76,12 +76,12 @@ values ('reels', null, 60, '2029-05-15'), ('reels', null, 30, '2029-05-22');
 select pg_temp.como('atendimento.gp@clickbaby.test');
 select throws_ok(
   $$ select * from public.operacao_grafico('{}'::jsonb, 'dia') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'G1: o atendimento não abre o gráfico do relatório externo'
 );
 select throws_ok(
   $$ select * from public.metricas_dentro_do_padrao('2029-05-01', '2029-05-31') $$,
-  'P0001', 'Os relatórios de pessoas são só da gestão.',
+  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
   'G1: nem as métricas do padrão'
 );
 reset role;

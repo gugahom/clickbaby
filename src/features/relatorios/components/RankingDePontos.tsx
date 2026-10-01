@@ -96,7 +96,7 @@ export function RankingDePontos({
     .map((l) => {
       const posicao = agora.get(l.pessoaId) ?? 0
       const antiga = antes?.get(l.pessoaId)
-      return { linha: l, posicao, mudanca: antes ? (antiga === undefined ? 'novo' : antiga - posicao) : null }
+      return { linha: l, posicao, mudanca: antes ? (antiga === undefined ? ('novo' as const) : antiga - posicao) : null }
     })
     .sort((a, b) => a.posicao - b.posicao || a.linha.nome.localeCompare(b.linha.nome))
 

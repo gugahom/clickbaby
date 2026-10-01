@@ -95,12 +95,14 @@ select ok(
 -- SÓ SEIS, e todas nomeadas. Uma policy a mais aqui é uma porta que ninguém
 -- discutiu; contar sem nomear deixaria trocar uma pela outra em silêncio.
 -- Eram quatro (as do avatar) até 21/09/2026, quando a CAPA DO FOTOLIVRO abriu a
--- primeira porta em `midias` — ver a migration 20260921202848.
+-- primeira porta em `midias` — ver a migration 20260921202848. Viraram oito
+-- em 30/09/2026: a tela Equipe sobe e apaga a foto de OUTRA pessoa, só na
+-- pasta `equipe/` do bucket de avatares (20260930232424).
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects'),
-  6,
-  'exatamente seis policies em storage.objects — as do avatar e as da capa do fotolivro'
+  8,
+  'exatamente oito policies em storage.objects — as do avatar, as da Equipe e as da capa do fotolivro'
 );
 
 select set_eq(
@@ -111,10 +113,12 @@ select set_eq(
     'avatares_upload_proprio',
     'avatares_troca_propria',
     'avatares_remocao_propria',
+    'avatares_upload_pela_equipe',
+    'avatares_remocao_pela_equipe',
     'midias_fotolivro_leitura',
     'midias_fotolivro_upload'
   ],
-  'as seis, pelo nome'
+  'as oito, pelo nome'
 );
 
 -- O ponto do arquivo, na forma que importa agora: `comprovantes` continua sem

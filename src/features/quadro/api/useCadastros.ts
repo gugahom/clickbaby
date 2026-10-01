@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 export interface PacoteOpcao {
   id: string
   nome: string
+  /** Para o termo sugerido do BIRTH (`termoSugerido`), que olha o slug. */
+  slug: string
   /** A cor do evento no Google, quando o pacote tem uma (os dois BIRTH). */
   cor_calendar: string | null
 }
@@ -33,7 +35,7 @@ export function useCadastros(ativo: boolean) {
     staleTime: 30 * 60 * 1000,
     queryFn: async () => {
       const [pacotes, maternidades] = await Promise.all([
-        supabase.from('pacotes').select('id, nome, cor_calendar').eq('ativo', true).order('nome'),
+        supabase.from('pacotes').select('id, nome, slug, cor_calendar').eq('ativo', true).order('nome'),
         supabase.from('maternidades').select('id, sigla, nome, cor_calendar').eq('ativo', true).order('sigla'),
       ])
       if (pacotes.error) throw pacotes.error

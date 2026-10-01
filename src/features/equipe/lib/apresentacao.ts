@@ -98,3 +98,19 @@ export const PAPEIS: { id: PapelSistema; rotulo: string }[] = [
   { id: 'financeiro', rotulo: 'Financeiro' },
   { id: 'gestao', rotulo: 'Gestão' },
 ]
+
+/** '2026-10-01' -> 'qua, 01/10'. */
+export function diaCurto(data: string): string {
+  const d = new Date(`${data}T12:00:00Z`)
+  const semana = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' }).format(d).replace('.', '')
+  return `${semana}, ${data.slice(8, 10)}/${data.slice(5, 7)}`
+}
+
+/** Um instante -> 'HH:MM' em Brasília. */
+export function horaEmBrasilia(instante: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(instante))
+}

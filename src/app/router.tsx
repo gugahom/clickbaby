@@ -1,9 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
-import { RotaDeGestao } from './guards/RotaDeGestao'
-import { RotaDoFinanceiro } from './guards/RotaDoFinanceiro'
-import { RotaAdministrativa } from './guards/RotaAdministrativa'
+import { RotaDaTela } from './guards/RotaDaTela'
 import { CalendarioPage } from '@/features/calendario/CalendarioPage'
 import { DespesasPage } from '@/features/despesas/DespesasPage'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -42,32 +40,33 @@ export const router = createBrowserRouter(
         {
           element: <AppShell />,
           children: [
-            { index: true, element: <QuadroPage /> },
+            // CADA TELA ATRÁS DA PRÓPRIA PORTA (30/09/2026): quem vê o quê é a
+            // lista de telas da pessoa, que a gestão concede na Equipe — ver
+            // `RotaDaTela` e a migration 20260930232424.
+            {
+              element: <RotaDaTela tela="quadro" />,
+              children: [{ index: true, element: <QuadroPage /> }],
+            },
             // O perfil é de qualquer pessoa logada — inclusive, e sobretudo,
             // de quem opera: é ali que a senha inicial compartilhada morre.
             { path: 'perfil', element: <PerfilPage /> },
             {
-              // As telas da gestão vivem atrás de RotaDeGestao. Ela é a
-              // navegação, não a segurança — ver o comentário lá.
-              element: <RotaDeGestao />,
+              element: <RotaDaTela tela="equipe" />,
+              children: [{ path: 'equipe', element: <EquipePage /> }],
+            },
+            {
+              element: <RotaDaTela tela="relatorios" />,
               children: [
-                { path: 'equipe', element: <EquipePage /> },
-                // A tela nasceu VAZIA a pedido do gestor (28/09/2026): a aba
-                // existe para as telas novas terem onde chegar, e o que ela
-                // mede ainda não foi combinado — ver RelatoriosPage.
                 { path: 'relatorios', element: <RelatoriosPage /> },
                 { path: 'relatorios/externo', element: <RelatorioExternoPage /> },
               ],
             },
             {
-              // O recolhimento de despesas é do financeiro E da gestão —
-              // guarda própria, para não abrir a Equipe junto.
-              element: <RotaDoFinanceiro />,
+              element: <RotaDaTela tela="despesas" />,
               children: [{ path: 'despesas', element: <DespesasPage /> }],
             },
             {
-              // O calendário é de todos menos as fotógrafas (30/09/2026).
-              element: <RotaAdministrativa />,
+              element: <RotaDaTela tela="calendario" />,
               children: [{ path: 'calendario', element: <CalendarioPage /> }],
             },
           ],

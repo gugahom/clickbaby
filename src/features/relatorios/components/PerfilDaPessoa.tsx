@@ -11,6 +11,7 @@ import type {
   MetricaPorEtapa,
   MetricaPorPessoa,
   PadraoDeTempo,
+  PlantaoDaPessoa,
   PontosDaPessoa,
 } from '../api/useMetricas'
 import { ETAPAS_DE_EDICAO, type LinhaDaPessoa } from '../lib/kpis'
@@ -44,6 +45,15 @@ import { ITENS_DE_PONTUACAO, formatarPontos, pontosComUnidade } from '../lib/pon
  * Aqui há cor, ao contrário da comparação com a equipe: o padrão é a régua que
  * a própria gestão escolheu, e ficar abaixo da metade dela é o que ela pediu
  * para enxergar.
+ *
+ * PLANTÃO × TRABALHO (30/09/2026, pedido do gestor: ver que "tal funcionário
+ * tem tantas horas e na verdade só fez tantas horas de trabalho de fato"). As
+ * horas de PLANTÃO vêm da escala que a gestão lança na Equipe; as de ETAPA são
+ * a soma do tempo com relógio aberto das etapas concluídas no período — o
+ * mesmo tempo líquido da produção, sem pausa. A frase diz o que a conta não
+ * pega, porque a leitura crua seria injusta: campo registrado depois (seção 9)
+ * não tem relógio, deslocamento não é etapa, e etapa de campo em paralelo conta
+ * duas vezes. É ESCALA, não ponto — o sistema não calcula jornada.
  */
 export interface PadraoNoPerfil {
   /** De todo mundo, no período. */
@@ -59,6 +69,7 @@ export function PerfilDaPessoa({
   fases,
   pontos,
   padrao,
+  plantao,
   rotuloDoPeriodo,
   onFechar,
 }: {
@@ -70,6 +81,8 @@ export function PerfilDaPessoa({
   /** Os pontos de todo mundo no período — os desta pessoa saem daqui. */
   pontos: PontosDaPessoa[]
   padrao: PadraoNoPerfil
+  /** As horas de plantão da escala no período; sem lançamento, `undefined`. */
+  plantao: PlantaoDaPessoa | undefined
   /** Como a frase termina: "em dezembro de 2027", "nos últimos 7 dias". */
   rotuloDoPeriodo: string
   /** O "xiszinho" (pedido do gestor): fecha o perfil e a tabela ocupa a largura. */
@@ -100,6 +113,9 @@ export function PerfilDaPessoa({
     const etapas = todas.reduce((acc, f) => acc + f.etapas, 0)
     return etapas > 0 ? todas.reduce((acc, f) => acc + f.somaMin, 0) / etapas : null
   }
+
+  const minutosDeEtapa = daPessoa.reduce((acc, m) => acc + m.somaMin, 0)
+  const medidas = daPessoa.reduce((acc, m) => acc + m.medidas, 0)
 
   const concluidasPorOutra = daPessoa.reduce((acc, m) => acc + m.concluidasPorOutra, 0)
   const registros: { rotulo: string; valor: number; atencao?: boolean; dica?: string }[] = [
@@ -162,6 +178,10 @@ export function PerfilDaPessoa({
         />
         <Numero rotulo="Ajustes" valor={String(linha.ajustes)} />
       </div>
+
+      <Bloco titulo="Plantão e trabalho" nota="escala planejada × relógio das etapas">
+        <PlantaoETrabalho plantao={plantao} minutosDeEtapa={minutosDeEtapa} medidas={medidas} />
+      </Bloco>
 
       <Bloco titulo="Pontos" nota="o peso de cada etapa, dividido quando passou de mão">
         {pontosDaPessoa.length === 0 ? (
@@ -292,6 +312,62 @@ export function PerfilDaPessoa({
         </Bloco>
       )}
     </section>
+  )
+}
+
+/** "144h", "61h30". */
+function emHoras(minutos: number): string {
+  const h = Math.floor(minutos / 60)
+  const m = Math.round(minutos % 60)
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
+}
+
+function PlantaoETrabalho({
+  plantao,
+  minutosDeEtapa,
+  medidas,
+}: {
+  plantao: PlantaoDaPessoa | undefined
+  minutosDeEtapa: number
+  medidas: number
+}) {
+  const proporcao = plantao && plantao.minutos > 0 ? minutosDeEtapa / plantao.minutos : null
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <div className="text-xs text-muted-foreground">Plantão na escala</div>
+          <div className="text-lg font-extrabold tabular-nums text-foreground">
+            {plantao ? emHoras(plantao.minutos) : '—'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {plantao ? `${plantao.plantoes} ${plantao.plantoes === 1 ? 'plantão' : 'plantões'}` : 'nenhum lançado'}
+          </div>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <div className="text-xs text-muted-foreground">Com etapa aberta</div>
+          <div className="text-lg font-extrabold tabular-nums text-foreground">{emHoras(minutosDeEtapa)}</div>
+          <div className="text-xs text-muted-foreground">
+            {medidas} {medidas === 1 ? 'etapa com relógio' : 'etapas com relógio'}
+          </div>
+        </div>
+      </div>
+      {proporcao !== null && (
+        <div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <div className="h-full rounded-full bg-grafico" style={{ width: `${Math.min(100, proporcao * 100)}%` }} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">{Math.round(proporcao * 100)}%</span> do plantão com etapa
+            aberta.
+          </p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Não entram: campo registrado depois (sem relógio), deslocamento e o tempo entre etapas. Etapas de campo em
+        paralelo contam duas vezes. É a escala planejada, não ponto.
+      </p>
+    </div>
   )
 }
 

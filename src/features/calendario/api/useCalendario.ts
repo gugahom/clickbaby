@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import type { TermoStatus } from '@/features/quadro/types'
 import { buscarTudo } from '@/features/quadro/api/useQuadro'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
@@ -318,6 +319,21 @@ export interface NovoCaso {
   observacao: string
   clickHome: boolean
   fotolivro: boolean
+  /**
+   * O TERMO DE IMAGEM, já no cadastro da agenda (30/09/2026, pedido do
+   * gestor). Nulo = ninguém respondeu ainda. Vai por `registrar_termo`, a
+   * mesma RPC da confirmação de entrega, DEPOIS de salvar o caso: termo e
+   * cadastro são fatos independentes (a mesma razão de serem duas chamadas na
+   * confirmação), e a RPC nova de caso não precisa de mais um argumento.
+   */
+  termo: TermoStatus | null
+}
+
+/** Registra o termo quando ele mudou. Só atendimento e adm — como quem cria. */
+async function registrarTermoSeMudou(casoId: string, termo: TermoStatus | null, antes: TermoStatus | null) {
+  if (termo === null || termo === antes) return
+  const { error } = await supabase.rpc('registrar_termo', { p_caso_id: casoId, p_termo: termo })
+  if (error) throw new Error(`O caso foi salvo, mas o termo não: ${error.message}`)
 }
 
 /** A previsão que vai para o banco: com hora, o instante; sem, o dia. */
@@ -347,9 +363,10 @@ export function useCriarCaso() {
         ...camposNovos(n),
       })
       if (error) throw new Error(error.message)
+      await registrarTermoSeMudou(data, n.termo, null)
       return data
     },
-    onSuccess: () => {
+    onSettled: () => {
       agendarRecargaDoQuadro(queryClient)
       return queryClient.invalidateQueries({ queryKey: [CHAVE] })
     },
@@ -378,6 +395,7 @@ export interface CasoEditavel {
   criadoPeloSistema: boolean
   /** Já tem evento no Google (a mudança vai para lá). */
   noGoogle: boolean
+  termo: TermoStatus | null
 }
 
 export function useCasoEditavel(casoId: string | null) {
@@ -389,7 +407,7 @@ export function useCasoEditavel(casoId: string | null) {
       const { data, error } = await supabase
         .from('casos')
         .select(
-          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
         )
         .eq('id', casoId ?? '')
         .single()
@@ -408,6 +426,7 @@ export function useCasoEditavel(casoId: string | null) {
         temFotolivro: data.etapas.some((e) => e.tipo === 'album'),
         criadoPeloSistema: data.criado_por !== null,
         noGoogle: data.google_calendar_event_id !== null || data.google_pendente,
+        termo: data.termo_status,
       }
     },
   })
@@ -421,7 +440,7 @@ export function useCasoEditavel(casoId: string | null) {
 export function useEditarCasoDoCalendario() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (e: NovoCaso & { casoId: string }): Promise<void> => {
+    mutationFn: async (e: NovoCaso & { casoId: string; termoAntes: TermoStatus | null }): Promise<void> => {
       const { error } = await supabase.rpc('editar_caso', {
         p_caso_id: e.casoId,
         p_mae_nome: e.maeNome,
@@ -434,8 +453,9 @@ export function useEditarCasoDoCalendario() {
         ...camposNovos(e),
       })
       if (error) throw new Error(error.message)
+      await registrarTermoSeMudou(e.casoId, e.termo, e.termoAntes)
     },
-    onSuccess: (_r, { casoId }) => {
+    onSettled: (_r, _e, { casoId }) => {
       agendarRecargaDoCaso(queryClient, casoId)
       return queryClient.invalidateQueries({ queryKey: [CHAVE] })
     },

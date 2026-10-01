@@ -27,7 +27,7 @@ import { ContextoAuth, type EstadoAuth, type PessoaLogada } from './contexto'
 async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
   const completa = await supabase
     .from('pessoas')
-    .select('id, nome, papel_sistema, foto_path')
+    .select('id, nome, papel_sistema, foto_path, telas')
     .eq('auth_user_id', authUserId)
     .maybeSingle()
 
@@ -37,6 +37,7 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
       nome: completa.data.nome,
       papelSistema: completa.data.papel_sistema,
       fotoPath: completa.data.foto_path,
+      telas: completa.data.telas,
     }
   }
 
@@ -57,6 +58,7 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
     nome: minima.data.nome,
     papelSistema: minima.data.papel_sistema,
     fotoPath: null,
+    telas: null,
   }
 }
 

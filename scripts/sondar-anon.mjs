@@ -240,6 +240,12 @@ const RPCS_TRANSICAO = {
   operacao_resumo: { p_filtros: {} },
   // O gráfico do recorte e o padrão em uso (20260930052252).
   operacao_grafico: { p_filtros: {}, p_eixo: 'dia' },
+  // Telas por pessoa e escala (30/09/2026).
+  tem_tela: { p_tela: 'equipe' },
+  telas_padrao_do_papel: { p_papel: 'gestao' },
+  telas_efetivas: { p_telas: null, p_papel: 'gestao' },
+  definir_foto_da_pessoa: { p_pessoa_id: '00000000-0000-0000-0000-000000000000', p_foto_path: null },
+  metricas_plantoes_por_pessoa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
