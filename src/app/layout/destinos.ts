@@ -156,16 +156,17 @@ export function destinosDe(telas: Set<Tela>): Destino[] {
     })
   }
 
-  // O COMERCIAL (01/10/2026): quem tem a tela Comercial e NÃO tem Relatórios
-  // entra no relatório externo já no modo comercial — é a porta dele até a
-  // página comercial existir. Quem tem as duas liga o modo pelo próprio
-  // relatório externo, e não ganha um destino repetido.
+  // QUEM TEM A TELA COMERCIAL E NÃO TEM RELATÓRIOS chega ao relatório externo
+  // por aqui — com o nome dele, e não "Comercial" (01/10/2026, pedido do
+  // gestor: "essa não é a nossa tela comercial ainda (…) pode ficar relatório
+  // externo, a pessoa vai lá e muda o toggle"). Quem tem as duas já o tem no
+  // grupo Relatórios.
   if (telas.has('comercial') && !telas.has('relatorios')) {
     destinos.push({
-      para: '/relatorios/externo?comercial=1',
-      rotulo: 'Comercial',
+      para: '/relatorios/externo',
+      rotulo: 'Relatório externo',
       grupo: 'gestao',
-      descricao: 'Ofertas pós-parto: reels, New Born e Foto/Livro',
+      descricao: 'A operação inteira, com filtros e o modo comercial',
       Icone: IconeRelatorio,
     })
   }

@@ -33,6 +33,7 @@ export type GrupoDeLista =
   | 'termos'
   | 'turnos'
   | 'dias_semana'
+  | 'oferta_birth'
   | 'oferta_reels'
   | 'oferta_new_born'
   | 'oferta_fotolivro'
@@ -78,6 +79,7 @@ export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
   'termos',
   'turnos',
   'dias_semana',
+  'oferta_birth',
   'oferta_reels',
   'oferta_new_born',
   'oferta_fotolivro',
@@ -98,6 +100,7 @@ export const TITULO_DO_GRUPO: Record<GrupoDeLista | GrupoSimNao, string> = {
   termos: 'Termo de imagem',
   turnos: 'Horário do parto',
   dias_semana: 'Dia da semana',
+  oferta_birth: 'Oferta de Birth',
   oferta_reels: 'Oferta de Reels',
   oferta_new_born: 'Oferta de New Born',
   oferta_fotolivro: 'Oferta de Foto/Livro',
@@ -135,6 +138,9 @@ export type OfertaComercial = Database['public']['Enums']['oferta_comercial']
 export type FaseComercial = Database['public']['Enums']['fase_comercial']
 
 export const OFERTAS: { id: OfertaComercial; rotulo: string; grupo: GrupoDeLista }[] = [
+  // O BIRTH (01/10/2026): a venda do próprio pacote, apresentado aos pais
+  // depois do parto. Só existe nos dois BIRTH.
+  { id: 'birth', rotulo: 'Birth', grupo: 'oferta_birth' },
   { id: 'reels', rotulo: 'Reels', grupo: 'oferta_reels' },
   { id: 'new_born', rotulo: 'New Born', grupo: 'oferta_new_born' },
   { id: 'fotolivro', rotulo: 'Foto/Livro', grupo: 'oferta_fotolivro' },
@@ -152,6 +158,7 @@ export const FASES_COMERCIAIS: FaseComercial[] = ['apresentar', 'enviado', 'recu
 const OPCOES_DA_OFERTA = FASES_COMERCIAIS.map((f) => ({ valor: f, rotulo: ROTULO_FASE_COMERCIAL[f] }))
 
 export const OPCOES_FIXAS: Partial<Record<GrupoDeLista, { valor: string; rotulo: string }[]>> = {
+  oferta_birth: OPCOES_DA_OFERTA,
   oferta_reels: OPCOES_DA_OFERTA,
   oferta_new_born: OPCOES_DA_OFERTA,
   oferta_fotolivro: OPCOES_DA_OFERTA,
@@ -362,7 +369,15 @@ export function semFiltros(f: FiltrosDaOperacao): FiltrosDaOperacao {
  */
 type GrupoDeColuna = Exclude<
   GrupoDeLista,
-  'links' | 'maternidades' | 'pacotes' | 'pessoas' | 'etapas' | 'oferta_reels' | 'oferta_new_born' | 'oferta_fotolivro'
+  | 'links'
+  | 'maternidades'
+  | 'pacotes'
+  | 'pessoas'
+  | 'etapas'
+  | 'oferta_birth'
+  | 'oferta_reels'
+  | 'oferta_new_born'
+  | 'oferta_fotolivro'
 >
 
 export type ColunaDoFiltro =

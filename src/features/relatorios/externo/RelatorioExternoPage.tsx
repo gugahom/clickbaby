@@ -78,9 +78,11 @@ import {
  * o modo: só os partos, e três colunas fixas a mais — REELS (nos BASIC e
  * STANDARD), NEW BORN e FOTO/LIVRO — com o seletor de fase de cada oferta:
  * apresentar, enviado, recusou, vendido. É a planilha que o comercial usava,
- * com os filtros do relatório. Quem tem SÓ a tela Comercial entra aqui direto
- * no modo, sem o botão — e o banco recusa qualquer busca dele fora do modo.
- * Quando a página comercial existir, isto muda de casa.
+ * com os filtros do relatório. Desde 01/10/2026 entra também o BIRTH, com a
+ * oferta do próprio pacote, e a tela Comercial abre o relatório externo
+ * inteiro: a pessoa entra em "Relatório externo" e liga a chave quando quer
+ * (pedido do gestor — esta ainda não é a página comercial). Quando ela existir,
+ * isto muda de casa.
  */
 type Visao = 'casos' | 'grafico'
 const METRICAS_IDS = Object.keys(METRICAS) as Metrica[]
@@ -99,10 +101,7 @@ export function RelatorioExternoPage() {
   const [params, setParams] = useSearchParams()
   const telas = useTelas()
   const podeComercial = telas.has('comercial')
-  // Quem só tem a tela Comercial vive no modo comercial.
-  const soComercial = podeComercial && !telas.has('relatorios')
-  const lidos = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
-  const filtros: FiltrosDaOperacao = soComercial ? { ...lidos, comercial: true } : lidos
+  const filtros = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
   const comercial = filtros.comercial === true
   const ordem = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
   const pagina = Math.max(1, Number(params.get('pagina')) || 1)
@@ -173,10 +172,10 @@ export function RelatorioExternoPage() {
     <div className="mx-auto w-full max-w-[100rem] space-y-4 p-3 md:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">{soComercial ? 'Comercial' : 'Relatório externo'}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Relatório externo</h1>
         <p className="text-sm text-muted-foreground">
           {comercial
-            ? 'As ofertas pós-parto: reels nos BASIC e STANDARD, New Born e Foto/Livro. Mude a fase de cada uma na própria linha.'
+            ? 'As ofertas pós-parto: o BIRTH, o reels nos BASIC e STANDARD, New Born e Foto/Livro. Mude a fase de cada uma na própria linha.'
             : 'Toda a operação. Combine os filtros para chegar no recorte — cada opção mostra quantos casos ela daria.'}
           {simulado && (
             <span className="ml-2 rounded-full bg-atencao/15 px-2 py-0.5 text-xs font-semibold text-atencao-tinta">
@@ -185,7 +184,7 @@ export function RelatorioExternoPage() {
           )}
         </p>
         </div>
-        {podeComercial && !soComercial && (
+        {podeComercial && (
           <ChaveComercial ligada={comercial} onTrocar={() => mudar({ ...filtros, comercial: !comercial })} />
         )}
       </header>
@@ -801,7 +800,13 @@ function ListaDeCasos({
                 {comercial &&
                   OFERTAS.map((o) => (
                     <td key={o.id} className="border-l border-border/60 px-3 py-2 align-middle">
-                      <SeletorDeOferta casoId={c.id} oferta={o.id} fase={c.ofertas[o.id]} podeMudar={podeMudarOfertas} />
+                      <SeletorDeOferta
+                        casoId={c.id}
+                        oferta={o.id}
+                        fase={c.ofertas[o.id]}
+                        podeMudar={podeMudarOfertas}
+                        podeAbrir={c.ehBirth && (o.id === 'new_born' || o.id === 'fotolivro')}
+                      />
                     </td>
                   ))}
                 {colunas.map((col) => (
@@ -827,12 +832,20 @@ function ListaDeCasos({
               </div>
               {comercial && (
                 <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-0.5">
-                  {OFERTAS.filter((o) => c.ofertas[o.id] !== null).map((o) => (
-                    <span key={o.id} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      {o.rotulo}
-                      <SeletorDeOferta casoId={c.id} oferta={o.id} fase={c.ofertas[o.id]} podeMudar={podeMudarOfertas} />
-                    </span>
-                  ))}
+                  {OFERTAS.map((o) => ({ o, podeAbrir: c.ehBirth && (o.id === 'new_born' || o.id === 'fotolivro') }))
+                    .filter(({ o, podeAbrir }) => c.ofertas[o.id] !== null || (podeAbrir && podeMudarOfertas))
+                    .map(({ o, podeAbrir }) => (
+                      <span key={o.id} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {o.rotulo}
+                        <SeletorDeOferta
+                          casoId={c.id}
+                          oferta={o.id}
+                          fase={c.ofertas[o.id]}
+                          podeMudar={podeMudarOfertas}
+                          podeAbrir={podeAbrir}
+                        />
+                      </span>
+                    ))}
                 </div>
               )}
               {colunas.length > 0 && (

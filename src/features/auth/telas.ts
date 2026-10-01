@@ -34,9 +34,9 @@ export const TELAS: { id: Tela; rotulo: string; descricao: string; poder?: strin
   {
     id: 'comercial',
     rotulo: 'Comercial',
-    descricao: 'As ofertas pós-parto: reels, New Born e Foto/Livro',
+    descricao: 'As ofertas pós-parto: BIRTH, reels, New Born e Foto/Livro',
     poder:
-      'Abre o relatório externo no modo comercial — os partos, com nome de mãe e bebê e os links — e deixa mudar a fase das ofertas.',
+      'Abre o relatório externo inteiro — com nome de mãe e bebê e os links — e deixa mudar a fase das ofertas no modo comercial.',
   },
 ]
 

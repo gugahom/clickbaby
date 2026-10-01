@@ -36,7 +36,10 @@ const ETAPA_DA_VENDA: Partial<Record<OfertaComercial, string>> = {
  * seções do Quadro, e o mesmo Dropdown da casa.
  *
  * NULO É "NÃO SE APLICA" — o reels de um BABY REELS, o Foto/Livro de um MASTER
- * + ÁLBUM — e aparece como um traço, sem seletor.
+ * + ÁLBUM — e aparece como um traço, sem seletor. A EXCEÇÃO É O BIRTH
+ * (01/10/2026): lá New Born e Foto/Livro ficam escondidos ("casos MUITO RAROS",
+ * nas palavras do gestor), e a célula oferece "＋ Oferecer" para abrir a oferta
+ * naquele caso — a partir daí ela anda como em qualquer parto.
  *
  * VENDIDO NO NEW BORN E NO FOTO/LIVRO PERGUNTA ANTES: ele cria a etapa no caso,
  * e o cartão aparece na seção da equipe. Um toque errado num relatório não
@@ -49,17 +52,42 @@ export function SeletorDeOferta({
   oferta,
   fase,
   podeMudar,
+  podeAbrir = false,
 }: {
   casoId: string
   oferta: OfertaComercial
   fase: FaseComercial | null
   podeMudar: boolean
+  /** Oferta escondida que o comercial pode abrir neste caso (New Born e Foto/Livro num BIRTH). */
+  podeAbrir?: boolean
 }) {
   const definir = useDefinirOferta()
   const [confirmando, setConfirmando] = useState<FaseComercial | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
-  if (fase === null) return <span className="text-muted-foreground" title="Não se aplica a este caso">—</span>
+  if (fase === null) {
+    if (!podeAbrir || !podeMudar) {
+      return (
+        <span className="text-muted-foreground" title="Não se aplica a este caso">
+          —
+        </span>
+      )
+    }
+    return (
+      <div onClick={(e) => e.stopPropagation()} className="inline-flex flex-col items-start gap-0.5">
+        <button
+          type="button"
+          disabled={definir.isPending}
+          onClick={() => mudar('apresentar')}
+          title="Raro no BIRTH: abre esta oferta só neste caso"
+          className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:border-marca/50 hover:text-marca disabled:opacity-60"
+        >
+          ＋ Oferecer
+        </button>
+        {erro && <span className="max-w-40 text-[11px] font-semibold text-atrasado">{erro}</span>}
+      </div>
+    )
+  }
 
   function mudar(nova: FaseComercial) {
     setErro(null)

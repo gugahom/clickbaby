@@ -1,10 +1,12 @@
--- pgTAP: o modo comercial do relatório externo (migrations 20261001001602 e
--- 20261001001607).
+-- pgTAP: o modo comercial do relatório externo (migrations 20261001001602,
+-- 20261001001607, 20261001143918 e 20261001143922).
 --
---   O1 — quais ofertas se aplicam a cada caso: reels só no BASIC e STANDARD;
---        New Born e Foto/Livro onde a etapa ainda não existe; BIRTH fora.
---   A1 — a tela Comercial abre o relatório externo SÓ no modo comercial, e não
---        abre o relatório interno; sem a tela, não muda fase.
+--   O1 — quais ofertas se aplicam a cada caso (birth/reels/New Born/Foto/Livro):
+--        birth só nos BIRTH; reels só no BASIC e STANDARD; New Born e Foto/Livro
+--        onde a etapa ainda não existe — e, no BIRTH, só quando abertos.
+--   A1 — a tela Comercial abre o relatório externo inteiro, e não abre o
+--        relatório interno; sem a tela, não muda fase.
+--   R1 — o caso raro: New Born aberto num BIRTH; e o BIRTH vendido não cria etapa.
 --   F1 — mudar a fase grava a linha e o evento; repetir a mesma fase não grava.
 --   V1 — VENDIDO no New Born cria a etapa Click Home, mesmo no caso encerrado,
 --        sem reabri-lo; e a oferta continua "vendido" com a etapa já criada.
@@ -13,7 +15,7 @@
 -- Os casos moram em JUNHO DE 2029, longe dos fictícios e dos outros testes.
 
 begin;
-select plan(16);
+select plan(19);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 select gen_random_uuid(), e, 'authenticated', 'authenticated', now(), now()
@@ -57,7 +59,8 @@ insert into public.entregaveis (caso_id, tipo, url) values (pg_temp.caso('MC Ent
 update public.casos set status_entrega = 'confirmado', status_operacional = 'encerrado' where id = pg_temp.caso('MC Entregue');
 
 create function pg_temp.ofertas(p_mae text) returns text language sql as $$
-  select coalesce(oferta_reels, '-') || '/' || coalesce(oferta_new_born, '-') || '/' || coalesce(oferta_fotolivro, '-')
+  select coalesce(oferta_birth, '-') || '/' || coalesce(oferta_reels, '-') || '/'
+      || coalesce(oferta_new_born, '-') || '/' || coalesce(oferta_fotolivro, '-')
   from public.operacao_dos_casos where id = pg_temp.caso(p_mae);
 $$;
 
@@ -71,9 +74,9 @@ $$;
 -- O1. Quais ofertas se aplicam
 -- =============================================================================
 
-select is(pg_temp.ofertas('MC Basic'), 'apresentar/apresentar/apresentar', 'O1: BASIC — as três ofertas');
-select is(pg_temp.ofertas('MC Album'), '-/apresentar/-', 'O1: MASTER + ÁLBUM — sem reels e sem Foto/Livro (já tem)');
-select is(pg_temp.ofertas('MC Birth'), '-/-/-', 'O1: BIRTH — fora do comercial');
+select is(pg_temp.ofertas('MC Basic'), '-/apresentar/apresentar/apresentar', 'O1: BASIC — reels, New Born e Foto/Livro');
+select is(pg_temp.ofertas('MC Album'), '-/-/apresentar/-', 'O1: MASTER + ÁLBUM — sem reels e sem Foto/Livro (já tem)');
+select is(pg_temp.ofertas('MC Birth'), 'apresentar/-/-/-', 'O1: BIRTH — só a oferta do próprio BIRTH');
 
 
 -- =============================================================================
@@ -85,10 +88,9 @@ select lives_ok(
   $$ select * from public.operacao_buscar('{"comercial": true}'::jsonb) $$,
   'A1: a tela Comercial abre o relatório externo no modo comercial'
 );
-select throws_ok(
+select lives_ok(
   $$ select * from public.operacao_buscar('{}'::jsonb) $$,
-  'P0001', 'O relatório externo é de quem tem a tela Relatórios — ou a tela Comercial, no modo comercial.',
-  'A1: fora do modo comercial, não'
+  'A1: e também o relatório externo inteiro, com a chave desligada'
 );
 select throws_ok(
   $$ select * from public.metricas_por_pessoa('2029-06-01', '2029-06-30') $$,
@@ -138,7 +140,7 @@ select is(
   'encerrado:pendente',
   'V1: a etapa nasce no caso encerrado, e o caso continua encerrado'
 );
-select is(pg_temp.ofertas('MC Entregue'), 'apresentar/vendido/apresentar', 'V1: com a etapa criada, a oferta continua vendida');
+select is(pg_temp.ofertas('MC Entregue'), '-/apresentar/vendido/apresentar', 'V1: com a etapa criada, a oferta continua vendida');
 
 
 -- =============================================================================
@@ -146,12 +148,26 @@ select is(pg_temp.ofertas('MC Entregue'), 'apresentar/vendido/apresentar', 'V1: 
 -- =============================================================================
 
 select pg_temp.como('mc.comercial@clickbaby.test');
-select is(pg_temp.maes('{"comercial": true}'), 'MC Album,MC Basic,MC Entregue', 'B1: o modo comercial deixa o BIRTH de fora');
+select is(pg_temp.maes('{"comercial": true}'), 'MC Album,MC Basic,MC Birth,MC Entregue', 'B1: o modo comercial traz os partos, BIRTH inclusive');
 select is(
   pg_temp.maes('{"comercial": true, "oferta_reels": ["enviado"]}'), 'MC Basic',
   'B1: o filtro por fase acha o reels enviado'
 );
+
+-- =============================================================================
+-- R1. O BIRTH: a oferta dele, e o New Born aberto num caso raro
+-- =============================================================================
+
+select is(
+  public.definir_oferta_comercial(pg_temp.caso('MC Birth'), 'new_born', 'apresentar'), false,
+  'R1: o comercial abre o New Born num BIRTH (sem criar etapa ainda)'
+);
+select is(
+  public.definir_oferta_comercial(pg_temp.caso('MC Birth'), 'birth', 'vendido'), false,
+  'R1: BIRTH vendido não cria etapa — as dele já existem'
+);
 select pg_temp.sair();
+select is(pg_temp.ofertas('MC Birth'), 'vendido/-/apresentar/-', 'R1: o New Born aberto passa a aparecer só nesse BIRTH');
 
 select * from finish();
 rollback;
