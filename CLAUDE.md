@@ -2072,12 +2072,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
   espremido numa coluna de 3.5rem viraria listra.
 - **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
-  do padrão dos papéis `comercial` e `gestao`. Ela abre o relatório externo SÓ NO MODO
-  COMERCIAL (ver o item do relatório externo): `exigir_operacao(p_filtros)` deixa entrar quem
-  tem Relatórios, ou quem tem Comercial com `comercial: true` no filtro — e esse filtro corta
-  para os partos antes de tudo. O relatório interno continua fechado para ela. Quem tem só a
-  Comercial ganha o destino "Comercial" na navegação e entra no relatório já no modo, sem a
-  chave.
+  do padrão dos papéis `comercial` e `gestao`. **Desde 01/10/2026 (migration
+  `20261001143922`) ela abre o RELATÓRIO EXTERNO INTEIRO** — `exigir_operacao` aceita a tela
+  Relatórios ou a Comercial —, e quem tem só ela vê o destino **"Relatório externo"** e liga a
+  chave Comercial quando quer. Pedido do gestor: "essa não é a nossa tela comercial ainda (…) a
+  pessoa vai lá e muda o toggle". Na primeira versão (mesmo dia, de madrugada) ela abria só o
+  modo comercial, com um destino chamado "Comercial" que parecia a página comercial. O relatório
+  INTERNO continua só da tela Relatórios.
 - **TELAS POR PESSOA** (30/09/2026, pedido do gestor, migration `20260930232424`). Quem vê
   qual tela deixou de ser só o PAPEL: a gestão concede e tira telas pessoa a pessoa na ficha da
   Equipe — é a porta para o que vem, o painel comercial e o financeiro, em que a pessoa entra
@@ -2427,7 +2428,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   painel, e a planilha exportada leva as três colunas.
   **QUAIS CASOS** (decisão do gestor, perguntado): REELS só nos BASIC e STANDARD puros — os que
   não venderam o vertical; a equipe o faz mesmo assim e o comercial o oferece depois; NEW BORN e
-  FOTO/LIVRO em todo parto que ainda não tem a etapa; BIRTH, EVENTO e NEWBORN fora. Onde a
+  FOTO/LIVRO em todo parto que ainda não tem a etapa; EVENTO e NEWBORN fora.
+  **O BIRTH ENTROU EM 01/10/2026** (`20261001143918` e `20261001143922`, pedido do gestor: "os
+  BIRTH são vendidos, então têm que ser apresentados"): a oferta **Birth** — a venda do próprio
+  pacote — é a primeira coluna, e só existe nos dois BIRTH. Lá New Born e Foto/Livro ficam
+  ESCONDIDOS ("apenas birth, mas em casos MUITO RAROS é possível que aconteça essa venda") e a
+  célula mostra **"＋ Oferecer"**, que abre a oferta só naquele caso; dali em diante ela anda
+  como em qualquer parto. Reels nunca: o BIRTH já faz o reels. BIRTH vendido não cria etapa. Onde a
   oferta não se aplica, a célula é um traço. A regra mora na view `operacao_dos_casos`
   (`comercial`, `oferta_*`), e a fase em `ofertas_comerciais` — sem linha, "apresentar".
   **VENDIDO CRIA A ETAPA** no New Born e no Foto/Livro (decisão do gestor), depois de uma

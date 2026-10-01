@@ -98,6 +98,7 @@ export function PainelDeFiltros({
           — a oferta só existe nos partos. */}
       {filtros.comercial && (
         <>
+          {lista('oferta_birth')}
           {lista('oferta_reels')}
           {lista('oferta_new_born')}
           {lista('oferta_fotolivro')}

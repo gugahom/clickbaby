@@ -52,6 +52,8 @@ export interface CasoDaOperacao {
   trabalho: { etapa: string; pessoaId: string; pessoa: string }[]
   /** A fase de cada oferta do comercial; nulo onde ela não se aplica. */
   ofertas: Record<OfertaComercial, FaseComercial | null>
+  /** BIRTH ou BIRTH + REELS: onde o comercial pode ABRIR New Born e Foto/Livro. */
+  ehBirth: boolean
 }
 
 export interface PaginaDaOperacao {
@@ -118,12 +120,11 @@ function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
       pessoaId: t.pessoa_id,
       pessoa: t.pessoa,
     })),
-    ofertas: {
-      reels: null,
-      new_born: null,
-      fotolivro: null,
-      ...((l.ofertas as Partial<Record<OfertaComercial, FaseComercial | null>> | null) ?? {}),
-    },
+    ofertas: (() => {
+      const o = (l.ofertas as Partial<Record<OfertaComercial, FaseComercial | null>> | null) ?? {}
+      return { birth: o.birth ?? null, reels: o.reels ?? null, new_born: o.new_born ?? null, fotolivro: o.fotolivro ?? null }
+    })(),
+    ehBirth: (l.ofertas as { eh_birth?: boolean } | null)?.eh_birth === true,
   }
 }
 

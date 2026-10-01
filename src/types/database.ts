@@ -1154,6 +1154,7 @@ export type Database = {
           comercial: boolean | null
           dia: string | null
           dia_semana: number | null
+          eh_birth: boolean | null
           equipamentos: string[] | null
           fotografou_o_parto: string | null
           horas_ate_envio: number | null
@@ -1165,6 +1166,7 @@ export type Database = {
           maternidade_sigla: string | null
           nasceu: boolean | null
           nome_de_busca: string | null
+          oferta_birth: string | null
           oferta_fotolivro: string | null
           oferta_new_born: string | null
           oferta_reels: string | null
@@ -1641,6 +1643,7 @@ export type Database = {
           m_handoff: boolean
           m_links: boolean
           m_maternidades: boolean
+          m_oferta_birth: boolean
           m_oferta_fotolivro: boolean
           m_oferta_new_born: boolean
           m_oferta_reels: boolean
@@ -1930,7 +1933,7 @@ export type Database = {
         | "new_born"
         | "acompanhamento"
       momento_despesa: "parto" | "substituicao" | "fechamento"
-      oferta_comercial: "reels" | "new_born" | "fotolivro"
+      oferta_comercial: "birth" | "reels" | "new_born" | "fotolivro"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -2183,7 +2186,7 @@ export const Constants = {
         "acompanhamento",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
-      oferta_comercial: ["reels", "new_born", "fotolivro"],
+      oferta_comercial: ["birth", "reels", "new_born", "fotolivro"],
       papel_sistema: [
         "operador",
         "comercial",
