@@ -33,6 +33,9 @@ export type GrupoDeLista =
   | 'termos'
   | 'turnos'
   | 'dias_semana'
+  | 'oferta_reels'
+  | 'oferta_new_born'
+  | 'oferta_fotolivro'
 
 export type GrupoSimNao = 'uti' | 'handoff' | 'reaberto' | 'avaliado' | 'com_despesa'
 
@@ -55,6 +58,11 @@ export interface FiltrosDaOperacao {
    * de ativos é ignorado, e o que entrou vai para o fim.
    */
   ordem?: string[] | undefined
+  /**
+   * O MODO COMERCIAL (01/10/2026): só os partos, com as três ofertas pós-parto
+   * em colunas. No banco, é também o que deixa a tela Comercial entrar.
+   */
+  comercial?: boolean | undefined
 }
 
 export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
@@ -70,6 +78,9 @@ export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
   'termos',
   'turnos',
   'dias_semana',
+  'oferta_reels',
+  'oferta_new_born',
+  'oferta_fotolivro',
 ]
 
 export const GRUPOS_SIM_NAO: GrupoSimNao[] = ['uti', 'handoff', 'reaberto', 'avaliado', 'com_despesa']
@@ -87,6 +98,9 @@ export const TITULO_DO_GRUPO: Record<GrupoDeLista | GrupoSimNao, string> = {
   termos: 'Termo de imagem',
   turnos: 'Horário do parto',
   dias_semana: 'Dia da semana',
+  oferta_reels: 'Oferta de Reels',
+  oferta_new_born: 'Oferta de New Born',
+  oferta_fotolivro: 'Oferta de Foto/Livro',
   uti: 'Passou pela UTI',
   handoff: 'Teve passagem de turno',
   reaberto: 'Voltou para ajuste',
@@ -112,7 +126,35 @@ export const ROTULO_DO_LINK: Record<TipoDeLink, string> = {
   google_drive: 'Google Drive',
 }
 
+/**
+ * AS OFERTAS DO COMERCIAL E AS FASES DELAS (01/10/2026, pedido do gestor). A
+ * ordem é a do caminho: apresentar, enviado, e o fim — recusou ou vendido.
+ * "Recusou" é o "não quis" do pedido (decisão do gestor).
+ */
+export type OfertaComercial = Database['public']['Enums']['oferta_comercial']
+export type FaseComercial = Database['public']['Enums']['fase_comercial']
+
+export const OFERTAS: { id: OfertaComercial; rotulo: string; grupo: GrupoDeLista }[] = [
+  { id: 'reels', rotulo: 'Reels', grupo: 'oferta_reels' },
+  { id: 'new_born', rotulo: 'New Born', grupo: 'oferta_new_born' },
+  { id: 'fotolivro', rotulo: 'Foto/Livro', grupo: 'oferta_fotolivro' },
+]
+
+export const ROTULO_FASE_COMERCIAL: Record<FaseComercial, string> = {
+  apresentar: 'Apresentar',
+  enviado: 'Enviado',
+  recusou: 'Recusou',
+  vendido: 'Vendido',
+}
+
+export const FASES_COMERCIAIS: FaseComercial[] = ['apresentar', 'enviado', 'recusou', 'vendido']
+
+const OPCOES_DA_OFERTA = FASES_COMERCIAIS.map((f) => ({ valor: f, rotulo: ROTULO_FASE_COMERCIAL[f] }))
+
 export const OPCOES_FIXAS: Partial<Record<GrupoDeLista, { valor: string; rotulo: string }[]>> = {
+  oferta_reels: OPCOES_DA_OFERTA,
+  oferta_new_born: OPCOES_DA_OFERTA,
+  oferta_fotolivro: OPCOES_DA_OFERTA,
   links: [
     ...(Object.entries(ROTULO_DO_LINK) as [TipoDeLink, string][]).map(([valor, rotulo]) => ({ valor, rotulo })),
     { valor: 'nenhum', rotulo: 'Sem nenhum link' },
@@ -240,6 +282,7 @@ export function lerDoEndereco(
     despesa_min: numero(params.get('despesa_min')),
     despesa_max: numero(params.get('despesa_max')),
     ordem,
+    comercial: params.get('comercial') === '1',
   }
 }
 
@@ -261,6 +304,7 @@ export function escreverNoEndereco(f: FiltrosDaOperacao, extras: Record<string, 
   if (f.ate) p.set('ate', f.ate)
   if (!f.de && !f.ate) p.set('tudo', '1')
   if (f.busca) p.set('busca', f.busca)
+  if (f.comercial) p.set('comercial', '1')
   // Na ORDEM em que os grupos foram aplicados: é ela que ordena as colunas.
   for (const g of gruposAtivos(f)) {
     if ((GRUPOS_DE_LISTA as string[]).includes(g)) p.set(g, f.listas[g as GrupoDeLista].join(','))
@@ -288,6 +332,7 @@ export function paraOBanco(f: FiltrosDaOperacao): Record<string, unknown> {
     horas_max: f.horas_max ?? null,
     despesa_min: f.despesa_min ?? null,
     despesa_max: f.despesa_max ?? null,
+    comercial: f.comercial ?? false,
   }
 }
 
@@ -303,7 +348,7 @@ export function quantosFiltros(f: FiltrosDaOperacao): number {
 }
 
 export function semFiltros(f: FiltrosDaOperacao): FiltrosDaOperacao {
-  return { de: f.de, ate: f.ate, listas: vazios(), simNao: {} }
+  return { de: f.de, ate: f.ate, listas: vazios(), simNao: {}, comercial: f.comercial }
 }
 
 /**
@@ -315,10 +360,15 @@ export function semFiltros(f: FiltrosDaOperacao): FiltrosDaOperacao {
  *   * maternidade e pacote já são colunas fixas;
  *   * período e busca por nome não acrescentam nada — a data e o nome já estão.
  */
+type GrupoDeColuna = Exclude<
+  GrupoDeLista,
+  'links' | 'maternidades' | 'pacotes' | 'pessoas' | 'etapas' | 'oferta_reels' | 'oferta_new_born' | 'oferta_fotolivro'
+>
+
 export type ColunaDoFiltro =
   | { tipo: 'link'; link: TipoDeLink }
   | { tipo: 'trabalho' }
-  | { tipo: 'grupo'; grupo: Exclude<GrupoDeLista, 'links' | 'maternidades' | 'pacotes' | 'pessoas' | 'etapas'> }
+  | { tipo: 'grupo'; grupo: GrupoDeColuna }
   | { tipo: 'simNao'; grupo: GrupoSimNao }
   | { tipo: 'faixa'; faixa: Faixa }
 
@@ -329,14 +379,15 @@ export function colunasDosFiltros(f: FiltrosDaOperacao): ColunaDoFiltro[] {
       for (const l of f.listas.links) if (l !== 'nenhum') colunas.push({ tipo: 'link', link: l as TipoDeLink })
     } else if (g === 'pessoas' || g === 'etapas') {
       if (!colunas.some((c) => c.tipo === 'trabalho')) colunas.push({ tipo: 'trabalho' })
-    } else if (g === 'maternidades' || g === 'pacotes') {
+    } else if (g === 'maternidades' || g === 'pacotes' || g.startsWith('oferta_')) {
+      // As ofertas já são colunas fixas no modo comercial.
       continue
     } else if (g === 'horas' || g === 'despesa') {
       colunas.push({ tipo: 'faixa', faixa: g })
     } else if ((GRUPOS_SIM_NAO as string[]).includes(g)) {
       colunas.push({ tipo: 'simNao', grupo: g as GrupoSimNao })
     } else {
-      colunas.push({ tipo: 'grupo', grupo: g as Exclude<GrupoDeLista, 'links' | 'maternidades' | 'pacotes' | 'pessoas' | 'etapas'> })
+      colunas.push({ tipo: 'grupo', grupo: g as GrupoDeColuna })
     }
   }
   return colunas

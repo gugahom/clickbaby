@@ -17,9 +17,12 @@ import { destinosDe } from '../layout/destinos'
  * Nas telas Relatórios e Equipe a tela é também a SEGURANÇA — o banco confere a
  * mesma lista (`tem_tela`). Nas outras, é só a porta.
  */
-export function RotaDaTela({ tela }: { tela: Tela }) {
+export function RotaDaTela({ tela }: { tela: Tela | Tela[] }) {
   const telas = useTelas()
-  if (telas.has(tela)) return <Outlet />
+  // Uma lista abre com QUALQUER uma delas: o relatório externo é da tela
+  // Relatórios e também da Comercial (só no modo comercial — quem confere o
+  // modo é a própria página, e o banco).
+  if ((Array.isArray(tela) ? tela : [tela]).some((t) => telas.has(t))) return <Outlet />
 
   const primeira = destinosDe(telas)[0]
   if (primeira) return <Navigate to={primeira.para} replace />

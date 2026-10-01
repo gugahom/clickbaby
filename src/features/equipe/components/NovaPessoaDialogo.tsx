@@ -53,8 +53,6 @@ export function NovaPessoaDialogo({ onFechar }: { onFechar: () => void }) {
       .catch((e: unknown) => setErro(e instanceof Error ? e.message : String(e)))
   }
 
-  const rotuloPapel = PAPEIS.find((p) => p.id === papel)?.rotulo ?? papel
-
   return (
     <Dialogo
       titulo="Cadastrar pessoa"
@@ -115,11 +113,6 @@ export function NovaPessoaDialogo({ onFechar }: { onFechar: () => void }) {
               onEscolher={(item) => setPapel(item.id)}
               itens={PAPEIS}
               larguraCheia
-              gatilho={
-                <span className="inline-flex min-h-12 w-full items-center justify-between rounded-md border border-border bg-background/60 px-3 text-base">
-                  {rotuloPapel}
-                </span>
-              }
             />
           </div>
           <span className="mt-1 block text-xs text-muted-foreground">

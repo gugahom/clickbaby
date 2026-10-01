@@ -5,6 +5,7 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { IconeX } from '@/components/ui/icones'
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
 import { formatarMoeda } from '@/lib/formato'
+import { useTelas } from '@/features/auth/telas'
 import type { TipoDeGrafico } from '../components/GraficoDoKpi'
 import { Segmentado } from '../components/Segmentado'
 import { dataCurta, hojeDoRelatorio, periodoDoMes } from '../lib/metricas'
@@ -12,6 +13,7 @@ import { exportarCasos, exportarNumeros } from './exportar'
 import {
   GRUPOS_DE_LISTA,
   GRUPOS_SIM_NAO,
+  OFERTAS,
   ORDEM_PADRAO,
   ORDENS,
   ROTULO_DO_LINK,
@@ -31,6 +33,7 @@ import {
 import { EIXOS, METRICAS, type Eixo, type Metrica } from './grafico'
 import { GraficoDoRecorte } from './GraficoDoRecorte'
 import { PainelDeFiltros } from './PainelDeFiltros'
+import { SeletorDeOferta } from './SeletorDeOferta'
 import {
   POR_PAGINA,
   useBuscaDaOperacao,
@@ -70,6 +73,14 @@ import {
  * filtro aplicado acrescenta a sua à direita, na ordem em que foi aplicado
  * (`colunasDosFiltros`). Tirou o filtro, a coluna sai. E a lista abre do MAIS
  * ANTIGO para o mais recente.
+ *
+ * O MODO COMERCIAL (01/10/2026, pedido do gestor). Um botão no cabeçalho liga
+ * o modo: só os partos, e três colunas fixas a mais — REELS (nos BASIC e
+ * STANDARD), NEW BORN e FOTO/LIVRO — com o seletor de fase de cada oferta:
+ * apresentar, enviado, recusou, vendido. É a planilha que o comercial usava,
+ * com os filtros do relatório. Quem tem SÓ a tela Comercial entra aqui direto
+ * no modo, sem o botão — e o banco recusa qualquer busca dele fora do modo.
+ * Quando a página comercial existir, isto muda de casa.
  */
 type Visao = 'casos' | 'grafico'
 const METRICAS_IDS = Object.keys(METRICAS) as Metrica[]
@@ -86,7 +97,13 @@ interface Extras {
 export function RelatorioExternoPage() {
   const [{ hoje, simulado }] = useState(hojeDoRelatorio)
   const [params, setParams] = useSearchParams()
-  const filtros = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
+  const telas = useTelas()
+  const podeComercial = telas.has('comercial')
+  // Quem só tem a tela Comercial vive no modo comercial.
+  const soComercial = podeComercial && !telas.has('relatorios')
+  const lidos = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
+  const filtros: FiltrosDaOperacao = soComercial ? { ...lidos, comercial: true } : lidos
+  const comercial = filtros.comercial === true
   const ordem = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
   const pagina = Math.max(1, Number(params.get('pagina')) || 1)
   const visao: Visao = params.get('ver') === 'grafico' ? 'grafico' : 'casos'
@@ -154,16 +171,23 @@ export function RelatorioExternoPage() {
 
   return (
     <div className="mx-auto w-full max-w-[100rem] space-y-4 p-3 md:p-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">Relatório externo</h1>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+        <h1 className="text-2xl font-extrabold tracking-tight">{soComercial ? 'Comercial' : 'Relatório externo'}</h1>
         <p className="text-sm text-muted-foreground">
-          Toda a operação. Combine os filtros para chegar no recorte — cada opção mostra quantos casos ela daria.
+          {comercial
+            ? 'As ofertas pós-parto: reels nos BASIC e STANDARD, New Born e Foto/Livro. Mude a fase de cada uma na própria linha.'
+            : 'Toda a operação. Combine os filtros para chegar no recorte — cada opção mostra quantos casos ela daria.'}
           {simulado && (
             <span className="ml-2 rounded-full bg-atencao/15 px-2 py-0.5 text-xs font-semibold text-atencao-tinta">
               Data simulada: {dataCurta(hoje)} · só no local
             </span>
           )}
         </p>
+        </div>
+        {podeComercial && !soComercial && (
+          <ChaveComercial ligada={comercial} onTrocar={() => mudar({ ...filtros, comercial: !comercial })} />
+        )}
       </header>
 
       <button
@@ -180,7 +204,13 @@ export function RelatorioExternoPage() {
 
       <div className="grid items-start gap-5 lg:grid-cols-[17.5rem_minmax(0,1fr)] 2xl:grid-cols-[19rem_minmax(0,1fr)]">
         <aside className={clsx('space-y-3', !filtrosAbertos && 'hidden lg:block')}>
-          <PainelDeFiltros filtros={filtros} facetas={facetas.data} hoje={hoje} rotuloDe={rotuloDe} onMudar={mudar} />
+          <PainelDeFiltros
+            filtros={filtros}
+            facetas={facetas.data}
+            hoje={hoje}
+            rotuloDe={rotuloDe}
+            onMudar={mudar}
+          />
           <button
             type="button"
             onClick={() => setFiltrosAbertos(false)}
@@ -238,6 +268,8 @@ export function RelatorioExternoPage() {
                     carregando={busca.isPending}
                     colunas={colunasDosFiltros(filtros)}
                     filtros={filtros}
+                    comercial={comercial}
+                    podeMudarOfertas={podeComercial}
                   />
                   {total > POR_PAGINA && (
                     <Paginacao pagina={pagina} total={total} onIr={(p) => irPara({ pagina: p })} />
@@ -249,6 +281,42 @@ export function RelatorioExternoPage() {
         </section>
       </div>
     </div>
+  )
+}
+
+/**
+ * O BOTÃO DO MODO COMERCIAL, no cabeçalho (pedido do gestor: "um checkbox de
+ * comercial"). Uma chave e não uma caixa de marcar solta: ela liga um MODO da
+ * tela, e a chave diz isso pela forma.
+ */
+function ChaveComercial({ ligada, onTrocar }: { ligada: boolean; onTrocar: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={ligada}
+      onClick={onTrocar}
+      className={clsx(
+        'inline-flex min-h-11 items-center gap-3 rounded-full border px-4 text-sm font-bold transition-colors',
+        ligada ? 'border-marca bg-marca-suave text-marca' : 'border-border bg-card text-foreground hover:border-marca/40',
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={clsx(
+          'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors',
+          ligada ? 'bg-marca' : 'bg-muted-foreground/30',
+        )}
+      >
+        <span
+          className={clsx(
+            'absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform',
+            ligada ? 'translate-x-4' : 'translate-x-0.5',
+          )}
+        />
+      </span>
+      Comercial
+    </button>
   )
 }
 
@@ -309,20 +377,16 @@ function BuscaENumero({
       </p>
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {ordem !== null && (
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            Ordenar
-            <select
-              value={ordem}
-              onChange={(e) => onOrdenar(e.target.value as Ordem)}
-              className="h-10 rounded-full border border-border bg-card px-3 text-sm text-foreground"
-            >
-              {ORDENS.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.rotulo}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            variante="pilula"
+            prefixo="Ordenar"
+            compacto
+            rotulo="Ordenar"
+            alinhamento="direita"
+            selecionado={ordem}
+            onEscolher={(item) => onOrdenar(item.id as Ordem)}
+            itens={ORDENS.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+          />
         )}
         <Segmentado
           rotulo="Ver o recorte como"
@@ -334,6 +398,7 @@ function BuscaENumero({
           onTrocar={onTrocarVisao}
         />
         <Dropdown
+          variante="pilula"
           compacto
           alinhamento="direita"
           rotulo={exportando ? 'Exportando…' : 'Exportar planilha'}
@@ -343,7 +408,6 @@ function BuscaENumero({
             { id: 'casos', rotulo: `Casos do recorte (${total.toLocaleString('pt-BR')})` },
             { id: 'numeros', rotulo: `Números ${nomeDoEixo}` },
           ]}
-          className="w-60"
         />
       </div>
     </div>
@@ -662,11 +726,16 @@ function ListaDeCasos({
   carregando,
   colunas,
   filtros,
+  comercial,
+  podeMudarOfertas,
 }: {
   casos: CasoDaOperacao[] | undefined
   carregando: boolean
   colunas: ColunaDoFiltro[]
   filtros: FiltrosDaOperacao
+  /** As três colunas das ofertas, fixas, logo depois do pacote. */
+  comercial: boolean
+  podeMudarOfertas: boolean
 }) {
   const navegar = useNavigate()
   if (carregando && !casos) return <p className="py-16 text-center text-sm text-muted-foreground">Carregando…</p>
@@ -692,6 +761,12 @@ function ListaDeCasos({
               <th className="px-3 py-3 font-semibold">Mãe · bebê</th>
               <th className="px-3 py-3 font-semibold">Maternidade</th>
               <th className="px-3 py-3 font-semibold">Pacote</th>
+              {comercial &&
+                OFERTAS.map((o) => (
+                  <th key={o.id} className="border-l border-border/60 px-3 py-3 font-semibold whitespace-nowrap text-marca">
+                    {o.rotulo}
+                  </th>
+                ))}
               {colunas.map((c) => (
                 <th key={chaveDaColuna(c)} className="border-l border-border/60 px-3 py-3 font-semibold whitespace-nowrap text-foreground">
                   {tituloDaColuna(c)}
@@ -723,6 +798,12 @@ function ListaDeCasos({
                 </td>
                 <td className="px-3 py-3 font-semibold whitespace-nowrap text-foreground">{c.maternidadeSigla ?? '—'}</td>
                 <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{c.pacoteNome ?? 'sem pacote'}</td>
+                {comercial &&
+                  OFERTAS.map((o) => (
+                    <td key={o.id} className="border-l border-border/60 px-3 py-2 align-middle">
+                      <SeletorDeOferta casoId={c.id} oferta={o.id} fase={c.ofertas[o.id]} podeMudar={podeMudarOfertas} />
+                    </td>
+                  ))}
                 {colunas.map((col) => (
                   <td key={chaveDaColuna(col)} className="border-l border-border/60 px-3 py-3 align-top">
                     <CelulaDaColuna coluna={col} caso={c} filtros={filtros} />
@@ -744,6 +825,16 @@ function ListaDeCasos({
                 <span>{c.maternidadeSigla ?? '—'}</span>
                 <span>{c.pacoteNome ?? '—'}</span>
               </div>
+              {comercial && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-0.5">
+                  {OFERTAS.filter((o) => c.ofertas[o.id] !== null).map((o) => (
+                    <span key={o.id} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {o.rotulo}
+                      <SeletorDeOferta casoId={c.id} oferta={o.id} fase={c.ofertas[o.id]} podeMudar={podeMudarOfertas} />
+                    </span>
+                  ))}
+                </div>
+              )}
               {colunas.length > 0 && (
                 <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
                   {colunas.map((col) => (

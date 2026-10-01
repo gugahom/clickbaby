@@ -93,6 +93,16 @@ export function PainelDeFiltros({
   return (
     <div className="divide-y divide-border rounded-painel border border-border bg-card">
       <Periodo filtros={filtros} hoje={hoje} onMudar={onMudar} />
+      {/* No MODO COMERCIAL as fases das ofertas vêm primeiro: "quem falta
+          apresentar" é a pergunta de quem abre a tela. Fora dele não aparecem
+          — a oferta só existe nos partos. */}
+      {filtros.comercial && (
+        <>
+          {lista('oferta_reels')}
+          {lista('oferta_new_born')}
+          {lista('oferta_fotolivro')}
+        </>
+      )}
       {lista('links')}
       {lista('termos')}
       {lista('situacoes')}

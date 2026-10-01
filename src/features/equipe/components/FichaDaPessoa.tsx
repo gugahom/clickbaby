@@ -412,11 +412,6 @@ function Acoes({ pessoa, onExcluida }: { pessoa: PessoaDaEquipe; onExcluida: () 
                 executar(definirPapel.mutateAsync({ pessoaId: pessoa.id, papel }))
               }}
               itens={PAPEIS}
-              gatilho={
-                <span className="inline-flex min-h-11 w-full items-center justify-between rounded-md border border-border bg-background/60 px-3 text-sm font-semibold">
-                  {ROTULO_PAPEL[pessoa.papelSistema] ?? pessoa.papelSistema}
-                </span>
-              }
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">

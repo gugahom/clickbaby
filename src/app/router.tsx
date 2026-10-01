@@ -56,10 +56,13 @@ export const router = createBrowserRouter(
             },
             {
               element: <RotaDaTela tela="relatorios" />,
-              children: [
-                { path: 'relatorios', element: <RelatoriosPage /> },
-                { path: 'relatorios/externo', element: <RelatorioExternoPage /> },
-              ],
+              children: [{ path: 'relatorios', element: <RelatoriosPage /> }],
+            },
+            {
+              // O externo também é da tela Comercial, que o abre só no modo
+              // comercial (01/10/2026).
+              element: <RotaDaTela tela={['relatorios', 'comercial']} />,
+              children: [{ path: 'relatorios/externo', element: <RelatorioExternoPage /> }],
             },
             {
               element: <RotaDaTela tela="despesas" />,

@@ -76,7 +76,7 @@ values ('reels', null, 60, '2029-05-15'), ('reels', null, 30, '2029-05-22');
 select pg_temp.como('atendimento.gp@clickbaby.test');
 select throws_ok(
   $$ select * from public.operacao_grafico('{}'::jsonb, 'dia') $$,
-  'P0001', 'Os relatórios são de quem tem a tela Relatórios liberada.',
+  'P0001', 'O relatório externo é de quem tem a tela Relatórios — ou a tela Comercial, no modo comercial.',
   'G1: o atendimento não abre o gráfico do relatório externo'
 );
 select throws_ok(

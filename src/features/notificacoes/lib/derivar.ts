@@ -1,9 +1,11 @@
+import { MINUTOS_IMINENTE, alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
   rotuloDaRodada,
   type CasoQuadro,
   type EtapaQuadro,
+  type EtapaTipo,
 } from '@/features/quadro/types'
 
 /**
@@ -21,23 +23,25 @@ import {
  * o vídeo sai de "alterações" — e a notificação some porque a condição que a
  * criava deixou de ser verdade. Não há código nenhum no meio.
  *
- * SÓ "PARA VOCÊ" (30/09/2026, pedido do gestor: "vai ser só para você, e só
- * vai notificar o usuário que tiver que ser notificado mesmo"). Até aqui havia
- * duas famílias, e as GERAIS — aviso escrito num card, horário estourando,
- * edição liberada sem ninguém, prazo vencido, alteração no trabalho de outra
- * pessoa — entravam na lista de todo mundo. Elas SAÍRAM: o Quadro já mostra
- * tudo isso a quem olha, e o sino voltou a ser sobre MIM.
- *
- * O que fica:
- *   * atribuição, rendição e alteração pedida em trabalho MEU;
- *   * e, só para atendimento e adm, o trabalho do ADM — caso esperando
- *     conferência em Entregáveis, rascunho pendente, vídeo, Foto/Livro e New
- *     Born para entregar (decisão do gestor, perguntado). Não são "de uma
- *     pessoa", mas são do PAPEL de quem as recebe: é a Morgana que precisa
- *     saber. Mandar para fotógrafa seria ensinar a ignorar o sino.
+ * SÓ O QUE TEM O MEU NOME (01/10/2026, segunda volta do gestor: "entrei e
+ * tinha 25 notificações (…) quero que seja o para você mesmo, quando o meu nome
+ * é marcado em algum lugar"). Em 30/09 o sino tinha ficado só com "para você",
+ * mas "para você" incluía o trabalho do PAPEL — rascunho pendente, entrega
+ * esperando conferência — e para a gestão isso era a operação inteira de novo.
+ * O papel saiu: "não é todo mundo que resolve os rascunhos". Fica o que aponta
+ * para a pessoa:
+ *   * a etapa ATRIBUÍDA a mim, a RENDIÇÃO que eu assumo, a ALTERAÇÃO pedida no
+ *     meu trabalho;
+ *   * e as URGÊNCIAS do meu trabalho — o pedido dele: "quando é alguma
+ *     urgência". A hora chegando (ou estourada) de uma etapa de campo que é
+ *     minha, o prazo do pacote vencido com edição minha aberta, e o aviso
+ *     escrito numa etapa minha. As mesmas três que eram "gerais" até 30/09 —
+ *     agora só para a dona.
+ * O ADM continua achando a fila de Entregáveis pelo anel verde da aba, e os
+ * rascunhos pela aba deles.
  */
 
-export type TipoNotificacao = 'atribuida' | 'rendicao' | 'alteracao_minha' | 'entrega' | 'rascunho'
+export type TipoNotificacao = 'atribuida' | 'horario' | 'prazo' | 'alteracao_minha' | 'rendicao' | 'aviso'
 
 export interface Notificacao {
   /** Estável entre renderizações: é o que o React usa de chave e o que o
@@ -46,6 +50,8 @@ export interface Notificacao {
   tipo: TipoNotificacao
   /** Menor = mais urgente. Ver ORDEM. */
   peso: number
+  /** Passou da hora ou do prazo: o sino pinta a linha de vermelho. */
+  urgente: boolean
   titulo: string
   /** A linha de baixo: de que caso é, e o que está esperando. */
   detalhe: string
@@ -56,24 +62,24 @@ export interface Notificacao {
 }
 
 /**
- * A ORDEM DA LISTA é por urgência, não por hora.
- *
- * Uma lista cronológica responde "o que aconteceu por último", e a pergunta de
- * quem abre o sino é "o que eu faço agora". O que tem dona e não começou vem
- * primeiro; o que é só informação vem por último.
+ * A ORDEM DA LISTA é por urgência, não por hora: a pergunta de quem abre o
+ * sino é "o que eu faço agora". O relógio estourando vem antes de tudo.
  */
 const ORDEM: Record<TipoNotificacao, number> = {
-  atribuida: 0,
-  alteracao_minha: 1,
-  rendicao: 2,
-  entrega: 3,
-  rascunho: 4,
+  horario: 0,
+  atribuida: 1,
+  prazo: 2,
+  alteracao_minha: 3,
+  rendicao: 4,
+  aviso: 5,
 }
 
-/** Papéis que recebem o trabalho de ADM: conferir entrega e resolver rascunho. */
-function ehAdmOuAtendimento(papel: string): boolean {
-  return papel !== 'operador'
-}
+/**
+ * ESTAS NÃO VIRAM AVISO: a observação do vídeo, do fotolivro e do New Born é
+ * onde moram os PEDIDOS DO CLIENTE (prints, link de música) — a mesma lista de
+ * `SEM_FAIXA_NO_CARD` e de `SECAO_DA_ETAPA`.
+ */
+const SEM_AVISO = new Set<EtapaTipo>(['edicao_video', 'album', 'click_home'])
 
 /** O nome do caso como o sino mostra — mãe e bebê, como no card. */
 function nomeDoCaso(caso: CasoQuadro): string {
@@ -90,86 +96,119 @@ function nomeDaEtapa(etapa: EtapaQuadro): string {
  * O CARIMBO DE "QUANDO ISTO COMEÇOU".
  *
  * `atualizadoEm` da etapa é aproximado (qualquer escrita o move), e basta:
- * `eventos` teria o instante exato — e é legível por toda pessoa ativa desde
- * 25/08 —, mas custaria uma consulta a mais a cada recarga do Quadro por uma
- * precisão que o sino não usa. Sem carimbo nenhum, a notificação conta como
- * ANTIGA: é melhor deixar de pulsar por algo novo do que pulsar para sempre
- * por algo que ninguém consegue silenciar.
+ * `eventos` teria o instante exato, mas custaria uma consulta a mais a cada
+ * recarga do Quadro por uma precisão que o sino não usa. Sem carimbo nenhum, a
+ * notificação conta como ANTIGA: é melhor deixar de pulsar por algo novo do que
+ * pulsar para sempre por algo que ninguém consegue silenciar.
  */
 function quando(etapa: EtapaQuadro): string {
   return etapa.atualizadoEm ?? ''
 }
 
+const aguardando = (e: EtapaQuadro) => e.status === 'pendente' || e.status === 'atribuida'
+
 export function derivarNotificacoes({
   casos,
   etapasPorCaso,
   pessoaId,
-  papel,
+  agora,
 }: {
   casos: CasoQuadro[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   pessoaId: string | null
-  papel: string
+  agora: Date
 }): Notificacao[] {
   const lista: Notificacao[] = []
+  if (pessoaId === null) return lista
 
   for (const caso of casos) {
+    // Cancelado não cobra nada de ninguém.
+    if (caso.statusOperacional === 'cancelado') continue
+
     const etapas = etapasPorCaso.get(caso.id) ?? []
     const nome = nomeDoCaso(caso)
     const enviado = caso.liberadoParaEntregaEm !== null
+    const minhas = etapas.filter((e) => e.responsavelId === pessoaId)
+    if (minhas.length === 0 && !etapas.some((e) => e.proximoResponsavelId === pessoaId)) continue
 
-    // Cancelado não cobra nada de ninguém, e rascunho DESCARTADO menos ainda.
-    if (caso.statusOperacional === 'cancelado') continue
-
-    /* ---------------------------------------------------------------- caso */
-
-    // RASCUNHO PENDENTE: falta pacote ou maternidade, e sem isso o caso não
-    // tem checklist. É trabalho de quem cadastra, não de quem fotografa.
-    if (caso.ehRascunho && !caso.ehTerminal && ehAdmOuAtendimento(papel)) {
-      lista.push({
-        id: `rascunho:${caso.id}`,
-        tipo: 'rascunho',
-        peso: ORDEM.rascunho,
-        titulo: 'Rascunho esperando confirmação',
-        detalhe: caso.faltaPacote ? 'Sem pacote definido' : 'Sem maternidade definida',
-        casoId: caso.id,
-        casoNome: nome,
-        em: caso.updatedAt ?? '',
-      })
+    /*
+     * HORA CHEGANDO OU ESTOURADA, de uma etapa de campo MINHA que ainda não
+     * começou. A mesma função que pinta o card decide "está na hora" — uma
+     * definição só, para o sino e o Quadro não discordarem. Ela diz O QUE é a
+     * hora ("Banho", "Entrada"); o sino só toca se essa etapa, parada, é minha.
+     */
+    const alerta = alertaDeHorario(caso, etapas, agora)
+    if (alerta && !enviado && (alerta.nivel === 'iminente' || alerta.atrasado)) {
+      const dona = minhas.find(
+        (e) => e.trilha === 'acompanhamento' && aguardando(e) && ROTULO_ETAPA[e.tipo] === alerta.oQue,
+      )
+      if (dona) {
+        lista.push({
+          id: `horario:${dona.id}`,
+          tipo: 'horario',
+          peso: ORDEM.horario,
+          urgente: alerta.atrasado,
+          titulo: alerta.atrasado ? `${alerta.oQue} atrasada — é sua` : `${alerta.oQue} ${alerta.rotulo} — é sua`,
+          detalhe: caso.maternidadeSigla ?? 'Sem maternidade',
+          casoId: caso.id,
+          casoNome: nome,
+          /*
+           * QUANDO O ALERTA NASCEU, e não a hora marcada: esta fica no FUTURO
+           * enquanto o alerta é iminente, e um carimbo futuro faria a
+           * notificação parecer nova para sempre. Ela nasce quando entra na
+           * janela vermelha: a hora marcada menos a janela.
+           */
+          em: (() => {
+            const hora = dona.previsaoEm ?? caso.previsaoEm
+            return hora ? new Date(new Date(hora).getTime() - MINUTOS_IMINENTE * 60_000).toISOString() : ''
+          })(),
+        })
+      }
     }
 
-    // ESPERANDO O ADM: enviado para Entregáveis e ainda não confirmado.
-    if (enviado && !caso.ehTerminal && ehAdmOuAtendimento(papel)) {
+    /*
+     * PRAZO DO PACOTE VENCIDO com EDIÇÃO MINHA ainda aberta. Na UTI não: lá o
+     * SLA está congelado de propósito. Uma linha por caso, não por etapa —
+     * quem tem foto e reels abertos no mesmo caso atrasado tem UM problema.
+     */
+    const minhaEdicaoAberta = minhas.find(
+      (e) => e.trilha === 'edicao' && e.status !== 'concluida' && e.status !== 'dispensada',
+    )
+    if (
+      minhaEdicaoAberta &&
+      caso.venceEm !== null &&
+      !caso.ehTerminal &&
+      !caso.naUti &&
+      !enviado &&
+      new Date(caso.venceEm).getTime() < agora.getTime()
+    ) {
       lista.push({
-        id: `entrega:${caso.id}`,
-        tipo: 'entrega',
-        peso: ORDEM.entrega,
-        titulo: 'Entrega esperando conferência',
-        detalhe: caso.liberadoParaEntregaPorNome
-          ? `Enviado por ${caso.liberadoParaEntregaPorNome}`
-          : 'Na aba Entregáveis',
+        id: `prazo:${caso.id}`,
+        tipo: 'prazo',
+        peso: ORDEM.prazo,
+        urgente: true,
+        titulo: `Prazo vencido — ${nomeDaEtapa(minhaEdicaoAberta)} é sua`,
+        detalhe: caso.pacoteNome ?? 'Sem pacote',
         casoId: caso.id,
         casoNome: nome,
-        em: caso.liberadoParaEntregaEm ?? '',
+        em: caso.venceEm,
       })
     }
-
-    /* --------------------------------------------------------------- etapa */
 
     for (const etapa of etapas) {
       const resolvida = etapa.status === 'concluida' || etapa.status === 'dispensada'
-      const minha = pessoaId !== null && etapa.responsavelId === pessoaId
+      const minha = etapa.responsavelId === pessoaId
 
-      // ATRIBUÍDA E AINDA NÃO COMEÇOU — a pílula vermelha que pulsa no card,
-      // agora também no sino. É a notificação mais importante do sistema: tem
-      // dona e está parada.
+      // ATRIBUÍDA E AINDA NÃO COMEÇOU — a pílula vermelha que pulsa no card.
+      // Tem dona e está parada.
       if (etapa.status === 'atribuida' && minha) {
         lista.push({
           id: `atribuida:${etapa.id}`,
           tipo: 'atribuida',
           peso: ORDEM.atribuida,
+          urgente: false,
           titulo: `${nomeDaEtapa(etapa)} atribuída a você`,
-          detalhe: 'Aguardando início',
+          detalhe: 'Aguardando você dar play',
           casoId: caso.id,
           casoNome: nome,
           em: quando(etapa),
@@ -177,11 +216,12 @@ export function derivarNotificacoes({
       }
 
       // RENDIÇÃO PLANEJADA: eu assumo esta etapa na virada do turno.
-      if (!resolvida && pessoaId !== null && etapa.proximoResponsavelId === pessoaId) {
+      if (!resolvida && etapa.proximoResponsavelId === pessoaId) {
         lista.push({
           id: `rendicao:${etapa.id}`,
           tipo: 'rendicao',
           peso: ORDEM.rendicao,
+          urgente: false,
           titulo: `Você assume ${nomeDaEtapa(etapa)} na virada`,
           detalhe: etapa.responsavelNome ? `Hoje com ${etapa.responsavelNome}` : 'Sem responsável',
           casoId: caso.id,
@@ -190,80 +230,31 @@ export function derivarNotificacoes({
         })
       }
 
-      // VOLTOU PARA ALTERAÇÃO, no MEU trabalho. A de outra pessoa saiu com as
-      // gerais (30/09/2026).
-      const emAlteracao =
-        etapa.status === 'em_alteracao' || etapa.faseAlbum === 'pedido_de_alteracoes'
+      // VOLTOU PARA ALTERAÇÃO, no MEU trabalho.
+      const emAlteracao = etapa.status === 'em_alteracao' || etapa.faseAlbum === 'pedido_de_alteracoes'
       if (emAlteracao && !resolvida && minha) {
         lista.push({
           id: `alteracao:${etapa.id}`,
           tipo: 'alteracao_minha',
           peso: ORDEM.alteracao_minha,
+          urgente: false,
           titulo: `Pediram alteração no seu ${ROTULO_ETAPA[etapa.tipo]}`,
-          detalhe:
-            etapa.faseAlbum !== null
-              ? ROTULO_FASE_ALBUM[etapa.faseAlbum]
-              : (etapa.responsavelNome ?? 'Sem responsável'),
+          detalhe: etapa.faseAlbum !== null ? ROTULO_FASE_ALBUM[etapa.faseAlbum] : 'Voltou para você',
           casoId: caso.id,
           casoNome: nome,
           em: quando(etapa),
         })
       }
 
-      // O FOTO/LIVRO ESPERANDO O ADM (21/09/2026) — as duas passagens por
-      // Entregáveis: a prova para mandar ao cliente, e o livro pronto. Mesmo
-      // tipo da entrega do caso: é o mesmo trabalho, na mesma aba, do mesmo papel.
-      if (etapa.tipo === 'album' && ehAdmOuAtendimento(papel)) {
-        const paraAprovar =
-          etapa.faseAlbum === 'aguardando_aprovacao' && etapa.fotolivroEnviadoEm === null
-        const pronto = etapa.faseAlbum === 'pronto_para_entrega'
-        if (paraAprovar || pronto) {
-          lista.push({
-            id: `fotolivro-${paraAprovar ? 'aprovacao' : 'entrega'}:${etapa.id}`,
-            tipo: 'entrega',
-            peso: ORDEM.entrega,
-            titulo: paraAprovar ? 'Foto/Livro para mandar ao cliente' : 'Foto/Livro pronto para entregar',
-            detalhe: 'Na aba Entregáveis',
-            casoId: caso.id,
-            casoNome: nome,
-            em: quando(etapa),
-          })
-        }
-      }
-
-      // O VÍDEO DO MASTER TERMINADO (21/09/2026), em Entregáveis esperando o
-      // ADM confirmar a entrega. Mesmo tipo da entrega do caso e do fotolivro.
-      if (
-        etapa.tipo === 'edicao_video' &&
-        etapa.status === 'pronto_para_entrega' &&
-        ehAdmOuAtendimento(papel)
-      ) {
+      // AVISO ESCRITO NUMA ETAPA MINHA, ainda aberta — a pílula com megafone.
+      if (minha && !resolvida && etapa.observacao && !SEM_AVISO.has(etapa.tipo)) {
         lista.push({
-          id: `video-entrega:${etapa.id}`,
-          tipo: 'entrega',
-          peso: ORDEM.entrega,
-          titulo: 'Vídeo do MASTER pronto para entregar',
-          detalhe: 'Na aba Entregáveis',
-          casoId: caso.id,
-          casoNome: nome,
-          em: quando(etapa),
-        })
-      }
-
-      // O CLICK HOME COM A GALERIA PRONTA (22/09/2026), esperando o ADM mandar
-      // o link à família. Mesmo tipo dos outros dois: é o mesmo trabalho, na
-      // mesma aba, do mesmo papel.
-      if (
-        etapa.tipo === 'click_home' &&
-        etapa.faseClickHome === 'enviar_para_escolha' &&
-        ehAdmOuAtendimento(papel)
-      ) {
-        lista.push({
-          id: `click-home-entrega:${etapa.id}`,
-          tipo: 'entrega',
-          peso: ORDEM.entrega,
-          titulo: 'Galeria do New Born para mandar à família',
-          detalhe: 'Na aba Entregáveis',
+          id: `aviso:${etapa.id}`,
+          tipo: 'aviso',
+          peso: ORDEM.aviso,
+          urgente: false,
+          titulo: `Aviso na sua etapa de ${nomeDaEtapa(etapa)}`,
+          detalhe: etapa.observacao,
           casoId: caso.id,
           casoNome: nome,
           em: quando(etapa),
