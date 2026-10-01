@@ -31,13 +31,21 @@ export const TELAS: { id: Tela; rotulo: string; descricao: string; poder?: strin
     descricao: 'Interno e externo',
     poder: 'Dá acesso às métricas das pessoas e à operação inteira, com nome de mãe e bebê.',
   },
+  {
+    id: 'comercial',
+    rotulo: 'Comercial',
+    descricao: 'As ofertas pós-parto: reels, New Born e Foto/Livro',
+    poder:
+      'Abre o relatório externo no modo comercial — os partos, com nome de mãe e bebê e os links — e deixa mudar a fase das ofertas.',
+  },
 ]
 
 /** Espelho literal de `telas_padrao_do_papel` no banco — muda nos dois. */
 export function telasPadraoDoPapel(papel: string): Tela[] {
-  if (papel === 'gestao') return ['quadro', 'concluidos', 'calendario', 'equipe', 'despesas', 'relatorios']
+  if (papel === 'gestao') return ['quadro', 'concluidos', 'calendario', 'equipe', 'despesas', 'relatorios', 'comercial']
   if (papel === 'financeiro') return ['quadro', 'concluidos', 'calendario', 'despesas']
   if (papel === 'operador') return ['quadro']
+  if (papel === 'comercial') return ['quadro', 'concluidos', 'calendario', 'comercial']
   return ['quadro', 'concluidos', 'calendario']
 }
 

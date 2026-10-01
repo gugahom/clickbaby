@@ -4,11 +4,13 @@ import { AnimatePresence, m, useReducedMotion } from 'motion/react'
 import clsx from 'clsx'
 import {
   IconeAtribuir,
-  IconeCheck,
-  IconeNota,
+  IconeAviso,
+  IconeCalendario,
   IconeReabrir,
+  IconeRelogio,
   IconeRendicao,
   IconeSino,
+  IconeX,
 } from '@/components/ui/icones'
 import { useAuth } from '@/features/auth/contexto'
 import { useQuadro } from '@/features/quadro/api/useQuadro'
@@ -35,10 +37,11 @@ const TETO = 30
  */
 const ICONE: Record<TipoNotificacao, (props: { className: string }) => ReactNode> = {
   atribuida: IconeAtribuir,
-  rendicao: IconeRendicao,
+  horario: IconeRelogio,
+  prazo: IconeCalendario,
   alteracao_minha: IconeReabrir,
-  entrega: IconeCheck,
-  rascunho: IconeNota,
+  rendicao: IconeRendicao,
+  aviso: IconeAviso,
 }
 
 /** "há 25min", "em 40min" — ou nada, quando o carimbo não existe. */
@@ -131,11 +134,43 @@ export function Sino() {
     casos: data?.casos ?? [],
     etapasPorCaso: data?.etapasPorCaso ?? new Map(),
     pessoaId: pessoa?.id ?? null,
-    papel: pessoa?.papelSistema ?? 'operador',
+    agora,
   })
 
   const ehNova = (n: Notificacao, marca: string | null) => marca === null || n.em > marca
   const novas = lista.filter((n) => ehNova(n, vistoEm))
+
+  /*
+   * O AVISO DE "CHEGOU AGORA" (01/10/2026, pedido do gestor: "dar uma sensação
+   * de urgência maior, porque hoje não está passando"). Com a lista enxuta —
+   * só o que tem o nome da pessoa —, cada item novo merece aparecer sozinho:
+   * um cartão embaixo do sino, por alguns segundos, com o caso a um toque.
+   *
+   * Só para o que NASCE com a tela aberta: o que já existia ao entrar fica no
+   * sino, que já está vermelho e balançando por ele — uma rajada de cartões no
+   * login seria o oposto de urgência. E a hora chegando conta como nova no
+   * minuto em que entra na janela vermelha, que é quando ela precisa aparecer.
+   *
+   * Estado derivado de render anterior, e não efeito: guardar a lista de ids da
+   * última vez e comparar é o padrão do React para "isto mudou desde a última
+   * renderização".
+   */
+  const idsAgora = lista.map((n) => n.id).join('|')
+  const [idsAntes, setIdsAntes] = useState<string | null>(null)
+  const [chegou, setChegou] = useState<Notificacao | null>(null)
+  if (data && idsAgora !== idsAntes) {
+    if (idsAntes !== null) {
+      const conhecidos = new Set(idsAntes.split('|'))
+      const nova = lista.find((n) => !conhecidos.has(n.id) && ehNova(n, vistoEm))
+      if (nova) setChegou(nova)
+    }
+    setIdsAntes(idsAgora)
+  }
+  useEffect(() => {
+    if (!chegou) return
+    const t = window.setTimeout(() => setChegou(null), 9000)
+    return () => window.clearTimeout(t)
+  }, [chegou])
   // O sino CHAMA enquanto houver algo para mim — e não enquanto eu estiver com
   // a lista aberta na frente, que é quando a onda só atrapalharia a leitura.
   const chamando = lista.length > 0 && !aberto
@@ -143,6 +178,7 @@ export function Sino() {
   function alternar() {
     const indo = !aberto
     setAberto(indo)
+    setChegou(null)
     if (!indo) return
     setVistoAntes(vistoEm)
     // Só escreve quando há o que marcar: uma RPC por clique num sino sem
@@ -152,6 +188,7 @@ export function Sino() {
 
   function irAoCaso(n: Notificacao) {
     setAberto(false)
+    setChegou(null)
     // O Quadro lê `?caso=` e abre o card, seja em que aba ele estiver — ver
     // QuadroPage. Query e não rota própria: o caso não tem tela, ele tem um
     // lugar DENTRO do Quadro.
@@ -222,6 +259,50 @@ export function Sino() {
       </button>
 
       <AnimatePresence>
+        {chegou && !aberto && (
+          <m.div
+            key={chegou.id}
+            role="status"
+            aria-live="polite"
+            initial={semMovimento ? { opacity: 1 } : { opacity: 0, y: -10, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={semMovimento ? { opacity: 0 } : { opacity: 0, y: -6, transition: { duration: 0.15 } }}
+            transition={semMovimento ? { duration: 0 } : { type: 'spring', bounce: 0.25, duration: 0.35 }}
+            style={{ transformOrigin: 'top right' }}
+            className="absolute top-full right-3 z-50 mt-2 w-[min(340px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-atrasado/40 bg-card text-foreground shadow-cartao-alto sm:right-0"
+          >
+            <div className="flex items-start gap-3 border-l-4 border-atrasado p-3">
+              <button
+                type="button"
+                onClick={() => irAoCaso(chegou)}
+                className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 text-left"
+              >
+                <span className="mt-0.5 grid size-8 flex-shrink-0 place-items-center rounded-full bg-atrasado text-white">
+                  {(() => {
+                    const Icone = ICONE[chegou.tipo]
+                    return <Icone className="size-4" />
+                  })()}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-bold tracking-wide text-atrasado uppercase">Para você · agora</span>
+                  <span className="block text-sm font-bold">{chegou.titulo}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{chegou.casoNome}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChegou(null)}
+                aria-label="Dispensar o aviso"
+                className="-mt-1 -mr-1 grid size-8 flex-shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <IconeX className="size-4" />
+              </button>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {aberto && (
           <m.div
             id={idPainel}
@@ -271,7 +352,12 @@ export function Sino() {
                       key={n.id}
                       type="button"
                       onClick={() => irAoCaso(n)}
-                      className="flex w-full cursor-pointer items-start gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60"
+                      className={clsx(
+                        'flex w-full cursor-pointer items-start gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0',
+                        // PASSOU DA HORA OU DO PRAZO: a linha inteira tinge, e o
+                        // título fica vermelho — é o que não pode esperar a lista.
+                        n.urgente ? 'bg-atrasado/8 hover:bg-atrasado/12' : 'hover:bg-muted/60',
+                      )}
                     >
                       <div className="mt-0.5 text-atrasado">
                         <Icone className="size-[18px]" />
@@ -281,7 +367,11 @@ export function Sino() {
                         <p
                           className={clsx(
                             'text-sm',
-                            nova ? 'font-semibold text-foreground' : 'text-foreground/80',
+                            n.urgente
+                              ? 'font-bold text-atrasado'
+                              : nova
+                                ? 'font-semibold text-foreground'
+                                : 'text-foreground/80',
                           )}
                         >
                           {n.titulo}{' '}

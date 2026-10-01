@@ -435,6 +435,9 @@ marcar_notificacoes_vistas()                            -- só o "já vi" — a 
 
 -- telas por pessoa (30/09/2026; ver seção 13)
 tem_tela(p_tela)                                        -- helper das policies e da porta dos relatórios
+
+-- o modo comercial do relatório externo (01/10/2026; ver seção 13)
+definir_oferta_comercial(p_caso_id, p_oferta, p_fase)   -- tela Comercial; vendido cria a etapa
 definir_foto_da_pessoa(p_pessoa_id, p_foto_path)        -- a Equipe troca a foto de outra pessoa
 
 -- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
@@ -659,6 +662,12 @@ Rode as duas **depois de todo `db push` que toque schema**.
   A consulta do Quadro tem validade de 2 minutos (`staleTime`), para voltar à aba não
   recarregar a cada 30 segundos — o que, no celular, era a cada desbloqueio.
 - Mutações que representam transição de estado chamam RPC, nunca `.update()` direto.
+- **NÃO EXISTE `<select>` NATIVO** (01/10/2026, pedido do gestor: "um padrão de dropdown em
+  todo o sistema"). Toda escolha passa pelo `Dropdown` da casa: `variante="campo"` em
+  formulário, `variante="pilula"` (com `prefixo`, "Ordenar · Mais antigos") em barra de
+  ferramentas. Gatilho próprio (`gatilho`) só para o que não é campo — as pílulas de FASE, o
+  chip da conta, os menus de ícone. Um gatilho feito à mão que imita campo é o padrão se
+  desfazendo; foram três, e voltaram ao gatilho padrão.
 - Realtime via canais do Supabase no Quadro e na Fila.
 - Mobile-first. O layout desktop é a adaptação, não o contrário.
 - Tema escuro obrigatório — metade da operação é noturna.
@@ -1111,6 +1120,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **A LISTA DE IDS VAI EM LOTES DE 150** (`CASOS_POR_LOTE`, em `useQuadro.ts`). Ela viaja na
   URL, e até aqui o Quadro mandava todos os casos do sistema numa lista só: ~10kB no dia,
   crescendo uns 5kB por mês. Quem precisa do lote agora é a aba Concluídos.
+- **O SINO É SÓ O QUE TEM O MEU NOME** (01/10/2026, segunda volta do gestor: "entrei e tinha
+  25 notificações (…) quero que seja o para você mesmo, quando o meu nome é marcado"). O item de
+  30/09, logo abaixo, mantinha o trabalho do PAPEL (rascunho, entrega para conferir) como "para
+  você", e para a gestão isso era a operação inteira de novo: SAIU — "não é todo mundo que
+  resolve os rascunhos"; o ADM acha a fila pelo anel verde de Entregáveis. Fica: atribuída a
+  mim, rendição que eu assumo, alteração no meu trabalho, e as URGÊNCIAS do MEU trabalho — hora
+  chegando ou estourada de etapa de campo minha que não começou, prazo do pacote vencido com
+  edição minha aberta, aviso numa etapa minha. Passou da hora ou do prazo, a linha fica
+  vermelha (`urgente`). E **O QUE CHEGA COM A TELA ABERTA APARECE SOZINHO**: um cartão "Para
+  você · agora" embaixo do sino, por nove segundos, com o caso a um toque — só para o que nasce
+  durante a sessão (o que já existia ao entrar fica no sino), comparando os ids da renderização
+  anterior, sem efeito. Era o que faltava de "sensação de urgência", nas palavras dele.
 - **O SINO É SÓ "PARA VOCÊ"** (30/09/2026, pedido do gestor: "vai ser só para você, e só vai
   notificar o usuário que tiver que ser notificado mesmo"). As GERAIS saíram — aviso num card,
   horário estourando, edição sem ninguém, prazo vencido, alteração no trabalho de outra pessoa —,
@@ -2050,6 +2071,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
   conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
   espremido numa coluna de 3.5rem viraria listra.
+- **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
+  do padrão dos papéis `comercial` e `gestao`. Ela abre o relatório externo SÓ NO MODO
+  COMERCIAL (ver o item do relatório externo): `exigir_operacao(p_filtros)` deixa entrar quem
+  tem Relatórios, ou quem tem Comercial com `comercial: true` no filtro — e esse filtro corta
+  para os partos antes de tudo. O relatório interno continua fechado para ela. Quem tem só a
+  Comercial ganha o destino "Comercial" na navegação e entra no relatório já no modo, sem a
+  chave.
 - **TELAS POR PESSOA** (30/09/2026, pedido do gestor, migration `20260930232424`). Quem vê
   qual tela deixou de ser só o PAPEL: a gestão concede e tira telas pessoa a pessoa na ficha da
   Equipe — é a porta para o que vem, o painel comercial e o financeiro, em que a pessoa entra
@@ -2390,6 +2418,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **TUDO NASCE FECHADO** no painel, o período inclusive (com o recorte no título); abre sozinho
   só o grupo que chega com filtro marcado. Ordem dos grupos, do gestor: período, links, termo,
   situação, prazo, maternidade, pacote, quem fez, na etapa, equipamento, e o resto.
+  **O MODO COMERCIAL** (01/10/2026, pedido do gestor, migration `20261001001607`). A planilha
+  do atendimento em que o comercial controla o que já OFERECEU depois do parto virou um modo
+  deste relatório: uma chave "Comercial" no cabeçalho, e a lista passa a ser só de PARTOS, com
+  três colunas fixas depois do pacote — REELS, NEW BORN e FOTO/LIVRO — e o seletor de fase de
+  cada oferta, na mesma pílula das seções do Quadro: **Apresentar · Enviado · Recusou · Vendido**
+  ("recusou" no lugar do "não quis" do pedido). Os filtros por fase das três vêm primeiro no
+  painel, e a planilha exportada leva as três colunas.
+  **QUAIS CASOS** (decisão do gestor, perguntado): REELS só nos BASIC e STANDARD puros — os que
+  não venderam o vertical; a equipe o faz mesmo assim e o comercial o oferece depois; NEW BORN e
+  FOTO/LIVRO em todo parto que ainda não tem a etapa; BIRTH, EVENTO e NEWBORN fora. Onde a
+  oferta não se aplica, a célula é um traço. A regra mora na view `operacao_dos_casos`
+  (`comercial`, `oferta_*`), e a fase em `ofertas_comerciais` — sem linha, "apresentar".
+  **VENDIDO CRIA A ETAPA** no New Born e no Foto/Livro (decisão do gestor), depois de uma
+  confirmação na tela — e cria MESMO NO CASO ENCERRADO, que é quando a venda acontece:
+  `definir_oferta_comercial` insere a etapa direto, porque `adicionar_etapa` recusa caso
+  terminal. Nenhum gatilho deriva status de etapa, então o caso continua encerrado, e as duas
+  etapas já não seguram o encerramento nem saem do arquivo do Quadro. Só cria: voltar a fase
+  não apaga etapa.
+  **QUEM MUDA A FASE** é a tela Comercial; quem só tem Relatórios vê a pílula e não a abre.
+  Custo medido no local: as ofertas levaram as facetas de ~105ms para ~275ms no histórico
+  inteiro; num mês, ~40ms.
   **Fica para as próximas voltas:** buscas salvas.
 - **O CALENDÁRIO** (`/quadro/calendario`, 30/09/2026, item 5 da fila do gestor). Todos os
   papéis MENOS `operador` (decisão do gestor; desde 30/09/2026, a tela `calendario` — o padrão

@@ -1,7 +1,15 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { chavesQuadro } from '@/features/quadro/api/useQuadro'
 import type { Database, Json } from '@/types/database'
-import { paraOBanco, type FiltrosDaOperacao, type Ordem, type TipoDeLink } from './filtros'
+import {
+  paraOBanco,
+  type FaseComercial,
+  type FiltrosDaOperacao,
+  type OfertaComercial,
+  type Ordem,
+  type TipoDeLink,
+} from './filtros'
 import type { Eixo, LinhaDoGrafico } from './grafico'
 
 /**
@@ -42,6 +50,8 @@ export interface CasoDaOperacao {
   links: { tipo: TipoDeLink; url: string }[]
   /** Quem fez cada etapa (não dispensada) do caso. */
   trabalho: { etapa: string; pessoaId: string; pessoa: string }[]
+  /** A fase de cada oferta do comercial; nulo onde ela não se aplica. */
+  ofertas: Record<OfertaComercial, FaseComercial | null>
 }
 
 export interface PaginaDaOperacao {
@@ -108,7 +118,29 @@ function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
       pessoaId: t.pessoa_id,
       pessoa: t.pessoa,
     })),
+    ofertas: {
+      reels: null,
+      new_born: null,
+      fotolivro: null,
+      ...((l.ofertas as Partial<Record<OfertaComercial, FaseComercial | null>> | null) ?? {}),
+    },
   }
+}
+
+/**
+ * MUDAR A FASE DE UMA OFERTA (01/10/2026). Vendido no New Born ou no Foto/Livro
+ * cria a etapa no caso — e aí o Quadro também precisa reler.
+ */
+export function useDefinirOferta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ casoId, oferta, fase }: { casoId: string; oferta: OfertaComercial; fase: FaseComercial }) =>
+      chamar(supabase.rpc('definir_oferta_comercial', { p_caso_id: casoId, p_oferta: oferta, p_fase: fase })),
+    onSuccess: (criouEtapa) => {
+      void qc.invalidateQueries({ queryKey: ['operacao'] })
+      if (criouEtapa) void qc.invalidateQueries({ queryKey: chavesQuadro.todos })
+    },
+  })
 }
 
 export function useBuscaDaOperacao(filtros: FiltrosDaOperacao, ordem: Ordem, pagina: number) {

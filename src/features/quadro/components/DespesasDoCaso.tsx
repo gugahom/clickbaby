@@ -260,8 +260,6 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
   const refeicao = tipo === 'refeicao'
   const valor = refeicao ? VALOR_DA_REFEICAO : paraNumero(valorTexto)
   const precisaDescricao = tipo === 'outro' && descricao.trim() === ''
-  const nomeEscolhido =
-    (pessoas ?? []).find((p) => p.id === pessoaId)?.nome ?? 'Escolher pessoa'
 
   function salvar() {
     if (valor === null) return
@@ -348,11 +346,7 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
             selecionado={pessoaId}
             onEscolher={(item) => setPessoaId(item.id)}
             itens={(pessoas ?? []).map((p) => ({ id: p.id, rotulo: p.nome }))}
-            gatilho={
-              <span className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium">
-                {nomeEscolhido}
-              </span>
-            }
+            larguraCheia
           />
         </div>
       </div>

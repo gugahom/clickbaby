@@ -1,6 +1,14 @@
 import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
 import { dataCurta } from '../lib/metricas'
-import { ROTULO_DO_LINK, rotuloDoEquipamento, rotuloFixo, type FiltrosDaOperacao, type Ordem } from './filtros'
+import {
+  OFERTAS,
+  ROTULO_DO_LINK,
+  ROTULO_FASE_COMERCIAL,
+  rotuloDoEquipamento,
+  rotuloFixo,
+  type FiltrosDaOperacao,
+  type Ordem,
+} from './filtros'
 import {
   COLUNA_DO_EIXO,
   graoDoTempo,
@@ -60,6 +68,9 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       'Voltou para ajuste',
       'Links',
       'Equipamento',
+      // No modo comercial, a fase de cada oferta (01/10/2026) — a planilha que o
+      // comercial usava, de volta ao Excel quando ele quiser.
+      ...(f.comercial ? OFERTAS.map((o) => `Oferta de ${o.rotulo}`) : []),
     ],
     casos.map((c) => [
       c.dia ? dataCurta(c.dia) : '',
@@ -78,9 +89,15 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       SIM_NAO(c.reaberto),
       [...new Set(c.links.map((l) => ROTULO_DO_LINK[l.tipo] ?? l.tipo))].join(', '),
       c.equipamentos.map(rotuloDoEquipamento).join(', '),
+      ...(f.comercial
+        ? OFERTAS.map((o) => {
+            const fase = c.ofertas[o.id]
+            return fase ? ROTULO_FASE_COMERCIAL[fase] : 'Não se aplica'
+          })
+        : []),
     ]),
   )
-  baixarCsv(nomeDoArquivo(f, ''), csv)
+  baixarCsv(nomeDoArquivo(f, f.comercial ? '_comercial' : ''), csv)
   return casos.length
 }
 

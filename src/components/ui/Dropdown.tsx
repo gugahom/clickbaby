@@ -9,6 +9,7 @@ const ALTURA_MAXIMA = 256
 
 interface Posicao {
   paraCima: boolean
+  larguraMinima?: number | undefined
   topo?: number | undefined
   base?: number | undefined
   esquerda?: number | undefined
@@ -78,6 +79,16 @@ interface PropsDropdown {
    * ser obrigatório (seção 6), e quem usar isto no celular está errando.
    */
   compacto?: boolean
+  /**
+   * A FORMA DO GATILHO PADRÃO (01/10/2026, pedido do gestor: "um padrão de
+   * dropdown em todo o sistema"). `campo` é o de formulário, da largura do
+   * campo de texto acima dele. `pilula` é o de BARRA DE FERRAMENTAS — ordenar,
+   * exportar —, da largura do que diz, na mesma pílula dos botões e da busca ao
+   * lado. Foi o lugar onde ainda havia um `<select>` nativo.
+   */
+  variante?: 'campo' | 'pilula'
+  /** Na pílula, o nome da pergunta antes da resposta: "Ordenar · Mais antigos". */
+  prefixo?: string
 }
 
 /** "Thália" e "thalia" são a mesma busca: sem acento, sem caixa. */
@@ -97,6 +108,13 @@ function temPonteiroFino(): boolean {
 
 /**
  * O dropdown da casa — um só, para escolha e para ação.
+ *
+ * O PADRÃO DE TODO O SISTEMA (01/10/2026). Não existe mais `<select>` nativo:
+ * o último, o "Ordenar" do relatório externo, saiu, e o gestor pediu um
+ * elemento só. As duas formas de gatilho estão em `variante`; o painel é o
+ * mesmo para as duas — cartão de cantos redondos, linhas que acendem por
+ * dentro e o visto na escolhida. Quem passa `gatilho` próprio (as pílulas de
+ * FASE, o chip da conta, os menus de ícone) cuida só do desenho do gatilho.
  *
  * POR QUE UM SÓ. Havia três `<select>` nativos e nenhum menu; o `<select>` não
  * aceita estilo de item, então os três eram a única coisa da tela fora da
@@ -127,6 +145,8 @@ export function Dropdown({
   id,
   buscavel = false,
   compacto = false,
+  variante = 'campo',
+  prefixo,
   textoLivre,
   placeholderBusca = 'Digite para filtrar',
 }: PropsDropdown) {
@@ -198,7 +218,11 @@ export function Dropdown({
         base: paraCima ? window.innerHeight - r.top + 4 : undefined,
         esquerda: alinhamento === 'esquerda' ? r.left : undefined,
         direita: alinhamento === 'direita' ? window.innerWidth - r.right : undefined,
-        largura: gatilho ? undefined : r.width,
+        // O painel do CAMPO tem a largura dele; o da PÍLULA, no mínimo a dela
+        // (a pílula é da largura da resposta escolhida, e as outras respostas
+        // podem ser mais compridas).
+        largura: gatilho || variante === 'pilula' ? undefined : r.width,
+        larguraMinima: variante === 'pilula' && !gatilho ? r.width : undefined,
       })
     }
 
@@ -229,7 +253,7 @@ export function Dropdown({
       document.removeEventListener('mousedown', foraDaCaixa)
       document.removeEventListener('keydown', esc, true)
     }
-  }, [aberto, alinhamento, gatilho])
+  }, [aberto, alinhamento, gatilho, variante])
 
   return (
     <div ref={caixa} className={clsx('relative', className)}>
@@ -262,6 +286,35 @@ export function Dropdown({
         >
           {gatilho}
         </button>
+      ) : variante === 'pilula' ? (
+        <button
+          ref={botao}
+          type="button"
+          id={idGatilho}
+          onClick={alternar}
+          aria-haspopup="menu"
+          aria-expanded={aberto}
+          aria-label={prefixo ? `${prefixo}: ${escolhido?.rotulo ?? rotulo}` : undefined}
+          disabled={desabilitado}
+          className={clsx(
+            'inline-flex cursor-pointer items-center gap-2 rounded-full border bg-card pr-3 pl-4 text-sm font-semibold whitespace-nowrap shadow-sm transition-colors',
+            compacto ? 'h-10' : 'min-h-11',
+            'focus-visible:ring-2 focus-visible:ring-marca/40 focus-visible:outline-none',
+            aberto ? 'border-marca text-foreground' : 'border-border text-foreground hover:border-marca/50',
+            desabilitado && 'cursor-not-allowed opacity-50',
+          )}
+        >
+          {prefixo && <span className="font-medium text-muted-foreground">{prefixo}</span>}
+          {prefixo && <span aria-hidden="true" className="h-4 w-px bg-border" />}
+          <span className="truncate">{escolhido?.rotulo ?? rotulo}</span>
+          <m.span
+            className="flex-shrink-0 text-muted-foreground"
+            animate={{ rotate: aberto ? 180 : 0 }}
+            transition={semMovimento ? { duration: 0 } : { duration: 0.2 }}
+          >
+            <Chevron className="size-4" />
+          </m.span>
+        </button>
       ) : (
         <button
           ref={botao}
@@ -272,11 +325,13 @@ export function Dropdown({
           aria-expanded={aberto}
           disabled={desabilitado}
           className={clsx(
-            'flex min-h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border px-3 text-base transition-colors',
-            'focus-visible:border-marca focus-visible:outline-none',
+            'flex min-h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 text-base transition-colors',
+            'focus-visible:ring-2 focus-visible:ring-marca/40 focus-visible:outline-none',
             desabilitado
-              ? 'cursor-not-allowed bg-muted/50 text-muted-foreground'
-              : 'bg-background/60 hover:bg-card',
+              ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground'
+              : aberto
+                ? 'border-marca bg-card'
+                : 'border-border bg-background/60 hover:border-marca/50 hover:bg-card',
           )}
         >
           <span className={clsx('block truncate', !escolhido && 'text-muted-foreground')}>
@@ -319,6 +374,7 @@ export function Dropdown({
               left: caixaDoPainel?.esquerda,
               right: caixaDoPainel?.direita,
               width: caixaDoPainel?.largura,
+              minWidth: caixaDoPainel?.larguraMinima,
               maxHeight: ALTURA_MAXIMA,
             }}
             className={clsx(
@@ -333,7 +389,7 @@ export function Dropdown({
               // porque é destrutivo e tem cor própria; enquanto o menu teve um
               // item só, e ele era esse, o defeito não existia. Ele nasceu junto
               // com "Editar conta" (02/09/2026).
-              'z-50 overflow-y-auto rounded-md border border-border bg-card text-foreground shadow-cartao-alto',
+              'z-50 overflow-y-auto rounded-xl border border-border bg-card p-1 text-foreground shadow-cartao-alto',
               // A origem acompanha o lado de onde ele nasce, senão um painel
               // que abre para cima parece cair do gatilho.
               caixaDoPainel?.paraCima ? 'origin-bottom' : 'origin-top',
@@ -347,7 +403,7 @@ export function Dropdown({
               // STICKY dentro do painel que rola: com a lista longa, o campo
               // não pode sumir para cima justamente quando a pessoa percebe
               // que era mais rápido digitar.
-              <div className="sticky top-0 z-10 border-b border-border bg-card p-1.5">
+              <div className="sticky -top-1 z-10 -mx-1 -mt-1 mb-1 border-b border-border bg-card p-1.5">
                 <input
                   type="search"
                   value={busca}
@@ -373,7 +429,7 @@ export function Dropdown({
             {visiveis.length === 0 ? (
               <p className="px-3 py-2.5 text-sm text-muted-foreground">Nada com esse nome.</p>
             ) : (
-              <ul className="py-1">
+              <ul className="space-y-0.5">
                 {visiveis.map((item) => {
                   const marcado = escolhido?.id === item.id
                   return (
@@ -386,7 +442,7 @@ export function Dropdown({
                         onClick={() => escolher(item)}
                         className={clsx(
                           // min-h-11: a linha É o alvo de toque (seção 6).
-                          'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                          'flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
                           item.desabilitado
                             ? 'cursor-not-allowed text-muted-foreground/60'
                             : item.destrutivo

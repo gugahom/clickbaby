@@ -831,6 +831,82 @@ export type Database = {
           },
         ]
       }
+      ofertas_comerciais: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string
+          caso_id: string
+          created_at: string
+          fase: Database["public"]["Enums"]["fase_comercial"]
+          id: string
+          oferta: Database["public"]["Enums"]["oferta_comercial"]
+          updated_at: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por: string
+          caso_id: string
+          created_at?: string
+          fase: Database["public"]["Enums"]["fase_comercial"]
+          id?: string
+          oferta: Database["public"]["Enums"]["oferta_comercial"]
+          updated_at?: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string
+          caso_id?: string
+          created_at?: string
+          fase?: Database["public"]["Enums"]["fase_comercial"]
+          id?: string
+          oferta?: Database["public"]["Enums"]["oferta_comercial"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ofertas_comerciais_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "ofertas_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "ofertas_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pacote_etapas: {
         Row: {
           created_at: string
@@ -1075,6 +1151,7 @@ export type Database = {
           adicionais: string[] | null
           avaliado: boolean | null
           bebe_nome: string | null
+          comercial: boolean | null
           dia: string | null
           dia_semana: number | null
           equipamentos: string[] | null
@@ -1088,6 +1165,9 @@ export type Database = {
           maternidade_sigla: string | null
           nasceu: boolean | null
           nome_de_busca: string | null
+          oferta_fotolivro: string | null
+          oferta_new_born: string | null
+          oferta_reels: string | null
           pacote_id: string | null
           pacote_nome: string | null
           passou_uti: boolean | null
@@ -1256,6 +1336,14 @@ export type Database = {
         Returns: undefined
       }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
+      definir_oferta_comercial: {
+        Args: {
+          p_caso_id: string
+          p_fase: Database["public"]["Enums"]["fase_comercial"]
+          p_oferta: Database["public"]["Enums"]["oferta_comercial"]
+        }
+        Returns: boolean
+      }
       definir_padrao_de_tempo: {
         Args: {
           p_etapa_tipo: Database["public"]["Enums"]["etapa_tipo"]
@@ -1320,6 +1408,7 @@ export type Database = {
         Returns: undefined
       }
       exigir_gestao: { Args: never; Returns: undefined }
+      exigir_operacao: { Args: { p_filtros: Json }; Returns: undefined }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       inicio_das_metricas: { Args: never; Returns: string }
       item_de_pontuacao: {
@@ -1502,6 +1591,7 @@ export type Database = {
           links: Json
           mae_nome: string
           maternidade_sigla: string
+          ofertas: Json
           pacote_nome: string
           passou_uti: boolean
           prazo: string
@@ -1551,6 +1641,9 @@ export type Database = {
           m_handoff: boolean
           m_links: boolean
           m_maternidades: boolean
+          m_oferta_fotolivro: boolean
+          m_oferta_new_born: boolean
+          m_oferta_reels: boolean
           m_pacotes: boolean
           m_prazos: boolean
           m_reaberto: boolean
@@ -1810,6 +1903,7 @@ export type Database = {
         | "criar_galeria"
         | "enviar_para_escolha"
         | "finalizado"
+      fase_comercial: "apresentar" | "enviado" | "recusou" | "vendido"
       fase_de_campo:
         | "deslocamento_recebimento"
         | "aguardando_internamento"
@@ -1836,6 +1930,7 @@ export type Database = {
         | "new_born"
         | "acompanhamento"
       momento_despesa: "parto" | "substituicao" | "fechamento"
+      oferta_comercial: "reels" | "new_born" | "fotolivro"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -1875,6 +1970,7 @@ export type Database = {
         | "equipe"
         | "despesas"
         | "relatorios"
+        | "comercial"
       termo_status:
         | "assinado"
         | "pendente"
@@ -2058,6 +2154,7 @@ export const Constants = {
         "enviar_para_escolha",
         "finalizado",
       ],
+      fase_comercial: ["apresentar", "enviado", "recusou", "vendido"],
       fase_de_campo: [
         "deslocamento_recebimento",
         "aguardando_internamento",
@@ -2086,6 +2183,7 @@ export const Constants = {
         "acompanhamento",
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
+      oferta_comercial: ["reels", "new_born", "fotolivro"],
       papel_sistema: [
         "operador",
         "comercial",
@@ -2129,6 +2227,7 @@ export const Constants = {
         "equipe",
         "despesas",
         "relatorios",
+        "comercial",
       ],
       termo_status: [
         "assinado",
