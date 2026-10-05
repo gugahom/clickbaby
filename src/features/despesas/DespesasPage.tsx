@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { formatarMoeda, hojeNoFuso } from '@/lib/formato'
-import { useRelatorioDespesas, type LinhaDoRelatorio } from './api/useRelatorioDespesas'
+import { Dropdown } from '@/components/ui/Dropdown'
+import { IconeCheck } from '@/components/ui/icones'
+import { formatarData, formatarMoeda, hojeNoFuso } from '@/lib/formato'
 import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
+import { useLancamentosDoMes, useMarcarRessarcida, type LancamentoDeDespesa } from './api/useRelatorioDespesas'
 
 /** '2026-09' -> 'setembro de 2026'. Meio-dia UTC para nenhum fuso empurrar o mês. */
 function rotuloDoMes(mes: string): string {
@@ -21,22 +23,34 @@ function deslocarMes(mes: string, delta: number): string {
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
 }
 
-/**
- * O FILTRO POR TIPO (30/09/2026, pedido do gestor: "filtrar por refeição —
- * é importante para eles verem os casos que têm refeição"). Os tipos marcados
- * SOMAM: marcar Refeição e Outro mostra os casos com qualquer um dos dois.
- * Nada marcado é tudo. O total, os números e o CSV passam a ser do recorte, e
- * o valor que aparece em cada caso é só o dos tipos marcados — um caso com
- * Uber e refeição, filtrado por refeição, mostra quanto foi a refeição.
- */
-type TipoDoFiltro = 'uberIda' | 'uberVolta' | 'refeicao' | 'outro'
+type TipoDoFiltro = LancamentoDeDespesa['tipo']
 
+/**
+ * O FILTRO POR TIPO (30/09/2026, pedido do gestor: "filtrar por refeição").
+ * Os tipos marcados SOMAM: marcar Refeição e Outro mostra os gastos de
+ * qualquer um dos dois. Nada marcado é tudo.
+ */
 const TIPOS_DO_FILTRO: { id: TipoDoFiltro; rotulo: string }[] = [
   { id: 'refeicao', rotulo: 'Refeição' },
   { id: 'outro', rotulo: 'Outro' },
-  { id: 'uberIda', rotulo: 'Uber ida' },
-  { id: 'uberVolta', rotulo: 'Uber volta' },
+  { id: 'uber_ida', rotulo: 'Uber ida' },
+  { id: 'uber_volta', rotulo: 'Uber volta' },
 ]
+
+const ROTULO_TIPO: Record<TipoDoFiltro, string> = {
+  uber_ida: 'Uber ida',
+  uber_volta: 'Uber volta',
+  refeicao: 'Refeição',
+  outro: 'Outro',
+}
+
+const ROTULO_MOMENTO: Record<NonNullable<LancamentoDeDespesa['momento']>, string> = {
+  parto: 'Parto',
+  substituicao: 'Substituição',
+  fechamento: 'Fechamento',
+}
+
+type Situacao = 'todas' | 'a_ressarcir' | 'ressarcidas'
 
 /** '2026-09-10' -> '10/09'. */
 function diaCurto(dia: string): string {
@@ -48,53 +62,69 @@ function diaCurto(dia: string): string {
  * RECOLHER AS DESPESAS DO MÊS — a tela do financeiro (14/09/2026).
  *
  * As funcionárias lançam o gasto no card, na hora; o financeiro vem aqui depois
- * e leva o mês inteiro de uma vez. É o fim da faixa DESPESAS da planilha: em vez
- * de abrir caso por caso e somar à mão, o mês já chega somado, caso a caso e no
- * total, e sai num CSV que abre direto no Excel deles.
+ * e leva o mês inteiro de uma vez. É o fim da faixa DESPESAS da planilha.
  *
- * O MÊS É O DO ATENDIMENTO, não o do lançamento — ver `despesas_por_caso`. Uma
- * corrida de um parto de setembro lançada em outubro aparece em setembro, que é
- * onde a planilha deles sempre a pôs.
+ * UMA LINHA POR GASTO, COM A PESSOA E O RESSARCIMENTO (05/10/2026, pedido do
+ * gestor: "o nome da pessoa que lança a despesa no card vá para a aba de
+ * despesas" e "um checkbox para o financeiro saber que já ressarciu o
+ * funcionário"). Até aqui o caso vinha somado por tipo, e o financeiro não via
+ * de quem era cada Uber — justamente quem ele tem de pagar. Agora cada caso
+ * lista os gastos dele: o tipo, DE QUEM FOI (quem recebe o reembolso; "lançado
+ * por" aparece só quando outra pessoa digitou, como o ADM pela fotógrafa), o
+ * valor e a caixa "Ressarcido", que carimba quem marcou e quando, e desmarca.
+ * Os filtros de SITUAÇÃO (a ressarcir) e de PESSOA são o caminho do pagamento:
+ * escolhe a pessoa, vê o que falta, paga, marca.
  *
- * TODA SOMA DESTA TELA VEM DO BANCO. Cada linha já chega somada pela view; o
- * que se soma aqui é só o rodapé do mês, sobre uma lista que o `buscarTudo`
- * garante que veio inteira.
+ * O MÊS É O DO ATENDIMENTO, não o do lançamento. Uma corrida de um parto de
+ * setembro lançada em outubro aparece em setembro, que é onde a planilha deles
+ * sempre a pôs.
+ *
+ * A SOMA É DE UMA LISTA QUE VEIO INTEIRA: `buscarTudo` pagina contra o total do
+ * servidor, então o rodapé do mês soma o mês, e não as primeiras mil linhas.
  */
 export function DespesasPage() {
   const mesAtual = hojeNoFuso().slice(0, 7)
   const [mes, setMes] = useState(mesAtual)
-  const { data: linhas, isPending, error } = useRelatorioDespesas(mes)
+  const { data: lancamentos, isPending, error } = useLancamentosDoMes(mes)
   const [tipos, setTipos] = useState<TipoDoFiltro[]>([])
+  const [situacao, setSituacao] = useState<Situacao>('todas')
+  const [pessoaId, setPessoaId] = useState<string>('')
 
-  // O recorte: com tipo marcado, só os casos que têm algum deles, e cada caso
-  // só com o valor desses tipos (os outros zerados). Sem tipo marcado, tudo.
-  const lista = (linhas ?? []).flatMap((l): LinhaDoRelatorio[] => {
-    if (tipos.length === 0) return [l]
-    const recorte: LinhaDoRelatorio = {
-      ...l,
-      uberIda: tipos.includes('uberIda') ? l.uberIda : 0,
-      uberVolta: tipos.includes('uberVolta') ? l.uberVolta : 0,
-      refeicao: tipos.includes('refeicao') ? l.refeicao : 0,
-      outro: tipos.includes('outro') ? l.outro : 0,
-    }
-    recorte.total = recorte.uberIda + recorte.uberVolta + recorte.refeicao + recorte.outro
-    return recorte.total > 0 ? [recorte] : []
-  })
-  const soma = (campo: keyof Pick<LinhaDoRelatorio, 'total' | 'uberIda' | 'uberVolta' | 'refeicao' | 'outro'>) =>
-    lista.reduce((acc, l) => acc + l[campo], 0)
+  const todos = lancamentos ?? []
+  const lista = todos.filter(
+    (l) =>
+      (tipos.length === 0 || tipos.includes(l.tipo)) &&
+      (situacao === 'todas' || (situacao === 'a_ressarcir') === (l.ressarcidoEm === null)) &&
+      (pessoaId === '' || l.pessoaId === pessoaId),
+  )
+  const filtrando = tipos.length > 0 || situacao !== 'todas' || pessoaId !== ''
 
-  const totalDoMes = soma('total')
-  // Com filtro, o número de lançamentos do caso inteiro mentiria sobre o
-  // recorte (ele conta os Uber também) — some o rodapé de lançamentos.
-  const lancamentos = lista.reduce((acc, l) => acc + l.lancamentos, 0)
+  // As pessoas que têm gasto no mês, para o filtro — de quem foi o gasto.
+  const pessoas = [...new Map(todos.filter((l) => l.pessoaId).map((l) => [l.pessoaId as string, l.pessoaNome ?? '—'])).entries()].sort(
+    (a, b) => a[1].localeCompare(b[1], 'pt-BR'),
+  )
+
+  const soma = (f: (l: LancamentoDeDespesa) => boolean) => lista.filter(f).reduce((acc, l) => acc + l.valor, 0)
+  const total = soma(() => true)
+  const aRessarcir = soma((l) => l.ressarcidoEm === null)
+
+  // Agrupado por caso, na ordem que veio do banco (dia, caso).
+  const casos: { casoId: string; linhas: LancamentoDeDespesa[] }[] = []
+  for (const l of lista) {
+    const ultimo = casos[casos.length - 1]
+    if (ultimo && ultimo.casoId === l.casoId) ultimo.linhas.push(l)
+    else casos.push({ casoId: l.casoId, linhas: [l] })
+  }
 
   function alternarTipo(t: TipoDoFiltro) {
     setTipos((atuais) => (atuais.includes(t) ? atuais.filter((x) => x !== t) : [...atuais, t]))
   }
 
   function exportar() {
+    // UMA LINHA POR GASTO (05/10/2026), com de quem foi, quem lançou e o
+    // ressarcimento — o que o financeiro precisa para pagar e conferir.
     const csv = montarCsv(
-      ['Dia', 'Mãe', 'Bebê', 'Pacote', 'Maternidade', 'Situação', 'Uber ida', 'Uber volta', 'Refeição', 'Outro', 'Total', 'Lançamentos'],
+      ['Dia', 'Mãe', 'Bebê', 'Pacote', 'Maternidade', 'Situação do caso', 'Tipo', 'Momento', 'Descrição', 'Valor', 'De quem', 'Lançado por', 'Ressarcido', 'Ressarcido em', 'Ressarcido por'],
       lista.map((l) => [
         l.dia.split('-').reverse().join('/'),
         l.maeNome,
@@ -102,23 +132,27 @@ export function DespesasPage() {
         l.pacoteNome ?? '',
         l.maternidadeSigla ?? '',
         l.statusOperacional ?? '',
-        numeroParaCsv(l.uberIda),
-        numeroParaCsv(l.uberVolta),
-        numeroParaCsv(l.refeicao),
-        numeroParaCsv(l.outro),
-        numeroParaCsv(l.total),
-        String(l.lancamentos),
+        ROTULO_TIPO[l.tipo],
+        l.momento ? ROTULO_MOMENTO[l.momento] : '',
+        l.descricao ?? '',
+        numeroParaCsv(l.valor),
+        l.pessoaNome ?? '',
+        l.lancadoPor ?? '',
+        l.ressarcidoEm ? 'Sim' : 'Não',
+        l.ressarcidoEm ? (formatarData(l.ressarcidoEm) ?? '') : '',
+        l.ressarcidoPor ?? '',
       ]),
     )
-    baixarCsv(`despesas-${mes}${tipos.length > 0 ? `-${tipos.join('-')}` : ''}.csv`, csv)
+    baixarCsv(`despesas-${mes}${filtrando ? '-filtro' : ''}.csv`, csv)
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-3 md:p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-4 p-3 md:p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight">Despesas</h1>
         <p className="text-sm text-muted-foreground">
-          O que as funcionárias lançaram nos casos, somado por mês de atendimento.
+          O que as funcionárias lançaram nos casos, por mês de atendimento — de quem foi cada gasto e o que já foi
+          ressarcido.
         </p>
       </header>
 
@@ -130,9 +164,7 @@ export function DespesasPage() {
         </Botao>
         {/* Maiúscula só na primeira letra, por código: a classe `capitalize`
             põe em toda palavra e escrevia "Setembro De 2026". */}
-        <span className="text-base font-bold">
-          {rotuloDoMes(mes).replace(/^./, (letra) => letra.toUpperCase())}
-        </span>
+        <span className="text-base font-bold">{rotuloDoMes(mes).replace(/^./, (letra) => letra.toUpperCase())}</span>
         <Botao
           variante="fantasma"
           onClick={() => setMes((m) => deslocarMes(m, 1))}
@@ -152,31 +184,42 @@ export function DespesasPage() {
         <p className="text-sm text-muted-foreground">Somando o mês…</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo de despesa">
-            <span className="text-sm text-muted-foreground">Tipo</span>
-            {TIPOS_DO_FILTRO.map((t) => {
-              const ativo = tipos.includes(t.id)
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  aria-pressed={ativo}
-                  onClick={() => alternarTipo(t.id)}
-                  className={clsx(
-                    'min-h-9 rounded-full border px-3.5 text-sm font-semibold transition-colors',
-                    ativo
-                      ? 'border-marca bg-marca text-white'
-                      : 'border-border bg-card text-foreground hover:border-marca/40',
-                  )}
-                >
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo de despesa">
+              {TIPOS_DO_FILTRO.map((t) => (
+                <Chip key={t.id} ativo={tipos.includes(t.id)} onClick={() => alternarTipo(t.id)}>
                   {t.rotulo}
-                </button>
-              )
-            })}
-            {tipos.length > 0 && (
+                </Chip>
+              ))}
+            </div>
+            <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden="true" />
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar pelo ressarcimento">
+              <Chip ativo={situacao === 'a_ressarcir'} onClick={() => setSituacao((s) => (s === 'a_ressarcir' ? 'todas' : 'a_ressarcir'))}>
+                A ressarcir
+              </Chip>
+              <Chip ativo={situacao === 'ressarcidas'} onClick={() => setSituacao((s) => (s === 'ressarcidas' ? 'todas' : 'ressarcidas'))}>
+                Ressarcidas
+              </Chip>
+            </div>
+            {pessoas.length > 0 && (
+              <Dropdown
+                variante="pilula"
+                compacto
+                prefixo="Pessoa"
+                rotulo="Todas"
+                selecionado={pessoaId || 'todas'}
+                onEscolher={(item) => setPessoaId(item.id === 'todas' ? '' : item.id)}
+                itens={[{ id: 'todas', rotulo: 'Todas' }, ...pessoas.map(([id, nome]) => ({ id, rotulo: nome }))]}
+              />
+            )}
+            {filtrando && (
               <button
                 type="button"
-                onClick={() => setTipos([])}
+                onClick={() => {
+                  setTipos([])
+                  setSituacao('todas')
+                  setPessoaId('')
+                }}
                 className="min-h-9 px-2 text-sm font-semibold text-marca hover:underline"
               >
                 Limpar
@@ -184,17 +227,19 @@ export function DespesasPage() {
             )}
           </div>
 
-          <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-            <Numero rotulo={tipos.length > 0 ? 'Total do filtro' : 'Total do mês'} valor={formatarMoeda(totalDoMes)} destaque />
-            <Numero rotulo="Casos com gasto" valor={String(lista.length)} />
-            <Numero rotulo="Uber" valor={formatarMoeda(soma('uberIda') + soma('uberVolta'))} />
-            <Numero rotulo="Refeição" valor={formatarMoeda(soma('refeicao'))} />
-            <Numero rotulo="Outros" valor={formatarMoeda(soma('outro'))} />
+          <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+            <Numero rotulo={filtrando ? 'Total do filtro' : 'Total do mês'} valor={formatarMoeda(total)} destaque />
+            <Numero rotulo="A ressarcir" valor={formatarMoeda(aRessarcir)} alerta={aRessarcir > 0} />
+            <Numero rotulo="Já ressarcido" valor={formatarMoeda(total - aRessarcir)} />
+            <Numero rotulo="Uber" valor={formatarMoeda(soma((l) => l.tipo === 'uber_ida' || l.tipo === 'uber_volta'))} />
+            <Numero rotulo="Refeição" valor={formatarMoeda(soma((l) => l.tipo === 'refeicao'))} />
+            <Numero rotulo="Outros" valor={formatarMoeda(soma((l) => l.tipo === 'outro'))} />
           </section>
 
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {tipos.length === 0 && `${lancamentos} ${lancamentos === 1 ? 'lançamento' : 'lançamentos'}`}
+              {casos.length} {casos.length === 1 ? 'caso' : 'casos'} · {lista.length}{' '}
+              {lista.length === 1 ? 'lançamento' : 'lançamentos'}
             </span>
             {/* Sem linha, sem arquivo: um CSV só com cabeçalho abriria no Excel
                 parecendo que a exportação quebrou. */}
@@ -203,16 +248,14 @@ export function DespesasPage() {
             </Botao>
           </div>
 
-          {lista.length === 0 ? (
+          {casos.length === 0 ? (
             <p className="rounded-painel border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              {tipos.length > 0
-                ? `Nenhum caso de ${rotuloDoMes(mes)} com despesa desse tipo.`
-                : `Nenhuma despesa lançada em casos de ${rotuloDoMes(mes)}.`}
+              {filtrando ? `Nenhum gasto de ${rotuloDoMes(mes)} neste filtro.` : `Nenhuma despesa lançada em casos de ${rotuloDoMes(mes)}.`}
             </p>
           ) : (
             <ul className="space-y-2">
-              {lista.map((l) => (
-                <LinhaDeCaso key={l.casoId} linha={l} />
+              {casos.map((c) => (
+                <CasoComGastos key={c.casoId} linhas={c.linhas} />
               ))}
             </ul>
           )}
@@ -222,61 +265,148 @@ export function DespesasPage() {
   )
 }
 
-function Numero({ rotulo, valor, destaque = false }: { rotulo: string; valor: string; destaque?: boolean }) {
+function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className={clsx('rounded-painel border border-border bg-card p-3', destaque && 'border-marca')}>
+    <button
+      type="button"
+      aria-pressed={ativo}
+      onClick={onClick}
+      className={clsx(
+        'min-h-9 rounded-full border px-3.5 text-sm font-semibold transition-colors',
+        ativo ? 'border-marca bg-marca text-white' : 'border-border bg-card text-foreground hover:border-marca/40',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Numero({
+  rotulo,
+  valor,
+  destaque = false,
+  alerta = false,
+}: {
+  rotulo: string
+  valor: string
+  destaque?: boolean
+  alerta?: boolean
+}) {
+  return (
+    <div
+      className={clsx(
+        'rounded-painel border bg-card p-3',
+        destaque ? 'border-marca' : alerta ? 'border-atencao/60 bg-atencao/5' : 'border-border',
+      )}
+    >
       <div className="text-xs text-muted-foreground">{rotulo}</div>
-      <div className={clsx('mt-0.5 font-bold tabular-nums', destaque ? 'text-xl' : 'text-base')}>{valor}</div>
+      <div className={clsx('mt-0.5 font-bold tabular-nums', destaque ? 'text-xl' : 'text-base', alerta && 'text-atencao-tinta')}>
+        {valor}
+      </div>
     </div>
   )
 }
 
-/**
- * Um caso do mês: quem, quando e o gasto quebrado pelas colunas da planilha.
- *
- * SÓ OS TIPOS COM VALOR aparecem na quebra. Quatro rótulos com "R$ 0,00" em
- * cada linha fariam o que importa — a corrida que existiu — se perder no meio
- * dos zeros.
- */
-function LinhaDeCaso({ linha }: { linha: LinhaDoRelatorio }) {
-  const partes = [
-    { rotulo: 'Uber ida', valor: linha.uberIda },
-    { rotulo: 'Uber volta', valor: linha.uberVolta },
-    { rotulo: 'Refeição', valor: linha.refeicao },
-    { rotulo: 'Outro', valor: linha.outro },
-  ].filter((p) => p.valor > 0)
+/** Um caso do mês, com os gastos dele — um por linha. */
+function CasoComGastos({ linhas }: { linhas: LancamentoDeDespesa[] }) {
+  const caso = linhas[0]
+  if (!caso) return null
+  const total = linhas.reduce((acc, l) => acc + l.valor, 0)
 
   return (
     <li className="rounded-painel border border-border bg-card px-3 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate font-semibold">
-            <span className="mr-2 font-normal text-muted-foreground tabular-nums">{diaCurto(linha.dia)}</span>
-            {linha.maeNome}
-            {linha.bebeNome ? ` · ${linha.bebeNome}` : ''}
+            <span className="mr-2 font-normal text-muted-foreground tabular-nums">{diaCurto(caso.dia)}</span>
+            {caso.maeNome}
+            {caso.bebeNome ? ` · ${caso.bebeNome}` : ''}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            {linha.pacoteNome && <span className="font-medium text-foreground">{linha.pacoteNome}</span>}
-            {linha.maternidadeSigla && (
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{linha.maternidadeSigla}</span>
-            )}
+            {caso.pacoteNome && <span className="font-medium text-foreground">{caso.pacoteNome}</span>}
+            {caso.maternidadeSigla && <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{caso.maternidadeSigla}</span>}
             {/* Cancelado ganha selo: é o gasto que não virou atendimento, e é o
                 que o financeiro mais precisa conseguir achar na lista. */}
-            {linha.statusOperacional === 'cancelado' && (
+            {caso.statusOperacional === 'cancelado' && (
               <span className="rounded-full bg-atrasado/15 px-2 py-0.5 font-semibold text-atrasado">cancelado</span>
             )}
           </div>
         </div>
-        <span className="flex-shrink-0 text-base font-bold tabular-nums">{formatarMoeda(linha.total)}</span>
+        <span className="flex-shrink-0 text-base font-bold tabular-nums">{formatarMoeda(total)}</span>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-        {partes.map((p) => (
-          <span key={p.rotulo}>
-            {p.rotulo} <span className="tabular-nums text-foreground">{formatarMoeda(p.valor)}</span>
-          </span>
+      <ul className="mt-2 divide-y divide-border/70 border-t border-border/70">
+        {linhas.map((l) => (
+          <LinhaDoGasto key={l.id} gasto={l} />
         ))}
-      </div>
+      </ul>
+    </li>
+  )
+}
+
+/**
+ * UM GASTO: tipo, de quem foi, valor e a caixa do ressarcimento. A caixa é um
+ * botão de 44px (seção 6), e marcada diz quem marcou e quando — o carimbo é do
+ * servidor.
+ */
+function LinhaDoGasto({ gasto }: { gasto: LancamentoDeDespesa }) {
+  const marcar = useMarcarRessarcida()
+  const [erro, setErro] = useState<string | null>(null)
+  const ressarcida = gasto.ressarcidoEm !== null
+  const outraPessoaLancou = gasto.lancadoPorId !== null && gasto.lancadoPorId !== gasto.pessoaId
+
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+      <span className="min-w-0 flex-1">
+        <span className="font-medium">{ROTULO_TIPO[gasto.tipo]}</span>
+        {gasto.momento && (
+          <span className="ml-1.5 rounded bg-marca-suave px-1.5 py-0.5 text-xs font-medium">{ROTULO_MOMENTO[gasto.momento]}</span>
+        )}
+        <span className="mt-0.5 block text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">{gasto.pessoaNome ?? 'sem pessoa'}</span>
+          {outraPessoaLancou && gasto.lancadoPor && ` · lançado por ${gasto.lancadoPor}`}
+          {gasto.descricao && ` · ${gasto.descricao}`}
+        </span>
+        {erro && <span className="mt-0.5 block text-xs font-semibold text-atrasado">{erro}</span>}
+      </span>
+
+      <span className="font-semibold tabular-nums">{formatarMoeda(gasto.valor)}</span>
+
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={ressarcida}
+        disabled={marcar.isPending}
+        onClick={() => {
+          setErro(null)
+          marcar.mutate(
+            { despesaId: gasto.id, ressarcida: !ressarcida },
+            { onError: (e) => setErro(e instanceof Error ? e.message : String(e)) },
+          )
+        }}
+        title={
+          ressarcida
+            ? `Ressarcido em ${formatarData(gasto.ressarcidoEm) ?? ''}${gasto.ressarcidoPor ? ` por ${gasto.ressarcidoPor}` : ''}. Toque para desmarcar.`
+            : 'Marcar como ressarcido'
+        }
+        className={clsx(
+          'inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-xs font-bold transition-colors disabled:opacity-60',
+          ressarcida
+            ? 'border-concluido bg-concluido/10 text-concluido-tinta'
+            : 'border-border text-muted-foreground hover:border-marca/40 hover:text-foreground',
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={clsx(
+            'grid size-5 place-items-center rounded border',
+            ressarcida ? 'border-concluido bg-concluido text-white' : 'border-border bg-background',
+          )}
+        >
+          {ressarcida && <IconeCheck className="size-3.5" />}
+        </span>
+        {ressarcida ? 'Ressarcido' : 'Ressarcir'}
+      </button>
     </li>
   )
 }

@@ -68,6 +68,8 @@ const TABELAS = [
   // soma do mês deixando de valer alguma coisa.
   { nome: 'despesas' },
   { nome: 'despesas_por_caso', view: true },
+  // Uma linha por gasto, com nomes e ressarcimento (20261005060950).
+  { nome: 'despesas_detalhe', view: true },
   // A marca do sino (20260917215442). Ela guarda a que horas cada pessoa abriu
   // o app: leitura aberta a anon seria um relógio de presença da equipe
   // exposto na rua.
@@ -252,6 +254,8 @@ const RPCS_TRANSICAO = {
   definir_oferta_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_oferta: 'reels', p_fase: 'enviado' },
   // O retorno agendado do comercial (20261005055525).
   definir_retorno_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_retorno_em: null },
+  // O ressarcimento das despesas (20261005060950).
+  marcar_despesa_ressarcida: { p_despesa_id: '00000000-0000-0000-0000-000000000000', p_ressarcida: false },
   metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },
@@ -403,6 +407,8 @@ console.log(`Sondando ${alvo.url} como anon…\n`)
  */
 const FORMA = {
   despesas_por_caso: { chave: 'caso_id', coluna: 'total', valor: 0 },
+  // Tem `id`, mas não `created_at`.
+  despesas_detalhe: { chave: 'id', coluna: 'valor', valor: 0 },
   // Uma linha por PESSOA: a chave é pessoa_id, e não há `id`. Sem esta forma a
   // sonda recebia 42703 (coluna inexistente), que o Postgres devolve ANTES de
   // olhar permissão — e não dizia nada sobre o visitante ser barrado.

@@ -683,6 +683,8 @@ export interface DespesaResumo {
   registrado_em: string
   /** De quem foi o gasto. Null só se a pessoa sumir do cadastro. */
   pessoaNome: string | null
+  /** Quando o financeiro devolveu o gasto a quem pagou; nulo = a ressarcir. */
+  ressarcidaEm: string | null
 }
 
 /**
@@ -703,7 +705,7 @@ export function useDespesas(casoId: string, habilitado: boolean) {
           // O HINT DE FK É OBRIGATÓRIO AQUI: `despesas` aponta para `pessoas`
           // DUAS vezes (pessoa_id e registrado_por), e sem dizer qual delas o
           // PostgREST recusa a consulta inteira por ambiguidade.
-          'id, tipo, momento, valor, descricao, registrado_em, pessoa:pessoas!despesas_pessoa_id_fkey(nome)',
+          'id, tipo, momento, valor, descricao, registrado_em, ressarcido_em, pessoa:pessoas!despesas_pessoa_id_fkey(nome)',
         )
         .eq('caso_id', casoId)
         .order('registrado_em')
@@ -718,6 +720,7 @@ export function useDespesas(casoId: string, habilitado: boolean) {
         descricao: d.descricao,
         registrado_em: d.registrado_em,
         pessoaNome: d.pessoa?.nome ?? null,
+        ressarcidaEm: d.ressarcido_em,
       }))
     },
   })

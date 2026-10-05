@@ -423,6 +423,7 @@ remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirma
 -- despesas do caso (12/09/2026; ver seção 13)
 registrar_despesa(p_caso_id, p_tipo, p_valor, p_pessoa_id, p_momento, p_descricao)
 remover_despesa(p_despesa_id, p_motivo)                 -- não existe editar
+marcar_despesa_ressarcida(p_despesa_id, p_ressarcida)  -- o financeiro devolveu o gasto; tela Despesas (05/10/2026)
 restaurar_caso_cancelado_pelo_sync(p_caso_id, p_motivo) -- só o que o SYNC cancelou; atendimento/adm
 devolver_para_o_quadro(p_caso_id, p_motivo)             -- tira de Entregáveis; atendimento/adm
 liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
@@ -1712,16 +1713,17 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **A tela `/quadro/despesas`** é do `financeiro` e da `gestao` (desde 30/09/2026, a TELA
   Despesas, ver "TELAS POR PESSOA"; antes, `RotaDoFinanceiro`, guarda
   PRÓPRIA e não a `RotaDeGestao` com um papel a mais — juntar as duas abriria a Equipe para
-  o financeiro). Um mês por vez, com seta e não calendário; totais do mês; uma linha por caso
-  com a quebra por tipo; e **Exportar CSV** no formato que abre direto no Excel pt-BR (`;`
+  o financeiro). Um mês por vez, com seta e não calendário; totais do mês; os casos com os
+  gastos de cada um (ver o item seguinte); e **Exportar CSV** no formato que abre direto no Excel pt-BR (`;`
   como separador, vírgula decimal, BOM UTF-8 — sem os três o arquivo abre ilegível).
   **O MÊS É O DO ATENDIMENTO, não o do lançamento.** A planilha é por mês de parto: a corrida
   de um parto de setembro lançada em outubro, quando a fatura chegou, pertence a setembro.
   Filtrar pelo lançamento espalharia o gasto de um parto por dois meses.
-  **TODA SOMA DE MAIS DE UM CASO É DO BANCO.** `despesas_por_caso` devolve uma linha por
-  caso já somada e quebrada por tipo, e a tela pagina com `buscarTudo` mesmo sendo ~135
-  casos por mês: relatório é justamente a consulta que alguém um dia estica para o ano, e
-  sem paginação o PostgREST corta em mil e o total sai menor com cara de certo.
+  **TODA SOMA DE MAIS DE UM CASO ERA DO BANCO** (até 05/10/2026 — ver o item seguinte).
+  `despesas_por_caso` devolve uma linha por caso já somada e quebrada por tipo, e a tela
+  paginava com `buscarTudo` mesmo sendo ~135 casos por mês: relatório é justamente a consulta
+  que alguém um dia estica para o ano, e sem paginação o PostgREST corta em mil e o total sai
+  menor com cara de certo.
   `quadro_casos.total_despesas` traz o mesmo número para o card, sem consulta extra — ZERO
   e nunca nulo, para "sem despesa" não se confundir com "não carregou".
   **CANCELADOS ENTRAM NO RELATÓRIO**, com selo: é o gasto que não virou atendimento, e o
@@ -1736,6 +1738,31 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   lançar ali: é o último momento em que quem trabalhou lembra do Uber daquela madrugada.
   **O bloco NÃO TRAVA o envio** — despesa não é status do caso (invariante 3.5) e nem todo
   atendimento tem gasto.
+- **A PESSOA DE CADA GASTO E O RESSARCIMENTO** (05/10/2026, pedido do gestor, migration
+  `20261005060950`): "o nome da pessoa que lança a despesa no card vá para a aba de despesas"
+  e "um checkbox para o financeiro saber que já ressarciu o funcionário com aquele gasto".
+  **A TELA PASSOU A SER UMA LINHA POR GASTO**, agrupada por caso, lida da view
+  `despesas_detalhe` (`security_invoker`): o tipo, **DE QUEM FOI** (`pessoa_id`, quem recebe o
+  reembolso) e **"lançado por"** só quando outra pessoa digitou (`registrado_por`, o ADM
+  lançando pela fotógrafa). Somado por caso, o financeiro não via de quem era cada Uber —
+  justamente quem ele tem de pagar.
+  **A CAIXA "RESSARCIR"** em cada gasto (44px, `role=checkbox`) chama
+  `marcar_despesa_ressarcida`, da TELA Despesas — a tela dá o poder, como Relatórios e Equipe.
+  Carimba `despesas.ressarcido_em/_por` no servidor e **DESMARCA**: um clique errado não pode
+  virar pagamento registrado para sempre. As duas direções ficam em `eventos`
+  (`despesa_ressarcida`, `ressarcimento_desfeito`); marcar de novo não grava nada.
+  **GASTO RESSARCIDO NÃO SE APAGA** (trava em `remover_despesa`): o dinheiro saiu, e sumir com
+  o lançamento deixaria o financeiro sem o registro do que pagou. No card, a linha ganha o selo
+  "Ressarcida" e a lixeira apagada dizendo por quê; o financeiro desmarca antes.
+  **FILTROS DE PAGAMENTO:** além do tipo, "A ressarcir" / "Ressarcidas" e a PESSOA (as que têm
+  gasto no mês) — o caminho é escolher a pessoa, ver o que falta, pagar, marcar. Os cartões
+  ganharam "A ressarcir" e "Já ressarcido". O CSV virou uma linha por gasto, com de quem foi,
+  quem lançou e o ressarcimento.
+  **A SOMA AGORA É DO CLIENTE, e esta é a revisão da regra acima.** Com filtro por pessoa e
+  por ressarcimento, a soma pronta do banco teria de existir em cada combinação. O que a regra
+  protegia era o corte silencioso em mil linhas, e `buscarTudo` cobra a página contra o
+  `count` do servidor: a lista do mês vem INTEIRA, e somá-la é somar o mês. `despesas_por_caso`
+  ficou no banco, sem uso na tela.
 - **O vídeo horizontal do MASTER não segura o encerramento** (03/09/2026, migration
   `20260903153101`). Ele leva dez dias úteis e a família já recebeu fotos e reels; o cartão
   ficava semanas na lista do dia por causa dele. O caso encerra, o vídeo continua sendo
