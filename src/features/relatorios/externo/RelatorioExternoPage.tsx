@@ -34,6 +34,7 @@ import { EIXOS, METRICAS, type Eixo, type Metrica } from './grafico'
 import { GraficoDoRecorte } from './GraficoDoRecorte'
 import { PainelDeFiltros } from './PainelDeFiltros'
 import { SeletorDeOferta } from './SeletorDeOferta'
+import { RetornoDoCaso } from './RetornoDoCaso'
 import {
   POR_PAGINA,
   useBuscaDaOperacao,
@@ -103,7 +104,9 @@ export function RelatorioExternoPage() {
   const podeComercial = telas.has('comercial')
   const filtros = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
   const comercial = filtros.comercial === true
-  const ordem = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
+  const ordemPedida = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
+  // "Retorno mais próximo" só existe no modo comercial; fora dele, a padrão.
+  const ordem: Ordem = ordemPedida === 'retorno' && !comercial ? ORDEM_PADRAO : ordemPedida
   const pagina = Math.max(1, Number(params.get('pagina')) || 1)
   const visao: Visao = params.get('ver') === 'grafico' ? 'grafico' : 'casos'
   const eixo = (EIXOS.some((e) => e.id === params.get('eixo')) ? params.get('eixo') : 'tempo') as Eixo
@@ -227,6 +230,7 @@ export function RelatorioExternoPage() {
             total={total}
             periodo={filtros.de || filtros.ate ? `${filtros.de ? dataCurta(filtros.de) : '…'} a ${filtros.ate ? dataCurta(filtros.ate) : '…'}` : 'todo o período'}
             ordem={visao === 'casos' ? ordem : null}
+            comercial={comercial}
             onOrdenar={(o) => irPara({ ordem: o })}
             visao={visao}
             onTrocarVisao={(v) => irPara({ visao: v, pagina })}
@@ -326,6 +330,7 @@ function BuscaENumero({
   total,
   periodo,
   ordem,
+  comercial,
   onOrdenar,
   visao,
   onTrocarVisao,
@@ -339,6 +344,7 @@ function BuscaENumero({
   periodo: string
   /** Nula no gráfico: lá a ordem da lista não muda nada. */
   ordem: Ordem | null
+  comercial: boolean
   onOrdenar: (o: Ordem) => void
   visao: Visao
   onTrocarVisao: (v: Visao) => void
@@ -384,7 +390,7 @@ function BuscaENumero({
             alinhamento="direita"
             selecionado={ordem}
             onEscolher={(item) => onOrdenar(item.id as Ordem)}
-            itens={ORDENS.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+            itens={ORDENS.filter((o) => comercial || o.id !== 'retorno').map((o) => ({ id: o.id, rotulo: o.rotulo }))}
           />
         )}
         <Segmentado
@@ -771,6 +777,11 @@ function ListaDeCasos({
                   {tituloDaColuna(c)}
                 </th>
               ))}
+              {/* O RETORNO É A ÚLTIMA COLUNA (05/10/2026, pedido do gestor): à
+                  direita de tudo, onde o olho termina a linha. */}
+              {comercial && (
+                <th className="border-l border-border/60 px-3 py-3 font-semibold whitespace-nowrap text-marca">Retorno</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -814,6 +825,11 @@ function ListaDeCasos({
                     <CelulaDaColuna coluna={col} caso={c} filtros={filtros} />
                   </td>
                 ))}
+                {comercial && (
+                  <td className="border-l border-border/60 px-3 py-2 align-middle">
+                    <RetornoDoCaso casoId={c.id} nome={nome(c)} retorno={c.retornoComercial} podeMudar={podeMudarOfertas} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -846,6 +862,10 @@ function ListaDeCasos({
                         />
                       </span>
                     ))}
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    Retorno
+                    <RetornoDoCaso casoId={c.id} nome={nome(c)} retorno={c.retornoComercial} podeMudar={podeMudarOfertas} />
+                  </span>
                 </div>
               )}
               {colunas.length > 0 && (

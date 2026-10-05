@@ -438,6 +438,7 @@ tem_tela(p_tela)                                        -- helper das policies e
 
 -- o modo comercial do relatório externo (01/10/2026; ver seção 13)
 definir_oferta_comercial(p_caso_id, p_oferta, p_fase)   -- tela Comercial; vendido cria a etapa
+definir_retorno_comercial(p_caso_id, p_retorno_em)      -- tela Comercial; a data de voltar à família (05/10/2026)
 definir_foto_da_pessoa(p_pessoa_id, p_foto_path)        -- a Equipe troca a foto de outra pessoa
 
 -- relatório interno das pessoas (28/09/2026; ver seção 13) — SÓ GESTÃO, leitura
@@ -2416,8 +2417,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **O LINK NA COLUNA É CLICÁVEL, COM COPIAR; NA PLANILHA, SÓ O TIPO** (decisões do gestor): o
   link é a chave da galeria da família, e um arquivo encaminhado abriria todas. A busca devolve
   o endereço só da página da tela.
-  **TUDO NASCE FECHADO** no painel, o período inclusive (com o recorte no título); abre sozinho
-  só o grupo que chega com filtro marcado. Ordem dos grupos, do gestor: período, links, termo,
+  **TUDO NASCE FECHADO** no painel, MENOS O PERÍODO, que fica sempre aberto e sem seta desde
+  05/10/2026 (pedido do gestor; `Secao fixa`); abre sozinho só o grupo que chega com filtro
+  marcado. O atalho "Últimos 30 dias" virou **"Próximos 30 dias"** no mesmo dia ("fica
+  redundante" com o mês passado): com a agenda inteira no sistema, há partos marcados pela
+  frente, e nenhum atalho olhava para eles. Ordem dos grupos, do gestor: período, links, termo,
   situação, prazo, maternidade, pacote, quem fez, na etapa, equipamento, e o resto.
   **O MODO COMERCIAL** (01/10/2026, pedido do gestor, migration `20261001001607`). A planilha
   do atendimento em que o comercial controla o que já OFERECEU depois do parto virou um modo
@@ -2444,6 +2448,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   etapas já não seguram o encerramento nem saem do arquivo do Quadro. Só cria: voltar a fase
   não apaga etapa.
   **QUEM MUDA A FASE** é a tela Comercial; quem só tem Relatórios vê a pílula e não a abre.
+  **O RETORNO AGENDADO** (05/10/2026, pedido do gestor, migration `20261005055525`): a ÚLTIMA
+  coluna do modo comercial é a data de voltar a procurar a família que disse "agora não" — e,
+  "bem no futuro", a data de uma mensagem automática de WhatsApp, por isso é DATA e não texto.
+  UMA POR CASO (`retornos_comerciais`, escrita só por `definir_retorno_comercial`, com o antes e
+  o depois em `eventos`; nulo tira o retorno e apaga a linha). O diálogo tem atalhos (+7, +15,
+  +30 dias, +3 meses); a pílula fica vermelha vencida, âmbar de hoje a 7 dias. O filtro é por
+  SITUAÇÃO (`situacao_do_retorno`: vencido, hoje e próximos 7 dias, mais adiante, sem), e a
+  busca ganhou a ordem "Retorno mais próximo", só oferecida no modo comercial.
   Custo medido no local: as ofertas levaram as facetas de ~105ms para ~275ms no histórico
   inteiro; num mês, ~40ms.
   **Fica para as próximas voltas:** buscas salvas.

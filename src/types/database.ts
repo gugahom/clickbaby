@@ -1088,6 +1088,76 @@ export type Database = {
         }
         Relationships: []
       }
+      retornos_comerciais: {
+        Row: {
+          atualizado_por: string
+          caso_id: string
+          created_at: string
+          id: string
+          retorno_em: string
+          updated_at: string
+        }
+        Insert: {
+          atualizado_por: string
+          caso_id: string
+          created_at?: string
+          id?: string
+          retorno_em: string
+          updated_at?: string
+        }
+        Update: {
+          atualizado_por?: string
+          caso_id?: string
+          created_at?: string
+          id?: string
+          retorno_em?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retornos_comerciais_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retornos_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retornos_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "retornos_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "retornos_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retornos_comerciais_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       despesas_por_caso: {
@@ -1176,6 +1246,7 @@ export type Database = {
           prazo: string | null
           previsao_em: string | null
           reaberto: boolean | null
+          retorno_comercial: string | null
           situacao: string | null
           termo: string | null
           teve_handoff: boolean | null
@@ -1358,6 +1429,10 @@ export type Database = {
           p_item: Database["public"]["Enums"]["item_de_pontuacao"]
           p_pontos: number
         }
+        Returns: undefined
+      }
+      definir_retorno_comercial: {
+        Args: { p_caso_id: string; p_retorno_em: string }
         Returns: undefined
       }
       devolver_para_o_quadro: {
@@ -1650,6 +1725,7 @@ export type Database = {
           m_pacotes: boolean
           m_prazos: boolean
           m_reaberto: boolean
+          m_retorno: boolean
           m_situacoes: boolean
           m_termos: boolean
           m_trabalho: boolean
@@ -1772,6 +1848,7 @@ export type Database = {
         Returns: undefined
       }
       retornar_da_uti: { Args: { p_caso_id: string }; Returns: undefined }
+      situacao_do_retorno: { Args: { p_data: string }; Returns: string }
       somar_dias_uteis: {
         Args: { p_dias: number; p_inicio: string }
         Returns: string

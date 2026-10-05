@@ -57,6 +57,7 @@ const TABELAS = [
   { nome: 'entregaveis' },
   { nome: 'escalas' },
   { nome: 'ofertas_comerciais' },
+  { nome: 'retornos_comerciais' },
   { nome: 'padroes_tempo' },
   { nome: 'pontos_por_item' },
   { nome: 'operacao_dos_casos', view: true },
@@ -249,6 +250,8 @@ const RPCS_TRANSICAO = {
   metricas_plantoes_por_pessoa: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   // O modo comercial do relatório externo (20261001001607).
   definir_oferta_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_oferta: 'reels', p_fase: 'enviado' },
+  // O retorno agendado do comercial (20261005055525).
+  definir_retorno_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_retorno_em: null },
   metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
   padroes_de_tempo: {},
   definir_padrao_de_tempo: { p_etapa_tipo: 'reels', p_minutos: null },

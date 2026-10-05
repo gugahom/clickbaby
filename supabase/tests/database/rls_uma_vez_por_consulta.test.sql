@@ -33,9 +33,10 @@ select is(
       and (qual ~ '(eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()'
            or with_check ~ '(eh_(pessoa_ativa|adm|atendimento)\(\)|tem_tela\()')),
   -- Desde 30/09/2026, duas delas (pessoas e escalas) usam tem_tela('equipe'), e
-  -- a leitura de ofertas_comerciais usa tem_tela('comercial'/'relatorios').
-  20,
-  'U2: as 20 policies que usam os helpers continuam lá');
+  -- a leitura de ofertas_comerciais e de retornos_comerciais usa
+  -- tem_tela('comercial'/'relatorios').
+  21,
+  'U2: as 21 policies que usam os helpers continuam lá');
 
 -- 3. O PLANO mostra a diferença: a consulta do Quadro, como o app a faz, não
 --    tem mais a função como filtro linha a linha — ela aparece como InitPlan.
