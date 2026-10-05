@@ -70,7 +70,7 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       'Equipamento',
       // No modo comercial, a fase de cada oferta (01/10/2026) — a planilha que o
       // comercial usava, de volta ao Excel quando ele quiser.
-      ...(f.comercial ? OFERTAS.map((o) => `Oferta de ${o.rotulo}`) : []),
+      ...(f.comercial ? [...OFERTAS.map((o) => `Oferta de ${o.rotulo}`), 'Retorno agendado'] : []),
     ],
     casos.map((c) => [
       c.dia ? dataCurta(c.dia) : '',
@@ -95,6 +95,7 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
             return fase ? ROTULO_FASE_COMERCIAL[fase] : 'Não se aplica'
           })
         : []),
+      ...(f.comercial ? [c.retornoComercial ? dataCurta(c.retornoComercial) : ''] : []),
     ]),
   )
   baixarCsv(nomeDoArquivo(f, f.comercial ? '_comercial' : ''), csv)

@@ -37,6 +37,7 @@ export type GrupoDeLista =
   | 'oferta_reels'
   | 'oferta_new_born'
   | 'oferta_fotolivro'
+  | 'retorno'
 
 export type GrupoSimNao = 'uti' | 'handoff' | 'reaberto' | 'avaliado' | 'com_despesa'
 
@@ -83,6 +84,7 @@ export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
   'oferta_reels',
   'oferta_new_born',
   'oferta_fotolivro',
+  'retorno',
 ]
 
 export const GRUPOS_SIM_NAO: GrupoSimNao[] = ['uti', 'handoff', 'reaberto', 'avaliado', 'com_despesa']
@@ -104,6 +106,7 @@ export const TITULO_DO_GRUPO: Record<GrupoDeLista | GrupoSimNao, string> = {
   oferta_reels: 'Oferta de Reels',
   oferta_new_born: 'Oferta de New Born',
   oferta_fotolivro: 'Oferta de Foto/Livro',
+  retorno: 'Retorno agendado',
   uti: 'Passou pela UTI',
   handoff: 'Teve passagem de turno',
   reaberto: 'Voltou para ajuste',
@@ -159,6 +162,13 @@ const OPCOES_DA_OFERTA = FASES_COMERCIAIS.map((f) => ({ valor: f, rotulo: ROTULO
 
 export const OPCOES_FIXAS: Partial<Record<GrupoDeLista, { valor: string; rotulo: string }[]>> = {
   oferta_birth: OPCOES_DA_OFERTA,
+  // O RETORNO AGENDADO (05/10/2026), por situação — "quem eu procuro hoje".
+  retorno: [
+    { valor: 'vencido', rotulo: 'Retorno vencido' },
+    { valor: 'proximos', rotulo: 'Hoje e próximos 7 dias' },
+    { valor: 'depois', rotulo: 'Mais adiante' },
+    { valor: 'sem', rotulo: 'Sem retorno' },
+  ],
   oferta_reels: OPCOES_DA_OFERTA,
   oferta_new_born: OPCOES_DA_OFERTA,
   oferta_fotolivro: OPCOES_DA_OFERTA,
@@ -222,7 +232,7 @@ export function rotuloDoEquipamento(valor: string): string {
   return valor
 }
 
-export type Ordem = 'recentes' | 'antigos' | 'mais_horas' | 'mais_despesas' | 'maternidade'
+export type Ordem = 'recentes' | 'antigos' | 'mais_horas' | 'mais_despesas' | 'maternidade' | 'retorno'
 
 /** O padrão da tela desde 30/09/2026 (pedido do gestor): do mais antigo ao mais recente. */
 export const ORDEM_PADRAO: Ordem = 'antigos'
@@ -233,6 +243,8 @@ export const ORDENS: { id: Ordem; rotulo: string }[] = [
   { id: 'mais_horas', rotulo: 'Mais horas até o envio' },
   { id: 'mais_despesas', rotulo: 'Mais despesas' },
   { id: 'maternidade', rotulo: 'Maternidade' },
+  // Só no modo comercial (a tela tira fora dele): o retorno mais próximo primeiro.
+  { id: 'retorno', rotulo: 'Retorno mais próximo' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -378,6 +390,7 @@ type GrupoDeColuna = Exclude<
   | 'oferta_reels'
   | 'oferta_new_born'
   | 'oferta_fotolivro'
+  | 'retorno'
 >
 
 export type ColunaDoFiltro =
@@ -394,8 +407,8 @@ export function colunasDosFiltros(f: FiltrosDaOperacao): ColunaDoFiltro[] {
       for (const l of f.listas.links) if (l !== 'nenhum') colunas.push({ tipo: 'link', link: l as TipoDeLink })
     } else if (g === 'pessoas' || g === 'etapas') {
       if (!colunas.some((c) => c.tipo === 'trabalho')) colunas.push({ tipo: 'trabalho' })
-    } else if (g === 'maternidades' || g === 'pacotes' || g.startsWith('oferta_')) {
-      // As ofertas já são colunas fixas no modo comercial.
+    } else if (g === 'maternidades' || g === 'pacotes' || g.startsWith('oferta_') || g === 'retorno') {
+      // As ofertas e o retorno já são colunas fixas no modo comercial.
       continue
     } else if (g === 'horas' || g === 'despesa') {
       colunas.push({ tipo: 'faixa', faixa: g })

@@ -98,6 +98,7 @@ export function PainelDeFiltros({
           — a oferta só existe nos partos. */}
       {filtros.comercial && (
         <>
+          {lista('retorno')}
           {lista('oferta_birth')}
           {lista('oferta_reels')}
           {lista('oferta_new_born')}
@@ -169,6 +170,7 @@ function Secao({
   contagem = 0,
   resumo,
   onLimpar,
+  fixa = false,
   children,
 }: {
   titulo: string
@@ -176,11 +178,22 @@ function Secao({
   /** Uma linha miúda sob o título, para dizer o que vale sem abrir (o período). */
   resumo?: string | undefined
   onLimpar?: (() => void) | undefined
+  /** Sempre aberta, sem a seta — o período (05/10/2026, pedido do gestor). */
+  fixa?: boolean
   children: ReactNode
 }) {
   // Grupo com filtro marcado abre sozinho: fechado, esconderia justamente o
   // que está recortando a lista.
-  const [aberto, setAberto] = useState(contagem > 0)
+  const [abertoAgora, setAberto] = useState(contagem > 0)
+  const aberto = fixa || abertoAgora
+  if (fixa) {
+    return (
+      <section className="px-4 py-3">
+        <h3 className="flex min-h-9 items-center text-sm font-bold text-foreground">{titulo}</h3>
+        <div className="pt-1">{children}</div>
+      </section>
+    )
+  }
   return (
     <section className="px-4 py-3">
       <div className="flex items-center gap-2">
@@ -391,19 +404,23 @@ function Periodo({
   const atalhos: { rotulo: string; de?: string; ate?: string }[] = [
     { rotulo: 'Este mês', ...intervalo(periodoDoMes(mes)) },
     { rotulo: 'Mês passado', ...intervalo(periodoDoMes(deslocarMes(mes, -1))) },
-    { rotulo: 'Últimos 30 dias', de: somarDias(hoje, -29), ate: hoje },
+    // "PRÓXIMOS 30 DIAS" no lugar de "últimos 30 dias" (05/10/2026, pedido do
+    // gestor: "fica um pouco redundante" com o mês passado). Desde que a agenda
+    // inteira entra no sistema, há partos marcados pela frente, e nenhum atalho
+    // olhava para eles.
+    { rotulo: 'Próximos 30 dias', de: hoje, ate: somarDias(hoje, 29) },
     { rotulo: 'Este ano', de: `${hoje.slice(0, 4)}-01-01`, ate: `${hoje.slice(0, 4)}-12-31` },
     { rotulo: 'Tudo' },
   ]
-  // Só UM atalho acende: em 30 de setembro "este mês" e "últimos 30 dias" são o
-  // mesmo intervalo, e dois botões acesos parecem dois filtros somados.
+  // Só UM atalho acende: dois intervalos iguais (pode acontecer na virada do
+  // mês) com dois botões acesos parecem dois filtros somados.
   const ativo = atalhos.find((a) => (a.de ?? '') === (filtros.de ?? '') && (a.ate ?? '') === (filtros.ate ?? ''))
   const campoDeData = 'h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm tabular-nums'
   const resumo = ativo
     ? ativo.rotulo
     : `${filtros.de ? dataCurta(filtros.de) : '…'} a ${filtros.ate ? dataCurta(filtros.ate) : '…'}`
   return (
-    <Secao titulo="Período do atendimento" resumo={resumo}>
+    <Secao titulo="Período do atendimento" resumo={resumo} fixa>
       <div className="space-y-2.5">
         <div className="flex flex-wrap gap-1.5">
           {atalhos.map((a) => {

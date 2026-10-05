@@ -54,6 +54,8 @@ export interface CasoDaOperacao {
   ofertas: Record<OfertaComercial, FaseComercial | null>
   /** BIRTH ou BIRTH + REELS: onde o comercial pode ABRIR New Born e Foto/Livro. */
   ehBirth: boolean
+  /** 'YYYY-MM-DD' do retorno agendado pelo comercial, ou nulo. */
+  retornoComercial: string | null
 }
 
 export interface PaginaDaOperacao {
@@ -125,7 +127,18 @@ function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
       return { birth: o.birth ?? null, reels: o.reels ?? null, new_born: o.new_born ?? null, fotolivro: o.fotolivro ?? null }
     })(),
     ehBirth: (l.ofertas as { eh_birth?: boolean } | null)?.eh_birth === true,
+    retornoComercial: (l.ofertas as { retorno?: string | null } | null)?.retorno ?? null,
   }
+}
+
+/** AGENDAR, TROCAR OU TIRAR O RETORNO de um parto (05/10/2026). Nulo tira. */
+export function useDefinirRetorno() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ casoId, retorno }: { casoId: string; retorno: string | null }) =>
+      chamar(supabase.rpc('definir_retorno_comercial', { p_caso_id: casoId, p_retorno_em: retorno as string })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['operacao'] }),
+  })
 }
 
 /**

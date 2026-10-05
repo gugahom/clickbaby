@@ -7,6 +7,8 @@
 --   A1 — a tela Comercial abre o relatório externo inteiro, e não abre o
 --        relatório interno; sem a tela, não muda fase.
 --   R1 — o caso raro: New Born aberto num BIRTH; e o BIRTH vendido não cria etapa.
+--   T1 — o retorno agendado: só a tela Comercial; filtro por situação; a ordem
+--        "retorno mais próximo"; tirar o retorno apaga a linha e fica no histórico.
 --   F1 — mudar a fase grava a linha e o evento; repetir a mesma fase não grava.
 --   V1 — VENDIDO no New Born cria a etapa Click Home, mesmo no caso encerrado,
 --        sem reabri-lo; e a oferta continua "vendido" com a etapa já criada.
@@ -15,7 +17,7 @@
 -- Os casos moram em JUNHO DE 2029, longe dos fictícios e dos outros testes.
 
 begin;
-select plan(19);
+select plan(25);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 select gen_random_uuid(), e, 'authenticated', 'authenticated', now(), now()
@@ -168,6 +170,46 @@ select is(
 );
 select pg_temp.sair();
 select is(pg_temp.ofertas('MC Birth'), 'vendido/-/apresentar/-', 'R1: o New Born aberto passa a aparecer só nesse BIRTH');
+
+
+-- =============================================================================
+-- T1. O retorno agendado
+-- =============================================================================
+
+select pg_temp.como('mc.coord@clickbaby.test');
+select throws_ok(
+  format($$ select public.definir_retorno_comercial(%L, current_date + 3) $$, pg_temp.caso('MC Basic')),
+  'P0001', 'Só quem tem a tela Comercial agenda o retorno.',
+  'T1: sem a tela Comercial, não agenda'
+);
+select pg_temp.sair();
+
+select pg_temp.como('mc.comercial@clickbaby.test');
+select lives_ok(
+  format($$ select public.definir_retorno_comercial(%L, (now() at time zone 'America/Sao_Paulo')::date + 3) $$, pg_temp.caso('MC Basic')),
+  'T1: o comercial agenda o retorno'
+);
+select is(
+  pg_temp.maes('{"comercial": true, "retorno": ["proximos"]}'), 'MC Basic',
+  'T1: o filtro "hoje e próximos 7 dias" acha o retorno'
+);
+select is(
+  (select mae_nome from public.operacao_buscar(
+     '{"comercial": true, "de": "2029-06-01", "ate": "2029-06-30"}'::jsonb, 'retorno') limit 1),
+  'MC Basic',
+  'T1: na ordem "retorno mais próximo", ele vem primeiro'
+);
+select lives_ok(
+  format($$ select public.definir_retorno_comercial(%L, null) $$, pg_temp.caso('MC Basic')),
+  'T1: tirar o retorno'
+);
+select pg_temp.sair();
+select is(
+  (select (select count(*) from public.retornos_comerciais where caso_id = pg_temp.caso('MC Basic'))::text || ':'
+       || (select count(*) from public.eventos where caso_id = pg_temp.caso('MC Basic') and tipo = 'retorno_comercial')::text),
+  '0:2',
+  'T1: sem linha na agenda, e as duas mudanças no histórico'
+);
 
 select * from finish();
 rollback;
