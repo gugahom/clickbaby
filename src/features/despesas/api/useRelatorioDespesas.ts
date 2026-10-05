@@ -15,6 +15,19 @@ type TipoDespesa = Database['public']['Enums']['tipo_despesa']
 type MomentoDespesa = Database['public']['Enums']['momento_despesa']
 
 /**
+ * SÓ REFEIÇÃO E "OUTRO" SE RESSARCEM (05/10/2026, correção do gestor). O Uber
+ * não passa por ressarcimento, e não ganha caixa nem entra no "A ressarcir".
+ * Espelho da constraint `despesas_so_refeicao_e_outro_se_ressarcem` e da trava
+ * de `marcar_despesa_ressarcida` (migration 20261005063038): muda nos dois ou
+ * em nenhum.
+ */
+export const TIPOS_RESSARCIVEIS: readonly TipoDespesa[] = ['refeicao', 'outro']
+
+export function seRessarce(tipo: TipoDespesa): boolean {
+  return TIPOS_RESSARCIVEIS.includes(tipo)
+}
+
+/**
  * UM GASTO, COM OS NOMES (05/10/2026, pedido do gestor: "o nome da pessoa que
  * lança a despesa no card vá para a aba de despesas junto com a sua despesa").
  * `pessoaNome` é DE QUEM FOI o gasto — quem o financeiro ressarce; `lancadoPor`

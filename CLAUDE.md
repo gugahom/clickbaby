@@ -1751,6 +1751,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   Carimba `despesas.ressarcido_em/_por` no servidor e **DESMARCA**: um clique errado não pode
   virar pagamento registrado para sempre. As duas direções ficam em `eventos`
   (`despesa_ressarcida`, `ressarcimento_desfeito`); marcar de novo não grava nada.
+  **SÓ REFEIÇÃO E "OUTRO" SE RESSARCEM** (mesmo dia, correção do gestor, migration
+  `20261005063038`): o Uber não passa por ressarcimento. A linha dele mostra "não se ressarce"
+  no lugar da caixa e fica fora do "A ressarcir" e do filtro; o banco recusa na RPC e na
+  constraint `despesas_so_refeicao_e_outro_se_ressarcem`. A lista é `TIPOS_RESSARCIVEIS` na
+  tela, e muda nos dois lados ou em nenhum. Desmarcar segue aceito em qualquer tipo.
   **GASTO RESSARCIDO NÃO SE APAGA** (trava em `remover_despesa`): o dinheiro saiu, e sumir com
   o lançamento deixaria o financeiro sem o registro do que pagou. No card, a linha ganha o selo
   "Ressarcida" e a lixeira apagada dizendo por quê; o financeiro desmarca antes.
