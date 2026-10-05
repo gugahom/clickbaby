@@ -378,6 +378,8 @@ export type Database = {
           pessoa_id: string
           registrado_em: string
           registrado_por: string
+          ressarcido_em: string | null
+          ressarcido_por: string | null
           tipo: Database["public"]["Enums"]["tipo_despesa"]
           updated_at: string
           valor: number
@@ -391,6 +393,8 @@ export type Database = {
           pessoa_id: string
           registrado_em?: string
           registrado_por: string
+          ressarcido_em?: string | null
+          ressarcido_por?: string | null
           tipo: Database["public"]["Enums"]["tipo_despesa"]
           updated_at?: string
           valor: number
@@ -404,6 +408,8 @@ export type Database = {
           pessoa_id?: string
           registrado_em?: string
           registrado_por?: string
+          ressarcido_em?: string | null
+          ressarcido_por?: string | null
           tipo?: Database["public"]["Enums"]["tipo_despesa"]
           updated_at?: string
           valor?: number
@@ -454,6 +460,13 @@ export type Database = {
           {
             foreignKeyName: "despesas_registrado_por_fkey"
             columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_ressarcido_por_fkey"
+            columns: ["ressarcido_por"]
             isOneToOne: false
             referencedRelation: "pessoas"
             referencedColumns: ["id"]
@@ -1160,6 +1173,82 @@ export type Database = {
       }
     }
     Views: {
+      despesas_detalhe: {
+        Row: {
+          bebe_nome: string | null
+          caso_id: string | null
+          descricao: string | null
+          dia: string | null
+          id: string | null
+          mae_nome: string | null
+          maternidade_sigla: string | null
+          momento: Database["public"]["Enums"]["momento_despesa"] | null
+          pacote_nome: string | null
+          pessoa_id: string | null
+          pessoa_nome: string | null
+          registrado_em: string | null
+          registrado_por: string | null
+          registrado_por_nome: string | null
+          ressarcido_em: string | null
+          ressarcido_por_nome: string | null
+          status_operacional:
+            | Database["public"]["Enums"]["status_operacional"]
+            | null
+          tipo: Database["public"]["Enums"]["tipo_despesa"] | null
+          valor: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       despesas_por_caso: {
         Row: {
           bebe_nome: string | null
@@ -1501,6 +1590,10 @@ export type Database = {
       lista_do_filtro: {
         Args: { p_chave: string; p_filtros: Json }
         Returns: string[]
+      }
+      marcar_despesa_ressarcida: {
+        Args: { p_despesa_id: string; p_ressarcida: boolean }
+        Returns: undefined
       }
       marcar_fotolivro_enviado: {
         Args: { p_caso_etapa_id: string }

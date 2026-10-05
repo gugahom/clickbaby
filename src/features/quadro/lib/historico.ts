@@ -12,6 +12,7 @@ import {
   type TermoStatus,
 } from '../types'
 import { ROTULO_TERMO } from './termo'
+import { formatarMoeda } from '@/lib/formato'
 
 export interface EventoHistorico {
   id: string
@@ -284,6 +285,18 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
 
     case 'fotolivro_enviado_ao_cliente':
       return { ...base, acao: 'Enviou a prova do Foto/Livro ao cliente', tom: 'marco' }
+
+    // O ressarcimento da despesa (05/10/2026), marcado pelo financeiro.
+    case 'despesa_ressarcida':
+    case 'ressarcimento_desfeito': {
+      const valor = evento.payload?.['valor']
+      return {
+        ...base,
+        acao: evento.tipo === 'despesa_ressarcida' ? 'Marcou uma despesa como ressarcida' : 'Desfez o ressarcimento de uma despesa',
+        tom: 'normal',
+        ...(typeof valor === 'number' ? { detalhe: formatarMoeda(valor) } : {}),
+      }
+    }
 
     default:
       // Evento novo no backend: aparece feio, mas aparece.

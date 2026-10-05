@@ -162,6 +162,14 @@ function LinhaDeDespesa({
         {despesa.descricao ? ` · ${despesa.descricao}` : ''}
       </span>
 
+      {/* O financeiro marca na tela de Despesas (05/10/2026); aqui a fotógrafa
+          só vê que o gasto dela já voltou. */}
+      {despesa.ressarcidaEm && (
+        <span className="rounded-full bg-concluido/15 px-2 py-0.5 text-xs font-semibold text-concluido-tinta">
+          Ressarcida
+        </span>
+      )}
+
       {/* tabular-nums: numa lista de valores, os centavos alinhados são o que
           deixa a conferência ser leitura em vez de contagem. */}
       <span className="font-semibold tabular-nums">{formatarMoeda(despesa.valor)}</span>
@@ -169,7 +177,9 @@ function LinhaDeDespesa({
       <BotaoIcone
         rotulo="Apagar despesa"
         tom="pendencia"
-        disabled={remover.isPending}
+        // Ressarcida não se apaga: o dinheiro saiu, e o banco recusa também.
+        disabled={remover.isPending || despesa.ressarcidaEm !== null}
+        {...(despesa.ressarcidaEm ? { motivo: 'já foi ressarcida; o financeiro desmarca antes' } : {})}
         onClick={() => setConfirmando(true)}
       >
         <IconeLixeira className="size-4" />
