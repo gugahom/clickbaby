@@ -5,7 +5,7 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { IconeCheck } from '@/components/ui/icones'
 import { formatarData, formatarMoeda, hojeNoFuso } from '@/lib/formato'
 import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
-import { useLancamentosDoMes, useMarcarRessarcida, type LancamentoDeDespesa } from './api/useRelatorioDespesas'
+import { seRessarce, useLancamentosDoMes, useMarcarRessarcida, type LancamentoDeDespesa } from './api/useRelatorioDespesas'
 
 /** '2026-09' -> 'setembro de 2026'. Meio-dia UTC para nenhum fuso empurrar o mês. */
 function rotuloDoMes(mes: string): string {
@@ -52,6 +52,11 @@ const ROTULO_MOMENTO: Record<NonNullable<LancamentoDeDespesa['momento']>, string
 
 type Situacao = 'todas' | 'a_ressarcir' | 'ressarcidas'
 
+/** O gasto que o financeiro ainda deve devolver: refeição ou "outro", sem marca. */
+function aRessarcirDe(l: LancamentoDeDespesa): boolean {
+  return seRessarce(l.tipo) && l.ressarcidoEm === null
+}
+
 /** '2026-09-10' -> '10/09'. */
 function diaCurto(dia: string): string {
   const [, m, d] = dia.split('-')
@@ -72,6 +77,8 @@ function diaCurto(dia: string): string {
  * lista os gastos dele: o tipo, DE QUEM FOI (quem recebe o reembolso; "lançado
  * por" aparece só quando outra pessoa digitou, como o ADM pela fotógrafa), o
  * valor e a caixa "Ressarcido", que carimba quem marcou e quando, e desmarca.
+ * A caixa só existe na REFEIÇÃO e no "OUTRO" — o Uber não se ressarce (correção
+ * do gestor no mesmo dia; ver `TIPOS_RESSARCIVEIS`).
  * Os filtros de SITUAÇÃO (a ressarcir) e de PESSOA são o caminho do pagamento:
  * escolhe a pessoa, vê o que falta, paga, marca.
  *
@@ -94,7 +101,7 @@ export function DespesasPage() {
   const lista = todos.filter(
     (l) =>
       (tipos.length === 0 || tipos.includes(l.tipo)) &&
-      (situacao === 'todas' || (situacao === 'a_ressarcir') === (l.ressarcidoEm === null)) &&
+      (situacao === 'todas' || (situacao === 'a_ressarcir' ? aRessarcirDe(l) : l.ressarcidoEm !== null)) &&
       (pessoaId === '' || l.pessoaId === pessoaId),
   )
   const filtrando = tipos.length > 0 || situacao !== 'todas' || pessoaId !== ''
@@ -106,7 +113,7 @@ export function DespesasPage() {
 
   const soma = (f: (l: LancamentoDeDespesa) => boolean) => lista.filter(f).reduce((acc, l) => acc + l.valor, 0)
   const total = soma(() => true)
-  const aRessarcir = soma((l) => l.ressarcidoEm === null)
+  const aRessarcir = soma(aRessarcirDe)
 
   // Agrupado por caso, na ordem que veio do banco (dia, caso).
   const casos: { casoId: string; linhas: LancamentoDeDespesa[] }[] = []
@@ -138,7 +145,7 @@ export function DespesasPage() {
         numeroParaCsv(l.valor),
         l.pessoaNome ?? '',
         l.lancadoPor ?? '',
-        l.ressarcidoEm ? 'Sim' : 'Não',
+        seRessarce(l.tipo) ? (l.ressarcidoEm ? 'Sim' : 'Não') : 'Não se ressarce',
         l.ressarcidoEm ? (formatarData(l.ressarcidoEm) ?? '') : '',
         l.ressarcidoPor ?? '',
       ]),
@@ -229,8 +236,8 @@ export function DespesasPage() {
 
           <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
             <Numero rotulo={filtrando ? 'Total do filtro' : 'Total do mês'} valor={formatarMoeda(total)} destaque />
-            <Numero rotulo="A ressarcir" valor={formatarMoeda(aRessarcir)} alerta={aRessarcir > 0} />
-            <Numero rotulo="Já ressarcido" valor={formatarMoeda(total - aRessarcir)} />
+            <Numero rotulo="A ressarcir" valor={formatarMoeda(aRessarcir)} nota="refeição e outros" alerta={aRessarcir > 0} />
+            <Numero rotulo="Já ressarcido" valor={formatarMoeda(soma((l) => l.ressarcidoEm !== null))} />
             <Numero rotulo="Uber" valor={formatarMoeda(soma((l) => l.tipo === 'uber_ida' || l.tipo === 'uber_volta'))} />
             <Numero rotulo="Refeição" valor={formatarMoeda(soma((l) => l.tipo === 'refeicao'))} />
             <Numero rotulo="Outros" valor={formatarMoeda(soma((l) => l.tipo === 'outro'))} />
@@ -284,11 +291,13 @@ function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => voi
 function Numero({
   rotulo,
   valor,
+  nota,
   destaque = false,
   alerta = false,
 }: {
   rotulo: string
   valor: string
+  nota?: string
   destaque?: boolean
   alerta?: boolean
 }) {
@@ -303,6 +312,7 @@ function Numero({
       <div className={clsx('mt-0.5 font-bold tabular-nums', destaque ? 'text-xl' : 'text-base', alerta && 'text-atencao-tinta')}>
         {valor}
       </div>
+      {nota && <div className="text-[11px] leading-tight text-muted-foreground">{nota}</div>}
     </div>
   )
 }
@@ -372,41 +382,49 @@ function LinhaDoGasto({ gasto }: { gasto: LancamentoDeDespesa }) {
 
       <span className="font-semibold tabular-nums">{formatarMoeda(gasto.valor)}</span>
 
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={ressarcida}
-        disabled={marcar.isPending}
-        onClick={() => {
-          setErro(null)
-          marcar.mutate(
-            { despesaId: gasto.id, ressarcida: !ressarcida },
-            { onError: (e) => setErro(e instanceof Error ? e.message : String(e)) },
-          )
-        }}
-        title={
-          ressarcida
-            ? `Ressarcido em ${formatarData(gasto.ressarcidoEm) ?? ''}${gasto.ressarcidoPor ? ` por ${gasto.ressarcidoPor}` : ''}. Toque para desmarcar.`
-            : 'Marcar como ressarcido'
-        }
-        className={clsx(
-          'inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-xs font-bold transition-colors disabled:opacity-60',
-          ressarcida
-            ? 'border-concluido bg-concluido/10 text-concluido-tinta'
-            : 'border-border text-muted-foreground hover:border-marca/40 hover:text-foreground',
-        )}
-      >
-        <span
-          aria-hidden="true"
+      {seRessarce(gasto.tipo) ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={ressarcida}
+          disabled={marcar.isPending}
+          onClick={() => {
+            setErro(null)
+            marcar.mutate(
+              { despesaId: gasto.id, ressarcida: !ressarcida },
+              { onError: (e) => setErro(e instanceof Error ? e.message : String(e)) },
+            )
+          }}
+          title={
+            ressarcida
+              ? `Ressarcido em ${formatarData(gasto.ressarcidoEm) ?? ''}${gasto.ressarcidoPor ? ` por ${gasto.ressarcidoPor}` : ''}. Toque para desmarcar.`
+              : 'Marcar como ressarcido'
+          }
           className={clsx(
-            'grid size-5 place-items-center rounded border',
-            ressarcida ? 'border-concluido bg-concluido text-white' : 'border-border bg-background',
+            'inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-xs font-bold transition-colors disabled:opacity-60',
+            ressarcida
+              ? 'border-concluido bg-concluido/10 text-concluido-tinta'
+              : 'border-border text-muted-foreground hover:border-marca/40 hover:text-foreground',
           )}
         >
-          {ressarcida && <IconeCheck className="size-3.5" />}
+          <span
+            aria-hidden="true"
+            className={clsx(
+              'grid size-5 place-items-center rounded border',
+              ressarcida ? 'border-concluido bg-concluido text-white' : 'border-border bg-background',
+            )}
+          >
+            {ressarcida && <IconeCheck className="size-3.5" />}
+          </span>
+          {ressarcida ? 'Ressarcido' : 'Ressarcir'}
+        </button>
+      ) : (
+        // Sem caixa: o Uber não se ressarce. O espaço fica, para os valores
+        // continuarem alinhados com os das linhas que têm caixa.
+        <span className="inline-flex min-h-11 w-[7.5rem] items-center justify-center text-xs text-muted-foreground">
+          não se ressarce
         </span>
-        {ressarcida ? 'Ressarcido' : 'Ressarcir'}
-      </button>
+      )}
     </li>
   )
 }

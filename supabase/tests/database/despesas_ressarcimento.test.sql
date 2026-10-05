@@ -5,9 +5,11 @@
 --   R1 — só a tela Despesas marca; marcar carimba quem e quando; marcar de
 --        novo não grava outro evento; ninguém escreve na coluna direto.
 --   R2 — gasto ressarcido não se apaga; desmarcado, apaga.
+--   R3 — só refeição e "outro" se ressarcem (20261005063038): o Uber é
+--        recusado pela RPC e pela constraint.
 
 begin;
-select plan(10);
+select plan(13);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 select gen_random_uuid(), e, 'authenticated', 'authenticated', now(), now()
@@ -40,13 +42,16 @@ begin
 end;
 $$;
 create function pg_temp.caso() returns uuid language sql as $$ select id from public.casos where mae_nome = 'Mae DR'; $$;
-create function pg_temp.despesa() returns uuid language sql as $$ select id from public.despesas where caso_id = pg_temp.caso(); $$;
+create function pg_temp.despesa() returns uuid language sql as $$ select id from public.despesas where caso_id = pg_temp.caso() and tipo = 'refeicao'; $$;
+create function pg_temp.uber() returns uuid language sql as $$ select id from public.despesas where caso_id = pg_temp.caso() and tipo = 'uber_ida'; $$;
 create function pg_temp.pessoa(p_nome text) returns uuid language sql as $$ select id from public.pessoas where nome = p_nome; $$;
 grant execute on function pg_temp.caso() to authenticated;
 grant execute on function pg_temp.despesa() to authenticated;
+grant execute on function pg_temp.uber() to authenticated;
 
--- O ADM lança o Uber da fotógrafa.
+-- O ADM lança a refeição e o Uber da fotógrafa.
 select pg_temp.como('dr.adm@clickbaby.test');
+select public.registrar_despesa(pg_temp.caso(), 'refeicao', 35.00, pg_temp.pessoa('DR Foto'));
 select public.registrar_despesa(pg_temp.caso(), 'uber_ida', 22.50, pg_temp.pessoa('DR Foto'));
 select pg_temp.sair();
 
@@ -56,7 +61,7 @@ select pg_temp.sair();
 -- =============================================================================
 
 select is(
-  (select pessoa_nome || ' / ' || registrado_por_nome from public.despesas_detalhe where caso_id = pg_temp.caso()),
+  (select pessoa_nome || ' / ' || registrado_por_nome from public.despesas_detalhe where id = pg_temp.despesa()),
   'DR Foto / DR Adm',
   'P1: a view traz de quem foi o gasto e quem lançou'
 );
@@ -85,7 +90,7 @@ select lives_ok($$ select public.marcar_despesa_ressarcida(pg_temp.despesa(), tr
 select pg_temp.sair();
 
 select is(
-  (select (ressarcido_em is not null)::text || ' / ' || ressarcido_por_nome from public.despesas_detalhe where caso_id = pg_temp.caso()),
+  (select (ressarcido_em is not null)::text || ' / ' || ressarcido_por_nome from public.despesas_detalhe where id = pg_temp.despesa()),
   'true / DR Financeiro',
   'R1: carimba quando e quem'
 );
@@ -121,6 +126,28 @@ select is(
 select pg_temp.como('dr.foto@clickbaby.test');
 select lives_ok($$ select public.remover_despesa(pg_temp.despesa(), 'lancei errado') $$, 'R2: desmarcado, apaga');
 select pg_temp.sair();
+
+
+-- =============================================================================
+-- R3. Só refeição e "outro" se ressarcem
+-- =============================================================================
+
+select pg_temp.como('dr.financeiro@clickbaby.test');
+select throws_ok(
+  $$ select public.marcar_despesa_ressarcida(pg_temp.uber(), true) $$,
+  'P0001', 'Só refeição e "outro" se ressarcem. O Uber não passa por ressarcimento.',
+  'R3: o Uber não se marca'
+);
+select lives_ok($$ select public.marcar_despesa_ressarcida(pg_temp.uber(), false) $$, 'R3: desmarcar um Uber não erra');
+select pg_temp.sair();
+
+select throws_ok(
+  $$ update public.despesas
+       set ressarcido_em = now(), ressarcido_por = (select id from public.pessoas where nome = 'DR Financeiro')
+     where id = pg_temp.uber() $$,
+  '23514', null,
+  'R3: nem por baixo da RPC — a constraint recusa'
+);
 
 select * from finish();
 rollback;
