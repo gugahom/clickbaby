@@ -94,19 +94,39 @@ function horaEmSaoPaulo(instante: string): string {
     .format(new Date(instante));
 }
 
+/** Mesma lista de `src/lib/textoFormatado.ts`: com alguma destas, o texto já é HTML. */
+const TEM_MARCACAO = /<\/?(b|strong|i|em|u|s|strike|del|br|div|p|ul|ol|li)\b[^>]*>/i;
+
+function escaparHtml(texto: string): string {
+  return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * A observação em HTML (06/10/2026): a do editor com formatação já é — e chega
+ * limpa, porque a tela a passa por `sanitizarHtml` antes de salvar —; a escrita
+ * antes dele é texto puro, e a quebra de linha vira `<br>`.
+ */
+export function observacaoEmHtml(observacao: string): string {
+  return TEM_MARCACAO.test(observacao) ? observacao : escaparHtml(observacao).replace(/\r?\n/g, "<br>");
+}
+
 /**
  * A DESCRIÇÃO do evento que o SISTEMA criou: as observações escritas no
  * calendário (o cadastro da família, no template da equipe), a hora da
  * cesárea, e a marca de origem. Só vale para caso criado pelo sistema — a
  * descrição de um evento que a equipe criou no Google é dela, e não é
  * reescrita (ver a migration 20260930192224).
+ *
+ * É HTML desde 06/10/2026, quando as observações ganharam negrito, itálico e
+ * listas: o Google mostra a descrição de um evento com essa formatação (é o
+ * mesmo formato que o editor dele grava), e as partes se separam por `<br>`.
  */
 export function descricaoDoEvento(caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar">): string {
   const partes: string[] = [];
-  if (caso.observacao_calendar) partes.push(caso.observacao_calendar);
+  if (caso.observacao_calendar) partes.push(observacaoEmHtml(caso.observacao_calendar));
   if (caso.cesarea_em) partes.push(`Cesárea às ${horaEmSaoPaulo(caso.cesarea_em)}`);
   partes.push("Criado pelo calendário do sistema ClickBaby.");
-  return partes.join("\n\n");
+  return partes.join("<br><br>");
 }
 
 export function montarEventoDoCaso(caso: CasoParaOGoogle): Record<string, unknown> {

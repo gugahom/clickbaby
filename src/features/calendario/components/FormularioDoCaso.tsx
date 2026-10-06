@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Dropdown } from '@/components/ui/Dropdown'
+import { EditorDeTexto } from '@/components/ui/EditorDeTexto'
 import { useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
@@ -361,23 +362,24 @@ function FormularioDoCaso({
             </span>
           </fieldset>
 
-          <label className="block">
+          {/* <div> e não <label>: um rótulo sem `for` aciona o primeiro
+              controle de dentro, e aqui ele seria o botão de negrito. */}
+          <div>
             <span className="text-sm font-medium">
               Observações <span className="font-normal text-muted-foreground">(opcional)</span>
             </span>
-            <textarea
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              rows={ehEvento || ehNewborn ? 6 : 4}
-              maxLength={4000}
-              className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-base"
+            <EditorDeTexto
+              valor={observacao}
+              onMudar={setObservacao}
+              rotulo="Observações"
+              linhas={ehEvento || ehNewborn ? 6 : 4}
             />
             <span className="mt-1 block text-xs text-muted-foreground">
               {!caso || caso.criadoPeloSistema
-                ? 'Vai na descrição do evento no Google.'
+                ? 'Vai na descrição do evento no Google, com a formatação.'
                 : 'Fica no sistema. A descrição do evento no Google é da equipe e não muda.'}
             </span>
-          </label>
+          </div>
         </div>
 
         {falta.length > 0 && !temBarra && (

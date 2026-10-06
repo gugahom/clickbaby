@@ -173,11 +173,11 @@ function CartaoDeDetalhes({ item, caixa }: { item: ItemDoCalendario; caixa: DOMR
           <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">com {item.responsavel}</span>
         )}
       </div>
-      <div className="mt-2 text-[11px] text-muted-foreground">
-        Cor na agenda: {a.nome}
-        {item.google === 'enviando' && ' · indo para o Google'}
-        {item.google === 'atualizando' && ' · atualizando no Google'}
-      </div>
+      {(item.google === 'enviando' || item.google === 'atualizando') && (
+        <div className="mt-2 text-[11px] text-muted-foreground">
+          {item.google === 'enviando' ? 'Indo para o Google' : 'Atualizando no Google'}
+        </div>
+      )}
     </div>
   )
 }
