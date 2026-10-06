@@ -17,6 +17,7 @@ import {
   idDoEventoDoCaso,
   montarEventoDoCaso,
   montarTituloDoEvento,
+  observacaoEmHtml,
 } from "./evento-do-caso.ts";
 
 function assertEqual(actual: unknown, expected: unknown, msg: string) {
@@ -194,12 +195,25 @@ Deno.test("hora a definir vira evento de DIA INTEIRO, no dia de Brasília", () =
   assertEqual(atualizado.end, { date: "2026-10-15" }, "sem a duração de duas horas");
 });
 
+Deno.test("a observação com formatação vai como está; a de texto puro é escapada (06/10/2026)", () => {
+  assertEqual(
+    observacaoEmHtml("<b>Nome:</b> Ana<br><ul><li>Médico</li></ul>"),
+    "<b>Nome:</b> Ana<br><ul><li>Médico</li></ul>",
+    "o HTML do editor passa direto",
+  );
+  assertEqual(
+    observacaoEmHtml("Peso < 3kg & sala 2\nQuarto 201"),
+    "Peso &lt; 3kg &amp; sala 2<br>Quarto 201",
+    "texto antigo: escapa e troca a quebra",
+  );
+});
+
 Deno.test("a descrição leva observações e cesárea — e só é reescrita no caso que o sistema criou", () => {
   const comCampos = { ...CASO_EDITADO, cesarea_em: "2026-10-14T17:30:00Z", observacao_calendar: "Nome: Ana\nMédico: Plantão" };
   assertEqual(
     descricaoDoEvento(comCampos),
-    "Nome: Ana\nMédico: Plantão\n\nCesárea às 14:30\n\nCriado pelo calendário do sistema ClickBaby.",
-    "observações, cesárea em Brasília, origem",
+    "Nome: Ana<br>Médico: Plantão<br><br>Cesárea às 14:30<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "observações, cesárea em Brasília, origem — em HTML, a quebra de linha vira <br>",
   );
   const daEquipe = atualizarEventoDoCaso(comCampos, EVENTO_DA_EQUIPE);
   assertEqual(daEquipe.description, "quarto 201, levar o cartão 14", "evento da equipe: a descrição dela fica");

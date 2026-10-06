@@ -2562,6 +2562,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   como o New Born. **A descrição do evento só é escrita no caso que o SISTEMA criou**
   (`criado_por`): no que veio do Google ela é da equipe (tem CPF, e-mail, médico), e reescrevê-la
   com um campo que aqui nasceu vazio apagaria o cadastro. O texto não vai para `eventos`.
+  **AS OBSERVAÇÕES TÊM FORMATAÇÃO** (06/10/2026, pedido do gestor): negrito, itálico,
+  sublinhado, tachado, as duas listas e "tirar a formatação", numa barra EMBAIXO da caixa
+  ("sem tirar muito espaço") — o arranjo da descrição do próprio Google. `EditorDeTexto` e
+  `TextoFormatado` (`components/ui`) são peças da casa sobre `contentEditable` e
+  `execCommand`, sem biblioteca de editor. O campo guarda HTML, que é o formato da descrição
+  do Google: **NADA dele vai à tela sem `sanitizarHtml`** (`lib/textoFormatado.ts`), que
+  refaz o conteúdo com só oito marcações e SEM atributo nenhum — na digitação, no colar, no
+  carregar do banco e no mostrar, porque o banco aceita qualquer texto. O texto de antes do
+  editor (puro, com quebras) é reconhecido pela falta de marcação e convertido, na tela e na
+  Edge Function (`observacaoEmHtml`, que a partir daí manda a descrição inteira em HTML,
+  partes separadas por `<br>`). A lista de marcações tem espelho nos dois lados.
+  **"COR NA AGENDA" SAIU** do detalhe e do cartão de hover no mesmo dia (pedido do gestor): a
+  cor continua no item e na pílula, que é onde ela se lê.
   **O FORMULÁRIO ABRE LARGO, EM DUAS COLUNAS** (30/09/2026, pedido do gestor: "não gosto de ele
   ficar extenso verticalmente e ter que ter scroll"): `Dialogo` ganhou `largo`; à esquerda o que
   é o título do evento e a prévia do Google, à direita adicionais, termo e observações. E o

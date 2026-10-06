@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
+import { TextoFormatado } from '@/components/ui/TextoFormatado'
 import { useCasoEditavel, useNoQuadro, type ItemDoCalendario } from '../api/useCalendario'
 import { emBrasilia, rotuloDoDiaCompleto } from '../lib/datas'
 import { aparencia } from '../lib/estilos'
@@ -46,7 +47,6 @@ export function DetalheDoItem({
     ['Maternidade', item.maternidade],
     ['Pacote', item.pacote],
     ['Com quem', item.responsavel],
-    ['Cor na agenda', a.nome],
   ]
   const temAcao = acoes.onEditar ?? acoes.onCancelar ?? acoes.onMudarHorario
   return (
@@ -73,7 +73,7 @@ export function DetalheDoItem({
         {caso.data?.observacao && (
           <div className="rounded-xl bg-muted/50 px-3 py-2.5">
             <div className="text-xs font-semibold text-muted-foreground">Observações</div>
-            <p className="mt-1 text-sm whitespace-pre-line text-foreground">{caso.data.observacao}</p>
+            <TextoFormatado valor={caso.data.observacao} className="mt-1 text-sm text-foreground" />
           </div>
         )}
         {item.google && (

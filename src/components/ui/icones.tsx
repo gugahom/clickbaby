@@ -8,6 +8,8 @@
  * óptico-consistente quando os cinco aparecem lado a lado.
  */
 
+import type { ReactNode } from 'react'
+
 interface PropsIcone {
   className?: string
 }
@@ -608,5 +610,85 @@ export function IconeCoroa({ className }: PropsIcone) {
       <path d="M3.5 8.5 8 12l4-6.5 4 6.5 4.5-3.5L19 18H5L3.5 8.5Z" />
       <path d="M5.5 20.5h13" fill="none" strokeLinecap="round" />
     </svg>
+  )
+}
+
+/**
+ * A FORMATAÇÃO DAS OBSERVAÇÕES (06/10/2026): negrito, itálico, sublinhado,
+ * tachado, as duas listas e o "tirar formatação" — a barra de baixo do
+ * `EditorDeTexto`, no arranjo da descrição do evento no Google.
+ */
+function IconeDeTraco({ className, children }: { className?: string | undefined; children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  )
+}
+
+export function IconeNegrito({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z" strokeWidth="2.5" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeItalico({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M19 4h-9M14 20H5M15 4 9 20" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeSublinhado({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M6 4v6a6 6 0 0 0 12 0V4M4 20h16" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeTachado({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M16 6.5A4 4 0 0 0 12 4h-1a3.5 3.5 0 0 0-2.2 6.2M14 12a4 4 0 0 1-2 7.5h-.5A4 4 0 0 1 8 17.5M4 12h16" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeListaComMarcadores({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" strokeWidth="3" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeListaNumerada({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M10 6h10M10 12h10M10 18h10" />
+      <path d="M4 4.5 5.5 3.5v5M4 14.5a1.5 1.5 0 0 1 3 0c0 1-3 2-3 3.5h3" strokeWidth="1.5" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeTirarFormatacao({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M4 7V4h12v3M8 20h4M11 4 8 14M15 15l5 5M20 15l-5 5" />
+    </IconeDeTraco>
   )
 }
