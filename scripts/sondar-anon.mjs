@@ -285,6 +285,17 @@ const RPCS_TRANSICAO = {
     p_motivo: 'sonda',
     p_etapas: ['edicao_foto'],
   },
+  // O agendamento e o pagamento do New Born (20261013172953). Quem alcançasse
+  // estas RPCs marcaria o ensaio na casa de uma família, ou diria que ela já
+  // pagou — e ninguém cobraria.
+  agendar_click_home: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_quando: null,
+  },
+  registrar_pagamento_do_click_home: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_pagamento: null,
+  },
   agendar_etapa: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,

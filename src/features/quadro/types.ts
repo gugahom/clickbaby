@@ -165,6 +165,11 @@ export interface EtapaQuadro {
   /** Onde o ensaio New Born está na esteira (22/09/2026). */
   faseClickHome: FaseClickHome | null
   /**
+   * O PAGAMENTO DO NEW BORN (13/10/2026): pago, a cobrar, ou nulo — ninguém
+   * informou ainda. Só na etapa click_home.
+   */
+  pagamentoClickHome: PagamentoClickHome | null
+  /**
    * EM QUE PÉ ESTÁ O TRABALHO DE CAMPO (28/09/2026). Só na entrada e no
    * nascimento, e nula até alguém declarar a primeira — ela não nasce com o
    * play (decisão do gestor).
@@ -254,6 +259,17 @@ export interface BlocoDia {
   resolvidos: number
   /** O dia só sai do Quadro quando todos os seus casos são terminais. */
   fechado: boolean
+  /**
+   * OS ENSAIOS NEW BORN MARCADOS PARA ESTE DIA (13/10/2026) — ver
+   * `juntarEnsaios`. Vazio na maioria dos dias.
+   */
+  ensaios?: EnsaioNoDia[]
+}
+
+/** Um ensaio New Born agendado, no bloco do dia em que ele acontece. */
+export interface EnsaioNoDia {
+  caso: CasoQuadro
+  etapa: EtapaQuadro
 }
 
 export function normalizarCaso(linha: LinhaQuadro): CasoQuadro {
@@ -329,6 +345,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     pausadoEm: linha.pausado_em,
     faseAlbum: linha.fase_album,
     faseClickHome: linha.fase_click_home,
+    pagamentoClickHome: linha.pagamento_click_home,
     faseCampo: linha.fase_campo,
     faseCampoEm: linha.fase_campo_em,
     previsaoEm: linha.previsao_em,
@@ -696,6 +713,10 @@ export const FASES_DE_ESPERA_EXTERNA = new Set<FaseAlbum>([
  * mesmo caso, com seção própria, e não um pacote à parte.
  */
 export const FASES_CLICK_HOME = [
+  // AS DUAS DE ANTES DO ENSAIO (13/10/2026, pedido do gestor): vendido sem
+  // data, e com a data marcada. No dia marcado o ensaio aparece no Quadro.
+  'a_agendar',
+  'agendado',
   'aguardando_edicao',
   'editando',
   'criar_galeria',
@@ -727,6 +748,8 @@ export const FASES_CLICK_HOME_ANTES_DA_ESCOLHA = new Set<FaseClickHome>([
 ])
 
 export const ROTULO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
+  a_agendar: 'A agendar',
+  agendado: 'Agendado',
   aguardando_edicao: 'Aguardando edição',
   editando: 'Editando',
   criar_galeria: 'Criar galeria online',
@@ -736,12 +759,37 @@ export const ROTULO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
 
 /** Mesma gramática de cor do fotolivro: de quem é a bola, não o quanto falta. */
 export const ESTILO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
+  // Sem data é a bola da EQUIPE (alguém precisa ligar e marcar): âmbar. Com a
+  // data marcada, espera o dia: neutro.
+  a_agendar: 'bg-atencao/15 text-atencao-tinta',
+  agendado: 'bg-pronto-fundo text-pronto border border-pronto-borda',
   aguardando_edicao: 'bg-atencao/15 text-atencao-tinta',
   editando: 'bg-andamento/12 text-andamento-tinta',
   criar_galeria: 'bg-andamento/12 text-andamento-tinta',
   // Esperando a família escolher: bola de fora, cor neutra.
   enviar_para_escolha: 'bg-pronto-fundo text-pronto border border-pronto-borda',
   finalizado: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+}
+
+/**
+ * ANTES DO ENSAIO (13/10/2026): sem fase conta como "a agendar". Nelas o
+ * cartão agenda (ou remarca) o ensaio, e não tem "galeria pronta" a oferecer.
+ * `aguardando_edicao` entra no AGENDAR porque um ensaio desmarcado volta a ser
+ * agendado dali — o banco aceita as três.
+ */
+export const FASES_CLICK_HOME_ANTES_DO_ENSAIO = new Set<FaseClickHome | null>([null, 'a_agendar', 'agendado'])
+export const FASES_CLICK_HOME_QUE_AGENDAM = new Set<FaseClickHome | null>([
+  null,
+  'a_agendar',
+  'agendado',
+  'aguardando_edicao',
+])
+
+export type PagamentoClickHome = Database['public']['Enums']['pagamento_click_home']
+
+export const ROTULO_PAGAMENTO_CLICK_HOME: Record<PagamentoClickHome, string> = {
+  pago: 'Pago',
+  a_cobrar: 'A cobrar',
 }
 
 /** Esperando a família — a seção não cobra o que não depende da equipe. */

@@ -57,6 +57,9 @@ export type Database = {
           iniciado_em: string | null
           observacao: string | null
           ordem: number
+          pagamento_click_home:
+            | Database["public"]["Enums"]["pagamento_click_home"]
+            | null
           pausa_acumulada: string
           pausado_em: string | null
           previsao_em: string | null
@@ -94,6 +97,9 @@ export type Database = {
           iniciado_em?: string | null
           observacao?: string | null
           ordem?: number
+          pagamento_click_home?:
+            | Database["public"]["Enums"]["pagamento_click_home"]
+            | null
           pausa_acumulada?: string
           pausado_em?: string | null
           previsao_em?: string | null
@@ -131,6 +137,9 @@ export type Database = {
           iniciado_em?: string | null
           observacao?: string | null
           ordem?: number
+          pagamento_click_home?:
+            | Database["public"]["Enums"]["pagamento_click_home"]
+            | null
           pausa_acumulada?: string
           pausado_em?: string | null
           previsao_em?: string | null
@@ -1437,6 +1446,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      agendar_click_home: {
+        Args: { p_caso_etapa_id: string; p_quando: string }
+        Returns: undefined
+      }
       agendar_etapa: {
         Args: { p_caso_etapa_id: string; p_previsao_em: string }
         Returns: undefined
@@ -1922,6 +1935,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_pagamento_do_click_home: {
+        Args: {
+          p_caso_etapa_id: string
+          p_pagamento: Database["public"]["Enums"]["pagamento_click_home"]
+        }
+        Returns: undefined
+      }
       registrar_termo: {
         Args: {
           p_caso_id: string
@@ -2072,6 +2092,8 @@ export type Database = {
         | "pronto_para_entrega"
         | "entregue"
       fase_click_home:
+        | "a_agendar"
+        | "agendado"
         | "aguardando_edicao"
         | "editando"
         | "criar_galeria"
@@ -2105,6 +2127,7 @@ export type Database = {
         | "acompanhamento"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       oferta_comercial: "birth" | "reels" | "new_born" | "fotolivro"
+      pagamento_click_home: "pago" | "a_cobrar"
       papel_sistema:
         | "operador"
         | "comercial"
@@ -2322,6 +2345,8 @@ export const Constants = {
         "entregue",
       ],
       fase_click_home: [
+        "a_agendar",
+        "agendado",
         "aguardando_edicao",
         "editando",
         "criar_galeria",
@@ -2358,6 +2383,7 @@ export const Constants = {
       ],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       oferta_comercial: ["birth", "reels", "new_born", "fotolivro"],
+      pagamento_click_home: ["pago", "a_cobrar"],
       papel_sistema: [
         "operador",
         "comercial",

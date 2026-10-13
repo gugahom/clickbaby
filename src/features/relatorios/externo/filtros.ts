@@ -17,6 +17,7 @@
  * por isso que `FiltrosDaOperacao` guarda essa ordem, e o endereço a respeita.
  */
 import type { Database } from '@/types/database'
+import { OPCOES_TERMO, ROTULO_TERMO } from '@/features/quadro/lib/termo'
 
 export type TipoDeLink = Database['public']['Enums']['tipo_entregavel']
 
@@ -203,11 +204,11 @@ export const OPCOES_FIXAS: Partial<Record<GrupoDeLista, { valor: string; rotulo:
     { valor: 'fotolivro', rotulo: 'Foto/Livro' },
     { valor: 'video_master', rotulo: 'Vídeo MASTER' },
   ],
+  // Os nomes vêm de ROTULO_TERMO, a tabela única: com uma cópia aqui, o
+  // filtro, o gráfico e a planilha falariam "Autorizado" depois que o modal
+  // passou a dizer "Ass/autorizado" (13/10/2026).
   termos: [
-    { valor: 'assinado', rotulo: 'Autorizado' },
-    { valor: 'nao_autorizado', rotulo: 'Não autorizado' },
-    { valor: 'pendente', rotulo: 'Ass pendente' },
-    { valor: 'sem_contrato', rotulo: 'Sem contrato' },
+    ...OPCOES_TERMO.map((t) => ({ valor: t, rotulo: ROTULO_TERMO[t] })),
     { valor: 'sem_resposta', rotulo: 'Sem resposta' },
   ],
   turnos: [

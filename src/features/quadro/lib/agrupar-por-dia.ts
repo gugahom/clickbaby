@@ -1,4 +1,4 @@
-import type { BlocoDia, CasoQuadro } from '../types'
+import type { BlocoDia, CasoQuadro, EnsaioNoDia } from '../types'
 
 /**
  * Rascunho cancelado sem NUNCA ter tido pacote e maternidade resolvidos.
@@ -187,6 +187,64 @@ export function blocosAbertos(blocos: BlocoDia[]): BlocoDia[] {
 export function semFuturo(blocos: BlocoDia[], hoje: string): BlocoDia[] {
   const limite = diaSeguinte(hoje)
   return blocos.filter((b) => b.dia === null || b.dia <= limite)
+}
+
+/**
+ * O ENSAIO NEW BORN NO DIA EM QUE ELE ACONTECE (13/10/2026, pedido do gestor:
+ * "no dia do agendamento ela apareceria no painel para mim novamente").
+ *
+ * O caso do New Born mora no dia do PARTO, semanas antes — e quase sempre já
+ * encerrado. O ensaio entra no bloco do dia AGENDADO como um cartão próprio,
+ * sem mexer no caso: se o dia não tem bloco (nenhum parto, ou todos resolvidos),
+ * ele ganha um só para o ensaio.
+ *
+ * MESMO CORTE DOS CASOS: até amanhã (`semFuturo`) e, para trás, sem limite. Um
+ * ensaio que passou da data e ninguém moveu para a edição continua no bloco do
+ * dia dele, que fica atrasado — nunca sai por passagem de data (invariante 3.5).
+ * Ele sai quando alguém diz que o ensaio aconteceu (a fase anda) ou o remarca.
+ *
+ * Cada ensaio CONTA no "x de y" do dia, como um trabalho a fazer, e nunca como
+ * resolvido: quando ele se resolve, sai da lista.
+ */
+export function juntarEnsaios(blocos: BlocoDia[], ensaios: EnsaioNoDia[], hoje: string): BlocoDia[] {
+  const limite = diaSeguinte(hoje)
+  const porDia = new Map<string, EnsaioNoDia[]>()
+  for (const ensaio of ensaios) {
+    if (!ensaio.etapa.previsaoEm) continue
+    const dia = diaEmBrasilia(ensaio.etapa.previsaoEm)
+    if (dia > limite) continue
+    const doDia = porDia.get(dia)
+    if (doDia) doDia.push(ensaio)
+    else porDia.set(dia, [ensaio])
+  }
+  if (porDia.size === 0) return blocos
+
+  const resultado = blocos.map((bloco) => {
+    const doDia = bloco.dia === null ? undefined : porDia.get(bloco.dia)
+    if (!doDia) return bloco
+    porDia.delete(bloco.dia as string)
+    return { ...bloco, ensaios: ordenarEnsaios(doDia), total: bloco.total + doDia.length }
+  })
+  for (const [dia, doDia] of porDia) {
+    resultado.push({ dia, casos: [], total: doDia.length, resolvidos: 0, fechado: false, ensaios: ordenarEnsaios(doDia) })
+  }
+  // Por dia, como sempre, com o bloco SEM DATA no fim.
+  return resultado.sort((a, b) =>
+    a.dia === null ? 1 : b.dia === null ? -1 : a.dia.localeCompare(b.dia),
+  )
+}
+
+const ordenarEnsaios = (lista: EnsaioNoDia[]) =>
+  [...lista].sort((a, b) => (a.etapa.previsaoEm ?? '').localeCompare(b.etapa.previsaoEm ?? ''))
+
+/** O dia (calendário de Brasília) de um instante. */
+function diaEmBrasilia(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso))
 }
 
 /**

@@ -23,6 +23,7 @@ import { mensagemDeErro } from '../lib/erros'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { Entregaveis } from './Entregaveis'
 import { LinkParaCopiar } from './LinkParaCopiar'
+import { PagamentoDoClickHome } from './PagamentoDoClickHome'
 import { ROTULO_DO_LINK_DO_VIDEO, linksDoCasoParaOVideo } from '../lib/links-do-video'
 import type { CasoQuadro, EtapaQuadro } from '../types'
 
@@ -236,6 +237,9 @@ function LinhaDoClickHome({
               NEW BORN
             </span>
             <span className="truncate font-semibold">{titulo}</span>
+            {/* O PAGAMENTO À VISTA de quem entrega (13/10/2026): "para a gente
+                não ter aquela insegurança na hora da entrega". */}
+            <PagamentoDoClickHome etapa={etapa} onErro={onErro} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Galeria pronta — mande o link para a família escolher as fotos do ensaio.
@@ -295,6 +299,22 @@ function LinhaDoClickHome({
             {titulo}. O ensaio fica como finalizado, o link da galeria passa a contar
             como conferido, e o cartão sai da seção New Born.
           </p>
+          {/* NÃO TRAVA (decisão do gestor): avisa, em vermelho, e a entrega
+              segue. Pago não precisa de aviso nenhum. */}
+          {etapa.pagamentoClickHome !== 'pago' && (
+            <p
+              role="alert"
+              className={
+                etapa.pagamentoClickHome === 'a_cobrar'
+                  ? 'rounded-xl bg-atrasado px-3 py-2.5 text-sm font-bold text-white'
+                  : 'rounded-xl bg-atencao/15 px-3 py-2.5 text-sm font-semibold text-atencao-tinta'
+              }
+            >
+              {etapa.pagamentoClickHome === 'a_cobrar'
+                ? 'Este New Born está A COBRAR — a família ainda não pagou.'
+                : 'O pagamento deste New Born não foi informado. Confira antes de entregar.'}
+            </p>
+          )}
         </Dialogo>
       )}
     </li>
