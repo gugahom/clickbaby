@@ -420,8 +420,38 @@ function Periodo({
     ? ativo.rotulo
     : `${filtros.de ? dataCurta(filtros.de) : '…'} a ${filtros.ate ? dataCurta(filtros.ate) : '…'}`
   return (
-    <Secao titulo="Período do atendimento" resumo={resumo} fixa>
+    <Secao titulo={filtros.nascimentos ? 'Período dos nascimentos' : 'Período do atendimento'} resumo={resumo} fixa>
       <div className="space-y-2.5">
+        {/* O QUE O PERÍODO CONTA (13/10/2026, pedido do gestor): todo caso com
+            data no período, ou só os bebês que nasceram nele. */}
+        <div role="radiogroup" aria-label="O que contar" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+          {([
+            [false, 'Atendimentos'],
+            [true, 'Nascimentos'],
+          ] as const).map(([valor, rotulo]) => {
+            const aceso = (filtros.nascimentos ?? false) === valor
+            return (
+              <button
+                key={rotulo}
+                type="button"
+                role="radio"
+                aria-checked={aceso}
+                onClick={() => onMudar({ ...filtros, nascimentos: valor })}
+                className={clsx(
+                  'min-h-8 rounded-lg px-2 text-xs font-bold transition-colors',
+                  aceso ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {rotulo}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          {filtros.nascimentos
+            ? 'Só os bebês que nasceram no período, pela data do nascimento. Cancelados e rascunhos ficam fora.'
+            : 'Todo caso com data prevista no período — inclusive cancelados e rascunhos.'}
+        </p>
         <div className="flex flex-wrap gap-1.5">
           {atalhos.map((a) => {
             const aceso = a === ativo

@@ -762,7 +762,8 @@ function ListaDeCasos({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground">
-              <th className="py-3 pr-3 pl-4 font-semibold">Data</th>
+              {/* No modo Nascimentos a data é a do nascimento, não a prevista. */}
+              <th className="py-3 pr-3 pl-4 font-semibold">{filtros.nascimentos ? 'Nasceu' : 'Data'}</th>
               <th className="px-3 py-3 font-semibold">Mãe · bebê</th>
               <th className="px-3 py-3 font-semibold">Maternidade</th>
               <th className="px-3 py-3 font-semibold">Pacote</th>
@@ -842,7 +843,10 @@ function ListaDeCasos({
             <div role="link" tabIndex={0} onClick={() => abrir(c.id)} onKeyDown={(e) => e.key === 'Enter' && abrir(c.id)} className="block cursor-pointer space-y-1.5 px-4 py-3 hover:bg-muted/50">
               <div className="min-w-0 truncate font-semibold text-foreground">{nome(c)}</div>
               <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-                <span className="tabular-nums">{c.dia ? dataCurta(c.dia) : '—'}</span>
+                <span className="tabular-nums">
+                  {filtros.nascimentos && 'Nasceu '}
+                  {c.dia ? dataCurta(c.dia) : '—'}
+                </span>
                 <span>{c.maternidadeSigla ?? '—'}</span>
                 <span>{c.pacoteNome ?? '—'}</span>
               </div>

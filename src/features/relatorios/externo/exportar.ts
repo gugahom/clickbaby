@@ -52,7 +52,7 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
   const casos = await lerTodosOsCasos(f, ordem)
   const csv = montarCsv(
     [
-      'Data',
+      f.nascimentos ? 'Nasceu em' : 'Data',
       'Mãe',
       'Bebê',
       'Maternidade',
