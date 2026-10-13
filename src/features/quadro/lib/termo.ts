@@ -31,9 +31,16 @@ export const OPCOES_TERMO: readonly TermoStatus[] = [
   'sem_contrato',
 ]
 
+/**
+ * "ASS/AUTORIZADO" E "ASS/NÃO AUTORIZADO" (13/10/2026, pedido do gestor): os dois
+ * rótulos dizem as duas coisas — o contrato foi ASSINADO, e o uso de imagem foi
+ * ou não autorizado nele. Até aqui eram "Autorizado" e "Não autorizado", e a
+ * assinatura ficava subentendida. Só o rótulo mudou; os valores no banco são os
+ * mesmos. Esta é a tabela ÚNICA de nomes: o relatório externo lê daqui.
+ */
 export const ROTULO_TERMO: Record<TermoStatus, string> = {
-  assinado: 'Autorizado',
-  nao_autorizado: 'Não autorizado',
+  assinado: 'Ass/autorizado',
+  nao_autorizado: 'Ass/não autorizado',
   pendente: 'Ass pendente',
   sem_contrato: 'Sem contrato',
   // Não aparece em lugar nenhum da tela; fica aqui porque o tipo é exaustivo e
@@ -43,8 +50,8 @@ export const ROTULO_TERMO: Record<TermoStatus, string> = {
 
 /** O que a escolha significa, dito no diálogo — a pessoa marca uma vez e encerra. */
 export const EXPLICACAO_TERMO: Record<TermoStatus, string> = {
-  assinado: 'A família autorizou o uso das imagens.',
-  nao_autorizado: 'A família NÃO autorizou — estas imagens não vão para lugar nenhum.',
+  assinado: 'Contrato assinado, e a família autorizou o uso das imagens.',
+  nao_autorizado: 'Contrato assinado, mas a família NÃO autorizou o uso — estas imagens não vão para lugar nenhum.',
   pendente: 'O contrato existe, mas a assinatura do termo ainda não veio.',
   sem_contrato: 'Não há contrato com termo — é o caso dos BIRTH, vendidos depois do parto.',
   nao_aplicavel: '',

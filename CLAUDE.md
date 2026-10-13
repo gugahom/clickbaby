@@ -1849,6 +1849,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   justamente para um engano não ficar trancado.
   **BIRTH ABRE MARCADO COMO "SEM CONTRATO"** — são vendidos depois do parto e não têm
   contrato assinado —, marcado e não travado: um BIRTH que virou venda com contrato existe.
+  **"ASS/AUTORIZADO" E "ASS/NÃO AUTORIZADO"** (13/10/2026, pedido do gestor): os dois rótulos
+  passaram a dizer as duas coisas que a resposta afirma — o contrato foi ASSINADO e o uso de
+  imagem foi, ou não, autorizado nele. Só o rótulo; os valores no banco não mudaram.
+  `ROTULO_TERMO` é a tabela ÚNICA de nomes: o relatório externo (filtro, gráfico, planilha),
+  que tinha uma cópia, passou a ler dela.
   **QUEM RESPONDEU E QUANDO FICA EM `eventos`** (`termo_registrado`, com o valor anterior), e
   não em colunas novas: append-only, uma correção não apaga a resposta de hoje. O quarto
   valor do enum, `nao_aplicavel`, a RPC RECUSA — valor de enum não se apaga, e uma quarta
