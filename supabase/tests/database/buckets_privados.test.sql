@@ -97,12 +97,15 @@ select ok(
 -- Eram quatro (as do avatar) até 21/09/2026, quando a CAPA DO FOTOLIVRO abriu a
 -- primeira porta em `midias` — ver a migration 20260921202848. Viraram oito
 -- em 30/09/2026: a tela Equipe sobe e apaga a foto de OUTRA pessoa, só na
--- pasta `equipe/` do bucket de avatares (20260930232424).
+-- pasta `equipe/` do bucket de avatares (20260930232424). Onze em 13/10/2026:
+-- o bucket próprio dos ANEXOS DOS PEDIDOS, `pedidos`, com leitura, upload e
+-- remoção (20261013215014) — o resto das regras dele está em
+-- anexos_dos_pedidos.test.sql.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects'),
-  8,
-  'exatamente oito policies em storage.objects — as do avatar, as da Equipe e as da capa do fotolivro'
+  11,
+  'exatamente onze policies em storage.objects — avatar, Equipe, capa do fotolivro e anexos dos pedidos'
 );
 
 select set_eq(
@@ -116,9 +119,12 @@ select set_eq(
     'avatares_upload_pela_equipe',
     'avatares_remocao_pela_equipe',
     'midias_fotolivro_leitura',
-    'midias_fotolivro_upload'
+    'midias_fotolivro_upload',
+    'pedidos_leitura',
+    'pedidos_upload',
+    'pedidos_remocao'
   ],
-  'as oito, pelo nome'
+  'as onze, pelo nome'
 );
 
 -- O ponto do arquivo, na forma que importa agora: `comprovantes` continua sem

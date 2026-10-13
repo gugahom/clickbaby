@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import clsx from 'clsx'
-import { IconeNota } from '@/components/ui/icones'
-import { AnotarDialogo } from './AnotarDialogo'
+import { Dialogo } from '@/components/ui/Dialogo'
+import { IconeClipe, IconeNota } from '@/components/ui/icones'
+import { AnexosDosPedidos } from './AnexosDosPedidos'
+import { useEnvioDeAnexos } from '../api/useEnvioDeAnexos'
 import { useAnotarEtapa } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
-import type { EtapaQuadro } from '../types'
+import { ROTULO_ETAPA, type EtapaQuadro } from '../types'
 
 /**
  * OS PEDIDOS DO CLIENTE SOBRE O VÍDEO (16/09/2026, pedido do gestor).
@@ -24,6 +26,10 @@ import type { EtapaQuadro } from '../types'
  * vermelha do Quadro é chamado para quem está em campo; um pedido de música
  * dentro de um vídeo de dez dias úteis pulsando ali ensinaria a equipe a ignorar
  * a faixa. Ver o filtro em `AvisosDoCaso`.
+ *
+ * E GANHOU ANEXOS (13/10/2026, pedido do gestor): a referência que a família
+ * manda — a música, a foto, o vídeo — mora junto do texto, como no cartão do
+ * Trello. A pastilha conta os anexos, e acende com eles mesmo sem texto.
  */
 export function PedidosDaEtapa({
   etapa,
@@ -36,7 +42,8 @@ export function PedidosDaEtapa({
   const [aberto, setAberto] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  const tem = (etapa.observacao ?? '').trim() !== ''
+  const temTexto = (etapa.observacao ?? '').trim() !== ''
+  const tem = temTexto || etapa.anexos > 0
 
   return (
     <>
@@ -47,7 +54,7 @@ export function PedidosDaEtapa({
           setAberto(true)
         }}
         aria-label={tem ? 'Ver e editar os pedidos do cliente' : 'Escrever os pedidos do cliente'}
-        title={tem ? etapa.observacao ?? undefined : 'Pedidos do cliente'}
+        title={temTexto ? etapa.observacao ?? undefined : 'Pedidos do cliente'}
         className={clsx(
           // O alvo tem 44px (seção 6) sem a pastilha crescer: o retângulo
           // invisível do `before` é o que a mão acerta. Mesmo recurso do
@@ -65,10 +72,16 @@ export function PedidosDaEtapa({
       >
         <IconeNota className="size-3.5" />
         Pedidos
+        {etapa.anexos > 0 && (
+          <span className="inline-flex items-center gap-0.5" aria-label={`${etapa.anexos} anexos`}>
+            <IconeClipe className="size-3" />
+            {etapa.anexos}
+          </span>
+        )}
       </button>
 
       {aberto && (
-        <AnotarDialogo
+        <DialogoDosPedidos
           etapa={etapa}
           ocupado={anotar.isPending}
           erro={erro}
@@ -76,6 +89,12 @@ export function PedidosDaEtapa({
           onConfirmar={(observacao) => {
             setErro(null)
             onErro(null)
+            // O texto igual ao gravado não vai ao banco: quem abriu só para
+            // anexar fecha com "Salvar" sem gravar um evento de anotação à toa.
+            if (observacao.trim() === (etapa.observacao ?? '').trim()) {
+              setAberto(false)
+              return
+            }
             anotar
               .mutateAsync({ casoEtapaId: etapa.id, observacao })
               .then(
@@ -86,5 +105,59 @@ export function PedidosDaEtapa({
         />
       )}
     </>
+  )
+}
+
+/**
+ * O diálogo dos pedidos: o texto e os anexos. Era o `AnotarDialogo` do aviso
+ * do Quadro, com título e frase de AVISO — "aparece numa faixa no card", que é
+ * justamente o que o pedido NÃO faz.
+ */
+function DialogoDosPedidos({
+  etapa,
+  ocupado,
+  erro,
+  onCancelar,
+  onConfirmar,
+}: {
+  etapa: EtapaQuadro
+  ocupado: boolean
+  erro: string | null
+  onCancelar: () => void
+  onConfirmar: (observacao: string) => void
+}) {
+  const [texto, setTexto] = useState(etapa.observacao ?? '')
+  const envio = useEnvioDeAnexos(etapa)
+  const tinha = (etapa.observacao ?? '').trim() !== ''
+  const vazio = texto.trim() === ''
+
+  return (
+    <Dialogo
+      titulo={`Pedidos do cliente · ${ROTULO_ETAPA[etapa.tipo]}`}
+      rotuloConfirmar={tinha && vazio ? 'Apagar o texto' : 'Salvar'}
+      confirmarDestrutivo={tinha && vazio}
+      ocupado={ocupado || envio.progresso !== null}
+      erro={erro}
+      onConfirmar={() => onConfirmar(texto)}
+      onCancelar={onCancelar}
+    >
+      <div className="space-y-4" onPaste={envio.aoColar}>
+        <label className="block">
+          <span className="text-sm font-medium">O que a família pediu</span>
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            rows={4}
+            placeholder="Trocar a música do final; a foto da vovó na capa…"
+            className="mt-1.5 w-full rounded-md border border-border bg-background/60 px-3 py-2 text-base transition-colors focus:border-marca focus:bg-card"
+          />
+        </label>
+        {tinha && vazio && (
+          <p className="text-sm text-atrasado">Salvar em branco apaga o texto dos pedidos.</p>
+        )}
+
+        <AnexosDosPedidos etapa={etapa} envio={envio} />
+      </div>
+    </Dialogo>
   )
 }

@@ -66,6 +66,7 @@ GRANT ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_p
 GRANT ALL ON FUNCTION public.pontos_por_item_vigentes() TO authenticated;
 GRANT ALL ON FUNCTION public.reabrir_caso(p_caso_id uuid, p_motivo text, p_etapas public.etapa_tipo[]) TO authenticated;
 GRANT ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) TO authenticated;
+GRANT ALL ON FUNCTION public.registrar_anexo_da_etapa(p_caso_etapa_id uuid, p_caminho text, p_nome text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_avaliacao(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_despesa(p_caso_id uuid, p_tipo public.tipo_despesa, p_valor numeric, p_pessoa_id uuid, p_momento public.momento_despesa, p_descricao text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) TO authenticated;
@@ -73,6 +74,7 @@ GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao t
 GRANT ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, p_campo public.campo_material, p_valor text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) TO authenticated;
+GRANT ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.restaurar_caso_cancelado_pelo_sync(p_caso_id uuid, p_motivo text) TO authenticated;
@@ -82,6 +84,7 @@ GRANT ALL ON FUNCTION public.telas_efetivas(p_telas public.tela[], p_papel publi
 GRANT ALL ON FUNCTION public.telas_padrao_do_papel(p_papel public.papel_sistema) TO authenticated;
 GRANT ALL ON FUNCTION public.tem_tela(p_tela public.tela) TO authenticated;
 GRANT ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) TO authenticated;
+GRANT SELECT ON TABLE public.anexos_da_etapa TO authenticated;
 GRANT SELECT ON TABLE public.caso_etapas TO authenticated;
 GRANT SELECT ON TABLE public.casos TO authenticated;
 GRANT SELECT ON TABLE public.despesas TO authenticated;
@@ -189,6 +192,7 @@ REVOKE ALL ON FUNCTION public.pontos_por_item_vigentes() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.previsao_do_dia(p_previsao timestamp with time zone, p_sem_hora boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reabrir_caso(p_caso_id uuid, p_motivo text, p_etapas public.etapa_tipo[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reabrir_etapa(p_caso_etapa_id uuid, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.registrar_anexo_da_etapa(p_caso_etapa_id uuid, p_caminho text, p_nome text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_avaliacao(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_despesa(p_caso_id uuid, p_tipo public.tipo_despesa, p_valor numeric, p_pessoa_id uuid, p_momento public.momento_despesa, p_descricao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_entregavel(p_caso_id uuid, p_tipo public.tipo_entregavel, p_url text) FROM PUBLIC;
@@ -197,6 +201,7 @@ REVOKE ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, 
 REVOKE ALL ON FUNCTION public.registrar_mudanca_de_acesso() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.restaurar_caso_cancelado_pelo_sync(p_caso_id uuid, p_motivo text) FROM PUBLIC;

@@ -1,6 +1,6 @@
 import { type LiHTMLAttributes, type ReactNode } from 'react'
 import clsx from 'clsx'
-import { IconeNota } from '@/components/ui/icones'
+import { IconeClipe, IconeNota } from '@/components/ui/icones'
 import { rotularDia } from '@/lib/formato'
 import { corDoCaso } from '../lib/cores-calendar'
 import { rotuloDaRodada, type CasoQuadro, type EtapaQuadro, type StatusEtapa } from '../types'
@@ -284,14 +284,24 @@ function LinhaDeRodada({
           de propósito: aquilo é chamado para quem está na maternidade agora, e
           um pedido de música dentro de um vídeo de dez dias úteis pulsando
           junto ensinaria a equipe a ignorar os dois. */}
-      {etapa.observacao && (
+      {(etapa.observacao || etapa.anexos > 0) && (
         <div className="flex w-full gap-2 rounded-md border-l-[3px] border-atencao bg-atencao/12 px-2.5 py-2">
           <IconeNota className="mt-0.5 size-3.5 flex-shrink-0 text-atencao-tinta" />
           <div className="min-w-0">
             <p className="rotulo-sobrescrito text-atencao-tinta">{rotuloObservacao}</p>
-            <p className="mt-0.5 text-xs whitespace-pre-line text-foreground">
-              {etapa.observacao}
-            </p>
+            {etapa.observacao && (
+              <p className="mt-0.5 text-xs whitespace-pre-line text-foreground">
+                {etapa.observacao}
+              </p>
+            )}
+            {/* Os anexos se ABREM na pastilha "Pedidos" ou na ficha; aqui só
+                se diz que existem, para o cartão não crescer com miniaturas. */}
+            {etapa.anexos > 0 && (
+              <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-atencao-tinta">
+                <IconeClipe className="size-3.5" />
+                {etapa.anexos === 1 ? '1 anexo' : `${etapa.anexos} anexos`}
+              </p>
+            )}
           </div>
         </div>
       )}

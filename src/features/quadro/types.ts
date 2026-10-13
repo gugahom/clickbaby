@@ -170,6 +170,12 @@ export interface EtapaQuadro {
    */
   pagamentoClickHome: PagamentoClickHome | null
   /**
+   * QUANTOS ANEXOS os pedidos do cliente têm (13/10/2026) — foto, vídeo,
+   * música, PDF. Só o número, contado pelo banco na mesma consulta; a lista
+   * se busca quando alguém abre os pedidos. Zero fora das etapas com "Pedidos".
+   */
+  anexos: number
+  /**
    * EM QUE PÉ ESTÁ O TRABALHO DE CAMPO (28/09/2026). Só na entrada e no
    * nascimento, e nula até alguém declarar a primeira — ela não nasce com o
    * play (decisão do gestor).
@@ -326,6 +332,7 @@ type LinhaEtapaComResponsavel = LinhaEtapa & {
   baixou: { nome: string } | null
   subiu: { nome: string } | null
   fotolivro_enviado: { nome: string } | null
+  anexos_da_etapa: { count: number }[]
 }
 
 export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
@@ -346,6 +353,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     faseAlbum: linha.fase_album,
     faseClickHome: linha.fase_click_home,
     pagamentoClickHome: linha.pagamento_click_home,
+    anexos: linha.anexos_da_etapa[0]?.count ?? 0,
     faseCampo: linha.fase_campo,
     faseCampoEm: linha.fase_campo_em,
     previsaoEm: linha.previsao_em,

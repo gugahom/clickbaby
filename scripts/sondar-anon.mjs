@@ -70,6 +70,9 @@ const TABELAS = [
   { nome: 'despesas_por_caso', view: true },
   // Uma linha por gasto, com nomes e ressarcimento (20261005060950).
   { nome: 'despesas_detalhe', view: true },
+  // Os anexos dos pedidos do cliente (20261013215014): nome de arquivo de
+  // referência da família, e o caminho dele no bucket privado.
+  { nome: 'anexos_da_etapa' },
   // A marca do sino (20260917215442). Ela guarda a que horas cada pessoa abriu
   // o app: leitura aberta a anon seria um relógio de presença da equipe
   // exposto na rua.
@@ -296,6 +299,12 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_pagamento: null,
   },
+  registrar_anexo_da_etapa: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_caminho: null,
+    p_nome: null,
+  },
+  remover_anexo_da_etapa: { p_anexo_id: '00000000-0000-0000-0000-000000000000' },
   agendar_etapa: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,
