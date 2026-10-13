@@ -1312,6 +1312,7 @@ export type Database = {
           bebe_nome: string | null
           comercial: boolean | null
           dia: string | null
+          dia_nascimento: string | null
           dia_semana: number | null
           eh_birth: boolean | null
           equipamentos: string[] | null

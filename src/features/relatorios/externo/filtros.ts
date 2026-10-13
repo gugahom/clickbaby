@@ -65,6 +65,13 @@ export interface FiltrosDaOperacao {
    * em colunas. No banco, é também o que deixa a tela Comercial entrar.
    */
   comercial?: boolean | undefined
+  /**
+   * O MODO NASCIMENTOS (13/10/2026, pedido do gestor: "uma relação só dos
+   * nascimentos"). O período passa a ser o dia em que o nascimento foi
+   * concluído, e só entra bebê que nasceu, em caso que não foi cancelado. Sem
+   * ele, o período é o dia do caso e conta tudo o que passou pelo Quadro.
+   */
+  nascimentos?: boolean | undefined
 }
 
 export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
@@ -302,6 +309,7 @@ export function lerDoEndereco(
     despesa_max: numero(params.get('despesa_max')),
     ordem,
     comercial: params.get('comercial') === '1',
+    nascimentos: params.get('nascimentos') === '1',
   }
 }
 
@@ -324,6 +332,7 @@ export function escreverNoEndereco(f: FiltrosDaOperacao, extras: Record<string, 
   if (!f.de && !f.ate) p.set('tudo', '1')
   if (f.busca) p.set('busca', f.busca)
   if (f.comercial) p.set('comercial', '1')
+  if (f.nascimentos) p.set('nascimentos', '1')
   // Na ORDEM em que os grupos foram aplicados: é ela que ordena as colunas.
   for (const g of gruposAtivos(f)) {
     if ((GRUPOS_DE_LISTA as string[]).includes(g)) p.set(g, f.listas[g as GrupoDeLista].join(','))
@@ -352,6 +361,7 @@ export function paraOBanco(f: FiltrosDaOperacao): Record<string, unknown> {
     despesa_min: f.despesa_min ?? null,
     despesa_max: f.despesa_max ?? null,
     comercial: f.comercial ?? false,
+    nascimentos: f.nascimentos ?? false,
   }
 }
 
@@ -367,7 +377,7 @@ export function quantosFiltros(f: FiltrosDaOperacao): number {
 }
 
 export function semFiltros(f: FiltrosDaOperacao): FiltrosDaOperacao {
-  return { de: f.de, ate: f.ate, listas: vazios(), simNao: {}, comercial: f.comercial }
+  return { de: f.de, ate: f.ate, listas: vazios(), simNao: {}, comercial: f.comercial, nascimentos: f.nascimentos }
 }
 
 /**

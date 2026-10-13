@@ -2455,6 +2455,17 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   redundante" com o mês passado): com a agenda inteira no sistema, há partos marcados pela
   frente, e nenhum atalho olhava para eles. Ordem dos grupos, do gestor: período, links, termo,
   situação, prazo, maternidade, pacote, quem fez, na etapa, equipamento, e o resto.
+  **O MODO NASCIMENTOS** (13/10/2026, pedido do gestor, migration `20261013153516`): "uma
+  relação só dos nascimentos (…) não de tudo que passa pelo quadro". O período sempre foi o
+  DIA DO CASO, e o recorte levava todo caso com essa data — medido no remoto, setembro de 2026
+  tinha 198 casos no relatório e 152 nascimentos; a diferença era quase toda de cancelados (o
+  evento apagado e recriado na agenda vira um cancelado e um caso novo, o mesmo bebê duas
+  vezes na conta da maternidade). Um seletor no topo do Período — **Atendimentos ·
+  Nascimentos** — troca a pergunta: no segundo, o período é o DIA DO NASCIMENTO CONCLUÍDO
+  (`operacao_dos_casos.dia_nascimento`) e só entra bebê que nasceu, em caso não cancelado.
+  Corta antes de tudo, como a data e o modo comercial: facetas, números, gráfico no tempo e
+  planilha seguem; a coluna da data vira "Nasceu" (a busca devolve o dia do nascimento ali e
+  ordena por ele). Mora no endereço (`nascimentos=1`). Nenhuma assinatura mudou.
   **O MODO COMERCIAL** (01/10/2026, pedido do gestor, migration `20261001001607`). A planilha
   do atendimento em que o comercial controla o que já OFERECEU depois do parto virou um modo
   deste relatório: uma chave "Comercial" no cabeçalho, e a lista passa a ser só de PARTOS, com
