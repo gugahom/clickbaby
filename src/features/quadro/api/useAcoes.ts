@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
 import { casoDaEtapa } from './atualizar-por-caso'
-import type { FaseAlbum, FaseCampo, FaseClickHome, FaseVideoMaster, TermoStatus } from '../types'
+import type { FaseAlbum, FaseCampo, FaseClickHome, FaseVideoMaster, PagamentoClickHome, TermoStatus } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
 export type EtapaTipo = Database['public']['Enums']['etapa_tipo']
@@ -198,6 +198,27 @@ export function useMoverClickHome() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseClickHome }>(
     ({ casoEtapaId, fase }) =>
       chamar('mover_click_home', { p_caso_etapa_id: casoEtapaId, p_fase: fase }),
+  )
+}
+
+/**
+ * AGENDAR O ENSAIO NEW BORN (13/10/2026): a data e a fase "agendado", na mesma
+ * transação. `quando` é o instante com o fuso de Brasília explícito.
+ */
+export function useAgendarClickHome() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; quando: string }>(({ casoEtapaId, quando }) =>
+    chamar('agendar_click_home', { p_caso_etapa_id: casoEtapaId, p_quando: quando }),
+  )
+}
+
+/** O pagamento do New Born — atendimento ou adm (13/10/2026). */
+export function useRegistrarPagamentoClickHome() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; pagamento: PagamentoClickHome }>(
+    ({ casoEtapaId, pagamento }) =>
+      chamar('registrar_pagamento_do_click_home', {
+        p_caso_etapa_id: casoEtapaId,
+        p_pagamento: pagamento,
+      }),
   )
 }
 

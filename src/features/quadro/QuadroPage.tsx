@@ -32,6 +32,7 @@ import {
   blocosVisiveis,
   dividirEmDuasColunas,
   semFuturo,
+  juntarEnsaios,
 } from './lib/agrupar-por-dia'
 import {
   casosComVideoAberto,
@@ -66,6 +67,8 @@ import { CartaoDeEdicao } from './components/CartaoDeEdicao'
 import { FaseDoVideo } from './components/FaseDoVideo'
 import { FaseDoAlbum } from './components/FaseDoAlbum'
 import { FaseDoClickHome } from './components/FaseDoClickHome'
+import { AgendamentoDoClickHome, DialogoAgendarEnsaio } from './components/AgendamentoDoClickHome'
+import { PagamentoDoClickHome } from './components/PagamentoDoClickHome'
 import { PrazoDaEtapa } from './components/PrazoDaEtapa'
 import { PedidosDaEtapa } from './components/PedidosDaEtapa'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
@@ -81,7 +84,7 @@ import type {
   FotolivroNaEntrega,
   VideoNaEntrega,
 } from './components/EntregasPainel'
-import type { BlocoDia, CasoQuadro } from './types'
+import type { BlocoDia, CasoQuadro, EnsaioNoDia } from './types'
 import {
   FASES_ALBUM_ANTES_DA_APROVACAO,
   FASES_ALBUM_NA_TELA,
@@ -162,6 +165,11 @@ export function QuadroPage() {
   // O ensaio que está indo para a escolha pelo arrastar ou pelo ✓ do cartão —
   // o seletor de fase abre o mesmo diálogo por conta própria.
   const [enviandoClickHome, setEnviandoClickHome] = useState<{
+    etapa: EtapaQuadro
+    caso: CasoQuadro
+  } | null>(null)
+  // O ensaio solto na coluna "Agendado" — o diálogo pede o dia e a hora.
+  const [agendandoClickHome, setAgendandoClickHome] = useState<{
     etapa: EtapaQuadro
     caso: CasoQuadro
   } | null>(null)
@@ -301,7 +309,21 @@ export function QuadroPage() {
     //
     // SEM FUTURO (30/08/2026, a pedido do gestor): o Quadro corta em `hoje`.
     // Ver a nota de `semFuturo` em agrupar-por-dia.ts.
-    const abertos = semFuturo(blocosAbertos(agruparPorDia(noQuadro)), hoje).map((bloco) => ({
+    // OS ENSAIOS NEW BORN AGENDADOS entram no bloco do dia em que acontecem
+    // (13/10/2026). O NEWBORN de pacote próprio fica de fora: antes do ensaio
+    // ele já é o card do dia, com o play.
+    const ensaiosAgendados: EnsaioNoDia[] = casos
+      .filter((c) => c.statusOperacional !== 'cancelado' && c.pacoteSlug !== 'newborn')
+      .flatMap((caso) =>
+        ensaiosAbertos(etapas.get(caso.id) ?? [])
+          .filter((e) => e.faseClickHome === 'agendado' && e.previsaoEm !== null)
+          .map((etapa) => ({ caso, etapa })),
+      )
+    const abertos = juntarEnsaios(
+      semFuturo(blocosAbertos(agruparPorDia(noQuadro)), hoje),
+      ensaiosAgendados,
+      hoje,
+    ).map((bloco) => ({
       ...bloco,
       casos: ordenarPorUrgencia(bloco.casos, etapas, agora),
     }))
@@ -768,7 +790,10 @@ export function QuadroPage() {
   ) => (
     <>
       <AtribuicaoDaSecao etapa={etapa} onErro={onErro} />
-      <PrazoDaEtapa etapa={etapa} onErro={onErro} />
+      {/* O AGENDAMENTO DO ENSAIO no lugar do prazo (13/10/2026): era o mesmo
+          campo, e o Calendário já o mostrava como "Ensaio New Born". */}
+      <AgendamentoDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+      <PagamentoDoClickHome etapa={etapa} onErro={onErro} />
       <PedidosDaEtapa etapa={etapa} onErro={onErro} />
       <FaseDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
       {etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA && (
@@ -784,7 +809,8 @@ export function QuadroPage() {
            Depois da escolha ele não conclui nada: o fim é a confirmação da
            Morgana em Entregáveis. */
         concluirComo={
-          etapa.faseClickHome === null ||
+          // Antes do ensaio (a agendar, agendado) não há galeria a oferecer.
+          etapa.faseClickHome !== null &&
           FASES_CLICK_HOME_ANTES_DA_ESCOLHA.has(etapa.faseClickHome)
             ? {
                 rotulo: 'Galeria pronta — mandar para escolha',
@@ -994,7 +1020,8 @@ export function QuadroPage() {
   }))
   const itensClickHome: ItemDaSecao[] = emClickHome.map((caso) => ({
     id: caso.id,
-    fase: ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseClickHome ?? null,
+    // Sem fase é "a agendar" (13/10/2026): o New Born vendido e sem data.
+    fase: ensaiosAbertos(etapasPorCaso.get(caso.id) ?? [])[0]?.faseClickHome ?? 'a_agendar',
     cartao: (raiz) => cartaoClickHome(caso, raiz),
   }))
 
@@ -1073,6 +1100,12 @@ export function QuadroPage() {
     const ensaio = ensaiosAbertos(etapasPorCaso.get(casoId) ?? [])[0]
     if (!ensaio) return false
     setErroClickHome(null)
+    // AGENDADO pede o dia e a hora do ensaio (13/10/2026).
+    if (fase === 'agendado') {
+      const caso = emClickHome.find((c) => c.id === casoId)
+      if (caso) setAgendandoClickHome({ etapa: ensaio, caso })
+      return false
+    }
     // A escolha pede o link da galeria antes — mesmo arranjo do fotolivro.
     if (fase === FASE_CLICK_HOME_ESCOLHA) {
       const caso = emClickHome.find((c) => c.id === casoId)
@@ -1646,6 +1679,14 @@ export function QuadroPage() {
           etapa={aprovandoFotolivro.etapa}
           nomeDoCaso={nomeDoCaso(aprovandoFotolivro.caso)}
           onFechar={() => setAprovandoFotolivro(null)}
+        />
+      )}
+
+      {agendandoClickHome && (
+        <DialogoAgendarEnsaio
+          etapa={agendandoClickHome.etapa}
+          nomeDoCaso={nomeDoCaso(agendandoClickHome.caso)}
+          onFechar={() => setAgendandoClickHome(null)}
         />
       )}
 

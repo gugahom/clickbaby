@@ -277,6 +277,21 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
       }
     }
 
+    // O pagamento do New Born (13/10/2026).
+    case 'pagamento_do_click_home_registrado': {
+      const para = texto(evento.payload, 'para')
+      return {
+        ...base,
+        acao:
+          para === 'pago'
+            ? 'Marcou o New Born como pago'
+            : para === 'a_cobrar'
+              ? 'Marcou o New Born como a cobrar'
+              : 'Tirou a informação de pagamento do New Born',
+        tom: 'normal',
+      }
+    }
+
     case 'click_home_para_escolha':
       return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
 

@@ -395,8 +395,10 @@ enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2
 enviar_video_nos_links_do_caso(p_caso_etapa_id)  -- pronto SEM par novo: o vídeo foi para os links do caso (29/09/2026)
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
--- esteira do ensaio CLICK HOME (5 fases; ver seção 13)
+-- esteira do ensaio CLICK HOME (7 fases desde 13/10/2026; ver seção 13)
 mover_click_home(p_caso_etapa_id, p_fase)        -- escreve fase E status juntos
+agendar_click_home(p_caso_etapa_id, p_quando)    -- dia e hora do ensaio + fase "agendado" (13/10/2026)
+registrar_pagamento_do_click_home(p_caso_etapa_id, p_pagamento) -- pago / a cobrar; atendimento/adm (13/10/2026)
 enviar_click_home_para_escolha(p_caso_etapa_id, p_link) -- link da galeria + fase
 confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm
 
@@ -1474,6 +1476,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **SÓ MARCA, NUNCA DESMARCA:** tirar o sufixo do título não desfaz um ensaio que pode já ter
   sido fotografado. Quem precisa desfazer usa "Este caso não tem Click Home" no seletor, que
   dispensa a etapa.
+  **O AGENDAMENTO DO ENSAIO E O PAGAMENTO** (13/10/2026, pedido do gestor, migrations
+  `20261013172946` e `20261013172953`). Duas fases ANTES da edição: **A agendar** (vendido, sem
+  data; o New Born sem fase conta como ela) e **Agendado** (com dia e hora). A data é o
+  `previsao_em` da etapa — o mesmo que o Calendário já mostrava como "Ensaio New Born" e o
+  cartão chamava de "Prazo"; no cartão do New Born a pílula de prazo virou "Agendar ensaio" /
+  "Ensaio dd/mm, hh:mm". `agendar_click_home` grava a data e leva a "agendado" na mesma
+  transação, delegando a `agendar_etapa` e `mover_click_home`; recusa New Born cuja edição já
+  começou. As duas fases de antes deixam a etapa PENDENTE, sem carimbar início nem atribuir quem
+  agendou — o relógio de ciclo mede a edição. **No dia marcado o ensaio aparece no Quadro**, no
+  bloco daquele dia (`juntarEnsaios`, que cria o bloco se não houver), como um cartão próprio —
+  `CartaoDoEnsaio`: hora, família, quem vai, pagamento, e "Ensaio feito" (leva a "Aguardando
+  edição"; ninguém passa de fase pela data, decisão do gestor) ou "Reagendar". Ensaio que passou
+  da data sem ninguém mover fica no dia dele, atrasado. Conta no "x de y" do dia.
+  **O PAGAMENTO** é `caso_etapas.pagamento_click_home` ('pago' | 'a_cobrar', nulo = ninguém
+  informou), escrito por `registrar_pagamento_do_click_home` (atendimento ou adm). Pílula no
+  cartão, na ficha, no ensaio do Quadro e em Entregáveis; na confirmação da entrega do New Born,
+  "A cobrar" aparece em vermelho e "não informado" em âmbar — e a entrega NÃO trava (decisão do
+  gestor).
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
   **na agenda continua "CLICK HOME"** — é a grafia que a equipe digita no título e a que o
   parser procura. Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:

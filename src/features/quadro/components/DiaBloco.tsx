@@ -5,6 +5,7 @@ import { Chevron } from '@/components/ui/icones'
 import { dataCurta, diasAtras, ehRotuloRelativo, rotularDia } from '@/lib/formato'
 import type { BlocoDia, EtapaQuadro } from '../types'
 import { CasoLinha } from './CasoLinha'
+import { CartaoDoEnsaio } from './CartaoDoEnsaio'
 import { Diafragma } from './Diafragma'
 
 interface PropsDiaBloco {
@@ -181,6 +182,11 @@ export function DiaBloco({
 
       <Sanfona aberto={aberto} id={idPainel} rotuladoPor={idCabecalho}>
         <div className="mt-1.5 space-y-2">
+          {/* Os ensaios New Born do dia vêm antes dos partos (13/10/2026): têm
+              hora marcada e são fora da maternidade — ver juntarEnsaios. */}
+          {(bloco.ensaios ?? []).map((ensaio) => (
+            <CartaoDoEnsaio key={ensaio.etapa.id} ensaio={ensaio} atrasado={emAtraso} />
+          ))}
           {ativos.map((caso) => (
             <CasoLinha
               key={caso.id}

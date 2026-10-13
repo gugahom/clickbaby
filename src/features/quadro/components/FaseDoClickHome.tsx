@@ -14,6 +14,7 @@ import {
   type FaseClickHome,
 } from '../types'
 import { DialogoGaleriaDoClickHome } from './DialogoGaleriaDoClickHome'
+import { DialogoAgendarEnsaio } from './AgendamentoDoClickHome'
 
 /**
  * A FASE DO NEW BORN — as cinco colunas do quadro do ensaio newborn
@@ -31,8 +32,8 @@ import { DialogoGaleriaDoClickHome } from './DialogoGaleriaDoClickHome'
  * "ENVIAR PARA ESCOLHA" ABRE UM DIÁLOGO, porque sem o link da galeria a fase
  * não significa nada — e o banco recusa sem ele.
  *
- * SEM FASE ATÉ ALGUÉM DIZER UMA: estar na seção já é ser um ensaio a fazer, e
- * uma fase de padrão afirmaria um estado que ninguém declarou.
+ * SEM FASE CONTA COMO "A AGENDAR" (13/10/2026): estar na seção sem fase é ser um
+ * New Born vendido que ninguém marcou ainda — o que a coluna nova diz.
  */
 const DISPENSAR = 'dispensar'
 
@@ -50,19 +51,17 @@ export function FaseDoClickHome({
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const atual = etapa.faseClickHome
+  const [agendando, setAgendando] = useState(false)
+  // SEM FASE É "A AGENDAR" (13/10/2026): o New Born vendido e ainda sem data.
+  const atual: FaseClickHome = etapa.faseClickHome ?? 'a_agendar'
 
   return (
     <>
       <Dropdown
         alinhamento="direita"
         className="min-w-0"
-        rotulo={
-          atual
-            ? `Fase do New Born: ${ROTULO_FASE_CLICK_HOME[atual]}`
-            : 'Definir a fase do New Born'
-        }
-        {...(atual ? { selecionado: atual } : {})}
+        rotulo={`Fase do New Born: ${ROTULO_FASE_CLICK_HOME[atual]}`}
+        selecionado={atual}
         desabilitado={mover.isPending}
         onEscolher={(item) => {
           onErro(null)
@@ -72,6 +71,11 @@ export function FaseDoClickHome({
           }
           if (item.id === FASE_CLICK_HOME_ESCOLHA) {
             setEnviando(true)
+            return
+          }
+          // Agendado pede o dia e a hora — mesmo diálogo da pílula do ensaio.
+          if (item.id === 'agendado') {
+            setAgendando(true)
             return
           }
           mover
@@ -94,16 +98,18 @@ export function FaseDoClickHome({
           <span
             className={clsx(
               'inline-flex max-w-full items-center gap-1 truncate rounded-full px-2.5 py-1 text-xs font-bold transition-colors',
-              atual
-                ? ESTILO_FASE_CLICK_HOME[atual]
-                : 'border border-dashed border-border text-muted-foreground hover:border-marca hover:text-marca',
+              ESTILO_FASE_CLICK_HOME[atual],
               mover.isPending && 'opacity-60',
             )}
           >
-            {atual ? ROTULO_FASE_CLICK_HOME[atual] : 'Definir fase'}
+            {ROTULO_FASE_CLICK_HOME[atual]}
           </span>
         }
       />
+
+      {agendando && (
+        <DialogoAgendarEnsaio etapa={etapa} nomeDoCaso={nomeDoCaso} onFechar={() => setAgendando(false)} />
+      )}
 
       {enviando && (
         <DialogoGaleriaDoClickHome
@@ -137,7 +143,7 @@ export function FaseDoClickHome({
             A etapa sai desta seção e conta como resolvida. Use quando o ensaio
             não faz parte do que foi vendido — o título do evento no Calendar
             pode ter trazido o adicional por engano. Se ele só ainda não
-            aconteceu, deixe em “Aguardando edição”.
+            aconteceu, deixe em “A agendar” ou “Agendado”.
           </p>
         </Dialogo>
       )}
