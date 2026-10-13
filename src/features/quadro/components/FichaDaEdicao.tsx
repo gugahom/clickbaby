@@ -5,6 +5,8 @@ import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import { formatarDataHora, rotularDia } from '@/lib/formato'
 import { useUrlDaCapa } from '../api/useAcoes'
 import type { CasoQuadro, EtapaQuadro } from '../types'
+import { AnexosDosPedidos } from './AnexosDosPedidos'
+import { useEnvioDeAnexos } from '../api/useEnvioDeAnexos'
 import { Entregaveis } from './Entregaveis'
 import { HistoricoDoCaso } from './HistoricoDoCaso'
 
@@ -43,6 +45,7 @@ export function FichaDaEdicao({
   onFechar: () => void
 }) {
   const [erro, setErro] = useState<string | null>(null)
+  const envio = useEnvioDeAnexos(etapa)
   const nome = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
 
   return (
@@ -109,16 +112,19 @@ export function FichaDaEdicao({
             )}
 
             <Bloco titulo="Pedidos do cliente">
-              {etapa.observacao ? (
-                <p className="rounded-md border-l-[3px] border-atencao bg-atencao/12 px-3 py-2 text-sm whitespace-pre-line">
-                  {etapa.observacao}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum pedido registrado. Os pedidos da família entram pela pastilha
-                  “Pedidos”, lá em cima.
-                </p>
-              )}
+              <div className="space-y-3" onPaste={envio.aoColar}>
+                {etapa.observacao ? (
+                  <p className="rounded-md border-l-[3px] border-atencao bg-atencao/12 px-3 py-2 text-sm whitespace-pre-line">
+                    {etapa.observacao}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum pedido escrito. O texto entra pela pastilha “Pedidos”, lá em
+                    cima; os anexos, aqui ou lá.
+                  </p>
+                )}
+                <AnexosDosPedidos etapa={etapa} envio={envio} />
+              </div>
             </Bloco>
 
             <Bloco titulo="Links do caso">

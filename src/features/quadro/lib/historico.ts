@@ -292,6 +292,17 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
       }
     }
 
+    // Os anexos dos pedidos do cliente (13/10/2026).
+    case 'anexo_adicionado':
+    case 'anexo_removido': {
+      const nome = texto(evento.payload, 'nome')
+      return {
+        ...base,
+        acao: `${evento.tipo === 'anexo_adicionado' ? 'Anexou' : 'Apagou o anexo'} ${nome ? `“${nome}”` : 'um arquivo'} nos pedidos${etapa ? ` · ${etapa}` : ''}`,
+        tom: 'normal',
+      }
+    }
+
     case 'click_home_para_escolha':
       return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
 

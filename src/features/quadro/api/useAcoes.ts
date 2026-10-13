@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from './recarga'
 import { casoDaEtapa } from './atualizar-por-caso'
+import { caminhoDoAnexo, formatoDoArquivo, problemaDoArquivo } from '../lib/anexos'
 import type { FaseAlbum, FaseCampo, FaseClickHome, FaseVideoMaster, PagamentoClickHome, TermoStatus } from '../types'
 
 export type TipoEntregavel = Database['public']['Enums']['tipo_entregavel']
@@ -51,6 +52,7 @@ function useAcaoDoQuadro<TVars>(executar: (vars: TVars) => Promise<void>) {
       else agendarRecargaDoQuadro(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['entregaveis'] })
       void queryClient.invalidateQueries({ queryKey: ['despesas'] })
+      void queryClient.invalidateQueries({ queryKey: ['anexos'] })
     },
   })
 }
@@ -782,4 +784,108 @@ export function useRemoverDespesa() {
         ...(motivo === undefined ? {} : { p_motivo: motivo }),
       }),
   )
+}
+
+/**
+ * OS ANEXOS DOS PEDIDOS DO CLIENTE (13/10/2026, migration 20261013215014).
+ *
+ * Dois passos, como a capa do fotolivro: o ARQUIVO vai direto do navegador
+ * para o bucket privado `pedidos`, na pasta da etapa; a RPC põe na lista,
+ * lendo tamanho e formato do próprio Storage. Se a RPC recusa, o arquivo que
+ * acabou de subir é apagado — a policy deixa quem subiu apagar o próprio
+ * arquivo que não entrou na lista —, para não sobrar arquivo órfão.
+ *
+ * UM ARQUIVO POR CHAMADA: o diálogo manda um de cada vez e mostra "2 de 3".
+ */
+export function useAnexarNosPedidos() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; arquivo: File }>(async ({ casoEtapaId, arquivo }) => {
+    const problema = problemaDoArquivo(arquivo)
+    if (problema) throw new Error(problema)
+
+    const caminho = caminhoDoAnexo(casoEtapaId, arquivo.name)
+    // O Storage lê o tipo do PRÓPRIO arquivo, não da opção `contentType`. O
+    // Windows entrega `.opus` e `.heic` sem tipo, e o bucket recusaria — então
+    // o arquivo vai embrulhado com o tipo deduzido da extensão.
+    const formato = formatoDoArquivo(arquivo) as string
+    const corpo = arquivo.type === formato ? arquivo : new File([arquivo], arquivo.name, { type: formato })
+    const { error: erroDoEnvio } = await supabase.storage
+      .from('pedidos')
+      .upload(caminho, corpo, { contentType: formato })
+    if (erroDoEnvio) throw new Error(`Não foi possível enviar “${arquivo.name}”: ${erroDoEnvio.message}`)
+
+    const { error } = await supabase.rpc('registrar_anexo_da_etapa', {
+      p_caso_etapa_id: casoEtapaId,
+      p_caminho: caminho,
+      p_nome: arquivo.name,
+    })
+    if (error) {
+      await supabase.storage.from('pedidos').remove([caminho])
+      throw error
+    }
+  })
+}
+
+/**
+ * Apaga um anexo: a RPC confere quem pode (quem enviou, atendimento ou
+ * gestão), tira da lista e devolve o caminho; aí o arquivo sai do bucket. Se
+ * essa segunda parte falhar, o anexo já saiu da lista — sobra um arquivo que
+ * ninguém vê, e não um item que não abre.
+ */
+export function useRemoverAnexo() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; anexoId: string }>(async ({ anexoId }) => {
+    const { data: caminho, error } = await supabase.rpc('remover_anexo_da_etapa', { p_anexo_id: anexoId })
+    if (error) throw error
+    if (caminho) await supabase.storage.from('pedidos').remove([caminho])
+  })
+}
+
+export interface AnexoDaEtapa {
+  id: string
+  nome: string
+  tipoMime: string
+  tamanho: number
+  enviadoEm: string
+  enviadoPorId: string
+  enviadoPorNome: string | null
+  /** URL assinada de uma hora: o anexo pode ter foto da família (seção 10). */
+  url: string | null
+}
+
+/**
+ * A lista dos anexos de uma etapa, com as URLs assinadas — uma chamada só
+ * para todas. Buscada quando alguém abre os pedidos ou a ficha; a validade da
+ * consulta é bem menor que a da URL, então ela nunca expira em tela.
+ */
+export function useAnexosDaEtapa(casoEtapaId: string) {
+  return useQuery({
+    queryKey: ['anexos', casoEtapaId],
+    staleTime: 30 * 1000,
+    queryFn: async (): Promise<AnexoDaEtapa[]> => {
+      const { data, error } = await supabase
+        .from('anexos_da_etapa')
+        .select('id, caminho, nome, tipo_mime, tamanho, created_at, enviado_por, enviado:pessoas!anexos_da_etapa_enviado_por_fkey(nome)')
+        .eq('caso_etapa_id', casoEtapaId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+      if (error) throw error
+      if (data.length === 0) return []
+
+      const { data: assinadas, error: erroDasUrls } = await supabase.storage
+        .from('pedidos')
+        .createSignedUrls(data.map((a) => a.caminho), 60 * 60)
+      if (erroDasUrls) throw erroDasUrls
+      const urlDo = new Map(assinadas.map((a) => [a.path, a.signedUrl]))
+
+      return data.map((a) => ({
+        id: a.id,
+        nome: a.nome,
+        tipoMime: a.tipo_mime,
+        tamanho: a.tamanho,
+        enviadoEm: a.created_at,
+        enviadoPorId: a.enviado_por,
+        enviadoPorNome: a.enviado?.nome ?? null,
+        url: urlDo.get(a.caminho) ?? null,
+      }))
+    },
+  })
 }

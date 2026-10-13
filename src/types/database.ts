@@ -34,6 +34,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      anexos_da_etapa: {
+        Row: {
+          caminho: string
+          caso_etapa_id: string
+          created_at: string
+          enviado_por: string
+          id: string
+          nome: string
+          tamanho: number
+          tipo_mime: string
+          updated_at: string
+        }
+        Insert: {
+          caminho: string
+          caso_etapa_id: string
+          created_at?: string
+          enviado_por: string
+          id?: string
+          nome: string
+          tamanho: number
+          tipo_mime: string
+          updated_at?: string
+        }
+        Update: {
+          caminho?: string
+          caso_etapa_id?: string
+          created_at?: string
+          enviado_por?: string
+          id?: string
+          nome?: string
+          tamanho?: number
+          tipo_mime?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_da_etapa_caso_etapa_id_fkey"
+            columns: ["caso_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "caso_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_da_etapa_caso_etapa_id_fkey"
+            columns: ["caso_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_etapa_id"]
+          },
+          {
+            foreignKeyName: "anexos_da_etapa_enviado_por_fkey"
+            columns: ["enviado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caso_etapas: {
         Row: {
           atribuido_em: string | null
@@ -1903,6 +1961,10 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
         Returns: undefined
       }
+      registrar_anexo_da_etapa: {
+        Args: { p_caminho: string; p_caso_etapa_id: string; p_nome: string }
+        Returns: string
+      }
       registrar_avaliacao: { Args: { p_caso_id: string }; Returns: undefined }
       registrar_despesa: {
         Args: {
@@ -1949,6 +2011,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      remover_anexo_da_etapa: { Args: { p_anexo_id: string }; Returns: string }
       remover_despesa: {
         Args: { p_despesa_id: string; p_motivo?: string }
         Returns: undefined

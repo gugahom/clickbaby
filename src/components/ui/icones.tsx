@@ -692,3 +692,42 @@ export function IconeTirarFormatacao({ className }: PropsIcone) {
     </IconeDeTraco>
   )
 }
+
+/* Os anexos dos pedidos do cliente (13/10/2026): o clipe e um ícone por
+   formato — música, vídeo e o resto (PDF). A foto se mostra pela miniatura. */
+
+export function IconeClipe({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="m21 11-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeMusica({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M9 18V5l11-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="17" cy="16" r="3" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeFilme({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <rect x="3" y="5" width="13" height="14" rx="2" />
+      <path d="m16 10 5-3v10l-5-3" />
+    </IconeDeTraco>
+  )
+}
+
+export function IconeDocumento({ className }: PropsIcone) {
+  return (
+    <IconeDeTraco className={className}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
+    </IconeDeTraco>
+  )
+}

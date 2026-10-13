@@ -407,6 +407,10 @@ mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
 enviar_fotolivro_para_aprovacao(p_caso_etapa_id, p_link, p_capa) -- capa + link + fase, juntos
 marcar_fotolivro_enviado(p_caso_etapa_id)        -- "Enviado ao cliente"; atendimento/adm
 
+-- os anexos dos "Pedidos" do vídeo, do Foto/Livro e do New Born (13/10/2026; ver seção 13)
+registrar_anexo_da_etapa(p_caso_etapa_id, p_caminho, p_nome) -- o arquivo já subiu ao bucket `pedidos`
+remover_anexo_da_etapa(p_anexo_id)               -- quem enviou, atendimento ou adm; devolve o caminho
+
 -- pedido de alteração pós-entrega, SÓ das duas com seção própria (ver seção 13)
 pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabrir o caso
 
@@ -1522,6 +1526,23 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **PEDIDOS** (`PedidosDaEtapa`) é a observação da etapa (`anotar_etapa`), onde entram os
   pedidos da família — prints, link de música. O texto aparece POR EXTENSO dentro do cartão,
   que por isso cresceu.
+  **OS PEDIDOS TÊM ANEXOS** (13/10/2026, pedido do gestor: "normalmente o cliente manda
+  alguma referência, algum vídeo, alguma foto" — o "Anexos" do cartão do Trello deles). Nos
+  três lugares com "Pedidos" (vídeo do MASTER, Foto/Livro, New Born), por decisão dele, até
+  **50 MB por arquivo** (vídeo maior vai como link no texto), foto, vídeo, música ou PDF. O
+  arquivo mora no bucket privado PRÓPRIO `pedidos` (`<caso_etapa_id>/<carimbo>-<nome>`), com o
+  teto e os formatos no BUCKET — é o único lugar em que o servidor impõe o limite de verdade;
+  a lista de formatos tem espelho em `lib/anexos.ts`. A LISTA é `anexos_da_etapa`, escrita só
+  por RPC: `registrar_anexo_da_etapa` lê tamanho e formato do PRÓPRIO Storage, não do cliente.
+  **APAGA quem enviou, o atendimento ou a gestão**, em dois passos: a RPC tira da lista e
+  grava o evento, e a tela apaga o arquivo pela API do Storage (o Supabase recusa DELETE
+  direto em `storage.objects`). A policy de remoção só alcança arquivo que JÁ SAIU da lista —
+  ninguém some com o anexo de outra pessoa pela porta do Storage — e deixa quem subiu limpar
+  o próprio arquivo que não chegou a ser registrado. O diálogo dos pedidos deixou de ser o
+  `AnotarDialogo` do aviso (que dizia "aparece numa faixa no card"); os anexos entram NA HORA,
+  com fila ("2 de 3"), arrastar e Ctrl+V de print; foto vira miniatura, música toca ali
+  mesmo. O cartão mostra só a CONTAGEM (`anexos_da_etapa(count)` na consulta do Quadro); a
+  lista, com URLs assinadas de uma hora, vem quando alguém abre os pedidos ou a ficha.
   **EM ÂMBAR, COM TARJA E NOME** (16/09/2026, segunda volta do gestor: "o pedido ficou meio
   sem destaque"). Era um bloco no tom do cartão e passava por legenda. Agora a pastilha e o
   bloco dividem a cor de ATENÇÃO, e o bloco diz o que é ("Pedidos do cliente"). O que ele NÃO
