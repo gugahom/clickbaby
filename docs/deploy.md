@@ -62,6 +62,57 @@ vazaria para qualquer visitante.
 Se `VITE_SUPABASE_URL` faltar, o build **falha** com mensagem explícita, em vez
 de publicar um app que não fala com banco nenhum.
 
+## Quem publica: o fluxo "Publicar" do GitHub (desde 14/10/2026)
+
+**O Cloudflare não constrói mais sozinho a cada merge.** Em 13/10/2026 o PR #121
+entrou na main, o Cloudflare publicou a tela nova na hora, e a migration dela
+ainda não estava no banco: o Quadro ficou fora do ar até o `db push` manual. Por
+isso a publicação passou para `.github/workflows/publicar.yml`, que só põe o
+front no ar quando o banco já tem as migrations dele.
+
+**A cada push na main:**
+
+1. O fluxo roda `supabase db push --dry-run` contra o remoto.
+2. **Nenhuma migration pendente** → constrói e publica o front. Pronto.
+3. **Há migration pendente** → o fluxo **para em vermelho**, com a lista no
+   resumo da execução, e o front **não** vai ao ar (o site segue na versão
+   anterior, que funciona com o banco atual). O GitHub manda e-mail.
+4. Quem aprova lê o SQL no PR e vai em **Actions → Publicar → Run workflow**,
+   marca **"Aplicar as migrations pendentes"** e roda. O fluxo aplica, publica o
+   front e roda `npm run seguranca`.
+
+A aprovação continua humana, como sempre foi (CLAUDE.md, seções 11 e 12) — o
+botão é a aprovação. Subir a migration à mão, do jeito antigo, também vale:
+depois dele, um "Run workflow" sem marcar nada só publica o front.
+
+**Edge Functions continuam fora** deste fluxo: deploy manual, só quando mudam
+(`npx supabase functions deploy <nome>`). Se uma função nova depender de uma
+migration, suba a migration primeiro.
+
+### Configuração, uma vez só
+
+No **GitHub** (Settings → Secrets and variables → Actions):
+
+| tipo | nome | valor |
+| --- | --- | --- |
+| secret | `SUPABASE_ACCESS_TOKEN` | token pessoal do Supabase (Account → Access Tokens) |
+| secret | `SUPABASE_DB_PASSWORD` | a senha do banco do projeto |
+| secret | `CLOUDFLARE_API_TOKEN` | token com a permissão **Cloudflare Pages: Edit**, e só ela |
+| secret | `CLOUDFLARE_ACCOUNT_ID` | o id da conta — o mesmo valor do `R2_ACCOUNT_ID` do backup |
+| variable | `SUPABASE_PROJECT_REF` | `opfplextlmakxsxcufey` |
+| variable | `VITE_SUPABASE_URL` | o mesmo do `.env` |
+| variable | `VITE_SUPABASE_ANON_KEY` | o mesmo do `.env` (é pública por definição) |
+
+No **Cloudflare** (Workers & Pages → clickbaby → Settings → Build → Branch
+control): **desligar "Enable automatic production branch deployments"**. Sem
+isso os dois publicam, e o do Cloudflare volta a chegar antes da migration.
+Os *previews* de branch podem ficar ligados — não tocam o domínio —, mas eles
+também falam com o banco de produção, então uma tela que depende de migration
+nova aparece quebrada no preview até ela subir.
+
+**Desligue no Cloudflare só depois de o primeiro "Run workflow" publicar com
+sucesso** — assim os segredos estão provados antes de a porta antiga fechar.
+
 ## A armadilha que já mordeu
 
 `npm run dev:local` escreve um arquivo de ambiente apontando para o Supabase do
@@ -162,9 +213,9 @@ de build **não** se aplicam aqui: quem constrói é a sua máquina, com o seu
 `.env`. É por isso que este caminho funciona mesmo com o painel mal configurado —
 e por isso ele não corrige a causa.
 
-### 4. A integração com o git parou
+### 4. O fluxo "Publicar" parou
 
-Se o `main` não constrói sozinho mas o deploy manual funciona, o gatilho é que
-está desligado. No painel, em *Builds & deployments*: confirme que o repositório
-segue conectado, que a branch de produção é `main`, e que não há filtro de
-caminho excluindo o que mudou.
+Desde 14/10/2026 o `main` NÃO constrói sozinho no Cloudflare — de propósito (ver
+"Quem publica", acima). Olhe a última execução em **Actions → Publicar**:
+vermelha no passo "Parar se há migration…" é migration esperando aprovação;
+vermelha em outro passo é segredo faltando ou build quebrado, e o log diz qual.

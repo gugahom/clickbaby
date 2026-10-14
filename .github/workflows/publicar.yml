@@ -1,0 +1,206 @@
+# PUBLICAR: O FRONT SÓ VAI AO AR COM AS MIGRATIONS DELE NO BANCO (14/10/2026).
+#
+# Em 13/10/2026 o PR #121 entrou na main, o Cloudflare publicou a tela nova na
+# hora, e a migration dela ainda não tinha subido: o Quadro pedia ao banco uma
+# tabela que não existia (PGRST200) e ficou fora do ar até o `db push` manual.
+# Era a dívida #6 do CLAUDE.md — deploy do front automático, do banco à mão.
+#
+# AGORA QUEM PUBLICA É ESTE FLUXO, e não mais a integração do Cloudflare com o
+# git (desligada no painel — ver docs/deploy.md). A cada push na main:
+#
+#   1. VERIFICAR — `supabase db push --dry-run` contra o remoto.
+#   2. Se NÃO há migration pendente → PUBLICAR o front (build + wrangler).
+#      Se HÁ → o fluxo PARA, com o dry-run no resumo, e o front NÃO vai ao ar.
+#      O vermelho é de propósito: o GitHub manda e-mail, e alguém precisa olhar.
+#   3. A APROVAÇÃO é humana, como sempre foi neste projeto (CLAUDE.md, seções
+#      11 e 12): depois de ler o dry-run, rodar este fluxo pelo botão "Run
+#      workflow" com "Aplicar as migrations pendentes" marcado. Aí ele aplica,
+#      publica o front e roda `npm run seguranca`.
+#      O botão e não um "environment" com aprovador: aprovação obrigatória por
+#      environment não existe em repositório privado no plano gratuito.
+#
+# Subir a migration À MÃO (do jeito de antes) continua valendo: o próximo
+# "Run workflow", sem marcar nada, vê que não há pendência e só publica.
+#
+# FORA DESTE FLUXO, por ora: as Edge Functions continuam com deploy manual
+# (`supabase functions deploy <nome>`), só quando mudam.
+#
+# SEGREDOS E VARIÁVEIS (Settings → Secrets and variables → Actions):
+#   secrets.SUPABASE_ACCESS_TOKEN   token pessoal do Supabase (Account → Access Tokens)
+#   secrets.SUPABASE_DB_PASSWORD    a senha do banco do projeto
+#   secrets.CLOUDFLARE_API_TOKEN    token com "Cloudflare Pages: Edit", e nada além
+#   secrets.CLOUDFLARE_ACCOUNT_ID   o id da conta (o mesmo valor de R2_ACCOUNT_ID)
+#   vars.SUPABASE_PROJECT_REF       opfplextlmakxsxcufey — não é segredo
+#   vars.VITE_SUPABASE_URL          o mesmo do .env — vai no bundle, é público
+#   vars.VITE_SUPABASE_ANON_KEY     idem: a anon key é pública por definição
+#
+# A service_role key NÃO entra aqui: nada neste fluxo precisa dela.
+
+name: Publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      aplicar_migrations:
+        description: 'Aplicar as migrations pendentes (leia o dry-run da última execução antes)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Uma publicação de cada vez, e nenhuma cancelada no meio: um `db push` cortado
+# ao meio é o pior estado possível.
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+  SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      pendentes: ${{ steps.dry_run.outputs.pendentes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # O CLI do Supabase vem do package-lock (devDependency), na MESMA versão
+      # do ambiente local — o `npx supabase` dos scripts usa este.
+      - run: npm ci
+
+      - name: Ligar ao projeto remoto
+        run: |
+          test -n "$SUPABASE_PROJECT_REF" || { echo "Falta a variável SUPABASE_PROJECT_REF."; exit 1; }
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Migrations pendentes (dry-run)
+        id: dry_run
+        run: |
+          saida=$(npx supabase db push --dry-run 2>&1) || { echo "$saida"; exit 1; }
+          echo "$saida"
+          # O CLI fecha com uma linha JSON: {"upToDate":…,"migrations":[…]}.
+          resumo=$(echo "$saida" | grep -E '^\{"upToDate"' | tail -1 || true)
+          test -n "$resumo" || { echo "Não achei o resumo JSON do dry-run — a saída do CLI mudou?"; exit 1; }
+          pendentes=$(echo "$resumo" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log((r.migrations||[]).join("\n"))})')
+          {
+            echo "## Migrations pendentes no remoto"
+            if [ -z "$pendentes" ]; then
+              echo "Nenhuma — o banco já está igual à main."
+            else
+              echo "$pendentes" | sed 's/^/- `/; s/$/`/'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$pendentes" ]; then
+            echo "pendentes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pendentes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parar se há migration e ninguém aprovou
+        if: steps.dry_run.outputs.pendentes == 'true' && inputs.aplicar_migrations != true
+        run: |
+          {
+            echo
+            echo "### O front NÃO foi publicado"
+            echo "Ele depende das migrations acima. Leia o SQL delas no PR e, se estiver certo,"
+            echo "rode **Actions → Publicar → Run workflow** com **Aplicar as migrations pendentes** marcado."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Há migration pendente sem aprovação — o front não foi publicado. Ver o resumo do fluxo."
+          exit 1
+
+  migrations:
+    needs: verificar
+    if: needs.verificar.outputs.pendentes == 'true' && inputs.aplicar_migrations == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      # De novo o dry-run, aqui dentro: é ele que fica no log da execução que
+      # de fato aplicou.
+      - run: npx supabase db push --dry-run
+      - name: Aplicar
+        run: npx supabase db push --yes
+
+  publicar:
+    needs: [verificar, migrations]
+    # Publica quando não havia nada pendente, ou quando havia e foi aplicado.
+    # `always()` é o que deixa este job olhar um `migrations` pulado.
+    if: >-
+      always() &&
+      needs.verificar.result == 'success' &&
+      (needs.migrations.result == 'success' ||
+       (needs.migrations.result == 'skipped' && needs.verificar.outputs.pendentes == 'false'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # O Vite embute as duas no bundle EM TEMPO DE BUILD (docs/deploy.md). O
+      # vite.config.ts recusa buildar sem a URL, ou apontando para o local.
+      - name: Variáveis do build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$VITE_SUPABASE_URL" "$VITE_SUPABASE_ANON_KEY" > .env
+
+      - run: npm run build
+
+      # `dist`, não `dist/quadro`: o _redirects mora na raiz do publicado. E
+      # `--branch=main` é o que faz o deploy virar produção (docs/deploy.md).
+      # Versão TRAVADA, pela lição da dívida #6.
+      - name: Publicar no Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          npx --yes wrangler@4.131.2 pages deploy dist
+          --project-name=clickbaby --branch=main --commit-hash="$GITHUB_SHA"
+
+  seguranca:
+    # Depois de todo `db push` que toque schema (CLAUDE.md, seção 5). Não
+    # segura a publicação: a migration já está no banco, e o front que a usa
+    # tem de ir junto. Se falhar, o fluxo fica vermelho e alguém olha.
+    needs: migrations
+    if: needs.migrations.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: .env para as sondas
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$VITE_SUPABASE_URL" "$VITE_SUPABASE_ANON_KEY" > .env
+      - run: npm run seguranca
