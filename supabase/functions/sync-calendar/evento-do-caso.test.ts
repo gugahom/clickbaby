@@ -208,25 +208,20 @@ Deno.test("a observação com formatação vai como está; a de texto puro é es
   );
 });
 
-Deno.test("a descrição leva a DPP, em data brasileira, antes da cesárea", () => {
+Deno.test("a descrição leva a hora prevista do nascimento, e não a DPP (que é o dia do evento)", () => {
   assertEqual(
-    descricaoDoEvento({ dpp: "2026-10-20", observacao_calendar: null, cesarea_em: null }),
-    "DPP: 20/10/2026<br><br>Criado pelo calendário do sistema ClickBaby.",
-    "só a DPP",
-  );
-  assertEqual(
-    descricaoDoEvento({ dpp: "2026-10-20", observacao_calendar: "Nome: Ana", cesarea_em: "2026-10-14T17:30:00Z" }),
-    "Nome: Ana<br><br>DPP: 20/10/2026<br><br>Cesárea às 14:30<br><br>Criado pelo calendário do sistema ClickBaby.",
-    "caso antigo com cesárea: as duas linhas",
+    descricaoDoEvento({ observacao_calendar: null, cesarea_em: "2026-10-17T11:00:00Z" }),
+    "Nascimento previsto às 08:00<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "só o nascimento",
   );
 });
 
-Deno.test("a descrição leva observações e cesárea — e só é reescrita no caso que o sistema criou", () => {
+Deno.test("a descrição leva observações e nascimento previsto — e só é reescrita no caso que o sistema criou", () => {
   const comCampos = { ...CASO_EDITADO, cesarea_em: "2026-10-14T17:30:00Z", observacao_calendar: "Nome: Ana\nMédico: Plantão" };
   assertEqual(
     descricaoDoEvento(comCampos),
-    "Nome: Ana<br>Médico: Plantão<br><br>Cesárea às 14:30<br><br>Criado pelo calendário do sistema ClickBaby.",
-    "observações, cesárea em Brasília, origem — em HTML, a quebra de linha vira <br>",
+    "Nome: Ana<br>Médico: Plantão<br><br>Nascimento previsto às 14:30<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "observações, nascimento em Brasília, origem — em HTML, a quebra de linha vira <br>",
   );
   const daEquipe = atualizarEventoDoCaso(comCampos, EVENTO_DA_EQUIPE);
   assertEqual(daEquipe.description, "quarto 201, levar o cartão 14", "evento da equipe: a descrição dela fica");

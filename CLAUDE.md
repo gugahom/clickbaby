@@ -2650,14 +2650,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   como o New Born. **A descrição do evento só é escrita no caso que o SISTEMA criou**
   (`criado_por`): no que veio do Google ela é da equipe (tem CPF, e-mail, médico), e reescrevê-la
   com um campo que aqui nasceu vazio apagaria o cadastro. O texto não vai para `eventos`.
-  **A DPP NO LUGAR DA CESÁREA** (14/10/2026, pedido do gestor, migration `20261014113525`):
-  o campo "Cesárea" (hora da cirurgia) virou **DPP** — data provável do parto, uma DATA
-  (`casos.dpp`), no detalhe e na descrição do evento ("DPP: 20/10/2026"). Não foi renomear:
-  são perguntas diferentes (decisão do gestor, perguntado). `cesarea_em` FICA — 40 casos do
-  remoto tinham a hora —, sai só da tela; o formulário a devolve intacta ao salvar, porque
-  `editar_caso` grava o que recebe e nulo limparia, e a descrição do Google segue com
-  "Cesárea às…" onde ela existe. `p_dpp` é o último parâmetro de `criar_caso`/`editar_caso`,
-  e o sync recebe `dpp` como última coluna — retrocompatível nos dois sentidos.
+  **OS TRÊS DE QUANDO: DPP, INTERNAMENTO E NASCIMENTO** (14/10/2026, pedido do gestor, em duas
+  voltas no mesmo dia). **O DIA DO CASO É A DPP** — a data provável do parto ("o dia, para
+  nós, é a data provável do parto") —, **A HORA PREVISTA É A DO INTERNAMENTO** (a chegada que
+  o médico manda: a hora do alerta e a do evento no Google) e **`casos.cesarea_em` É O
+  NASCIMENTO PREVISTO** — a coluna nasceu como "hora da cesárea", e é a mesma pergunta. O
+  formulário e o detalhe do parto dizem os três por extenso ("Data provável do parto",
+  "Internamento previsto", "Nascimento previsto"); EVENTO e NEWBORN continuam com "Dia" e
+  "Hora". O formulário pede só a HORA do nascimento: o dia é a DPP, ou o seguinte quando a
+  hora vem antes da do internamento (`diaDoNascimento`). Na descrição do evento:
+  "Nascimento previsto às 08:00".
+  **A PRIMEIRA VOLTA ENTENDEU ERRADO** e deixou resto no banco: a migration `20261014113525`
+  criou `casos.dpp` (uma data à parte) e tirou o campo da cesárea da tela. O gestor explicou
+  no mesmo dia, e a tela voltou a usar `cesarea_em`. **`casos.dpp` e o `p_dpp` de
+  `criar_caso`/`editar_caso` ficaram SEM USO** — no remoto, 2 casos chegaram a preenchê-la,
+  os dois com o próprio dia do caso, e editar pelo calendário a limpa (a tela não manda mais
+  `p_dpp`, e o padrão é nulo). O sync ainda a recebe e a ignora. Apagar a coluna pede DROP +
+  CREATE das duas RPCs, da trigger `marcar_caso_para_o_google` e das duas funções do sync, e
+  ficou para quando houver outra mudança nelas.
   **AS OBSERVAÇÕES TÊM FORMATAÇÃO** (06/10/2026, pedido do gestor): negrito, itálico,
   sublinhado, tachado, as duas listas e "tirar a formatação", numa barra EMBAIXO da caixa
   ("sem tirar muito espaço") — o arranjo da descrição do próprio Google. `EditorDeTexto` e

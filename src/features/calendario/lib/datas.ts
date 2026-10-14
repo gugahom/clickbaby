@@ -45,6 +45,15 @@ export function emBrasilia(instante: string): { dia: string; hora: string } {
   return { dia: `${p('year')}-${p('month')}-${p('day')}`, hora: `${p('hour')}:${p('minute')}` }
 }
 
+/**
+ * O DIA DO NASCIMENTO PREVISTO (14/10/2026). O formulário pede só a HORA; o dia
+ * é o da DPP — menos quando a hora do nascimento vem ANTES da do internamento
+ * (interna às 22h, nasce à 1h): aí é o dia seguinte.
+ */
+export function diaDoNascimento(dpp: string, internamento: string, nascimento: string): string {
+  return internamento !== '' && nascimento < internamento ? somarDias(dpp, 1) : dpp
+}
+
 /** A meia-noite de Brasília daquele dia, como instante — para filtrar timestamptz. */
 export const inicioDoDiaEmBrasilia = (data: string) => `${data}T00:00:00-03:00`
 

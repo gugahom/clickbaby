@@ -3,7 +3,7 @@ import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { TextoFormatado } from '@/components/ui/TextoFormatado'
 import { useCasoEditavel, useNoQuadro, type ItemDoCalendario } from '../api/useCalendario'
-import { rotuloDoDiaCompleto } from '../lib/datas'
+import { emBrasilia, rotuloDoDiaCompleto } from '../lib/datas'
 import { aparencia } from '../lib/estilos'
 import { VendaDoCaso } from '@/features/vendas/components/VendaDoCaso'
 
@@ -40,11 +40,30 @@ export function DetalheDoItem({
 }) {
   const a = aparencia(item)
   const noQuadro = useNoQuadro(item.casoId)
-  // DPP e observações só existem no parto — são do caso, não da etapa.
+  // O nascimento previsto e as observações só existem no parto — são do caso,
+  // não da etapa.
   const caso = useCasoEditavel(item.tipo === 'parto' ? item.casoId : null)
+  // NO PARTO, OS TRÊS DE QUANDO (14/10/2026, pedido do gestor): o dia do caso é a
+  // DPP, a hora é a do internamento, e o nascimento previsto vem do caso.
+  // EVENTO e NEWBORN também são "parto" no calendário, e ali nada disso vale.
+  const ehParto = item.tipo === 'parto' && item.pacote !== 'EVENTO' && item.pacote !== 'NEWBORN'
+  const nascimento = caso.data?.cesareaEm ? emBrasilia(caso.data.cesareaEm) : null
+  const quando: [string, string | null][] = ehParto
+    ? [
+        ['Data provável do parto', rotuloDoDiaCompleto(item.dia)],
+        ['Internamento previsto', item.hora || 'a definir'],
+        [
+          'Nascimento previsto',
+          nascimento
+            ? nascimento.dia === item.dia
+              ? nascimento.hora
+              : `${nascimento.hora} · ${rotuloDoDiaCompleto(nascimento.dia)}`
+            : null,
+        ],
+      ]
+    : [['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : item.tipo === 'parto' ? ' · hora a definir' : ' · dia todo'}`]]
   const linhas: [string, string | null][] = [
-    ['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : item.tipo === 'parto' ? ' · hora a definir' : ' · dia todo'}`],
-    ['DPP', caso.data?.dpp ? rotuloDoDiaCompleto(caso.data.dpp) : null],
+    ...quando,
     ['Maternidade', item.maternidade],
     ['Pacote', item.pacote],
     ['Com quem', item.responsavel],
@@ -61,7 +80,7 @@ export function DetalheDoItem({
           {item.titulo}
           {item.vencido && ' · vencido'}
         </span>
-        <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
+        <dl className="grid grid-cols-[10.5rem_1fr] gap-x-3 gap-y-2 text-sm">
           {linhas
             .filter((l): l is [string, string] => l[1] !== null && l[1] !== '')
             .map(([rotulo, valor]) => (

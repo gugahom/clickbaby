@@ -7,7 +7,7 @@ import { EditorDeTexto } from '@/components/ui/EditorDeTexto'
 import { useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
-import { emBrasilia, rotuloDoDia } from '../lib/datas'
+import { diaDoNascimento, emBrasilia, rotuloDoDia } from '../lib/datas'
 import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
 import { IconeCheck } from '@/components/ui/icones'
 import type { TermoStatus } from '@/features/quadro/types'
@@ -132,8 +132,10 @@ function FormularioDoCaso({
   const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? '')
   // Hora a definir abre com o campo vazio — a meia-noite guardada não é hora.
   const [hora, setHora] = useState(proposta?.hora ?? (caso?.semHora ? '' : (antes?.hora ?? '')))
-  // A DPP no lugar da hora da cesárea (14/10/2026, pedido do gestor).
-  const [dpp, setDpp] = useState(caso?.dpp ?? '')
+  // OS TRÊS DE QUANDO (14/10/2026, o gestor: "a data provável do parto, o
+  // horário de chegada e o horário previsto de nascimento"): o DIA é a DPP, a
+  // HORA é a do internamento, e o NASCIMENTO previsto mora em `cesarea_em`.
+  const [nascimento, setNascimento] = useState(caso?.cesareaEm ? emBrasilia(caso.cesareaEm).hora : '')
   const [observacao, setObservacao] = useState(caso?.observacao ?? '')
   const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
   const [fotolivro, setFotolivro] = useState(caso?.temFotolivro ?? false)
@@ -158,6 +160,8 @@ function FormularioDoCaso({
   // mãe e o NOME do evento no lugar do bebê, e nenhum dos dois leva adicional.
   const ehEvento = pacote?.nome === 'EVENTO'
   const ehNewborn = pacote?.nome === 'NEWBORN'
+  const ehParto = !ehEvento && !ehNewborn
+  const nascimentoNoDiaSeguinte = nascimento !== '' && hora !== '' && nascimento < hora
   const maeEfetiva = ehEvento ? 'EVENTO' : maeNome
   const temBarra = maeEfetiva.includes('/') || bebeNome.includes('/')
   const falta = [
@@ -195,8 +199,7 @@ function FormularioDoCaso({
       maternidadeId,
       dia,
       hora,
-      dpp: ehEvento || ehNewborn ? '' : dpp,
-      cesareaEm: caso?.cesareaEm ?? null,
+      nascimento: ehEvento || ehNewborn ? '' : nascimento,
       observacao,
       clickHome: clickHome && !ehEvento && !ehNewborn,
       fotolivro: fotolivro && !ehEvento && !ehNewborn,
@@ -281,17 +284,34 @@ function FormularioDoCaso({
                 : 'grid-cols-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]',
             )}
           >
-            <CampoTexto rotulo="Dia" type="date" valor={dia} aoMudar={setDia} {...(dia ? { ajuda: rotuloDoDia(dia) } : {})} />
             <CampoTexto
-              rotulo="Hora prevista"
+              rotulo={ehParto ? 'Data provável do parto' : 'Dia'}
+              type="date"
+              valor={dia}
+              aoMudar={setDia}
+              {...(dia ? { ajuda: rotuloDoDia(dia) } : {})}
+            />
+            <CampoTexto
+              rotulo={ehParto ? 'Internamento previsto' : 'Hora prevista'}
               type="time"
               valor={hora}
               aoMudar={setHora}
               opcional
-              ajuda={hora === '' ? 'A definir: dia inteiro no Google.' : 'Apague para deixar a definir.'}
+              ajuda={hora === '' ? 'A definir: dia inteiro no Google.' : 'A hora do evento no Google.'}
             />
-            {!ehEvento && !ehNewborn && (
-              <CampoTexto rotulo="DPP" type="date" valor={dpp} aoMudar={setDpp} opcional ajuda="Data provável do parto." />
+            {ehParto && (
+              <CampoTexto
+                rotulo="Nascimento previsto"
+                type="time"
+                valor={nascimento}
+                aoMudar={setNascimento}
+                opcional
+                ajuda={
+                  nascimentoNoDiaSeguinte && dia
+                    ? `No dia seguinte, ${rotuloDoDia(diaDoNascimento(dia, hora, nascimento))}.`
+                    : 'Vai na descrição do evento.'
+                }
+              />
             )}
           </div>
           {mudouQuando && antes && (
