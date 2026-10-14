@@ -182,9 +182,24 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: >-
-          npx --yes wrangler@4.131.2 pages deploy dist
-          --project-name=clickbaby --branch=main --commit-hash="$GITHUB_SHA"
+        run: |
+          # O Account ID chega LIMPO ao wrangler: sem espaço, quebra de linha
+          # ou aspas que vieram junto na hora de colar o secret. E se não tiver
+          # a cara de um Account ID (32 caracteres de 0-9 e a-f), o passo para
+          # dizendo o que está errado — sem mostrar o valor. Em 14/10/2026 o
+          # Cloudflare respondia só "object identifier is invalid [7003]".
+          conta=$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '[:space:]"' | tr 'A-F' 'a-f')
+          if [ -z "$conta" ]; then
+            echo "::error::O secret CLOUDFLARE_ACCOUNT_ID está vazio (ou não existe com esse nome exato)."
+            exit 1
+          fi
+          if ! printf '%s' "$conta" | grep -qE '^[0-9a-f]{32}$'; then
+            fora=$(printf '%s' "$conta" | tr -d '0-9a-f' | wc -c)
+            echo "::error::CLOUDFLARE_ACCOUNT_ID não tem o formato de um Account ID: são ${#conta} caracteres (o certo é 32), ${fora} deles fora de 0-9 e a-f. Copie o Account ID da coluna da direita em Workers & Pages."
+            exit 1
+          fi
+          export CLOUDFLARE_ACCOUNT_ID="$conta"
+          npx --yes wrangler@4.131.2 pages deploy dist --project-name=clickbaby --branch=main --commit-hash="$GITHUB_SHA"
 
   seguranca:
     # Depois de todo `db push` que toque schema (CLAUDE.md, seção 5). Não
