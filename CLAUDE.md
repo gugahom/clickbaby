@@ -2695,11 +2695,16 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
    faltava e o `grant_service_role_pessoas.test.sql` trava o piso e o teto, mas isso resolve
    UMA linha: enquanto o auditor não olhar `service_role`, a próxima divergência aparece do
    mesmo jeito — por acaso, no meio de outra tarefa.
-6. **Sem workflow de CI para `db push` — nem para `functions deploy`.** O `db push` é
-   manual e já ficou para trás de um merge três vezes, chegando ao gestor como "está
-   bugado". O gestor já aprovou construir o workflow; falta fazer. (O primeiro workflow do
-   repositório entrou em 30/09/2026 e é o do BACKUP, não o de deploy — ver "Backup" na
-   seção 11.)
+6. **`functions deploy` continua manual** (o `db push` deixou de ser o buraco em
+   14/10/2026). O `db push` manual ficou para trás de um merge três vezes, e na quarta
+   (13/10/2026, PR #121) DERRUBOU o Quadro: o Cloudflare publicou a tela que lia
+   `anexos_da_etapa` antes de a migration subir (PGRST200). Desde então quem publica o
+   front é `.github/workflows/publicar.yml`: dry-run a cada push na main; sem migration
+   pendente, publica; com, PARA em vermelho e espera alguém rodar "Run workflow" com
+   "Aplicar as migrations pendentes" — a aprovação manual da seção 11, no botão (aprovação
+   por environment não existe em repositório privado no plano gratuito). Depois de aplicar,
+   roda `npm run seguranca`. A publicação automática do Cloudflare fica DESLIGADA no painel
+   (ver `docs/deploy.md`); se alguém a religar, o buraco volta.
    **O deploy de Edge Function tem o mesmo buraco, e é PIOR de enxergar.** Em 04/09/2026 a
    `admin-pessoas` estava publicada e ATIVA, e mesmo assim o cadastro pela tela nunca
    funcionou em produção: faltava CORS. O `supabase functions serve` responde ao preflight
