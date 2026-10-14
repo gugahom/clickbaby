@@ -169,3 +169,29 @@ const moeda = new Intl.NumberFormat('pt-BR', {
 export function formatarMoeda(valor: number): string {
   return moeda.format(valor)
 }
+
+/**
+ * "24,90" -> 24.9.
+ *
+ * QUEM DIGITA USA VÍRGULA. Um `type="number"` resolveria o parse e traria dois
+ * problemas piores: no Android ele aceita vírgula e devolve string vazia no
+ * `value`, e no desktop a roda do mouse muda o valor sem ninguém pedir — num
+ * campo de dinheiro isso é troco perdido em silêncio.
+ *
+ * O ponto vira separador de MILHAR quando há vírgula ("1.234,56"), e separador
+ * decimal quando não há ("24.90") — que é como as duas grafias chegam de gente
+ * diferente digitando o mesmo valor.
+ *
+ * Mora aqui desde 14/10/2026: as despesas e o valor da venda leem igual.
+ */
+export function lerValorEmReais(texto: string): number | null {
+  const bruto = texto.trim().replace(/\s|R\$/g, '')
+  if (bruto === '') return null
+
+  const normalizado = bruto.includes(',')
+    ? bruto.replace(/\./g, '').replace(',', '.')
+    : bruto
+
+  const n = Number(normalizado)
+  return Number.isFinite(n) && n > 0 ? n : null
+}

@@ -35,9 +35,10 @@ select is(
   -- Desde 30/09/2026, duas delas (pessoas e escalas) usam tem_tela('equipe'), e
   -- a leitura de ofertas_comerciais e de retornos_comerciais usa
   -- tem_tela('comercial'/'relatorios'). A 22ª é a leitura de anexos_da_etapa
-  -- (13/10/2026).
-  22,
-  'U2: as 22 policies que usam os helpers continuam lá');
+  -- (13/10/2026); a 23ª e a 24ª, as de vendas_do_caso e contratos_dos_casos
+  -- (14/10/2026).
+  24,
+  'U2: as 24 policies que usam os helpers continuam lá');
 
 -- 3. O PLANO mostra a diferença: a consulta do Quadro, como o app a faz, não
 --    tem mais a função como filtro linha a linha — ela aparece como InitPlan.

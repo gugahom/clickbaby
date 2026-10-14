@@ -64,7 +64,10 @@ export const EXPLICACAO_TERMO: Record<TermoStatus, string> = {
 export const CLASSE_TERMO: Record<TermoStatus, string> = {
   assinado: 'bg-concluido text-white',
   nao_autorizado: 'bg-atrasado text-white',
-  pendente: 'bg-atencao text-atencao-tinta',
+  // Texto BRANCO, como os outros dois de fundo cheio (14/10/2026, pedido do
+  // gestor: "ass pendente tá muito apagado"). Era a tinta âmbar sobre o fundo
+  // âmbar: 1,5:1 de contraste no tema claro; branco dá 5:1, o mesmo do verde.
+  pendente: 'bg-atencao text-white',
   sem_contrato: 'bg-muted text-muted-foreground',
   nao_aplicavel: 'bg-muted text-muted-foreground',
 }

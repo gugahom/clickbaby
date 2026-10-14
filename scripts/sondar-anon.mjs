@@ -73,6 +73,10 @@ const TABELAS = [
   // Os anexos dos pedidos do cliente (20261013215014): nome de arquivo de
   // referência da família, e o caminho dele no bucket privado.
   { nome: 'anexos_da_etapa' },
+  // O valor vendido e o link do contrato (20261014104728): receita e acesso
+  // ao contrato da família — nem fotógrafa logada lê.
+  { nome: 'vendas_do_caso' },
+  { nome: 'contratos_dos_casos' },
   // A marca do sino (20260917215442). Ela guarda a que horas cada pessoa abriu
   // o app: leitura aberta a anon seria um relógio de presença da equipe
   // exposto na rua.
@@ -305,6 +309,13 @@ const RPCS_TRANSICAO = {
     p_nome: null,
   },
   remover_anexo_da_etapa: { p_anexo_id: '00000000-0000-0000-0000-000000000000' },
+  registrar_venda_do_caso: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_item: 'pacote',
+    p_valor: 1,
+  },
+  remover_venda_do_caso: { p_venda_id: '00000000-0000-0000-0000-000000000000' },
+  definir_contrato_do_caso: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_url: null },
   agendar_etapa: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,
@@ -433,6 +444,8 @@ const FORMA = {
   // sonda recebia 42703 (coluna inexistente), que o Postgres devolve ANTES de
   // olhar permissão — e não dizia nada sobre o visitante ser barrado.
   notificacoes_vistas: { chave: 'pessoa_id' },
+  // Um contrato por caso: a chave é caso_id, e não há `id`.
+  contratos_dos_casos: { chave: 'caso_id' },
   // A view do relatório externo (20260929233525) tem `id` e não tem
   // `created_at`: com o padrão, o PostgREST devolvia PGRST204 (coluna
   // inexistente) e a sonda acusava falha — foi o que aconteceu no push de

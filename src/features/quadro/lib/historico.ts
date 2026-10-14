@@ -13,6 +13,7 @@ import {
 } from '../types'
 import { ROTULO_TERMO } from './termo'
 import { formatarMoeda } from '@/lib/formato'
+import { ROTULO_ITEM_DE_VENDA, type ItemDeVenda } from '@/features/vendas/lib/vendas'
 
 export interface EventoHistorico {
   id: string
@@ -291,6 +292,28 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         tom: 'normal',
       }
     }
+
+    // O valor vendido e o contrato (14/10/2026). O histórico é lido pela
+    // equipe inteira, e por isso o evento não traz valor nem link — a frase
+    // diz QUE houve a venda, e o quanto fica onde só atendimento e adm leem.
+    case 'venda_registrada':
+    case 'venda_removida': {
+      const item = texto(evento.payload, 'item')
+      const rotulo = item && item in ROTULO_ITEM_DE_VENDA ? ROTULO_ITEM_DE_VENDA[item as ItemDeVenda] : null
+      return {
+        ...base,
+        acao: `${evento.tipo === 'venda_registrada' ? 'Lançou o valor da venda' : 'Apagou o valor da venda'}${rotulo ? ` · ${rotulo}` : ''}`,
+        tom: 'sistema',
+      }
+    }
+    case 'contrato_definido':
+      return {
+        ...base,
+        acao: evento.payload?.['trocou'] === true ? 'Trocou o link do contrato' : 'Informou o link do contrato',
+        tom: 'sistema',
+      }
+    case 'contrato_removido':
+      return { ...base, acao: 'Tirou o link do contrato', tom: 'sistema' }
 
     // Os anexos dos pedidos do cliente (13/10/2026).
     case 'anexo_adicionado':

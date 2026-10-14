@@ -13,6 +13,7 @@ import {
 } from '../api/useAcoes'
 import { DialogoDespesa } from './DespesasDoCaso'
 import { SeletorDeTermo } from './SeletorDeTermo'
+import { VendaDoCaso } from '@/features/vendas/components/VendaDoCaso'
 import { termoSugerido } from '../lib/termo'
 import { mensagemDeErro } from '../lib/erros'
 import type { CasoQuadro, EtapaQuadro, TermoStatus } from '../types'
@@ -277,6 +278,15 @@ export function DialogoConfirmarEntrega({
               : {})}
           />
         </section>
+      )}
+
+      {/* O VALOR VENDIDO E O CONTRATO NA CONFIRMAÇÃO (14/10/2026, pedido do
+          gestor: "quando o administrativo clica para confirmar a entrega, ele
+          já teria aqui o valor para ele poder realizar a cobrança" — e o
+          contrato "para ele consultar"). Só na confirmação: quem lê é o ADM, e
+          é ele quem cobra. Não trava nada — a venda não é status do caso. */}
+      {modo === 'confirmacao' && (
+        <VendaDoCaso casoId={caso.id} ondeLancar="o valor e o contrato entram pelo Calendário, em “Editar caso”" />
       )}
 
       {/* AS DESPESAS APARECEM NA HORA DE ENVIAR (14/09/2026, pedido do gestor),

@@ -3,8 +3,9 @@ import { Botao } from '@/components/ui/Botao'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { TextoFormatado } from '@/components/ui/TextoFormatado'
 import { useCasoEditavel, useNoQuadro, type ItemDoCalendario } from '../api/useCalendario'
-import { emBrasilia, rotuloDoDiaCompleto } from '../lib/datas'
+import { rotuloDoDiaCompleto } from '../lib/datas'
 import { aparencia } from '../lib/estilos'
+import { VendaDoCaso } from '@/features/vendas/components/VendaDoCaso'
 
 /**
  * O DETALHE DE UM ITEM, ao tocar nele — o "Event Details" do exemplo.
@@ -39,11 +40,11 @@ export function DetalheDoItem({
 }) {
   const a = aparencia(item)
   const noQuadro = useNoQuadro(item.casoId)
-  // Cesárea e observações só existem no parto — são do caso, não da etapa.
+  // DPP e observações só existem no parto — são do caso, não da etapa.
   const caso = useCasoEditavel(item.tipo === 'parto' ? item.casoId : null)
   const linhas: [string, string | null][] = [
     ['Quando', `${rotuloDoDiaCompleto(item.dia)}${item.hora ? `, às ${item.hora}` : item.tipo === 'parto' ? ' · hora a definir' : ' · dia todo'}`],
-    ['Cesárea', caso.data?.cesareaEm ? `às ${emBrasilia(caso.data.cesareaEm).hora}` : null],
+    ['DPP', caso.data?.dpp ? rotuloDoDiaCompleto(caso.data.dpp) : null],
     ['Maternidade', item.maternidade],
     ['Pacote', item.pacote],
     ['Com quem', item.responsavel],
@@ -75,6 +76,11 @@ export function DetalheDoItem({
             <div className="text-xs font-semibold text-muted-foreground">Observações</div>
             <TextoFormatado valor={caso.data.observacao} className="mt-1 text-sm text-foreground" />
           </div>
+        )}
+        {/* O valor vendido e o contrato (14/10/2026): só no parto, e só para
+            quem pode ver — o componente some para a fotógrafa. */}
+        {item.tipo === 'parto' && (
+          <VendaDoCaso casoId={item.casoId} {...(acoes.onEditar ? { ondeLancar: 'lance em “Editar caso”' } : {})} />
         )}
         {item.google && (
           <p className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground" role="status">

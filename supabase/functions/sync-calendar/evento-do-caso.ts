@@ -31,6 +31,8 @@ export interface CasoParaOGoogle {
   /** A hora marcada da cesárea, e as observações do calendário (30/09/2026). */
   cesarea_em?: string | null;
   observacao_calendar?: string | null;
+  /** A DPP, data provável do parto ('YYYY-MM-DD'), que substituiu a cesárea na tela (14/10/2026). */
+  dpp?: string | null;
 }
 
 /** Sem nome de bebê ainda, o título leva "BEBÊ": o parser exige a barra. */
@@ -110,10 +112,16 @@ export function observacaoEmHtml(observacao: string): string {
   return TEM_MARCACAO.test(observacao) ? observacao : escaparHtml(observacao).replace(/\r?\n/g, "<br>");
 }
 
+/** '2026-10-20' -> '20/10/2026'. A DPP é DATA, sem hora nem fuso. */
+function dataBrasileira(dia: string): string {
+  const [ano, mes, d] = dia.split("-");
+  return `${d}/${mes}/${ano}`;
+}
+
 /**
  * A DESCRIÇÃO do evento que o SISTEMA criou: as observações escritas no
- * calendário (o cadastro da família, no template da equipe), a hora da
- * cesárea, e a marca de origem. Só vale para caso criado pelo sistema — a
+ * calendário (o cadastro da família, no template da equipe), a DPP, a hora da
+ * cesárea (casos de antes de 14/10/2026), e a marca de origem. Só vale para caso criado pelo sistema — a
  * descrição de um evento que a equipe criou no Google é dela, e não é
  * reescrita (ver a migration 20260930192224).
  *
@@ -121,9 +129,12 @@ export function observacaoEmHtml(observacao: string): string {
  * listas: o Google mostra a descrição de um evento com essa formatação (é o
  * mesmo formato que o editor dele grava), e as partes se separam por `<br>`.
  */
-export function descricaoDoEvento(caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar">): string {
+export function descricaoDoEvento(caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar" | "dpp">): string {
   const partes: string[] = [];
   if (caso.observacao_calendar) partes.push(observacaoEmHtml(caso.observacao_calendar));
+  // A DPP substituiu a cesárea na tela (14/10/2026); a linha da cesárea fica
+  // para os casos que já tinham a hora — ela continua guardada no banco.
+  if (caso.dpp) partes.push(`DPP: ${dataBrasileira(caso.dpp)}`);
   if (caso.cesarea_em) partes.push(`Cesárea às ${horaEmSaoPaulo(caso.cesarea_em)}`);
   partes.push("Criado pelo calendário do sistema ClickBaby.");
   return partes.join("<br><br>");
@@ -181,6 +192,7 @@ export interface CasoParaAtualizar {
   previsao_sem_hora?: boolean;
   cesarea_em?: string | null;
   observacao_calendar?: string | null;
+  dpp?: string | null;
   /** O caso foi criado pelo sistema: a descrição do evento é nossa. */
   descricao_do_sistema?: boolean;
 }
