@@ -69,9 +69,9 @@ jobs:
     outputs:
       pendentes: ${{ steps.dry_run.outputs.pendentes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -90,10 +90,15 @@ jobs:
         run: |
           saida=$(npx supabase db push --dry-run 2>&1) || { echo "$saida"; exit 1; }
           echo "$saida"
-          # O CLI fecha com uma linha JSON: {"upToDate":…,"migrations":[…]}.
-          resumo=$(echo "$saida" | grep -E '^\{"upToDate"' | tail -1 || true)
-          test -n "$resumo" || { echo "Não achei o resumo JSON do dry-run — a saída do CLI mudou?"; exit 1; }
-          pendentes=$(echo "$resumo" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log((r.migrations||[]).join("\n"))})')
+          # A LISTA, não o resumo JSON: a linha {"upToDate":…} aparece no
+          # terminal local e NÃO no GitHub (14/10/2026, a primeira execução caiu
+          # aí). O que sai igual nos dois é "Remote database is up to date" ou
+          # a lista "Would push these migrations:" com os nomes dos arquivos.
+          pendentes=$(echo "$saida" | grep -oE '[0-9]{14}_[A-Za-z0-9_]+\.sql' | sort -u || true)
+          if [ -z "$pendentes" ] && ! echo "$saida" | grep -q 'Remote database is up to date'; then
+            echo "Não reconheci a saída do dry-run: nem a lista de migrations nem 'up to date'. A saída do CLI mudou?"
+            exit 1
+          fi
           {
             echo "## Migrations pendentes no remoto"
             if [ -z "$pendentes" ]; then
@@ -126,8 +131,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -152,8 +157,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -190,8 +195,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
