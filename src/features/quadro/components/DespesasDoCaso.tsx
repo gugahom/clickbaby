@@ -5,7 +5,7 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { Alerta } from '@/components/ui/Alerta'
 import { IconeAdicionar, IconeLixeira } from '@/components/ui/icones'
-import { formatarMoeda } from '@/lib/formato'
+import { formatarMoeda, lerValorEmReais } from '@/lib/formato'
 import { useAuth } from '@/features/auth/contexto'
 import {
   useDespesas,
@@ -50,30 +50,6 @@ const TIPOS: TipoDespesa[] = ['uber_ida', 'uber_volta', 'refeicao', 'outro']
  */
 const VALOR_DA_REFEICAO = 35
 const MOMENTOS: MomentoDespesa[] = ['parto', 'substituicao', 'fechamento']
-
-/**
- * "24,90" -> 24.9.
- *
- * QUEM DIGITA USA VÍRGULA. Um `type="number"` resolveria o parse e traria dois
- * problemas piores: no Android ele aceita vírgula e devolve string vazia no
- * `value`, e no desktop a roda do mouse muda o valor sem ninguém pedir — num
- * campo de dinheiro isso é troco perdido em silêncio.
- *
- * O ponto vira separador de MILHAR quando há vírgula ("1.234,56"), e separador
- * decimal quando não há ("24.90") — que é como as duas grafias chegam de gente
- * diferente digitando o mesmo valor.
- */
-function paraNumero(texto: string): number | null {
-  const bruto = texto.trim().replace(/\s|R\$/g, '')
-  if (bruto === '') return null
-
-  const normalizado = bruto.includes(',')
-    ? bruto.replace(/\./g, '').replace(',', '.')
-    : bruto
-
-  const n = Number(normalizado)
-  return Number.isFinite(n) && n > 0 ? n : null
-}
 
 /**
  * A LISTA DE GASTOS DO CASO, com o total embaixo.
@@ -268,7 +244,7 @@ export function DialogoDespesa({ caso, onFechar }: { caso: CasoQuadro; onFechar:
   const [erro, setErro] = useState<string | null>(null)
 
   const refeicao = tipo === 'refeicao'
-  const valor = refeicao ? VALOR_DA_REFEICAO : paraNumero(valorTexto)
+  const valor = refeicao ? VALOR_DA_REFEICAO : lerValorEmReais(valorTexto)
   const precisaDescricao = tipo === 'outro' && descricao.trim() === ''
 
   function salvar() {

@@ -11,6 +11,11 @@ import { emBrasilia, rotuloDoDia } from '../lib/datas'
 import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
 import { IconeCheck } from '@/components/ui/icones'
 import type { TermoStatus } from '@/features/quadro/types'
+import { useAuth } from '@/features/auth/contexto'
+import { podeEncerrarCaso } from '@/features/quadro/lib/acoes'
+import { useVendaDoCaso } from '@/features/vendas/api/useVendaDoCaso'
+import { EditorDaVenda } from '@/features/vendas/components/EditorDaVenda'
+import { VENDA_INTOCADA, mudancaDaVenda, type EstadoDaVenda } from '@/features/vendas/lib/vendas'
 
 /**
  * O CASO PELO CALENDÁRIO — criar (30/09/2026, pedido do gestor: "criar casos
@@ -49,6 +54,11 @@ import type { TermoStatus } from '@/features/quadro/types'
  * confirmação da entrega, e quem já sabe a resposta ao marcar o parto não
  * precisa esperar o fim do caso. É opcional aqui — sem resposta, a
  * confirmação continua cobrando — e o BIRTH abre em "Sem contrato", como lá.
+ *
+ * O VALOR VENDIDO E O LINK DO CONTRATO (14/10/2026, pedido do gestor), numa
+ * faixa de largura inteira embaixo das duas colunas — e deixando claro que NÃO
+ * vão para o Google: é informação interna, que a RLS esconde das fotógrafas. Ver
+ * `features/vendas`.
  */
 export interface Proposta {
   dia: string
@@ -131,6 +141,11 @@ function FormularioDoCaso({
   const [termoEscolhido, setTermoEscolhido] = useState<TermoStatus | null | undefined>(undefined)
   const [erro, setErro] = useState<string | null>(null)
   const ocupado = criar.isPending || editar.isPending
+  const { pessoa } = useAuth()
+  const podeVenda = podeEncerrarCaso(pessoa?.papelSistema ?? 'operador')
+  const vendaAtual = useVendaDoCaso(caso?.id ?? null, podeVenda)
+  const [estadoDaVenda, setEstadoDaVenda] = useState<EstadoDaVenda>(VENDA_INTOCADA)
+  const venda = podeVenda ? mudancaDaVenda(estadoDaVenda, vendaAtual.data?.contrato ?? null) : null
 
   const pacote = cadastros.data?.pacotes.find((p) => p.id === pacoteId)
   // O MASTER + ÁLBUM já traz o Foto/Livro: a caixa aparece marcada e presa.
@@ -150,6 +165,7 @@ function FormularioDoCaso({
     !pacote && 'o pacote',
     !maternidade && 'a maternidade',
     dia === '' && 'o dia',
+    venda?.falta,
   ].filter(Boolean) as string[]
   const trocouPacote = caso?.pacoteId != null && pacoteId !== caso.pacoteId
   const horaAntes = caso?.semHora ? '' : (antes?.hora ?? '')
@@ -183,6 +199,7 @@ function FormularioDoCaso({
       clickHome: clickHome && !ehEvento && !ehNewborn,
       fotolivro: fotolivro && !ehEvento && !ehNewborn,
       termo,
+      venda: venda?.mudanca ?? undefined,
     }
     const feito = caso
       ? editar.mutateAsync({ ...dados, casoId: caso.id, termoAntes: caso.termo })
@@ -381,6 +398,20 @@ function FormularioDoCaso({
             </span>
           </div>
         </div>
+
+        {/* A VENDA EM LARGURA INTEIRA, numa fileira: dentro de uma das colunas
+            ela empurrava o formulário para a rolagem que o gestor pediu para
+            não ter. */}
+        {podeVenda && (
+          <div className="md:col-span-2">
+            <EditorDaVenda
+              inicial={vendaAtual.data}
+              carregando={caso !== undefined && vendaAtual.isPending}
+              estado={estadoDaVenda}
+              onMudar={setEstadoDaVenda}
+            />
+          </div>
+        )}
 
         {falta.length > 0 && !temBarra && (
           <p className="text-xs text-muted-foreground md:col-span-2">Falta {falta.join(', ')}.</p>

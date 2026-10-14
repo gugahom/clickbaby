@@ -435,6 +435,73 @@ export type Database = {
           },
         ]
       }
+      contratos_dos_casos: {
+        Row: {
+          caso_id: string
+          created_at: string
+          definido_por: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          caso_id: string
+          created_at?: string
+          definido_por: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          caso_id?: string
+          created_at?: string
+          definido_por?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_dos_casos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_dos_casos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "contratos_dos_casos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "contratos_dos_casos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_dos_casos_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: true
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_dos_casos_definido_por_fkey"
+            columns: ["definido_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       despesas: {
         Row: {
           caso_id: string
@@ -1238,6 +1305,82 @@ export type Database = {
           },
         ]
       }
+      vendas_do_caso: {
+        Row: {
+          caso_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          item: Database["public"]["Enums"]["item_de_venda"]
+          registrado_por: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          caso_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          item: Database["public"]["Enums"]["item_de_venda"]
+          registrado_por: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          caso_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          item?: Database["public"]["Enums"]["item_de_venda"]
+          registrado_por?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_do_caso_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_do_caso_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "vendas_do_caso_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "vendas_do_caso_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_do_caso_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_do_caso_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       despesas_detalhe: {
@@ -1564,6 +1707,10 @@ export type Database = {
           p_sem_hora?: boolean
         }
         Returns: string
+      }
+      definir_contrato_do_caso: {
+        Args: { p_caso_id: string; p_url: string }
+        Returns: undefined
       }
       definir_foto_da_pessoa: {
         Args: { p_foto_path: string; p_pessoa_id: string }
@@ -2011,6 +2158,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_venda_do_caso: {
+        Args: {
+          p_caso_id: string
+          p_descricao?: string
+          p_item: Database["public"]["Enums"]["item_de_venda"]
+          p_valor: number
+        }
+        Returns: string
+      }
       remover_anexo_da_etapa: { Args: { p_anexo_id: string }; Returns: string }
       remover_despesa: {
         Args: { p_despesa_id: string; p_motivo?: string }
@@ -2018,6 +2174,10 @@ export type Database = {
       }
       remover_entregavel: {
         Args: { p_entregavel_id: string; p_motivo?: string }
+        Returns: undefined
+      }
+      remover_venda_do_caso: {
+        Args: { p_venda_id: string }
         Returns: undefined
       }
       restaurar_caso_cancelado_pelo_sync: {
@@ -2188,6 +2348,7 @@ export type Database = {
         | "fotolivro"
         | "new_born"
         | "acompanhamento"
+      item_de_venda: "pacote" | "reels" | "new_born" | "foto_livro" | "outro"
       momento_despesa: "parto" | "substituicao" | "fechamento"
       oferta_comercial: "birth" | "reels" | "new_born" | "fotolivro"
       pagamento_click_home: "pago" | "a_cobrar"
@@ -2444,6 +2605,7 @@ export const Constants = {
         "new_born",
         "acompanhamento",
       ],
+      item_de_venda: ["pacote", "reels", "new_born", "foto_livro", "outro"],
       momento_despesa: ["parto", "substituicao", "fechamento"],
       oferta_comercial: ["birth", "reels", "new_born", "fotolivro"],
       pagamento_click_home: ["pago", "a_cobrar"],

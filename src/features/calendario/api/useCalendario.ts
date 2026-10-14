@@ -1,5 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { invalidarVendas, salvarVendaDoCaso } from '@/features/vendas/api/useVendaDoCaso'
+import type { MudancaDaVenda } from '@/features/vendas/lib/vendas'
 import type { TermoStatus } from '@/features/quadro/types'
 import { buscarTudo } from '@/features/quadro/api/useQuadro'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
@@ -327,6 +329,11 @@ export interface NovoCaso {
    * confirmação), e a RPC nova de caso não precisa de mais um argumento.
    */
   termo: TermoStatus | null
+  /**
+   * O VALOR VENDIDO E O CONTRATO (14/10/2026, pedido do gestor). Ausente para
+   * quem não pode ver a venda. Grava DEPOIS do caso, como o termo.
+   */
+  venda?: MudancaDaVenda | undefined
 }
 
 /** Registra o termo quando ele mudou. Só atendimento e adm — como quem cria. */
@@ -364,9 +371,11 @@ export function useCriarCaso() {
       })
       if (error) throw new Error(error.message)
       await registrarTermoSeMudou(data, n.termo, null)
+      if (n.venda) await salvarVendaDoCaso(data, n.venda)
       return data
     },
     onSettled: () => {
+      void invalidarVendas(queryClient)
       agendarRecargaDoQuadro(queryClient)
       return queryClient.invalidateQueries({ queryKey: [CHAVE] })
     },
@@ -454,8 +463,10 @@ export function useEditarCasoDoCalendario() {
       })
       if (error) throw new Error(error.message)
       await registrarTermoSeMudou(e.casoId, e.termo, e.termoAntes)
+      if (e.venda) await salvarVendaDoCaso(e.casoId, e.venda)
     },
     onSettled: (_r, _e, { casoId }) => {
+      void invalidarVendas(queryClient)
       agendarRecargaDoCaso(queryClient, casoId)
       return queryClient.invalidateQueries({ queryKey: [CHAVE] })
     },

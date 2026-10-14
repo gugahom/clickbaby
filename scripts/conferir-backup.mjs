@@ -38,6 +38,10 @@ const OBRIGATORIAS = [
   'public.entregaveis',
   'public.despesas',
   'public.handoffs',
+  // O valor vendido e o contrato (14/10/2026): sem eles a cópia perde a
+  // receita da empresa, que não existe em nenhum outro lugar do sistema.
+  'public.vendas_do_caso',
+  'public.contratos_dos_casos',
 ]
 const NAO_PODEM_ESTAR_VAZIAS = ['public.casos', 'public.caso_etapas', 'public.eventos', 'public.pessoas', 'auth.users']
 

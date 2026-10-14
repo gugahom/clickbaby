@@ -350,9 +350,12 @@ passaria a medir a entrega do ADM em vez do trabalho do turno.
 **`despesas` VOLTOU ao escopo em 12/09/2026** (instrução explícita do gestor, migration
 `20260913022926`), e é só isso que voltou: o registro de GASTO por caso — o Uber no cartão
 da empresa, a refeição extra. `status_financeiro` em `casos` continua removido, e com ele
-qualquer noção de receita, margem ou fechamento de mês. O plano já dizia o porquê: "sem
-receita, só despesa — não há margem por caso". Despesa não é status do caso e não entra em
+"pago", margem e fechamento de mês. Despesa não é status do caso e não entra em
 nenhum dos dois caminhos terminais: um caso encerra com ou sem gasto lançado.
+**O VALOR VENDIDO ENTROU em 14/10/2026** (instrução explícita do gestor, migration
+`20261014104728`): o plano dizia "sem receita, só despesa", e isso deixou de valer para o
+VALOR DA VENDA de cada caso — ver "O VALOR DA VENDA E O CONTRATO", na seção 13. Ele também
+não é status nem trava encerramento.
 
 ---
 
@@ -425,6 +428,11 @@ registrar_avaliacao(p_caso_id)                   -- avaliação da família; ate
 mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
+
+-- o valor vendido e o contrato do caso (14/10/2026; ver seção 13) — atendimento/adm
+registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao) -- pacote ou venda a mais
+remover_venda_do_caso(p_venda_id)                -- não existe editar
+definir_contrato_do_caso(p_caso_id, p_url)       -- em branco tira; o link não vai para eventos
 
 -- despesas do caso (12/09/2026; ver seção 13)
 registrar_despesa(p_caso_id, p_tipo, p_valor, p_pessoa_id, p_momento, p_descricao)
@@ -991,9 +999,10 @@ Priorize onde o custo do erro é alto, não cobertura ampla:
 - Não use `localStorage` para dado de domínio — só preferência de UI.
 - Não instale biblioteca nova sem justificar. A stack da seção 5 é deliberada.
 - Não altere schema pelo painel web do Supabase.
-- Não recrie `status_financeiro` (nem receita, margem ou fechamento de mês) sem instrução
-  explícita. `despesas` e `tipo_despesa` VOLTARAM em 12/09/2026 por pedido do gestor e
-  existem — o que segue fora é a trilha financeira do CASO, não o registro de gasto.
+- Não recrie `status_financeiro` (nem "pago", margem ou fechamento de mês) sem instrução
+  explícita. `despesas` e `tipo_despesa` VOLTARAM em 12/09/2026 por pedido do gestor, e o
+  VALOR VENDIDO (`vendas_do_caso`) entrou em 14/10/2026 — o que segue fora é a trilha
+  financeira do CASO como estado, não o registro do que se gastou e do que se vendeu.
 - Não hardcode os valores de `prazo_entrega` (SLA) nem a regra "BIRTH primeiro" — a
   ordenação da fila é por urgência de prazo derivada do pacote, o valor vem do seed.
 - Não crie tela de registro de ponto ou cálculo de jornada — está explicitamente fora de escopo.
@@ -1779,6 +1788,26 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   lançar ali: é o último momento em que quem trabalhou lembra do Uber daquela madrugada.
   **O bloco NÃO TRAVA o envio** — despesa não é status do caso (invariante 3.5) e nem todo
   atendimento tem gasto.
+- **O VALOR DA VENDA E O CONTRATO** (14/10/2026, pedido do gestor, migration
+  `20261014104728`). "Um campo onde a gente conseguisse lançar o valor do pacote (…) depois
+  ele pode vender o Reels e ir adicionando" — e o link do contrato, "para consultar". O
+  vendedor lança no CALENDÁRIO (criar e "Editar caso", numa faixa de largura inteira embaixo
+  das duas colunas, para o formulário não ganhar rolagem); o administrativo vê na
+  CONFIRMAÇÃO DA ENTREGA, que é quando cobra — antes ele buscava valor e contrato no
+  WhatsApp. Também no detalhe do parto no Calendário.
+  **UMA LISTA, não um campo** (decisão do gestor): `vendas_do_caso`, uma linha por item —
+  pacote, Reels, New Born, Foto/Livro, outro (este com descrição) — e o total é a soma. Não
+  existe editar, como na despesa. O formulário só grava no Salvar, DEPOIS do caso (como o
+  termo), e o valor digitado sem apertar o "+" entra sozinho: perder uma venda em silêncio é
+  pior que um clique a menos. `contratos_dos_casos` guarda um link por caso; em branco tira.
+  **QUEM VÊ é todo papel menos `operador`** (decisão do gestor) — `eh_atendimento() or
+  eh_adm()`, na RLS, não só na tela; por isso tabelas próprias e não colunas em `casos`, que
+  toda pessoa ativa lê pela view do Quadro. **Valor e link NÃO vão para `eventos`**: o
+  histórico é lido pela equipe inteira, então o evento diz "Lançou o valor da venda · Reels"
+  e mais nada. O link do contrato é tratado como o link de entrega (seção 10).
+  **FICA PARA DEPOIS** (decisão do gestor): a tela do financeiro (a previsão do que foi
+  vendido por mês, a planilha) e a do comercial — os dados já estão aqui para elas.
+  Não trava a entrega: venda não é status do caso.
 - **A PESSOA DE CADA GASTO E O RESSARCIMENTO** (05/10/2026, pedido do gestor, migration
   `20261005060950`): "o nome da pessoa que lança a despesa no card vá para a aba de despesas"
   e "um checkbox para o financeiro saber que já ressarciu o funcionário com aquele gasto".
