@@ -6,7 +6,7 @@ import type { TermoStatus } from '@/features/quadro/types'
 import { buscarTudo } from '@/features/quadro/api/useQuadro'
 import { agendarRecargaDoCaso, agendarRecargaDoQuadro } from '@/features/quadro/api/recarga'
 import { ROTULO_ETAPA, type EtapaTipo } from '@/features/quadro/types'
-import { emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, somarDias } from '../lib/datas'
+import { diaDoNascimento, emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, somarDias } from '../lib/datas'
 
 /**
  * A LEITURA DO CALENDÁRIO (30/09/2026). Nada novo no banco: tudo o que ele
@@ -312,21 +312,23 @@ export interface NovoCaso {
   bebeNome: string
   pacoteId: string
   maternidadeId: string
-  /** 'YYYY-MM-DD' */
+  /**
+   * 'YYYY-MM-DD' — o dia do caso, que É a DPP, a data provável do parto
+   * (14/10/2026, o gestor explicando: "o dia, para nós, é a data provável do parto").
+   */
   dia: string
-  /** 'HH:MM', ou vazio = hora a definir (o evento no Google é de dia inteiro). */
+  /**
+   * 'HH:MM' do INTERNAMENTO previsto (a hora em que a equipe precisa estar lá),
+   * ou vazio = hora a definir (o evento no Google é de dia inteiro).
+   */
   hora: string
   /**
-   * A DPP — data provável do parto ('YYYY-MM-DD'); vazio = sem DPP. Substituiu a
-   * hora da cesárea no formulário (14/10/2026, pedido do gestor).
+   * 'HH:MM' do NASCIMENTO previsto; vazio = sem hora. Grava em `casos.cesarea_em`,
+   * a coluna que nasceu como "hora da cesárea" (30/09/2026) — é a mesma
+   * pergunta, e os casos antigos já têm a hora ali. O dia é o da DPP, ou o
+   * seguinte quando ela vem antes do internamento (`diaDoNascimento`).
    */
-  dpp: string
-  /**
-   * A hora da cesárea que o caso JÁ TINHA, devolvida como veio: o campo saiu da
-   * tela, e `editar_caso` grava o que recebe — sem isto, salvar um caso antigo
-   * apagaria a hora.
-   */
-  cesareaEm: string | null
+  nascimento: string
   observacao: string
   clickHome: boolean
   fotolivro: boolean
@@ -355,12 +357,14 @@ async function registrarTermoSeMudou(casoId: string, termo: TermoStatus | null, 
 /** A previsão que vai para o banco: com hora, o instante; sem, o dia. */
 const previsao = (dia: string, hora: string) => `${dia}T${hora || '00:00'}:00-03:00`
 
-/** DPP, cesárea, observações e Foto/Livro — os campos de 30/09 e 14/10/2026. */
+/** Nascimento previsto, observações e Foto/Livro — os campos de 30/09/2026. */
 // Vazio vai OMITIDO: o padrão da RPC é nulo, e nulo é o que limpa o campo na
-// edição (o parâmetro não aceita `null` explícito nos tipos gerados).
+// edição (o parâmetro não aceita `null` explícito nos tipos gerados). `p_dpp`
+// (14/10/2026) não vai mais: a DPP é o próprio dia do caso.
 const camposNovos = (n: NovoCaso) => ({
-  ...(n.dpp ? { p_dpp: n.dpp } : {}),
-  ...(n.cesareaEm ? { p_cesarea_em: n.cesareaEm } : {}),
+  ...(n.nascimento
+    ? { p_cesarea_em: `${diaDoNascimento(n.dia, n.hora, n.nascimento)}T${n.nascimento}:00-03:00` }
+    : {}),
   ...(n.observacao.trim() ? { p_observacao: n.observacao.trim() } : {}),
   p_fotolivro: n.fotolivro,
 })
@@ -405,8 +409,8 @@ export interface CasoEditavel {
   maternidadeId: string | null
   previsaoEm: string | null
   semHora: boolean
+  /** O nascimento previsto (a coluna `cesarea_em`). */
   cesareaEm: string | null
-  dpp: string | null
   observacao: string | null
   clickHome: boolean
   /** O caso já tem a etapa de Foto/Livro (do pacote ou vendida à parte). */
@@ -427,7 +431,7 @@ export function useCasoEditavel(casoId: string | null) {
       const { data, error } = await supabase
         .from('casos')
         .select(
-          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, dpp, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
         )
         .eq('id', casoId ?? '')
         .single()
@@ -441,7 +445,6 @@ export function useCasoEditavel(casoId: string | null) {
         previsaoEm: data.previsao_em,
         semHora: data.previsao_sem_hora,
         cesareaEm: data.cesarea_em,
-        dpp: data.dpp,
         observacao: data.observacao_calendar,
         clickHome: data.click_home,
         temFotolivro: data.etapas.some((e) => e.tipo === 'album'),
