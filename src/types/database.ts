@@ -301,6 +301,7 @@ export type Database = {
           cor_calendar: string | null
           created_at: string
           criado_por: string | null
+          dpp: string | null
           encerrado_em: string | null
           google_calendar_event_id: string | null
           google_desatualizado: boolean
@@ -336,6 +337,7 @@ export type Database = {
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
+          dpp?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
           google_desatualizado?: boolean
@@ -371,6 +373,7 @@ export type Database = {
           cor_calendar?: string | null
           created_at?: string
           criado_por?: string | null
+          dpp?: string | null
           encerrado_em?: string | null
           google_calendar_event_id?: string | null
           google_desatualizado?: boolean
@@ -1698,6 +1701,7 @@ export type Database = {
           p_bebe_nome: string
           p_cesarea_em?: string
           p_click_home?: boolean
+          p_dpp?: string
           p_fotolivro?: boolean
           p_mae_nome: string
           p_maternidade_id: string
@@ -1759,6 +1763,7 @@ export type Database = {
           p_caso_id: string
           p_cesarea_em?: string
           p_click_home?: boolean
+          p_dpp?: string
           p_fotolivro?: boolean
           p_mae_nome: string
           p_maternidade_id: string
@@ -2204,6 +2209,7 @@ export type Database = {
           click_home: boolean
           cor_calendar: string
           descricao_do_sistema: boolean
+          dpp: string
           google_event_id: string
           mae_nome: string
           maternidade_sigla: string
@@ -2222,6 +2228,7 @@ export type Database = {
           cesarea_em: string
           click_home: boolean
           cor_calendar: string
+          dpp: string
           mae_nome: string
           maternidade_sigla: string
           observacao_calendar: string

@@ -316,8 +316,17 @@ export interface NovoCaso {
   dia: string
   /** 'HH:MM', ou vazio = hora a definir (o evento no Google é de dia inteiro). */
   hora: string
-  /** 'HH:MM' da cesárea, no mesmo dia; vazio = sem cesárea marcada. */
-  cesarea: string
+  /**
+   * A DPP — data provável do parto ('YYYY-MM-DD'); vazio = sem DPP. Substituiu a
+   * hora da cesárea no formulário (14/10/2026, pedido do gestor).
+   */
+  dpp: string
+  /**
+   * A hora da cesárea que o caso JÁ TINHA, devolvida como veio: o campo saiu da
+   * tela, e `editar_caso` grava o que recebe — sem isto, salvar um caso antigo
+   * apagaria a hora.
+   */
+  cesareaEm: string | null
   observacao: string
   clickHome: boolean
   fotolivro: boolean
@@ -346,11 +355,12 @@ async function registrarTermoSeMudou(casoId: string, termo: TermoStatus | null, 
 /** A previsão que vai para o banco: com hora, o instante; sem, o dia. */
 const previsao = (dia: string, hora: string) => `${dia}T${hora || '00:00'}:00-03:00`
 
-/** Cesárea, observações e Foto/Livro — os campos de 30/09/2026. */
+/** DPP, cesárea, observações e Foto/Livro — os campos de 30/09 e 14/10/2026. */
 // Vazio vai OMITIDO: o padrão da RPC é nulo, e nulo é o que limpa o campo na
 // edição (o parâmetro não aceita `null` explícito nos tipos gerados).
 const camposNovos = (n: NovoCaso) => ({
-  ...(n.cesarea ? { p_cesarea_em: `${n.dia}T${n.cesarea}:00-03:00` } : {}),
+  ...(n.dpp ? { p_dpp: n.dpp } : {}),
+  ...(n.cesareaEm ? { p_cesarea_em: n.cesareaEm } : {}),
   ...(n.observacao.trim() ? { p_observacao: n.observacao.trim() } : {}),
   p_fotolivro: n.fotolivro,
 })
@@ -396,6 +406,7 @@ export interface CasoEditavel {
   previsaoEm: string | null
   semHora: boolean
   cesareaEm: string | null
+  dpp: string | null
   observacao: string | null
   clickHome: boolean
   /** O caso já tem a etapa de Foto/Livro (do pacote ou vendida à parte). */
@@ -416,7 +427,7 @@ export function useCasoEditavel(casoId: string | null) {
       const { data, error } = await supabase
         .from('casos')
         .select(
-          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, dpp, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
         )
         .eq('id', casoId ?? '')
         .single()
@@ -430,6 +441,7 @@ export function useCasoEditavel(casoId: string | null) {
         previsaoEm: data.previsao_em,
         semHora: data.previsao_sem_hora,
         cesareaEm: data.cesarea_em,
+        dpp: data.dpp,
         observacao: data.observacao_calendar,
         clickHome: data.click_home,
         temFotolivro: data.etapas.some((e) => e.tipo === 'album'),

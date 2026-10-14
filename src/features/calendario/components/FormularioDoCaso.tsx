@@ -132,7 +132,8 @@ function FormularioDoCaso({
   const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? '')
   // Hora a definir abre com o campo vazio — a meia-noite guardada não é hora.
   const [hora, setHora] = useState(proposta?.hora ?? (caso?.semHora ? '' : (antes?.hora ?? '')))
-  const [cesarea, setCesarea] = useState(caso?.cesareaEm ? emBrasilia(caso.cesareaEm).hora : '')
+  // A DPP no lugar da hora da cesárea (14/10/2026, pedido do gestor).
+  const [dpp, setDpp] = useState(caso?.dpp ?? '')
   const [observacao, setObservacao] = useState(caso?.observacao ?? '')
   const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
   const [fotolivro, setFotolivro] = useState(caso?.temFotolivro ?? false)
@@ -194,7 +195,8 @@ function FormularioDoCaso({
       maternidadeId,
       dia,
       hora,
-      cesarea: ehEvento || ehNewborn ? '' : cesarea,
+      dpp: ehEvento || ehNewborn ? '' : dpp,
+      cesareaEm: caso?.cesareaEm ?? null,
       observacao,
       clickHome: clickHome && !ehEvento && !ehNewborn,
       fotolivro: fotolivro && !ehEvento && !ehNewborn,
@@ -289,7 +291,7 @@ function FormularioDoCaso({
               ajuda={hora === '' ? 'A definir: dia inteiro no Google.' : 'Apague para deixar a definir.'}
             />
             {!ehEvento && !ehNewborn && (
-              <CampoTexto rotulo="Cesárea" type="time" valor={cesarea} aoMudar={setCesarea} opcional ajuda="Hora da cirurgia." />
+              <CampoTexto rotulo="DPP" type="date" valor={dpp} aoMudar={setDpp} opcional ajuda="Data provável do parto." />
             )}
           </div>
           {mudouQuando && antes && (

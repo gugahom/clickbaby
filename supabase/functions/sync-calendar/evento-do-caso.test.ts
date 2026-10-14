@@ -208,6 +208,19 @@ Deno.test("a observação com formatação vai como está; a de texto puro é es
   );
 });
 
+Deno.test("a descrição leva a DPP, em data brasileira, antes da cesárea", () => {
+  assertEqual(
+    descricaoDoEvento({ dpp: "2026-10-20", observacao_calendar: null, cesarea_em: null }),
+    "DPP: 20/10/2026<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "só a DPP",
+  );
+  assertEqual(
+    descricaoDoEvento({ dpp: "2026-10-20", observacao_calendar: "Nome: Ana", cesarea_em: "2026-10-14T17:30:00Z" }),
+    "Nome: Ana<br><br>DPP: 20/10/2026<br><br>Cesárea às 14:30<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "caso antigo com cesárea: as duas linhas",
+  );
+});
+
 Deno.test("a descrição leva observações e cesárea — e só é reescrita no caso que o sistema criou", () => {
   const comCampos = { ...CASO_EDITADO, cesarea_em: "2026-10-14T17:30:00Z", observacao_calendar: "Nome: Ana\nMédico: Plantão" };
   assertEqual(

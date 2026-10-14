@@ -1924,6 +1924,8 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   imagem foi, ou não, autorizado nele. Só o rótulo; os valores no banco não mudaram.
   `ROTULO_TERMO` é a tabela ÚNICA de nomes: o relatório externo (filtro, gráfico, planilha),
   que tinha uma cópia, passou a ler dela.
+  **"ASS PENDENTE" EM BRANCO** (14/10/2026, pedido do gestor: "muito apagado"): era a tinta
+  âmbar sobre o fundo âmbar, 1,5:1 de contraste; agora texto branco, 5:1, o mesmo do verde.
   **QUEM RESPONDEU E QUANDO FICA EM `eventos`** (`termo_registrado`, com o valor anterior), e
   não em colunas novas: append-only, uma correção não apaga a resposta de hoje. O quarto
   valor do enum, `nao_aplicavel`, a RPC RECUSA — valor de enum não se apaga, e uma quarta
@@ -2648,6 +2650,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   como o New Born. **A descrição do evento só é escrita no caso que o SISTEMA criou**
   (`criado_por`): no que veio do Google ela é da equipe (tem CPF, e-mail, médico), e reescrevê-la
   com um campo que aqui nasceu vazio apagaria o cadastro. O texto não vai para `eventos`.
+  **A DPP NO LUGAR DA CESÁREA** (14/10/2026, pedido do gestor, migration `20261014113525`):
+  o campo "Cesárea" (hora da cirurgia) virou **DPP** — data provável do parto, uma DATA
+  (`casos.dpp`), no detalhe e na descrição do evento ("DPP: 20/10/2026"). Não foi renomear:
+  são perguntas diferentes (decisão do gestor, perguntado). `cesarea_em` FICA — 40 casos do
+  remoto tinham a hora —, sai só da tela; o formulário a devolve intacta ao salvar, porque
+  `editar_caso` grava o que recebe e nulo limparia, e a descrição do Google segue com
+  "Cesárea às…" onde ela existe. `p_dpp` é o último parâmetro de `criar_caso`/`editar_caso`,
+  e o sync recebe `dpp` como última coluna — retrocompatível nos dois sentidos.
   **AS OBSERVAÇÕES TÊM FORMATAÇÃO** (06/10/2026, pedido do gestor): negrito, itálico,
   sublinhado, tachado, as duas listas e "tirar a formatação", numa barra EMBAIXO da caixa
   ("sem tirar muito espaço") — o arranjo da descrição do próprio Google. `EditorDeTexto` e
