@@ -7,7 +7,7 @@ import { EditorDeTexto } from '@/components/ui/EditorDeTexto'
 import { useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
-import { diaDoNascimento, emBrasilia, rotuloDoDia } from '../lib/datas'
+import { emBrasilia, rotuloDoDia } from '../lib/datas'
 import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
 import { IconeCheck } from '@/components/ui/icones'
 import type { TermoStatus } from '@/features/quadro/types'
@@ -276,43 +276,53 @@ function FormularioDoCaso({
             </p>
           )}
 
-          <div
-            className={clsx(
-              'grid gap-3',
-              ehEvento || ehNewborn
-                ? 'grid-cols-2'
-                : 'grid-cols-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]',
-            )}
-          >
-            <CampoTexto
-              rotulo={ehParto ? 'Data provável do parto' : 'Dia'}
-              type="date"
-              valor={dia}
-              aoMudar={setDia}
-              {...(dia ? { ajuda: rotuloDoDia(dia) } : {})}
-            />
-            <CampoTexto
-              rotulo={ehParto ? 'Internamento previsto' : 'Hora prevista'}
-              type="time"
-              valor={hora}
-              aoMudar={setHora}
-              opcional
-              ajuda={hora === '' ? 'A definir: dia inteiro no Google.' : 'A hora do evento no Google.'}
-            />
-            {ehParto && (
+          {/* A fileira se mede pela COLUNA, não pela janela (`@container`): com
+              espaço, os três lado a lado; apertada, a DPP ganha a linha inteira e
+              os dois horários dividem a de baixo — senão o rótulo da DPP quebra e
+              a data sai cortada no campo. */}
+          <div className="@container">
+            <div
+              className={clsx(
+                'grid items-start gap-3',
+                ehParto ? 'grid-cols-2 @lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]' : 'grid-cols-2',
+              )}
+            >
+              <div className={ehParto ? 'col-span-2 @lg:col-span-1' : undefined}>
+                <CampoTexto
+                  rotulo={ehParto ? 'Data provável do parto' : 'Dia'}
+                  type="date"
+                  valor={dia}
+                  aoMudar={setDia}
+                  {...(dia ? { ajuda: rotuloDoDia(dia) } : {})}
+                />
+              </div>
+              {/* Rótulos CURTOS: com "previsto" e "(opcional)" eles quebravam em duas
+                  linhas e desalinhavam os três campos. O "previsto" mora na ajuda. */}
               <CampoTexto
-                rotulo="Nascimento previsto"
+                rotulo={ehParto ? 'Internamento' : 'Hora prevista'}
                 type="time"
-                valor={nascimento}
-                aoMudar={setNascimento}
-                opcional
+                valor={hora}
+                aoMudar={setHora}
                 ajuda={
-                  nascimentoNoDiaSeguinte && dia
-                    ? `No dia seguinte, ${rotuloDoDia(diaDoNascimento(dia, hora, nascimento))}.`
-                    : 'Vai na descrição do evento.'
+                  ehParto
+                    ? hora === ''
+                      ? 'Previsto · a definir'
+                      : 'Previsto · hora do evento'
+                    : hora === ''
+                      ? 'A definir: dia inteiro.'
+                      : 'Apague para deixar a definir.'
                 }
               />
-            )}
+              {ehParto && (
+                <CampoTexto
+                  rotulo="Nascimento"
+                  type="time"
+                  valor={nascimento}
+                  aoMudar={setNascimento}
+                  ajuda={nascimentoNoDiaSeguinte ? 'Previsto · no dia seguinte' : 'Previsto'}
+                />
+              )}
+            </div>
           </div>
           {mudouQuando && antes && (
             <p className="text-xs font-semibold text-foreground">
