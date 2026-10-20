@@ -429,7 +429,7 @@ mover_para_uti(p_caso_id) / retornar_da_uti(p_caso_id)  -- congela o SLA
 registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
 
--- o valor vendido e o contrato do caso (14/10/2026; ver seção 13) — atendimento/adm
+-- o valor vendido e o contrato do caso (14/10/2026; ver seção 13) — atendimento/adm ou tela Comercial
 registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao) -- pacote ou venda a mais
 remover_venda_do_caso(p_venda_id)                -- não existe editar
 definir_contrato_do_caso(p_caso_id, p_url)       -- em branco tira; o link não vai para eventos
@@ -1811,7 +1811,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   pior que um clique a menos. `contratos_dos_casos` guarda um link por caso; em branco tira.
   **QUEM VÊ é todo papel menos `operador`** (decisão do gestor) — `eh_atendimento() or
   eh_adm()`, na RLS, não só na tela; por isso tabelas próprias e não colunas em `casos`, que
-  toda pessoa ativa lê pela view do Quadro. **Valor e link NÃO vão para `eventos`**: o
+  toda pessoa ativa lê pela view do Quadro. **E QUEM TEM A TELA COMERCIAL** (20/10/2026, pedido
+  do gestor, migration `20261020173657`): a tela, concedida pessoa a pessoa, dá o poder junto —
+  como nos Relatórios e na Equipe —, na RLS das duas tabelas e nas três RPCs; o espelho na tela é
+  `usePodeVenda` (`features/vendas/podeVenda.ts`). E a venda passou a se lançar SEM editar o caso:
+  "Lançar venda" no bloco da venda, no detalhe do parto do Calendário (`DialogoLancarVenda`, o
+  mesmo editor do formulário), porque "Editar caso" é do adm e quem vende nem sempre é.
+  **Valor e link NÃO vão para `eventos`**: o
   histórico é lido pela equipe inteira, então o evento diz "Lançou o valor da venda · Reels"
   e mais nada. O link do contrato é tratado como o link de entrega (seção 10).
   **FICA PARA DEPOIS** (decisão do gestor): a tela do financeiro (a previsão do que foi

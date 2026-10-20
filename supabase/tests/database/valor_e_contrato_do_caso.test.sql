@@ -83,7 +83,7 @@ select pg_temp.sair();
 select pg_temp.como('foto.venda@clickbaby.test');
 select throws_ok(
   $$ select public.registrar_venda_do_caso(pg_temp.caso(), 'pacote', 100) $$,
-  'P0001', 'Quem lança o valor da venda é o atendimento ou a gestão.',
+  'P0001', 'Quem lança o valor da venda é o atendimento, a gestão ou quem tem a tela Comercial.',
   'V6: a fotógrafa não lança venda'
 );
 select is(

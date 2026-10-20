@@ -11,8 +11,7 @@ import { emBrasilia, rotuloDoDia } from '../lib/datas'
 import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
 import { IconeCheck } from '@/components/ui/icones'
 import type { TermoStatus } from '@/features/quadro/types'
-import { useAuth } from '@/features/auth/contexto'
-import { podeEncerrarCaso } from '@/features/quadro/lib/acoes'
+import { usePodeVenda } from '@/features/vendas/podeVenda'
 import { useVendaDoCaso } from '@/features/vendas/api/useVendaDoCaso'
 import { EditorDaVenda } from '@/features/vendas/components/EditorDaVenda'
 import { VENDA_INTOCADA, mudancaDaVenda, type EstadoDaVenda } from '@/features/vendas/lib/vendas'
@@ -144,8 +143,7 @@ function FormularioDoCaso({
   const [termoEscolhido, setTermoEscolhido] = useState<TermoStatus | null | undefined>(undefined)
   const [erro, setErro] = useState<string | null>(null)
   const ocupado = criar.isPending || editar.isPending
-  const { pessoa } = useAuth()
-  const podeVenda = podeEncerrarCaso(pessoa?.papelSistema ?? 'operador')
+  const podeVenda = usePodeVenda()
   const vendaAtual = useVendaDoCaso(caso?.id ?? null, podeVenda)
   const [estadoDaVenda, setEstadoDaVenda] = useState<EstadoDaVenda>(VENDA_INTOCADA)
   const venda = podeVenda ? mudancaDaVenda(estadoDaVenda, vendaAtual.data?.contrato ?? null) : null
