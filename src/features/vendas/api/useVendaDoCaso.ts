@@ -58,8 +58,14 @@ export function useVendaDoCaso(casoId: string | null, habilitado = true) {
  * e as novas, nessa ordem. São chamadas separadas, como o termo — o caso já
  * está salvo quando isto roda, e o erro diz que foi a venda que não entrou.
  */
-export async function salvarVendaDoCaso(casoId: string, mudanca: MudancaDaVenda): Promise<void> {
-  const falhou = (e: { message: string }) => new Error(`O caso foi salvo, mas a venda não: ${e.message}`)
+export async function salvarVendaDoCaso(
+  casoId: string,
+  mudanca: MudancaDaVenda,
+  /** 'so_venda': lançada sozinha (DialogoLancarVenda), sem caso salvo antes. */
+  contexto: 'com_caso' | 'so_venda' = 'com_caso',
+): Promise<void> {
+  const falhou = (e: { message: string }) =>
+    new Error(contexto === 'com_caso' ? `O caso foi salvo, mas a venda não: ${e.message}` : e.message)
 
   if (mudanca.contrato !== undefined) {
     const { error } = await supabase.rpc('definir_contrato_do_caso', { p_caso_id: casoId, p_url: mudanca.contrato })

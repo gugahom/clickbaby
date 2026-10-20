@@ -5,7 +5,10 @@ import { TextoFormatado } from '@/components/ui/TextoFormatado'
 import { useCasoEditavel, useNoQuadro, type ItemDoCalendario } from '../api/useCalendario'
 import { emBrasilia, rotuloDoDiaCompleto } from '../lib/datas'
 import { aparencia } from '../lib/estilos'
+import { useState } from 'react'
 import { VendaDoCaso } from '@/features/vendas/components/VendaDoCaso'
+import { DialogoLancarVenda } from '@/features/vendas/components/DialogoLancarVenda'
+import { usePodeVenda } from '@/features/vendas/podeVenda'
 
 /**
  * O DETALHE DE UM ITEM, ao tocar nele — o "Event Details" do exemplo.
@@ -39,6 +42,8 @@ export function DetalheDoItem({
   onFechar: () => void
 }) {
   const a = aparencia(item)
+  const podeVenda = usePodeVenda()
+  const [lancandoVenda, setLancandoVenda] = useState(false)
   const noQuadro = useNoQuadro(item.casoId)
   // O nascimento previsto e as observações só existem no parto — são do caso,
   // não da etapa.
@@ -98,8 +103,13 @@ export function DetalheDoItem({
         )}
         {/* O valor vendido e o contrato (14/10/2026): só no parto, e só para
             quem pode ver — o componente some para a fotógrafa. */}
+        {/* LANÇAR ALI MESMO (20/10/2026): quem tem a tela Comercial lança sem
+            precisar editar o caso, que é do adm. */}
         {item.tipo === 'parto' && (
-          <VendaDoCaso casoId={item.casoId} {...(acoes.onEditar ? { ondeLancar: 'lance em “Editar caso”' } : {})} />
+          <VendaDoCaso casoId={item.casoId} {...(podeVenda ? { aoLancar: () => setLancandoVenda(true) } : {})} />
+        )}
+        {lancandoVenda && (
+          <DialogoLancarVenda casoId={item.casoId} nome={item.nome} onFechar={() => setLancandoVenda(false)} />
         )}
         {item.google && (
           <p className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground" role="status">

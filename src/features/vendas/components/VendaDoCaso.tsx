@@ -1,6 +1,6 @@
 import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
-import { useAuth } from '@/features/auth/contexto'
-import { podeEncerrarCaso } from '@/features/quadro/lib/acoes'
+import { Botao } from '@/components/ui/Botao'
+import { usePodeVenda } from '../podeVenda'
 import { formatarMoeda } from '@/lib/formato'
 import { useVendaDoCaso } from '../api/useVendaDoCaso'
 import { rotuloDaLinha } from '../lib/vendas'
@@ -14,9 +14,17 @@ import { rotuloDaLinha } from '../lib/vendas'
  * quem não pode ver (a fotógrafa), NÃO APARECE: a RLS já devolveria vazio, e um
  * bloco "nada lançado" mentiria para ela sobre o caso.
  */
-export function VendaDoCaso({ casoId, ondeLancar }: { casoId: string; ondeLancar?: string }) {
-  const { pessoa } = useAuth()
-  const pode = podeEncerrarCaso(pessoa?.papelSistema ?? 'operador')
+export function VendaDoCaso({
+  casoId,
+  ondeLancar,
+  aoLancar,
+}: {
+  casoId: string
+  ondeLancar?: string
+  /** Abre o lançamento ali mesmo (DialogoLancarVenda) — o botão só aparece com ele. */
+  aoLancar?: () => void
+}) {
+  const pode = usePodeVenda()
   const { data, error, isPending } = useVendaDoCaso(casoId, pode)
   if (!pode) return null
 
@@ -66,6 +74,11 @@ export function VendaDoCaso({ casoId, ondeLancar }: { casoId: string; ondeLancar
               </>
             ) : (
               <span className="text-xs text-muted-foreground">Sem link do contrato.</span>
+            )}
+            {aoLancar && (
+              <Botao variante="contorno" className="ml-auto" onClick={aoLancar}>
+                Lançar venda
+              </Botao>
             )}
           </div>
         </>

@@ -15,29 +15,10 @@ import {
   type TipoEntregavel,
 } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
+import { ROTULO_TIPO_DE_LINK } from '../lib/rotulos-de-link'
 import type { CasoQuadro } from '../types'
 
-const ROTULO_TIPO: Record<TipoEntregavel, string> = {
-  google_photos: 'Google Photos',
-  wetransfer: 'WeTransfer',
-  cadeado: 'Cadeado',
-  reels: 'Reels',
-  album: 'Foto/Livro',
-  // O horizontal do MASTER (16/09/2026). Tipo próprio e não "wetransfer": o
-  // meio pelo qual o arquivo viaja muda com o tamanho do vídeo, e o que a
-  // lista precisa dizer é O QUE é aquele link.
-  video: 'Vídeo',
-  // O arquivo do vídeo para baixar (21/09/2026), cobrado junto do link do vídeo
-  // ao terminar a edição. Tipo próprio para não se confundir com o WeTransfer
-  // das FOTOS, que a conferência do envio do caso exige.
-  video_wetransfer: 'WeTransfer do vídeo',
-  // A galeria de escolha do ensaio newborn (22/09/2026): é por ela que a
-  // família escolhe as fotos do Click Home. Tipo próprio porque não é o álbum
-  // do parto — são dois endereços, em dois momentos.
-  click_home: 'Galeria do New Born',
-  // O material do BIRTH vendido depois da entrega (30/09/2026).
-  google_drive: 'Google Drive',
-}
+const ROTULO_TIPO = ROTULO_TIPO_DE_LINK
 
 /**
  * O BIRTH VENDIDO DEPOIS DA ENTREGA (30/09/2026, pedido do gestor). O BIRTH é

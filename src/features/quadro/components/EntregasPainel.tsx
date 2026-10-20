@@ -23,6 +23,7 @@ import { mensagemDeErro } from '../lib/erros'
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { Entregaveis } from './Entregaveis'
 import { LinkParaCopiar } from './LinkParaCopiar'
+import { LinksDoFotolivro } from './LinkDoFotolivro'
 import { PagamentoDoClickHome } from './PagamentoDoClickHome'
 import { ROTULO_DO_LINK_DO_VIDEO, linksDoCasoParaOVideo } from '../lib/links-do-video'
 import type { CasoQuadro, EtapaQuadro } from '../types'
@@ -436,6 +437,14 @@ function LinhaDoFotolivro({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* NA ENTREGA DO LIVRO, o link que vai à família (20/10/2026) — à vista
+          para quem entrega, e colável ali mesmo se ainda não veio. */}
+      {momento === 'entrega' && (
+        <div className="mt-3 border-t border-marca/20 pt-3">
+          <LinksDoFotolivro casoId={caso.id} nomeDoCaso={titulo} />
         </div>
       )}
 

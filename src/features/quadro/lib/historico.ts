@@ -1,3 +1,4 @@
+import { rotuloDoTipoDeLink } from './rotulos-de-link'
 import {
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
@@ -136,7 +137,7 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         ...base,
         acao: 'Registrou um link de entrega',
         tom: 'normal',
-        ...(tipoLink ? { detalhe: tipoLink.replace(/_/g, ' ') } : {}),
+        ...(tipoLink ? { detalhe: rotuloDoTipoDeLink(tipoLink) } : {}),
       }
     }
     case 'entregavel_removido': {
@@ -147,9 +148,9 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
         acao: 'Apagou um link de entrega',
         tom: 'alerta',
         ...(motivo
-          ? { detalhe: `${tipoLink ? `${tipoLink.replace(/_/g, ' ')} · ` : ''}${motivo}` }
+          ? { detalhe: `${tipoLink ? `${rotuloDoTipoDeLink(tipoLink)} · ` : ''}${motivo}` }
           : tipoLink
-            ? { detalhe: tipoLink.replace(/_/g, ' ') }
+            ? { detalhe: rotuloDoTipoDeLink(tipoLink) }
             : {}),
       }
     }
