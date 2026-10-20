@@ -71,6 +71,7 @@ import { AgendamentoDoClickHome, DialogoAgendarEnsaio } from './components/Agend
 import { PagamentoDoClickHome } from './components/PagamentoDoClickHome'
 import { PrazoDaEtapa } from './components/PrazoDaEtapa'
 import { PedidosDaEtapa } from './components/PedidosDaEtapa'
+import { PilulaLinkDoFotolivro } from './components/LinkDoFotolivro'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
 import { ReabrirCasoDialogo } from './components/ReabrirCasoDialogo'
@@ -735,6 +736,8 @@ export function QuadroPage() {
       <AtribuicaoDaSecao etapa={etapa} onErro={onErro} />
       <PrazoDaEtapa etapa={etapa} onErro={onErro} />
       <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+      {/* O link de entrega do livro, em qualquer fase (20/10/2026). */}
+      <PilulaLinkDoFotolivro casoId={caso.id} nomeDoCaso={nomeDoCaso(caso)} />
       <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
       {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
           passam por Entregáveis o cartão fica parado aqui, e sem esta pílula

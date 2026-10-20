@@ -1453,6 +1453,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   cor da marca (o verde diz "fechar o caso", e o caso pode estar encerrado há semanas). A
   contagem e o anel da aba somam os dois. O sino avisa atendimento e adm com o mesmo tipo da
   entrega de caso.
+  **O LINK DE ENTREGA DO LIVRO MORA DENTRO DO FOTO/LIVRO** (20/10/2026, pedido do gestor). O
+  tipo `album` ("Foto/Livro") sempre existiu nos links do caso, mas só se colava pelo card do
+  Quadro e com o caso ABERTO — e quase todo fotolivro corre com o caso encerrado. Agora ele entra
+  em qualquer fase pela pastilha "Link" do cartão da seção, pelo bloco "Entrega do Foto/Livro" da
+  ficha e pela linha do livro pronto em Entregáveis (`LinkDoFotolivro.tsx`). Sem migration:
+  `registrar_entregavel` sempre aceitou caso em qualquer estado. NÃO é o `fotolivro_link`, que é
+  a PROVA da aprovação; e não trava a confirmação da entrega. Apagar um link errado continua em
+  "Links do caso". Os nomes dos tipos de link são uma tabela só, `lib/rotulos-de-link.ts`, que o
+  histórico também lê ("Registrou um link de entrega · Foto/Livro", e não "album").
 - **A SEÇÃO CLICK HOME** (22/09/2026, pedido do gestor, migrations `20260922212852` e
   `20260922212901`). O ensaio newborn na casa da família ganhou o mesmo arranjo do vídeo e do
   fotolivro — cartão na coluna da direita, seletor de fase, play/pause, ficha, quadro por

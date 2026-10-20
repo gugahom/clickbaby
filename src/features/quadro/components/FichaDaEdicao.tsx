@@ -8,6 +8,7 @@ import type { CasoQuadro, EtapaQuadro } from '../types'
 import { AnexosDosPedidos } from './AnexosDosPedidos'
 import { useEnvioDeAnexos } from '../api/useEnvioDeAnexos'
 import { Entregaveis } from './Entregaveis'
+import { LinksDoFotolivro } from './LinkDoFotolivro'
 import { HistoricoDoCaso } from './HistoricoDoCaso'
 
 /**
@@ -87,6 +88,15 @@ export function FichaDaEdicao({
         <div className="mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_19rem]">
           <div className="min-w-0 space-y-6">
             {tipo === 'fotolivro' && <AprovacaoDoFotolivro etapa={etapa} />}
+
+            {/* O LINK FINAL do livro (20/10/2026), que entra com o caso
+                encerrado — "Links do caso", abaixo, só aceita link novo com ele
+                aberto. Apagar um errado continua sendo lá. */}
+            {tipo === 'fotolivro' && (
+              <Bloco titulo="Entrega do Foto/Livro">
+                <LinksDoFotolivro casoId={caso.id} nomeDoCaso={nome} />
+              </Bloco>
+            )}
 
             {/* O VÍDEO TERMINADO espera em Entregáveis (21/09/2026) — a ficha
                 diz onde ele está, e os dois links estão em "Links do caso". */}
