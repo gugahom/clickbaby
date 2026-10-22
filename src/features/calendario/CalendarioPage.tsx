@@ -9,7 +9,7 @@ import { useCalendario, type Feriado, type ItemDoCalendario } from './api/useCal
 import { CancelarCasoDialogo, MudarHorarioDialogo } from './components/AcoesDoItem'
 import { ControleDoFeriado } from './components/ControleDoFeriado'
 import { DetalheDoItem, type AcoesDoDetalhe } from './components/DetalheDoItem'
-import { FiltrosDoCalendario } from './components/FiltrosDoCalendario'
+import { FiltrosDeBusca } from '@/components/ui/FiltrosDeBusca'
 import { EditarCasoDialogo, NovoCasoDialogo, type Proposta } from './components/FormularioDoCaso'
 import { VisaoDia, VisaoLista, VisaoMes, VisaoSemana } from './components/Visoes'
 import {
@@ -215,9 +215,11 @@ export function CalendarioPage() {
         </div>
       </header>
 
-      <FiltrosDoCalendario
+      <FiltrosDeBusca
         busca={busca}
         onBuscar={setBusca}
+        placeholder="Buscar por mãe, bebê, maternidade…"
+        rotuloDaBusca="Buscar no calendário"
         grupos={[
           {
             id: 'tipos',

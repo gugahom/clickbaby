@@ -159,6 +159,10 @@ function FormularioDoCaso({
   const ehEvento = pacote?.nome === 'EVENTO'
   const ehNewborn = pacote?.nome === 'NEWBORN'
   const ehParto = !ehEvento && !ehNewborn
+  // O SEGUNDO HORÁRIO (22/10/2026, pedido do gestor): no parto é o nascimento
+  // previsto; no EVENTO, o término ("o evento tem hora para começar e às vezes
+  // tem hora para fechar"). Os dois moram em `cesarea_em` — ver useCalendario.
+  const temSegundoHorario = ehParto || ehEvento
   const nascimentoNoDiaSeguinte = nascimento !== '' && hora !== '' && nascimento < hora
   const maeEfetiva = ehEvento ? 'EVENTO' : maeNome
   const temBarra = maeEfetiva.includes('/') || bebeNome.includes('/')
@@ -197,7 +201,7 @@ function FormularioDoCaso({
       maternidadeId,
       dia,
       hora,
-      nascimento: ehEvento || ehNewborn ? '' : nascimento,
+      nascimento: temSegundoHorario ? nascimento : '',
       observacao,
       clickHome: clickHome && !ehEvento && !ehNewborn,
       fotolivro: fotolivro && !ehEvento && !ehNewborn,
@@ -282,12 +286,14 @@ function FormularioDoCaso({
             <div
               className={clsx(
                 'grid items-start gap-3',
-                ehParto ? 'grid-cols-2 @lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]' : 'grid-cols-2',
+                temSegundoHorario
+                  ? 'grid-cols-2 @lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]'
+                  : 'grid-cols-2',
               )}
             >
-              <div className={ehParto ? 'col-span-2 @lg:col-span-1' : undefined}>
+              <div className={temSegundoHorario ? 'col-span-2 @lg:col-span-1' : undefined}>
                 <CampoTexto
-                  rotulo={ehParto ? 'Data provável do parto' : 'Dia'}
+                  rotulo={ehParto ? 'Data provável do parto' : ehEvento ? 'Data do evento' : 'Dia'}
                   type="date"
                   valor={dia}
                   aoMudar={setDia}
@@ -297,12 +303,12 @@ function FormularioDoCaso({
               {/* Rótulos CURTOS: com "previsto" e "(opcional)" eles quebravam em duas
                   linhas e desalinhavam os três campos. O "previsto" mora na ajuda. */}
               <CampoTexto
-                rotulo={ehParto ? 'Internamento' : 'Hora prevista'}
+                rotulo={ehParto ? 'Internamento' : ehEvento ? 'Início' : 'Hora prevista'}
                 type="time"
                 valor={hora}
                 aoMudar={setHora}
                 ajuda={
-                  ehParto
+                  temSegundoHorario
                     ? hora === ''
                       ? 'Previsto · a definir'
                       : 'Previsto · hora do evento'
@@ -311,13 +317,19 @@ function FormularioDoCaso({
                       : 'Apague para deixar a definir.'
                 }
               />
-              {ehParto && (
+              {temSegundoHorario && (
                 <CampoTexto
-                  rotulo="Nascimento"
+                  rotulo={ehEvento ? 'Término' : 'Nascimento'}
                   type="time"
                   valor={nascimento}
                   aoMudar={setNascimento}
-                  ajuda={nascimentoNoDiaSeguinte ? 'Previsto · no dia seguinte' : 'Previsto'}
+                  ajuda={
+                    nascimentoNoDiaSeguinte
+                      ? 'Previsto · no dia seguinte'
+                      : ehEvento
+                        ? 'Opcional · fim no Google'
+                        : 'Previsto'
+                  }
                 />
               )}
             </div>

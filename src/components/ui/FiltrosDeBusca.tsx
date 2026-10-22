@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
-import { IconeLupa, IconeX } from '@/components/ui/icones'
+import { IconeLupa, IconeX } from './icones'
 
 /**
- * A BUSCA E OS FILTROS DO CALENDÁRIO, no molde do exemplo do gestor
+ * A BUSCA E OS FILTROS (nasceu no Calendário; virou peça da casa em 22/10/2026,
+ * quando as Despesas pediram o mesmo — "não gosto dos filtros todos abertos").
+ *
+ * No Calendário, no molde do exemplo do gestor
  * (30/09/2026): um campo de busca, três menus de marcar (cores, tipos,
  * maternidades) com o número de marcados no botão, e os filtros ativos em
  * etiquetas com × logo embaixo, com "Limpar".
@@ -27,14 +30,18 @@ export interface GrupoDoFiltro {
   onMudar: (marcados: string[]) => void
 }
 
-export function FiltrosDoCalendario({
+export function FiltrosDeBusca({
   busca,
   onBuscar,
   grupos,
+  placeholder,
+  rotuloDaBusca,
 }: {
   busca: string
   onBuscar: (texto: string) => void
   grupos: GrupoDoFiltro[]
+  placeholder: string
+  rotuloDaBusca: string
 }) {
   const ativos = grupos.flatMap((g) =>
     g.marcados.map((v) => ({ grupo: g, opcao: g.opcoes.find((o) => o.valor === v) ?? { valor: v, rotulo: v } })),
@@ -44,14 +51,15 @@ export function FiltrosDoCalendario({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-sm">
+        {/* No celular a busca ganha a linha inteira; os menus descem para a de baixo. */}
+        <div className="relative min-w-0 basis-full sm:max-w-sm sm:flex-1 sm:basis-auto">
           <IconeLupa className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
             value={busca}
             onChange={(e) => onBuscar(e.target.value)}
-            placeholder="Buscar por mãe, bebê, maternidade…"
-            aria-label="Buscar no calendário"
+            placeholder={placeholder}
+            aria-label={rotuloDaBusca}
             className="h-10 w-full rounded-full border border-border bg-card pr-3 pl-9 text-sm placeholder:text-muted-foreground"
           />
         </div>

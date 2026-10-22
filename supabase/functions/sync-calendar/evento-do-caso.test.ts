@@ -228,3 +228,29 @@ Deno.test("a descrição leva observações e nascimento previsto — e só é r
   const doSistema = atualizarEventoDoCaso({ ...comCampos, descricao_do_sistema: true }, EVENTO_DA_EQUIPE);
   assertEqual((doSistema.description as string).startsWith("Nome: Ana"), true, "evento do sistema: a descrição acompanha");
 });
+
+Deno.test("no EVENTO o segundo horário é o TÉRMINO: fim do evento no Google e na descrição", () => {
+  const evento = {
+    ...CASO_EDITADO,
+    mae_nome: "EVENTO",
+    bebe_nome: "MKT",
+    pacote_nome: "EVENTO",
+    click_home: false,
+    previsao_em: "2026-10-24T17:00:00Z",
+    cesarea_em: "2026-10-24T21:00:00Z",
+    descricao_do_sistema: true,
+  };
+  const editado = atualizarEventoDoCaso(evento, EVENTO_DA_EQUIPE);
+  assertEqual(editado.end, { dateTime: "2026-10-24T21:00:00.000Z", timeZone: "America/Sao_Paulo" }, "o fim é o término");
+  assertEqual(
+    editado.description,
+    "Término previsto às 18:00<br><br>Criado pelo calendário do sistema ClickBaby.",
+    "a descrição diz término, não nascimento",
+  );
+  const semTermino = atualizarEventoDoCaso({ ...evento, cesarea_em: null }, EVENTO_DA_EQUIPE);
+  assertEqual(semTermino.end, { dateTime: "2026-10-24T19:00:00.000Z", timeZone: "America/Sao_Paulo" }, "sem término, a duração que a equipe deixou");
+  const antesDoInicio = atualizarEventoDoCaso({ ...evento, cesarea_em: "2026-10-24T16:00:00Z" }, EVENTO_DA_EQUIPE);
+  assertEqual(antesDoInicio.end, { dateTime: "2026-10-24T19:00:00.000Z", timeZone: "America/Sao_Paulo" }, "término antes do início não vale");
+  const parto = atualizarEventoDoCaso({ ...CASO_EDITADO, cesarea_em: "2026-10-14T23:00:00Z" }, EVENTO_DA_EQUIPE);
+  assertEqual(parto.end, { dateTime: "2026-10-14T20:00:00.000Z", timeZone: "America/Sao_Paulo" }, "no parto o nascimento não mexe no fim");
+});
