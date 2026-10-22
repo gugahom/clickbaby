@@ -170,6 +170,12 @@ export interface EtapaQuadro {
    */
   pagamentoClickHome: PagamentoClickHome | null
   /**
+   * A MENSAGEM PARA A FAMÍLIA ESCOLHER AS FOTOS (22/10/2026): o texto que a
+   * galeria gera, com link, login e senha. Só no New Born. Credencial — nada de
+   * log.
+   */
+  mensagemClickHome: string | null
+  /**
    * QUANTOS ANEXOS os pedidos do cliente têm (13/10/2026) — foto, vídeo,
    * música, PDF. Só o número, contado pelo banco na mesma consulta; a lista
    * se busca quando alguém abre os pedidos. Zero fora das etapas com "Pedidos".
@@ -353,6 +359,7 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     faseAlbum: linha.fase_album,
     faseClickHome: linha.fase_click_home,
     pagamentoClickHome: linha.pagamento_click_home,
+    mensagemClickHome: linha.mensagem_click_home,
     anexos: linha.anexos_da_etapa[0]?.count ?? 0,
     faseCampo: linha.fase_campo,
     faseCampoEm: linha.fase_campo_em,
@@ -729,6 +736,9 @@ export const FASES_CLICK_HOME = [
   'editando',
   'criar_galeria',
   'enviar_para_escolha',
+  // A FAMÍLIA ESCOLHEU (22/10/2026, pedido do gestor): o fim que o Foto/Livro
+  // já tinha. É daqui, e não da escolha, que o ensaio vai para Entregáveis.
+  'pronto_para_entrega',
   'finalizado',
 ] as const
 
@@ -744,6 +754,12 @@ export const FASES_CLICK_HOME_NA_TELA: readonly FaseClickHome[] =
 
 /** A fase em que o ensaio entra só pelo diálogo do link da galeria. */
 export const FASE_CLICK_HOME_ESCOLHA: FaseClickHome = 'enviar_para_escolha'
+
+/**
+ * A fase que põe o ensaio em Entregáveis (22/10/2026). Até aqui era a escolha —
+ * e o card chegava ao ADM com a família ainda escolhendo as fotos.
+ */
+export const FASE_CLICK_HOME_ENTREGA: FaseClickHome = 'pronto_para_entrega'
 
 /**
  * As fases ANTES da escolha: nelas o "concluir" do cartão significa "a galeria
@@ -762,6 +778,7 @@ export const ROTULO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
   editando: 'Editando',
   criar_galeria: 'Criar galeria online',
   enviar_para_escolha: 'Enviar para escolha',
+  pronto_para_entrega: 'Pronto para entrega',
   finalizado: 'Finalizado',
 }
 
@@ -776,6 +793,8 @@ export const ESTILO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
   criar_galeria: 'bg-andamento/12 text-andamento-tinta',
   // Esperando a família escolher: bola de fora, cor neutra.
   enviar_para_escolha: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+  // Esperando o ADM confirmar a entrega: a cor do "pronto" do Foto/Livro.
+  pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',
   finalizado: 'bg-pronto-fundo text-pronto border border-pronto-borda',
 }
 

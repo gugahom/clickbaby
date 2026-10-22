@@ -100,14 +100,22 @@ export function FichaDaEdicao({
 
             {/* O VÍDEO TERMINADO espera em Entregáveis (21/09/2026) — a ficha
                 diz onde ele está, e os dois links estão em "Links do caso". */}
-            {/* O ENSAIO esperando a família escolher (22/09/2026) — a ficha
-                diz onde ele está, e o link está em "Links do caso". */}
+            {/* O ENSAIO esperando a família escolher, e depois o ADM entregar
+                (22/10/2026) — a ficha diz onde ele está. A mensagem para a
+                família fica no alto, na pastilha "Copiar mensagem". */}
             {tipo === 'click_home' && etapa.faseClickHome === 'enviar_para_escolha' && (
               <Bloco titulo="Escolha da família">
                 <p className="text-sm font-medium">
-                  Galeria pronta. O ensaio está na aba Entregáveis, esperando o ADM
-                  mandar o link para a família escolher as fotos — ele está em “Links
-                  do caso”, logo abaixo.
+                  Galeria enviada — esperando a família escolher as fotos. Quando ela escolher, leve o
+                  ensaio para “Pronto para entrega”: é aí que ele vai para a aba Entregáveis.
+                </p>
+              </Bloco>
+            )}
+            {tipo === 'click_home' && etapa.faseClickHome === 'pronto_para_entrega' && (
+              <Bloco titulo="Entrega">
+                <p className="text-sm font-medium">
+                  Fotos escolhidas. O ensaio está na aba Entregáveis, esperando o ADM confirmar a
+                  entrega — o link da galeria está em “Links do caso”, logo abaixo.
                 </p>
               </Bloco>
             )}

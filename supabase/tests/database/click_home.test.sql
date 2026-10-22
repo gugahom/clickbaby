@@ -8,7 +8,7 @@
 --   E — o ensaio NÃO segura o encerramento do caso.
 
 begin;
-select plan(23);
+select plan(31);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -219,10 +219,39 @@ select pg_temp.como('atendimento.ch@clickbaby.test');
 select throws_ok(
   format($$ select public.confirmar_entrega_do_click_home(%L::uuid) $$, pg_temp.ensaio('Mae CH Depois')),
   'P0001',
-  'Só se finaliza o Click Home que já foi mandado para a escolha da família.',
+  'Só se finaliza o Click Home que está pronto para entrega.',
   'D2: e não se finaliza o que nem foi mandado'
 );
 
+-- PRONTO PARA ENTREGA (22/10/2026): na escolha a família ainda está escolhendo.
+select throws_ok(
+  format($$ select public.confirmar_entrega_do_click_home(%L::uuid) $$, pg_temp.ensaio('Mae CH Standard')),
+  'P0001',
+  'Só se finaliza o Click Home que está pronto para entrega.',
+  'D2b: na escolha ainda não se finaliza'
+);
+reset role;
+
+select pg_temp.como('editora.ch@clickbaby.test');
+select throws_ok(
+  format($$ select public.mover_click_home(%L::uuid, 'pronto_para_entrega') $$, pg_temp.ensaio('Mae CH Depois')),
+  'P0001',
+  'Para mandar o Click Home para escolha é preciso o link da galeria.',
+  'D2c: pronto sem o link da galeria não passa'
+);
+select lives_ok(
+  format($$ select public.mover_click_home(%L::uuid, 'pronto_para_entrega') $$, pg_temp.ensaio('Mae CH Standard')),
+  'D2d: a família escolheu — a fotógrafa leva para Pronto para entrega'
+);
+reset role;
+
+select ok(
+  (select fase_click_home = 'pronto_para_entrega' and status = 'pausada' and concluido_em is null
+     from public.caso_etapas where id = pg_temp.ensaio('Mae CH Standard')),
+  'D2e: pronto é espera — aberto e pausado'
+);
+
+select pg_temp.como('atendimento.ch@clickbaby.test');
 select public.confirmar_entrega_do_click_home(pg_temp.ensaio('Mae CH Standard'));
 reset role;
 
@@ -273,6 +302,40 @@ select is(
     where caso_id = pg_temp.caso('Mae CH Depois') and tipo = 'entrega_confirmada'),
   true,
   'E3: e o evento diz que o ensaio ficou aberto — senão ninguém reconstrói isso depois'
+);
+
+-- =============================================================================
+-- M. A mensagem para o cliente (22/10/2026)
+-- =============================================================================
+
+select pg_temp.como('editora.ch@clickbaby.test');
+select lives_ok(
+  format($$ select public.definir_mensagem_do_click_home(%L::uuid, 'Oi! Escolha aqui: https://galeria.exemplo/x  login: fam  senha: 123') $$,
+         pg_temp.ensaio('Mae CH Depois')),
+  'M1: quem edita grava a mensagem da galeria'
+);
+select throws_ok(
+  format($$ select public.definir_mensagem_do_click_home(%L::uuid, 'x') $$,
+         (select id from public.caso_etapas where caso_id = pg_temp.caso('Mae CH Depois') and tipo <> 'click_home' limit 1)),
+  'P0001',
+  'A mensagem para o cliente é do New Born.',
+  'M2: em outra etapa, não'
+);
+reset role;
+
+select is(
+  (select payload from public.eventos
+    where caso_etapa_id = pg_temp.ensaio('Mae CH Depois') and tipo = 'mensagem_do_click_home_definida'),
+  '{"tem_mensagem": true}'::jsonb,
+  'M3: o evento não leva o texto (tem login e senha)'
+);
+
+select pg_temp.como('editora.ch@clickbaby.test');
+select public.definir_mensagem_do_click_home(pg_temp.ensaio('Mae CH Depois'), '   ');
+reset role;
+select ok(
+  (select mensagem_click_home is null from public.caso_etapas where id = pg_temp.ensaio('Mae CH Depois')),
+  'M4: em branco tira a mensagem'
 );
 
 select * from finish();

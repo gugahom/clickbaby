@@ -196,6 +196,13 @@ export function useConfirmarEntrega() {
  * A esteira do ensaio Click Home (22/09/2026). Escreve fase e status juntos,
  * como `mover_album` — ver a migration 20260922212901.
  */
+/** A mensagem da galeria para a família (22/10/2026). Em branco tira. */
+export function useDefinirMensagemDoClickHome() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; mensagem: string }>(({ casoEtapaId, mensagem }) =>
+    chamar('definir_mensagem_do_click_home', { p_caso_etapa_id: casoEtapaId, p_mensagem: mensagem }),
+  )
+}
+
 export function useMoverClickHome() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseClickHome }>(
     ({ casoEtapaId, fase }) =>

@@ -52,8 +52,9 @@ export interface VideoNaEntrega {
 }
 
 /**
- * UM ENSAIO NEW BORN ESPERANDO O ADM (22/09/2026): a galeria de escolha está
- * pronta, e alguém precisa mandar o link para a família escolher as fotos.
+ * UM ENSAIO NEW BORN ESPERANDO O ADM (22/09/2026). Desde 22/10/2026 ele chega
+ * aqui em PRONTO PARA ENTREGA, com as fotos já escolhidas pela família — a
+ * mensagem da escolha é copiada antes, no cartão da seção.
  */
 export interface ClickHomeNaEntrega {
   caso: CasoQuadro
@@ -243,7 +244,7 @@ function LinhaDoClickHome({
             <PagamentoDoClickHome etapa={etapa} onErro={onErro} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Galeria pronta — mande o link para a família escolher as fotos do ensaio.
+            Fotos escolhidas pela família — confira e confirme a entrega do ensaio.
             {caso.pacoteNome ? ` · ${caso.pacoteNome}` : ''}
           </p>
         </div>

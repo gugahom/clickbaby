@@ -316,6 +316,7 @@ const RPCS_TRANSICAO = {
   },
   remover_venda_do_caso: { p_venda_id: '00000000-0000-0000-0000-000000000000' },
   definir_contrato_do_caso: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_url: null },
+  definir_mensagem_do_click_home: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000', p_mensagem: null },
   agendar_etapa: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,
