@@ -71,6 +71,7 @@ import { AgendamentoDoClickHome, DialogoAgendarEnsaio } from './components/Agend
 import { PagamentoDoClickHome } from './components/PagamentoDoClickHome'
 import { PrazoDaEtapa } from './components/PrazoDaEtapa'
 import { PedidosDaEtapa } from './components/PedidosDaEtapa'
+import { MensagemDoClickHome } from './components/MensagemDoClickHome'
 import { PilulaLinkDoFotolivro } from './components/LinkDoFotolivro'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
@@ -92,6 +93,7 @@ import {
   FASES_CLICK_HOME_ANTES_DA_ESCOLHA,
   FASES_CLICK_HOME_NA_TELA,
   FASE_CLICK_HOME_ESCOLHA,
+  FASE_CLICK_HOME_ENTREGA,
   ROTULO_FASE_CLICK_HOME,
   FASES_VIDEO_NA_TELA,
   FASE_ALBUM_APROVACAO,
@@ -385,15 +387,15 @@ export function QuadroPage() {
             .map((etapa) => ({ caso, etapa })),
         ),
       /*
-       * O CLICK HOME EM ENTREGÁVEIS (22/09/2026, pedido do gestor): a galeria
-       * de escolha pronta, esperando o ADM mandar à família. Na seção o cartão
-       * fica em "Enviar para escolha" até a confirmação.
+       * O CLICK HOME EM ENTREGÁVEIS (22/09/2026, pedido do gestor). Desde
+       * 22/10/2026 entra só em PRONTO PARA ENTREGA: na escolha a família ainda
+       * está escolhendo as fotos, e o ADM não tem o que entregar.
        */
       ensaiosNaEntrega: casos
         .filter((c) => c.statusOperacional !== 'cancelado')
         .flatMap((caso): ClickHomeNaEntrega[] =>
           (etapas.get(caso.id) ?? [])
-            .filter((e) => e.tipo === 'click_home' && e.faseClickHome === FASE_CLICK_HOME_ESCOLHA)
+            .filter((e) => e.tipo === 'click_home' && e.faseClickHome === FASE_CLICK_HOME_ENTREGA)
             .map((etapa) => ({ caso, etapa })),
         ),
       totalAbertos: abertos.reduce((soma, b) => soma + b.total, 0),
@@ -798,8 +800,10 @@ export function QuadroPage() {
       <AgendamentoDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
       <PagamentoDoClickHome etapa={etapa} onErro={onErro} />
       <PedidosDaEtapa etapa={etapa} onErro={onErro} />
+      {/* A mensagem da galeria para a família, com copiar (22/10/2026). */}
+      <MensagemDoClickHome etapa={etapa} onErro={onErro} />
       <FaseDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
-      {etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA && (
+      {etapa.faseClickHome === FASE_CLICK_HOME_ENTREGA && (
         <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
           Em Entregáveis
         </span>
@@ -819,7 +823,19 @@ export function QuadroPage() {
                 rotulo: 'Galeria pronta — mandar para escolha',
                 aoTocar: () => setEnviandoClickHome({ etapa, caso }),
               }
-            : null
+            : // NA ESCOLHA, o ✓ é "a família escolheu" (22/10/2026): leva para
+              // Pronto para entrega, que é o que põe o ensaio em Entregáveis.
+              etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA
+              ? {
+                  rotulo: 'A família escolheu — pronto para entrega',
+                  aoTocar: () => {
+                    onErro(null)
+                    moverClickHome
+                      .mutateAsync({ casoEtapaId: etapa.id, fase: FASE_CLICK_HOME_ENTREGA })
+                      .catch((e: unknown) => onErro(mensagemDeErro(e)))
+                  },
+                }
+              : null
         }
       />
     </>
@@ -1046,8 +1062,8 @@ export function QuadroPage() {
     id: fase,
     rotulo: ROTULO_FASE_ALBUM[fase],
   }))
-  // Sem coluna de saída aqui também: "Enviar para escolha" segura o cartão até
-  // a confirmação em Entregáveis.
+  // Sem coluna de saída aqui também: "Pronto para entrega" segura o cartão até
+  // a confirmação em Entregáveis (desde 22/10/2026; antes era a escolha).
   const colunasClickHome: ColunaDaSecao[] = FASES_CLICK_HOME_NA_TELA.map((fase) => ({
     id: fase,
     rotulo: ROTULO_FASE_CLICK_HOME[fase],

@@ -398,12 +398,13 @@ enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2
 enviar_video_nos_links_do_caso(p_caso_etapa_id)  -- pronto SEM par novo: o vídeo foi para os links do caso (29/09/2026)
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
--- esteira do ensaio CLICK HOME (7 fases desde 13/10/2026; ver seção 13)
+-- esteira do ensaio CLICK HOME (8 fases desde 22/10/2026; ver seção 13)
 mover_click_home(p_caso_etapa_id, p_fase)        -- escreve fase E status juntos
 agendar_click_home(p_caso_etapa_id, p_quando)    -- dia e hora do ensaio + fase "agendado" (13/10/2026)
 registrar_pagamento_do_click_home(p_caso_etapa_id, p_pagamento) -- pago / a cobrar; atendimento/adm (13/10/2026)
 enviar_click_home_para_escolha(p_caso_etapa_id, p_link) -- link da galeria + fase
-confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm
+confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm; só de "pronto para entrega"
+definir_mensagem_do_click_home(p_caso_etapa_id, p_mensagem) -- a mensagem da galeria para a família; qualquer pessoa ativa (22/10/2026)
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
@@ -1516,6 +1517,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   cartão, na ficha, no ensaio do Quadro e em Entregáveis; na confirmação da entrega do New Born,
   "A cobrar" aparece em vermelho e "não informado" em âmbar — e a entrega NÃO trava (decisão do
   gestor).
+  **"PRONTO PARA ENTREGA" E A MENSAGEM PARA A FAMÍLIA** (22/10/2026, pedido do gestor, migrations
+  `20261022130001` e `20261022130002`). Até aqui "Enviar para escolha" já levava o ensaio para
+  Entregáveis — "só que o cliente ainda não escolheu as fotos". A esteira ganhou o fim que o
+  Foto/Livro já tinha: **PRONTO PARA ENTREGA**, depois da escolha. A escolha virou espera de fora,
+  na seção; é o PRONTO que põe o ensaio em Entregáveis (`FASE_CLICK_HOME_ENTREGA`), e
+  `mover_click_home` só deixa finalizar a partir dele (o pronto também exige o link da galeria).
+  Na escolha, o ✓ do cartão é "A família escolheu — pronto para entrega". Os ensaios que estavam
+  em escolha saíram de Entregáveis e ficaram na coluna deles.
+  **A MENSAGEM** é o texto que a galeria (Celpics) gera para a família escolher, com link, LOGIN e
+  SENHA — a equipe o colava nos "Pedidos", "que na verdade não chega nem a ser pedido dele".
+  Agora é `caso_etapas.mensagem_click_home` (constraint: só no `click_home`), escrita por
+  `definir_mensagem_do_click_home` (qualquer pessoa ativa; em branco tira). No cartão, a pastilha
+  "Mensagem" vira **"Copiar mensagem"** quando há texto — um toque copia —, com o lápis ao lado
+  para trocar (`MensagemDoClickHome.tsx`). Por ter senha, o evento diz só `tem_mensagem`, nunca o
+  texto, como o link de entrega.
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
   **na agenda continua "CLICK HOME"** — é a grafia que a equipe digita no título e a que o
   parser procura. Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:

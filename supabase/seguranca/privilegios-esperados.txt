@@ -21,6 +21,7 @@ GRANT ALL ON FUNCTION public.confirmar_entrega_do_video(p_caso_etapa_id uuid) TO
 GRANT ALL ON FUNCTION public.criar_caso(p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_click_home boolean, p_sem_hora boolean, p_cesarea_em timestamp with time zone, p_observacao text, p_fotolivro boolean, p_dpp date) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_contrato_do_caso(p_caso_id uuid, p_url text) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_foto_da_pessoa(p_pessoa_id uuid, p_foto_path text) TO authenticated;
+GRANT ALL ON FUNCTION public.definir_mensagem_do_click_home(p_caso_etapa_id uuid, p_mensagem text) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_oferta_comercial(p_caso_id uuid, p_oferta public.oferta_comercial, p_fase public.fase_comercial) TO authenticated;
 GRANT ALL ON FUNCTION public.definir_padrao_de_tempo(p_etapa_tipo public.etapa_tipo, p_minutos integer) TO authenticated;
@@ -136,6 +137,7 @@ REVOKE ALL ON FUNCTION public.confirmar_entrega_do_video(p_caso_etapa_id uuid) F
 REVOKE ALL ON FUNCTION public.criar_caso(p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_click_home boolean, p_sem_hora boolean, p_cesarea_em timestamp with time zone, p_observacao text, p_fotolivro boolean, p_dpp date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_contrato_do_caso(p_caso_id uuid, p_url text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_foto_da_pessoa(p_pessoa_id uuid, p_foto_path text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.definir_mensagem_do_click_home(p_caso_etapa_id uuid, p_mensagem text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_minha_foto(p_foto_path text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_oferta_comercial(p_caso_id uuid, p_oferta public.oferta_comercial, p_fase public.fase_comercial) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.definir_padrao_de_tempo(p_etapa_tipo public.etapa_tipo, p_minutos integer) FROM PUBLIC;

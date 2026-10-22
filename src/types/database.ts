@@ -113,6 +113,7 @@ export type Database = {
           fotolivro_link: string | null
           id: string
           iniciado_em: string | null
+          mensagem_click_home: string | null
           observacao: string | null
           ordem: number
           pagamento_click_home:
@@ -153,6 +154,7 @@ export type Database = {
           fotolivro_link?: string | null
           id?: string
           iniciado_em?: string | null
+          mensagem_click_home?: string | null
           observacao?: string | null
           ordem?: number
           pagamento_click_home?:
@@ -193,6 +195,7 @@ export type Database = {
           fotolivro_link?: string | null
           id?: string
           iniciado_em?: string | null
+          mensagem_click_home?: string | null
           observacao?: string | null
           ordem?: number
           pagamento_click_home?:
@@ -1720,6 +1723,10 @@ export type Database = {
         Args: { p_foto_path: string; p_pessoa_id: string }
         Returns: undefined
       }
+      definir_mensagem_do_click_home: {
+        Args: { p_caso_etapa_id: string; p_mensagem: string }
+        Returns: undefined
+      }
       definir_minha_foto: { Args: { p_foto_path: string }; Returns: undefined }
       definir_oferta_comercial: {
         Args: {
@@ -2328,6 +2335,7 @@ export type Database = {
         | "editando"
         | "criar_galeria"
         | "enviar_para_escolha"
+        | "pronto_para_entrega"
         | "finalizado"
       fase_comercial: "apresentar" | "enviado" | "recusou" | "vendido"
       fase_de_campo:
@@ -2582,6 +2590,7 @@ export const Constants = {
         "editando",
         "criar_galeria",
         "enviar_para_escolha",
+        "pronto_para_entrega",
         "finalizado",
       ],
       fase_comercial: ["apresentar", "enviado", "recusou", "vendido"],
