@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
-import { Dropdown } from '@/components/ui/Dropdown'
+import { FiltrosDeBusca } from '@/components/ui/FiltrosDeBusca'
 import { IconeCheck } from '@/components/ui/icones'
 import { formatarData, formatarMoeda, hojeNoFuso } from '@/lib/formato'
 import { baixarCsv, montarCsv, numeroParaCsv } from '@/lib/csv'
@@ -50,7 +50,16 @@ const ROTULO_MOMENTO: Record<NonNullable<LancamentoDeDespesa['momento']>, string
   fechamento: 'Fechamento',
 }
 
-type Situacao = 'todas' | 'a_ressarcir' | 'ressarcidas'
+type Situacao = 'a_ressarcir' | 'ressarcidas'
+
+const ROTULO_SITUACAO: Record<Situacao, string> = { a_ressarcir: 'A ressarcir', ressarcidas: 'Ressarcidas' }
+
+/** Sem acento e sem caixa — "conceição" acha "CONCEICAO". */
+const semAcento = (t: string) =>
+  t
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
 
 /** O gasto que o financeiro ainda deve devolver: refeição ou "outro", sem marca. */
 function aRessarcirDe(l: LancamentoDeDespesa): boolean {
@@ -93,18 +102,26 @@ export function DespesasPage() {
   const mesAtual = hojeNoFuso().slice(0, 7)
   const [mes, setMes] = useState(mesAtual)
   const { data: lancamentos, isPending, error } = useLancamentosDoMes(mes)
+  // A BUSCA E OS FILTROS (22/10/2026, pedido do gestor: "um campo de pesquisa
+  // para procurar as mães" e "não gosto dos filtros todos abertos"). A mesma
+  // barra do Calendário: busca, menus fechados que abrem no toque, e os filtros
+  // ativos em etiquetas. Dentro de um menu as opções SOMAM; entre menus, CORTAM.
+  const [busca, setBusca] = useState('')
   const [tipos, setTipos] = useState<TipoDoFiltro[]>([])
-  const [situacao, setSituacao] = useState<Situacao>('todas')
-  const [pessoaId, setPessoaId] = useState<string>('')
+  const [situacoes, setSituacoes] = useState<Situacao[]>([])
+  const [pessoaIds, setPessoaIds] = useState<string[]>([])
 
   const todos = lancamentos ?? []
+  const termo = semAcento(busca.trim())
   const lista = todos.filter(
     (l) =>
+      (termo === '' || semAcento(`${l.maeNome} ${l.bebeNome ?? ''}`).includes(termo)) &&
       (tipos.length === 0 || tipos.includes(l.tipo)) &&
-      (situacao === 'todas' || (situacao === 'a_ressarcir' ? aRessarcirDe(l) : l.ressarcidoEm !== null)) &&
-      (pessoaId === '' || l.pessoaId === pessoaId),
+      (situacoes.length === 0 ||
+        situacoes.some((s) => (s === 'a_ressarcir' ? aRessarcirDe(l) : l.ressarcidoEm !== null))) &&
+      (pessoaIds.length === 0 || (l.pessoaId !== null && pessoaIds.includes(l.pessoaId))),
   )
-  const filtrando = tipos.length > 0 || situacao !== 'todas' || pessoaId !== ''
+  const filtrando = termo !== '' || tipos.length > 0 || situacoes.length > 0 || pessoaIds.length > 0
 
   // As pessoas que têm gasto no mês, para o filtro — de quem foi o gasto.
   const pessoas = [...new Map(todos.filter((l) => l.pessoaId).map((l) => [l.pessoaId as string, l.pessoaNome ?? '—'])).entries()].sort(
@@ -121,10 +138,6 @@ export function DespesasPage() {
     const ultimo = casos[casos.length - 1]
     if (ultimo && ultimo.casoId === l.casoId) ultimo.linhas.push(l)
     else casos.push({ casoId: l.casoId, linhas: [l] })
-  }
-
-  function alternarTipo(t: TipoDoFiltro) {
-    setTipos((atuais) => (atuais.includes(t) ? atuais.filter((x) => x !== t) : [...atuais, t]))
   }
 
   function exportar() {
@@ -191,48 +204,35 @@ export function DespesasPage() {
         <p className="text-sm text-muted-foreground">Somando o mês…</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo de despesa">
-              {TIPOS_DO_FILTRO.map((t) => (
-                <Chip key={t.id} ativo={tipos.includes(t.id)} onClick={() => alternarTipo(t.id)}>
-                  {t.rotulo}
-                </Chip>
-              ))}
-            </div>
-            <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden="true" />
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar pelo ressarcimento">
-              <Chip ativo={situacao === 'a_ressarcir'} onClick={() => setSituacao((s) => (s === 'a_ressarcir' ? 'todas' : 'a_ressarcir'))}>
-                A ressarcir
-              </Chip>
-              <Chip ativo={situacao === 'ressarcidas'} onClick={() => setSituacao((s) => (s === 'ressarcidas' ? 'todas' : 'ressarcidas'))}>
-                Ressarcidas
-              </Chip>
-            </div>
-            {pessoas.length > 0 && (
-              <Dropdown
-                variante="pilula"
-                compacto
-                prefixo="Pessoa"
-                rotulo="Todas"
-                selecionado={pessoaId || 'todas'}
-                onEscolher={(item) => setPessoaId(item.id === 'todas' ? '' : item.id)}
-                itens={[{ id: 'todas', rotulo: 'Todas' }, ...pessoas.map(([id, nome]) => ({ id, rotulo: nome }))]}
-              />
-            )}
-            {filtrando && (
-              <button
-                type="button"
-                onClick={() => {
-                  setTipos([])
-                  setSituacao('todas')
-                  setPessoaId('')
-                }}
-                className="min-h-9 px-2 text-sm font-semibold text-marca hover:underline"
-              >
-                Limpar
-              </button>
-            )}
-          </div>
+          <FiltrosDeBusca
+            busca={busca}
+            onBuscar={setBusca}
+            placeholder="Buscar pela mãe ou pelo bebê…"
+            rotuloDaBusca="Buscar nas despesas"
+            grupos={[
+              {
+                id: 'tipo',
+                titulo: 'Tipo',
+                opcoes: TIPOS_DO_FILTRO.map((t) => ({ valor: t.id, rotulo: t.rotulo })),
+                marcados: tipos,
+                onMudar: (v) => setTipos(v as TipoDoFiltro[]),
+              },
+              {
+                id: 'ressarcimento',
+                titulo: 'Ressarcimento',
+                opcoes: (['a_ressarcir', 'ressarcidas'] as Situacao[]).map((s) => ({ valor: s, rotulo: ROTULO_SITUACAO[s] })),
+                marcados: situacoes,
+                onMudar: (v) => setSituacoes(v as Situacao[]),
+              },
+              {
+                id: 'pessoa',
+                titulo: 'Pessoa',
+                opcoes: pessoas.map(([id, nome]) => ({ valor: id, rotulo: nome })),
+                marcados: pessoaIds,
+                onMudar: setPessoaIds,
+              },
+            ]}
+          />
 
           <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
             <Numero rotulo={filtrando ? 'Total do filtro' : 'Total do mês'} valor={formatarMoeda(total)} destaque />
@@ -269,22 +269,6 @@ export function DespesasPage() {
         </>
       )}
     </div>
-  )
-}
-
-function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={ativo}
-      onClick={onClick}
-      className={clsx(
-        'min-h-9 rounded-full border px-3.5 text-sm font-semibold transition-colors',
-        ativo ? 'border-marca bg-marca text-white' : 'border-border bg-card text-foreground hover:border-marca/40',
-      )}
-    >
-      {children}
-    </button>
   )
 }
 

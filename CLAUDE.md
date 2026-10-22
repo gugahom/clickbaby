@@ -1848,6 +1848,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   gasto no mês) — o caminho é escolher a pessoa, ver o que falta, pagar, marcar. Os cartões
   ganharam "A ressarcir" e "Já ressarcido". O CSV virou uma linha por gasto, com de quem foi,
   quem lançou e o ressarcimento.
+  **BUSCA E FILTROS FECHADOS** (22/10/2026, pedido do gestor: "um campo de pesquisa para procurar
+  as mães" e "não gosto dos filtros todos abertos"). A barra é a MESMA do Calendário, que virou
+  peça da casa (`components/ui/FiltrosDeBusca.tsx`): busca por mãe ou bebê, sem acento, e três
+  menus que abrem no toque — Tipo, Ressarcimento e Pessoa —, com os marcados em etiquetas com × e
+  "Limpar". Dentro do menu as opções SOMAM, entre menus CORTAM, como no Calendário e no relatório
+  externo. A Pessoa, que era uma por vez, passou a aceitar várias. No celular a busca ganha a
+  linha inteira, nas duas telas.
   **A SOMA AGORA É DO CLIENTE, e esta é a revisão da regra acima.** Com filtro por pessoa e
   por ressarcimento, a soma pronta do banco teria de existir em cada combinação. O que a regra
   protegia era o corte silencioso em mil linhas, e `buscarTudo` cobra a página contra o
@@ -2675,6 +2682,14 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   "Hora". O formulário pede só a HORA do nascimento: o dia é a DPP, ou o seguinte quando a
   hora vem antes da do internamento (`diaDoNascimento`). Na descrição do evento:
   "Nascimento previsto às 08:00".
+  **NO EVENTO, INÍCIO E TÉRMINO** (22/10/2026, pedido do gestor: "o evento tem hora para começar
+  e às vezes tem hora para fechar"). Os mesmos três campos, com os nomes do evento — "Data do
+  evento", "Início" e "Término" — e o término na MESMA coluna `cesarea_em`, que virou "o segundo
+  horário do caso": nascimento previsto no parto, término no evento. Sem migration: nenhuma RPC
+  amarra a coluna ao pacote. No Google, o término é o FIM do evento (`duracaoPeloTermino`, em
+  `evento-do-caso.ts`) e a descrição diz "Término previsto às…"; sem término, ou com término
+  antes do início, vale a duração de sempre. É um caminho de ida: mexer no fim do evento no
+  Google não volta para o sistema (o sync só lê título e início).
   **A PRIMEIRA VOLTA ENTENDEU ERRADO** e deixou resto no banco: a migration `20261014113525`
   criou `casos.dpp` (uma data à parte) e tirou o campo da cesárea da tela. O gestor explicou
   no mesmo dia, e a tela voltou a usar `cesarea_em`. **`casos.dpp` e o `p_dpp` de

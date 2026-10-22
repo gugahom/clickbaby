@@ -92,6 +92,21 @@ function momentos(previsao: string, semHora: boolean, duracaoMs: number) {
   };
 }
 
+/**
+ * A DURAÇÃO DO EVENTO DO GOOGLE (22/10/2026). No EVENTO com término informado, o
+ * evento vai do início ao término ("o evento tem hora para começar e às vezes
+ * tem hora para fechar"); sem término — e em todo parto —, a duração de sempre.
+ * Término antes do início não é término: cai na duração de sempre.
+ */
+export function duracaoPeloTermino(
+  caso: { pacote_nome?: string | null; previsao_em: string | null; cesarea_em?: string | null },
+  semTermino: number,
+): number {
+  if (caso.pacote_nome !== "EVENTO" || !caso.cesarea_em || !caso.previsao_em) return semTermino;
+  const duracao = Date.parse(caso.cesarea_em) - Date.parse(caso.previsao_em);
+  return Number.isFinite(duracao) && duracao > 0 ? duracao : semTermino;
+}
+
 /** "14:30" em Brasília. */
 function horaEmSaoPaulo(instante: string): string {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
@@ -127,10 +142,16 @@ export function observacaoEmHtml(observacao: string): string {
  * listas: o Google mostra a descrição de um evento com essa formatação (é o
  * mesmo formato que o editor dele grava), e as partes se separam por `<br>`.
  */
-export function descricaoDoEvento(caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar">): string {
+export function descricaoDoEvento(
+  caso: Pick<CasoParaOGoogle, "cesarea_em" | "observacao_calendar"> & { pacote_nome?: string | null },
+): string {
   const partes: string[] = [];
   if (caso.observacao_calendar) partes.push(observacaoEmHtml(caso.observacao_calendar));
-  if (caso.cesarea_em) partes.push(`Nascimento previsto às ${horaEmSaoPaulo(caso.cesarea_em)}`);
+  if (caso.cesarea_em) {
+    // No EVENTO o segundo horário é o TÉRMINO (22/10/2026), não um nascimento.
+    const rotulo = caso.pacote_nome === "EVENTO" ? "Término previsto" : "Nascimento previsto";
+    partes.push(`${rotulo} às ${horaEmSaoPaulo(caso.cesarea_em)}`);
+  }
   partes.push("Criado pelo calendário do sistema ClickBaby.");
   return partes.join("<br><br>");
 }
@@ -142,7 +163,7 @@ export function montarEventoDoCaso(caso: CasoParaOGoogle): Record<string, unknow
     // Só o que a pessoa escreveu no calendário para ir à agenda: o que o
     // sistema sabe do caso (situação clínica, links) não sai daqui.
     description: descricaoDoEvento(caso),
-    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, DURACAO_MS),
+    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, duracaoPeloTermino(caso, DURACAO_MS)),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
 }
@@ -238,7 +259,8 @@ export function atualizarEventoDoCaso(caso: CasoParaAtualizar, atual: EventoDoGo
     ...resto,
     summary: asterisco ? `*${titulo}` : titulo,
     ...(caso.descricao_do_sistema ? { description: descricaoDoEvento(caso) } : {}),
-    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, duracaoEmMs(atual)),
+    // O término do EVENTO manda; sem ele, a duração que a equipe deixou no Google.
+    ...momentos(caso.previsao_em, caso.previsao_sem_hora === true, duracaoPeloTermino(caso, duracaoEmMs(atual))),
     ...(caso.cor_calendar ? { colorId: caso.cor_calendar } : {}),
   };
 }

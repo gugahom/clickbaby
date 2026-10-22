@@ -323,7 +323,8 @@ export interface NovoCaso {
    */
   hora: string
   /**
-   * 'HH:MM' do NASCIMENTO previsto; vazio = sem hora. Grava em `casos.cesarea_em`,
+   * 'HH:MM' do NASCIMENTO previsto — no EVENTO, do TÉRMINO (22/10/2026); vazio = sem
+   * hora. Grava em `casos.cesarea_em`,
    * a coluna que nasceu como "hora da cesárea" (30/09/2026) — é a mesma
    * pergunta, e os casos antigos já têm a hora ali. O dia é o da DPP, ou o
    * seguinte quando ela vem antes do internamento (`diaDoNascimento`).

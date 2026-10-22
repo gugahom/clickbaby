@@ -51,14 +51,16 @@ export function DetalheDoItem({
   // NO PARTO, OS TRÊS DE QUANDO (14/10/2026, pedido do gestor): o dia do caso é a
   // DPP, a hora é a do internamento, e o nascimento previsto vem do caso.
   // EVENTO e NEWBORN também são "parto" no calendário, e ali nada disso vale.
-  const ehParto = item.tipo === 'parto' && item.pacote !== 'EVENTO' && item.pacote !== 'NEWBORN'
+  const ehEvento = item.tipo === 'parto' && item.pacote === 'EVENTO'
+  const ehParto = item.tipo === 'parto' && !ehEvento && item.pacote !== 'NEWBORN'
   const nascimento = caso.data?.cesareaEm ? emBrasilia(caso.data.cesareaEm) : null
-  const quando: [string, string | null][] = ehParto
+  // No EVENTO o segundo horário é o TÉRMINO (22/10/2026), na mesma coluna.
+  const quando: [string, string | null][] = ehParto || ehEvento
     ? [
-        ['Data provável do parto', rotuloDoDiaCompleto(item.dia)],
-        ['Internamento previsto', item.hora || 'a definir'],
+        [ehEvento ? 'Data do evento' : 'Data provável do parto', rotuloDoDiaCompleto(item.dia)],
+        [ehEvento ? 'Início' : 'Internamento previsto', item.hora || 'a definir'],
         [
-          'Nascimento previsto',
+          ehEvento ? 'Término' : 'Nascimento previsto',
           nascimento
             ? nascimento.dia === item.dia
               ? nascimento.hora
