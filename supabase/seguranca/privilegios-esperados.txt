@@ -76,7 +76,7 @@ GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao t
 GRANT ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, p_campo public.campo_material, p_valor text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) TO authenticated;
-GRANT ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text) TO authenticated;
+GRANT ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) TO authenticated;
@@ -196,6 +196,7 @@ REVOKE ALL ON FUNCTION public.pausar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.pedir_alteracao_da_etapa(p_caso_etapa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.periodo_das_metricas(p_inicio date, p_fim date, OUT inicio timestamp with time zone, OUT fim timestamp with time zone) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.planejar_rendicao(p_caso_etapa_id uuid, p_proxima_pessoa_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.pode_ver_venda() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.pontos_por_item_vigentes() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.previsao_do_dia(p_previsao timestamp with time zone, p_sem_hora boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reabrir_caso(p_caso_id uuid, p_motivo text, p_etapas public.etapa_tipo[]) FROM PUBLIC;
@@ -209,7 +210,7 @@ REVOKE ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, 
 REVOKE ALL ON FUNCTION public.registrar_mudanca_de_acesso() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) FROM PUBLIC;
@@ -232,3 +233,4 @@ REVOKE ALL ON FUNCTION public.telas_padrao_do_papel(p_papel public.papel_sistema
 REVOKE ALL ON FUNCTION public.tem_tela(p_tela public.tela) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.tipo_tem_segunda_rodada(p_tipo public.etapa_tipo) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.transferir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid, p_motivo text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.venda_no_periodo(p_caso_id uuid, p_de date, p_ate date) FROM PUBLIC;

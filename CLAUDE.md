@@ -431,7 +431,7 @@ registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
 
 -- o valor vendido e o contrato do caso (14/10/2026; ver seção 13) — atendimento/adm ou tela Comercial
-registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao) -- pacote ou venda a mais
+registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao, p_forma, p_parcelas) -- pacote ou venda a mais; Pix/Cartão e parcelas (26/10/2026)
 remover_venda_do_caso(p_venda_id)                -- não existe editar
 definir_contrato_do_caso(p_caso_id, p_url)       -- em branco tira; o link não vai para eventos
 
@@ -1841,6 +1841,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   **Valor e link NÃO vão para `eventos`**: o
   histórico é lido pela equipe inteira, então o evento diz "Lançou o valor da venda · Reels"
   e mais nada. O link do contrato é tratado como o link de entrega (seção 10).
+  **A FORMA DE PAGAMENTO E AS VENDAS NO RELATÓRIO** (26/10/2026, pedido do gestor, migration
+  `20261026140001`): cada linha ganhou a FORMA (Pix ou Cartão, decisão dele) e as PARCELAS (1 = à
+  vista), juntas por constraint; as linhas de antes ficam sem as duas. A tela cobra a forma; a RPC
+  aceita sem, para o aparelho com a tela antiga em cache. ENTER NO VALOR ADICIONA a linha, como o
+  "+" — e não salva o diálogo. No relatório externo, um terceiro modo ao lado de Atendimentos e
+  Nascimentos: **VENDAS**, em que o período é o DIA EM QUE A VENDA FOI LANÇADA (decisão do gestor:
+  "vendido em novembro" é o mês do lançamento, não o do parto), entra o caso com venda no período e
+  o vendido é só o do período — "a Brígida em novembro" é o modo Vendas com novembro e a GNDI
+  marcada. O cartão "Vendido" (com Pix e Cartão separados), o gráfico, as colunas Vendido e
+  Pagamento e a planilha seguem. A DATA DA LINHA, no modo, é a da primeira venda do caso no
+  período, e é ela que o gráfico no tempo usa — o número do resumo é exato, soma linha a linha.
+  **O VALOR SÓ SAI PARA QUEM VÊ A VENDA** (`pode_ver_venda`, o par das policies): o relatório
+  externo também abre para quem tem só a tela Relatórios, e para essa pessoa os campos de venda
+  voltam nulos e o modo é recusado — as funções são `security definer` e leriam a tabela por cima
+  da RLS. `venda_no_periodo` é interna, fechada até para `authenticated`.
   **FICA PARA DEPOIS** (decisão do gestor): a tela do financeiro (a previsão do que foi
   vendido por mês, a planilha) e a do comercial — os dados já estão aqui para elas.
   Não trava a entrega: venda não é status do caso.

@@ -52,7 +52,7 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
   const casos = await lerTodosOsCasos(f, ordem)
   const csv = montarCsv(
     [
-      f.nascimentos ? 'Nasceu em' : 'Data',
+      f.vendas ? 'Vendido em' : f.nascimentos ? 'Nasceu em' : 'Data',
       'Mãe',
       'Bebê',
       'Maternidade',
@@ -71,6 +71,8 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
       // No modo comercial, a fase de cada oferta (01/10/2026) — a planilha que o
       // comercial usava, de volta ao Excel quando ele quiser.
       ...(f.comercial ? [...OFERTAS.map((o) => `Oferta de ${o.rotulo}`), 'Retorno agendado'] : []),
+      // No modo Vendas (26/10/2026), o vendido no período e como foi pago.
+      ...(f.vendas ? ['Vendido (R$)', 'Pagamento'] : []),
     ],
     casos.map((c) => [
       c.dia ? dataCurta(c.dia) : '',
@@ -96,9 +98,10 @@ export async function exportarCasos(f: FiltrosDaOperacao, ordem: Ordem): Promise
           })
         : []),
       ...(f.comercial ? [c.retornoComercial ? dataCurta(c.retornoComercial) : ''] : []),
+      ...(f.vendas ? [c.vendido === null ? '' : numeroParaCsv(c.vendido), c.pagamentos ?? ''] : []),
     ]),
   )
-  baixarCsv(nomeDoArquivo(f, f.comercial ? '_comercial' : ''), csv)
+  baixarCsv(nomeDoArquivo(f, f.vendas ? '_vendas' : f.comercial ? '_comercial' : ''), csv)
   return casos.length
 }
 
@@ -120,6 +123,7 @@ export async function exportarNumeros(f: FiltrosDaOperacao, eixo: Eixo): Promise
       'Mediana do parto ao envio (h)',
       'Despesas (R$)',
       'Cancelados',
+      ...(f.vendas ? ['Vendido (R$)'] : []),
     ],
     linhas.map((l) => [
       primeira(l),
@@ -131,6 +135,7 @@ export async function exportarNumeros(f: FiltrosDaOperacao, eixo: Eixo): Promise
       horas(l.medianaHorasAteEnvio),
       numeroParaCsv(l.totalDespesas),
       String(l.cancelados),
+      ...(f.vendas ? [l.totalVendido === null ? '' : numeroParaCsv(l.totalVendido)] : []),
     ]),
   )
   baixarCsv(nomeDoArquivo(f, eixo === 'tempo' ? `_por-${grao}` : `_por-${eixo.replace('_', '-')}`), csv)

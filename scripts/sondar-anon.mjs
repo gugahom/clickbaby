@@ -315,6 +315,9 @@ const RPCS_TRANSICAO = {
     p_valor: 1,
   },
   remover_venda_do_caso: { p_venda_id: '00000000-0000-0000-0000-000000000000' },
+  // Internas do relatório externo (26/10/2026): fechadas até para authenticated.
+  pode_ver_venda: {},
+  venda_no_periodo: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_de: null, p_ate: null },
   definir_contrato_do_caso: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_url: null },
   definir_mensagem_do_click_home: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000', p_mensagem: null },
   agendar_etapa: {

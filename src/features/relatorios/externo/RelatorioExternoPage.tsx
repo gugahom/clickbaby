@@ -104,9 +104,12 @@ export function RelatorioExternoPage() {
   const podeComercial = telas.has('comercial')
   const filtros = lerDoEndereco(params, periodoDoMes(hoje.slice(0, 7)))
   const comercial = filtros.comercial === true
+  const vendas = filtros.vendas === true
   const ordemPedida = (ORDENS.some((o) => o.id === params.get('ordem')) ? params.get('ordem') : ORDEM_PADRAO) as Ordem
-  // "Retorno mais próximo" só existe no modo comercial; fora dele, a padrão.
-  const ordem: Ordem = ordemPedida === 'retorno' && !comercial ? ORDEM_PADRAO : ordemPedida
+  // "Retorno mais próximo" só existe no modo comercial, e "Mais vendido" só no
+  // modo Vendas; fora deles, a padrão.
+  const ordem: Ordem =
+    (ordemPedida === 'retorno' && !comercial) || (ordemPedida === 'mais_vendido' && !vendas) ? ORDEM_PADRAO : ordemPedida
   const pagina = Math.max(1, Number(params.get('pagina')) || 1)
   const visao: Visao = params.get('ver') === 'grafico' ? 'grafico' : 'casos'
   const eixo = (EIXOS.some((e) => e.id === params.get('eixo')) ? params.get('eixo') : 'tempo') as Eixo
@@ -231,6 +234,7 @@ export function RelatorioExternoPage() {
             periodo={filtros.de || filtros.ate ? `${filtros.de ? dataCurta(filtros.de) : '…'} a ${filtros.ate ? dataCurta(filtros.ate) : '…'}` : 'todo o período'}
             ordem={visao === 'casos' ? ordem : null}
             comercial={comercial}
+            vendas={vendas}
             onOrdenar={(o) => irPara({ ordem: o })}
             visao={visao}
             onTrocarVisao={(v) => irPara({ visao: v, pagina })}
@@ -331,6 +335,7 @@ function BuscaENumero({
   periodo,
   ordem,
   comercial,
+  vendas,
   onOrdenar,
   visao,
   onTrocarVisao,
@@ -345,6 +350,7 @@ function BuscaENumero({
   /** Nula no gráfico: lá a ordem da lista não muda nada. */
   ordem: Ordem | null
   comercial: boolean
+  vendas: boolean
   onOrdenar: (o: Ordem) => void
   visao: Visao
   onTrocarVisao: (v: Visao) => void
@@ -390,7 +396,10 @@ function BuscaENumero({
             alinhamento="direita"
             selecionado={ordem}
             onEscolher={(item) => onOrdenar(item.id as Ordem)}
-            itens={ORDENS.filter((o) => comercial || o.id !== 'retorno').map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+            itens={ORDENS.filter((o) => (comercial || o.id !== 'retorno') && (vendas || o.id !== 'mais_vendido')).map((o) => ({
+              id: o.id,
+              rotulo: o.rotulo,
+            }))}
           />
         )}
         <Segmentado
@@ -533,12 +542,24 @@ function NumerosDoRecorte({
     },
     { id: 'despesas', rotulo: 'Despesas', valor: r ? formatarMoeda(r.totalDespesas) : '—' },
     { id: 'cancelados', rotulo: 'Cancelados', valor: r ? r.cancelados.toLocaleString('pt-BR') : '—' },
+    // O VENDIDO (26/10/2026), só para quem vê a venda — o banco devolve nulo
+    // para os outros, e aí o cartão nem aparece.
+    ...(r && r.totalVendido !== null
+      ? [
+          {
+            id: 'vendido' as const,
+            rotulo: 'Vendido',
+            valor: formatarMoeda(r.totalVendido),
+            detalhe: `Pix ${formatarMoeda(r.vendidoPix ?? 0)} · Cartão ${formatarMoeda(r.vendidoCartao ?? 0)}`,
+          },
+        ]
+      : []),
   ]
   // Os cartões são BOTÕES nas duas visões: na lista, tocar num deles abre o
   // gráfico já naquele número — o caminho mais curto de "86% no prazo" até
   // "como isso andou no mês".
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className={clsx('grid grid-cols-2 gap-3 sm:grid-cols-3', numeros.length > 6 ? 'sm:grid-cols-4 xl:grid-cols-7' : 'xl:grid-cols-6')}>
       {numeros.map((n) => (
         <button
           key={n.id}
@@ -763,10 +784,17 @@ function ListaDeCasos({
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground">
               {/* No modo Nascimentos a data é a do nascimento, não a prevista. */}
-              <th className="py-3 pr-3 pl-4 font-semibold">{filtros.nascimentos ? 'Nasceu' : 'Data'}</th>
+              <th className="py-3 pr-3 pl-4 font-semibold">{filtros.vendas ? 'Vendido em' : filtros.nascimentos ? 'Nasceu' : 'Data'}</th>
               <th className="px-3 py-3 font-semibold">Mãe · bebê</th>
               <th className="px-3 py-3 font-semibold">Maternidade</th>
               <th className="px-3 py-3 font-semibold">Pacote</th>
+              {/* No modo Vendas, o vendido no período e como foi pago (26/10/2026). */}
+              {filtros.vendas && (
+                <>
+                  <th className="border-l border-border/60 px-3 py-3 text-right font-semibold whitespace-nowrap text-marca">Vendido</th>
+                  <th className="px-3 py-3 font-semibold whitespace-nowrap text-marca">Pagamento</th>
+                </>
+              )}
               {comercial &&
                 OFERTAS.map((o) => (
                   <th key={o.id} className="border-l border-border/60 px-3 py-3 font-semibold whitespace-nowrap text-marca">
@@ -809,6 +837,14 @@ function ListaDeCasos({
                 </td>
                 <td className="px-3 py-3 font-semibold whitespace-nowrap text-foreground">{c.maternidadeSigla ?? '—'}</td>
                 <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{c.pacoteNome ?? 'sem pacote'}</td>
+                {filtros.vendas && (
+                  <>
+                    <td className="border-l border-border/60 px-3 py-3 text-right font-semibold whitespace-nowrap text-foreground tabular-nums">
+                      {c.vendido === null ? '—' : formatarMoeda(c.vendido)}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">{c.pagamentos ?? '—'}</td>
+                  </>
+                )}
                 {comercial &&
                   OFERTAS.map((o) => (
                     <td key={o.id} className="border-l border-border/60 px-3 py-2 align-middle">
@@ -844,11 +880,17 @@ function ListaDeCasos({
               <div className="min-w-0 truncate font-semibold text-foreground">{nome(c)}</div>
               <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                 <span className="tabular-nums">
-                  {filtros.nascimentos && 'Nasceu '}
+                  {filtros.vendas ? 'Vendido em ' : filtros.nascimentos && 'Nasceu '}
                   {c.dia ? dataCurta(c.dia) : '—'}
                 </span>
                 <span>{c.maternidadeSigla ?? '—'}</span>
                 <span>{c.pacoteNome ?? '—'}</span>
+                {filtros.vendas && c.vendido !== null && (
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {formatarMoeda(c.vendido)}
+                    {c.pagamentos && <span className="font-normal text-muted-foreground"> · {c.pagamentos}</span>}
+                  </span>
+                )}
               </div>
               {comercial && (
                 <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-0.5">

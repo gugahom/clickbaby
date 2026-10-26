@@ -1316,8 +1316,12 @@ export type Database = {
           caso_id: string
           created_at: string
           descricao: string | null
+          forma_pagamento:
+            | Database["public"]["Enums"]["forma_de_pagamento"]
+            | null
           id: string
           item: Database["public"]["Enums"]["item_de_venda"]
+          parcelas: number | null
           registrado_por: string
           updated_at: string
           valor: number
@@ -1326,8 +1330,12 @@ export type Database = {
           caso_id: string
           created_at?: string
           descricao?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_de_pagamento"]
+            | null
           id?: string
           item: Database["public"]["Enums"]["item_de_venda"]
+          parcelas?: number | null
           registrado_por: string
           updated_at?: string
           valor: number
@@ -1336,8 +1344,12 @@ export type Database = {
           caso_id?: string
           created_at?: string
           descricao?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_de_pagamento"]
+            | null
           id?: string
           item?: Database["public"]["Enums"]["item_de_venda"]
+          parcelas?: number | null
           registrado_por?: string
           updated_at?: string
           valor?: number
@@ -1994,6 +2006,7 @@ export type Database = {
           maternidade_sigla: string
           ofertas: Json
           pacote_nome: string
+          pagamentos: string
           passou_uti: boolean
           prazo: string
           reaberto: boolean
@@ -2004,6 +2017,7 @@ export type Database = {
           total_despesas: number
           trabalho: Json
           turno: string
+          vendido: number
         }[]
       }
       operacao_facetas: {
@@ -2027,6 +2041,7 @@ export type Database = {
           partos: number
           rotulo: string
           total_despesas: number
+          total_vendido: number
         }[]
       }
       operacao_marcas: {
@@ -2069,6 +2084,9 @@ export type Database = {
           no_prazo: number
           partos: number
           total_despesas: number
+          total_vendido: number
+          vendido_cartao: number
+          vendido_pix: number
         }[]
       }
       ordem_padrao_da_etapa: {
@@ -2096,6 +2114,7 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
         Returns: undefined
       }
+      pode_ver_venda: { Args: never; Returns: boolean }
       pontos_por_item_vigentes: {
         Args: never
         Returns: {
@@ -2174,7 +2193,9 @@ export type Database = {
         Args: {
           p_caso_id: string
           p_descricao?: string
+          p_forma?: Database["public"]["Enums"]["forma_de_pagamento"]
           p_item: Database["public"]["Enums"]["item_de_venda"]
+          p_parcelas?: number
           p_valor: number
         }
         Returns: string
@@ -2300,6 +2321,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      venda_no_periodo: {
+        Args: { p_ate: string; p_caso_id: string; p_de: string }
+        Returns: {
+          cartao: number
+          pagamentos: string
+          pix: number
+          primeiro_dia: string
+          total: number
+        }[]
+      }
     }
     Enums: {
       campo_material: "cartao_foto" | "cartao_video" | "baixou" | "upload"
@@ -2344,6 +2375,7 @@ export type Database = {
         | "admissao_cco"
         | "nascimento"
         | "cuidados"
+      forma_de_pagamento: "pix" | "cartao"
       item_de_pontuacao:
         | "nascimento"
         | "nascimento_birth"
@@ -2601,6 +2633,7 @@ export const Constants = {
         "nascimento",
         "cuidados",
       ],
+      forma_de_pagamento: ["pix", "cartao"],
       item_de_pontuacao: [
         "nascimento",
         "nascimento_birth",

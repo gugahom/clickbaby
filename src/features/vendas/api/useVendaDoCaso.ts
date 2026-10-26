@@ -27,7 +27,9 @@ export function useVendaDoCaso(casoId: string | null, habilitado = true) {
       const [vendas, contrato] = await Promise.all([
         supabase
           .from('vendas_do_caso')
-          .select('id, item, descricao, valor, created_at, registrado:pessoas!vendas_do_caso_registrado_por_fkey(nome)')
+          .select(
+            'id, item, descricao, valor, forma_pagamento, parcelas, created_at, registrado:pessoas!vendas_do_caso_registrado_por_fkey(nome)',
+          )
           .eq('caso_id', casoId ?? '')
           .order('created_at', { ascending: true })
           .order('id', { ascending: true }),
@@ -40,6 +42,8 @@ export function useVendaDoCaso(casoId: string | null, habilitado = true) {
         item: v.item,
         descricao: v.descricao,
         valor: Number(v.valor),
+        forma: v.forma_pagamento,
+        parcelas: v.parcelas,
         registradoPorNome: v.registrado?.nome ?? null,
         registradoEm: v.created_at,
       }))
@@ -81,6 +85,8 @@ export async function salvarVendaDoCaso(
       p_item: n.item,
       p_valor: n.valor,
       ...(n.descricao ? { p_descricao: n.descricao } : {}),
+      p_forma: n.forma,
+      p_parcelas: n.parcelas,
     })
     if (error) throw falhou(error)
   }

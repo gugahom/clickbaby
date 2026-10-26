@@ -73,6 +73,13 @@ export interface FiltrosDaOperacao {
    * ele, o período é o dia do caso e conta tudo o que passou pelo Quadro.
    */
   nascimentos?: boolean | undefined
+  /**
+   * O MODO VENDAS (26/10/2026, pedido do gestor: "quanto já foi vendido em
+   * novembro para o Brígida"). O período passa a ser o DIA EM QUE A VENDA FOI
+   * LANÇADA, entra o caso com venda no período, e o vendido é o do período. Só
+   * para quem vê a venda; nunca junto com `nascimentos`.
+   */
+  vendas?: boolean | undefined
 }
 
 export const GRUPOS_DE_LISTA: GrupoDeLista[] = [
@@ -240,7 +247,7 @@ export function rotuloDoEquipamento(valor: string): string {
   return valor
 }
 
-export type Ordem = 'recentes' | 'antigos' | 'mais_horas' | 'mais_despesas' | 'maternidade' | 'retorno'
+export type Ordem = 'recentes' | 'antigos' | 'mais_horas' | 'mais_despesas' | 'maternidade' | 'retorno' | 'mais_vendido'
 
 /** O padrão da tela desde 30/09/2026 (pedido do gestor): do mais antigo ao mais recente. */
 export const ORDEM_PADRAO: Ordem = 'antigos'
@@ -253,6 +260,8 @@ export const ORDENS: { id: Ordem; rotulo: string }[] = [
   { id: 'maternidade', rotulo: 'Maternidade' },
   // Só no modo comercial (a tela tira fora dele): o retorno mais próximo primeiro.
   { id: 'retorno', rotulo: 'Retorno mais próximo' },
+  // Só no modo Vendas (26/10/2026): o maior vendido do período primeiro.
+  { id: 'mais_vendido', rotulo: 'Mais vendido' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -310,7 +319,9 @@ export function lerDoEndereco(
     despesa_max: numero(params.get('despesa_max')),
     ordem,
     comercial: params.get('comercial') === '1',
-    nascimentos: params.get('nascimentos') === '1',
+    // Os dois modos não andam juntos; um endereço com os dois fica com Vendas.
+    nascimentos: params.get('nascimentos') === '1' && params.get('vendas') !== '1',
+    vendas: params.get('vendas') === '1',
   }
 }
 
@@ -334,6 +345,7 @@ export function escreverNoEndereco(f: FiltrosDaOperacao, extras: Record<string, 
   if (f.busca) p.set('busca', f.busca)
   if (f.comercial) p.set('comercial', '1')
   if (f.nascimentos) p.set('nascimentos', '1')
+  if (f.vendas) p.set('vendas', '1')
   // Na ORDEM em que os grupos foram aplicados: é ela que ordena as colunas.
   for (const g of gruposAtivos(f)) {
     if ((GRUPOS_DE_LISTA as string[]).includes(g)) p.set(g, f.listas[g as GrupoDeLista].join(','))
@@ -363,6 +375,7 @@ export function paraOBanco(f: FiltrosDaOperacao): Record<string, unknown> {
     despesa_max: f.despesa_max ?? null,
     comercial: f.comercial ?? false,
     nascimentos: f.nascimentos ?? false,
+    vendas: f.vendas ?? false,
   }
 }
 
@@ -378,7 +391,15 @@ export function quantosFiltros(f: FiltrosDaOperacao): number {
 }
 
 export function semFiltros(f: FiltrosDaOperacao): FiltrosDaOperacao {
-  return { de: f.de, ate: f.ate, listas: vazios(), simNao: {}, comercial: f.comercial, nascimentos: f.nascimentos }
+  return {
+    de: f.de,
+    ate: f.ate,
+    listas: vazios(),
+    simNao: {},
+    comercial: f.comercial,
+    nascimentos: f.nascimentos,
+    vendas: f.vendas,
+  }
 }
 
 /**
