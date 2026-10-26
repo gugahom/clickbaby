@@ -14,7 +14,7 @@ import { OPCOES_FIXAS, rotuloFixo, type FiltrosDaOperacao, type GrupoDeLista } f
  * a mediana não se compõe, e somar aqui dois dias daria outro número.
  */
 
-export type Metrica = 'casos' | 'partos' | 'no_prazo' | 'parto_envio' | 'despesas' | 'cancelados'
+export type Metrica = 'casos' | 'partos' | 'no_prazo' | 'parto_envio' | 'despesas' | 'cancelados' | 'vendido'
 
 export type Eixo = 'tempo' | 'maternidade' | 'pacote' | 'situacao' | 'prazo' | 'parto_por' | 'turno' | 'dia_semana' | 'termo'
 
@@ -66,6 +66,8 @@ export interface LinhaDoGrafico {
   medianaHorasAteEnvio: number | null
   totalDespesas: number
   cancelados: number
+  /** Nulo para quem não vê a venda. */
+  totalVendido: number | null
 }
 
 interface DefinicaoDaMetrica {
@@ -126,6 +128,14 @@ export const METRICAS: Record<Metrica, DefinicaoDaMetrica> = {
     detalhe: (l) => [`de ${plural(l.casos, 'caso', 'casos')}`],
     volume: true,
   },
+  // O VALOR VENDIDO (26/10/2026): no modo Vendas, o lançado no período.
+  vendido: {
+    rotulo: 'Vendido',
+    valor: (l) => l.totalVendido,
+    formatar: formatarMoeda,
+    detalhe: (l) => [`em ${plural(l.casos, 'caso', 'casos')}`],
+    volume: true,
+  },
 }
 
 const VAZIA = (chave: string): LinhaDoGrafico => ({
@@ -138,6 +148,7 @@ const VAZIA = (chave: string): LinhaDoGrafico => ({
   medianaHorasAteEnvio: null,
   totalDespesas: 0,
   cancelados: 0,
+  totalVendido: 0,
 })
 
 // ---------------------------------------------------------------------------

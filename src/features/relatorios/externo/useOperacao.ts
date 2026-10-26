@@ -56,6 +56,12 @@ export interface CasoDaOperacao {
   ehBirth: boolean
   /** 'YYYY-MM-DD' do retorno agendado pelo comercial, ou nulo. */
   retornoComercial: string | null
+  /**
+   * O VENDIDO do caso — no modo Vendas, só o do período — e as formas ("Pix,
+   * Cartão 10x"). Nulos para quem não vê a venda (26/10/2026).
+   */
+  vendido: number | null
+  pagamentos: string | null
 }
 
 export interface PaginaDaOperacao {
@@ -79,6 +85,10 @@ export interface ResumoDaOperacao {
   medianaHorasAteEnvio: number | null
   totalDespesas: number
   cancelados: number
+  /** Nulos para quem não vê a venda (26/10/2026). */
+  totalVendido: number | null
+  vendidoPix: number | null
+  vendidoCartao: number | null
 }
 
 export const POR_PAGINA = 50
@@ -128,6 +138,8 @@ function paraCaso(l: LinhaDaBusca): CasoDaOperacao {
     })(),
     ehBirth: (l.ofertas as { eh_birth?: boolean } | null)?.eh_birth === true,
     retornoComercial: (l.ofertas as { retorno?: string | null } | null)?.retorno ?? null,
+    vendido: numero(l.vendido),
+    pagamentos: l.pagamentos,
   }
 }
 
@@ -237,6 +249,9 @@ export function useResumoDaOperacao(filtros: FiltrosDaOperacao) {
         medianaHorasAteEnvio: numero(l?.mediana_horas_ate_envio),
         totalDespesas: numero(l?.total_despesas) ?? 0,
         cancelados: l?.cancelados ?? 0,
+        totalVendido: numero(l?.total_vendido),
+        vendidoPix: numero(l?.vendido_pix),
+        vendidoCartao: numero(l?.vendido_cartao),
       }
     },
   })
@@ -272,6 +287,7 @@ export async function lerGraficoDaOperacao(filtros: FiltrosDaOperacao, eixo: Eix
     medianaHorasAteEnvio: numero(l.mediana_horas_ate_envio),
     totalDespesas: numero(l.total_despesas) ?? 0,
     cancelados: l.cancelados,
+    totalVendido: numero(l.total_vendido),
   }))
 }
 
