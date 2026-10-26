@@ -44,9 +44,10 @@ export const BEBE_SEM_NOME = "BEBÊ";
 const DURACAO_MS = 60 * 60 * 1000;
 
 /**
- * "ANA/JOSÉ - STANDARD + CLICK HOME - HSC". O adicional vai GRUDADO no pacote,
- * como a equipe escreve ("STANDARD + CLICK HOME"); o parser o reconhece em
- * qualquer ponto do título.
+ * "ANA/JOSÉ - STANDARD + NEW BORN - HSC". O adicional vai GRUDADO no pacote,
+ * como a equipe escreve; o parser o reconhece em qualquer ponto do título.
+ * Até 26/10/2026 era "+ CLICK HOME" — o gestor trocou pelo nome que o cliente
+ * entende, porque o título vai num print para a família. O parser lê os dois.
  */
 export function montarTituloDoEvento(caso: Pick<CasoParaOGoogle, "mae_nome" | "bebe_nome" | "pacote_nome" | "maternidade_sigla" | "click_home">): string {
   // EVENTO e NEWBORN no formato em que a EQUIPE os escreve (30/09/2026): é o
@@ -55,7 +56,7 @@ export function montarTituloDoEvento(caso: Pick<CasoParaOGoogle, "mae_nome" | "b
   if (caso.pacote_nome === "NEWBORN") {
     return `NEWBORN/${caso.mae_nome}/${caso.bebe_nome ?? BEBE_SEM_NOME} - ${caso.maternidade_sigla}`;
   }
-  const pacote = caso.click_home ? `${caso.pacote_nome} + CLICK HOME` : caso.pacote_nome;
+  const pacote = caso.click_home ? `${caso.pacote_nome} + NEW BORN` : caso.pacote_nome;
   return `${caso.mae_nome}/${caso.bebe_nome ?? BEBE_SEM_NOME} - ${pacote} - ${caso.maternidade_sigla}`;
 }
 

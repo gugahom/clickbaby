@@ -22,7 +22,7 @@ import { VENDA_INTOCADA, mudancaDaVenda, type EstadoDaVenda } from '@/features/v
  * casos") e editar (mesmo dia, "poder editar").
  *
  * É O TÍTULO DO GOOGLE VIRADO FORMULÁRIO. A equipe escreve na agenda
- * "MÃE/BEBÊ - PACOTE - MATERNIDADE", com "+ CLICK HOME" quando há New Born — e
+ * "MÃE/BEBÊ - PACOTE - MATERNIDADE", com "+ NEW BORN" quando há New Born — e
  * cada pedaço virou um campo. A diferença é que pacote e maternidade aqui são
  * ESCOLHIDOS, não digitados (seção 6): o parser do sync precisa adivinhar
  * "BABY RELS" e, quando não consegue, o caso vira rascunho pendente. Daqui ele
@@ -187,7 +187,7 @@ function FormularioDoCaso({
     : ehNewborn
       ? `NEWBORN/${maeNome.trim().toUpperCase() || 'MÃE'}/${bebeTitulo} - ${sigla}`
       : `${maeNome.trim().toUpperCase() || 'MÃE'}/${bebeTitulo} - ${pacote?.nome ?? 'PACOTE'}${
-          clickHome ? ' + CLICK HOME' : ''
+          clickHome ? ' + NEW BORN' : ''
         } - ${sigla}`
   const cor = corDoGoogle(pacote?.cor_calendar ?? maternidade?.cor_calendar)
 

@@ -141,7 +141,7 @@ const EVENTO_DA_EQUIPE = {
 
 Deno.test("a edição reescreve título, hora e cor, e guarda o que o sistema não controla", () => {
   const novo = atualizarEventoDoCaso(CASO_EDITADO, EVENTO_DA_EQUIPE);
-  assertEqual(novo.summary, "*ANA PAULA/THÉO - BABY REELS + CLICK HOME - GNDI", "título novo, com o asterisco da equipe");
+  assertEqual(novo.summary, "*ANA PAULA/THÉO - BABY REELS + NEW BORN - GNDI", "título novo, com o asterisco da equipe");
   assertEqual(novo.description, "quarto 201, levar o cartão 14", "a descrição da equipe fica");
   assertEqual(novo.colorId, "5", "a cor da regra");
   assertEqual(novo.start, { dateTime: "2026-10-14T18:00:00.000Z", timeZone: "America/Sao_Paulo" }, "hora nova");

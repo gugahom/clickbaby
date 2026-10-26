@@ -172,6 +172,14 @@ function extrairMaternidadeDoFim(
 // na agenda; \s* entre as palavras cobre "CLICKHOME" digitado junto.
 const CLICK_HOME = /\s*[-+]?\s*CLICK\s*HOME\b/i;
 
+// "+ NEW BORN" É O MESMO ADICIONAL (26/10/2026, pedido do gestor: "vamos abandonar
+// esse nome, vamos usar só New Born" — o título vai para o cliente num print, e
+// "click home" o deixava perdido). O sistema passou a ESCREVER assim; a grafia
+// antiga continua sendo lida, porque a agenda inteira ainda a tem.
+// Aqui o separador é OBRIGATÓRIO e não pode vir uma barra depois: sem isso o
+// "NEWBORN/MÃE/BEBÊ" do começo do título — o PACOTE NEWBORN — viraria adicional.
+const NEW_BORN = /(?<=\S)\s*[-+]\s*NEW\s*BORN\b(?!\s*\/)/i;
+
 // EVENTO E NEWBORN PELO COMEÇO DO TÍTULO (30/09/2026, decisão do gestor).
 //
 // A equipe marca os dois na mesma agenda dos partos, e até aqui o parser os
@@ -202,9 +210,9 @@ const segmentar = (texto: string) =>
 export function parseEventoCalendar(titulo: string): ResultadoParseEvento {
   let texto = titulo.trim();
 
-  const clickHome = CLICK_HOME.test(texto);
+  const clickHome = CLICK_HOME.test(texto) || NEW_BORN.test(texto);
   if (clickHome) {
-    texto = texto.replace(CLICK_HOME, " ").replace(/\s+/g, " ").trim();
+    texto = texto.replace(CLICK_HOME, " ").replace(NEW_BORN, " ").replace(/\s+/g, " ").trim();
   }
 
   // O '*' que antecede alguns nomes: significado ainda não confirmado com

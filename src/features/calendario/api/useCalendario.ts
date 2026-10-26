@@ -416,11 +416,30 @@ export interface CasoEditavel {
   clickHome: boolean
   /** O caso já tem a etapa de Foto/Livro (do pacote ou vendida à parte). */
   temFotolivro: boolean
+  /**
+   * O que foi vendido junto com o pacote e ainda vale (26/10/2026): New Born e
+   * Foto/Livro com a etapa não dispensada. O detalhe do parto os mostra ao lado
+   * do pacote, porque a equipe manda aquele quadro num print para a família.
+   */
+  adicionais: string[]
   /** Criado pelo calendário do sistema: a descrição do evento no Google é nossa. */
   criadoPeloSistema: boolean
   /** Já tem evento no Google (a mudança vai para lá). */
   noGoogle: boolean
   termo: TermoStatus | null
+}
+
+/**
+ * New Born e Foto/Livro — o título do Google só leva o New Born.
+ * Etapa dispensada não conta ("este caso não tem Click Home"), e o Foto/Livro
+ * que já é do pacote (MASTER + ÁLBUM) não se repete ao lado dele.
+ */
+function adicionaisDoCaso(etapas: { tipo: string; status: string }[], pacote: string | null): string[] {
+  const vale = (tipo: string) => etapas.some((e) => e.tipo === tipo && e.status !== 'dispensada')
+  return [
+    vale('click_home') && 'NEW BORN',
+    vale('album') && !/ÁLBUM|ALBUM/i.test(pacote ?? '') && 'FOTO/LIVRO',
+  ].filter((a): a is string => typeof a === 'string')
 }
 
 export function useCasoEditavel(casoId: string | null) {
@@ -432,7 +451,7 @@ export function useCasoEditavel(casoId: string | null) {
       const { data, error } = await supabase
         .from('casos')
         .select(
-          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo)',
+          'id, mae_nome, bebe_nome, pacote_id, maternidade_id, previsao_em, previsao_sem_hora, cesarea_em, observacao_calendar, criado_por, click_home, google_calendar_event_id, google_pendente, termo_status, etapas:caso_etapas!caso_etapas_caso_id_fkey(tipo, status), pacote:pacotes(nome)',
         )
         .eq('id', casoId ?? '')
         .single()
@@ -449,6 +468,7 @@ export function useCasoEditavel(casoId: string | null) {
         observacao: data.observacao_calendar,
         clickHome: data.click_home,
         temFotolivro: data.etapas.some((e) => e.tipo === 'album'),
+        adicionais: adicionaisDoCaso(data.etapas, data.pacote?.nome ?? null),
         criadoPeloSistema: data.criado_por !== null,
         noGoogle: data.google_calendar_event_id !== null || data.google_pendente,
         termo: data.termo_status,
