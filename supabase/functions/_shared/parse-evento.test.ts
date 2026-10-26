@@ -454,6 +454,31 @@ Deno.test("click home: minúsculas e colado contam igual", () => {
   );
 });
 
+// "+ NEW BORN" (26/10/2026): o nome que o sistema passou a escrever.
+Deno.test("new born: o sufixo novo acende a mesma bandeira", () => {
+  for (const titulo of ["GABRIELA/FELIPE - BASIC REELS + NEW BORN - HNSG", "GABRIELA/FELIPE - BASIC REELS + newborn - HNSG"]) {
+    assertEqual(
+      parseEventoCalendar(titulo),
+      {
+        tipo: "caso",
+        mae: "GABRIELA",
+        bebe: "FELIPE",
+        pacote_bruto: "BASIC REELS",
+        maternidade_sigla: "HNSG",
+        click_home: true,
+      },
+      titulo,
+    );
+  }
+});
+
+Deno.test("new born: o NEWBORN do começo continua sendo o pacote, não o adicional", () => {
+  const r = parseEventoCalendar("NEWBORN/ANA/JOSÉ - BABY REELS - HSC");
+  if (r.tipo !== "caso" || r.click_home !== false || r.pacote_bruto !== "NEWBORN") {
+    throw new Error(`o prefixo virou adicional: ${JSON.stringify(r)}`);
+  }
+});
+
 Deno.test("click home: título sem o adicional continua sem a bandeira", () => {
   const r = parseEventoCalendar("KEVELYN/JOAQUIM - BABY REELS");
   if (r.tipo !== "caso" || r.click_home !== false) {

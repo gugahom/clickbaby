@@ -72,7 +72,10 @@ export function DetalheDoItem({
   const linhas: [string, string | null][] = [
     ...quando,
     ['Maternidade', item.maternidade],
-    ['Pacote', item.pacote],
+    // O PACOTE COM O QUE FOI VENDIDO JUNTO (26/10/2026, pedido do gestor): o
+    // print deste quadro vai para a família depois da reserva, e ela precisa
+    // ler "BASIC REELS + NEW BORN", o mesmo que o título do Google diz.
+    ['Pacote', [item.pacote, ...(caso.data?.adicionais ?? [])].filter(Boolean).join(' + ') || null],
     ['Com quem', item.responsavel],
   ]
   const temAcao = acoes.onEditar ?? acoes.onCancelar ?? acoes.onMudarHorario

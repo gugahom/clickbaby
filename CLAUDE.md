@@ -772,8 +772,8 @@ ciclo seguinte.
 - **O ID DO EVENTO VEM DO ID DO CASO** ("cb" + o uuid sem hífens). O Google aceita id
   escolhido pelo cliente, e isso torna a escrita idempotente: a segunda tentativa recebe 409 e
   só liga. Sem isso, uma queda entre criar o evento e ligá-lo deixaria evento duplicado.
-- **O TÍTULO VOLTA IGUAL**: "MÃE/BEBÊ - PACOTE[ + CLICK HOME] - SIGLA", com "BEBÊ" quando não
-  há nome. Depois de ligado, o sync relê o título a cada ciclo e ATUALIZA o caso a partir dele,
+- **O TÍTULO VOLTA IGUAL**: "MÃE/BEBÊ - PACOTE[ + NEW BORN] - SIGLA", com "BEBÊ" quando não
+  há nome. (Até 26/10/2026 o sistema escrevia "+ CLICK HOME"; o parser lê as duas grafias.) Depois de ligado, o sync relê o título a cada ciclo e ATUALIZA o caso a partir dele,
   como faz com todo evento conhecido; um título que o parser lesse diferente trocaria o
   checklist sozinho. `evento-do-caso.test.ts` passa toda combinação do cadastro (288) pelo
   parser. **Pacote ou maternidade nova entra nesse teste.**
@@ -1533,8 +1533,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   para trocar (`MensagemDoClickHome.tsx`). Por ter senha, o evento diz só `tem_mensagem`, nunca o
   texto, como o link de entrega.
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
-  **na agenda continua "CLICK HOME"** — é a grafia que a equipe digita no título e a que o
-  parser procura. Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:
+  **desde 26/10/2026 também no título que o SISTEMA escreve no Google** ("BASIC REELS + NEW
+  BORN"): o detalhe do parto vai num print para a família depois da reserva, e "click home" a
+  deixava perdida. O parser lê "+ CLICK HOME" e "+ NEW BORN" (com separador e sem barra depois,
+  para o "NEWBORN/" do começo do título continuar sendo o PACOTE NEWBORN), porque a agenda
+  inteira ainda tem a grafia antiga. No mesmo pedido, a linha "Pacote" do detalhe do parto no
+  Calendário passou a somar os adicionais vendidos — New Born e Foto/Livro com a etapa não
+  dispensada (`adicionaisDoCaso`, em `useCalendario.ts`). Os dois nomes são a mesma coisa, e o identificador no banco é `click_home`:
   mesmo arranjo de `album`/"Foto/Livro" e de `operador`/"Fotógrafo(a)". Ao mexer nisto, não
   troque as menções ao TÍTULO DO EVENTO — ali "CLICK HOME" é literal.
 - **A FICHA DO CARTÃO** (21/09/2026, pedido do gestor: "abrir esse card como num ClickUp ou
