@@ -550,7 +550,10 @@ function NumerosDoRecorte({
             id: 'vendido' as const,
             rotulo: 'Vendido',
             valor: formatarMoeda(r.totalVendido),
-            detalhe: `Pix ${formatarMoeda(r.vendidoPix ?? 0)} · Cartão ${formatarMoeda(r.vendidoCartao ?? 0)}`,
+            // Desde 27/10/2026 a venda guarda as duas condições, e o que conta é
+            // o valor no Pix (decisão do gestor) — a divisão por forma só
+            // falaria das linhas de 26/10.
+            detalhe: 'valor no Pix',
           },
         ]
       : []),

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { CampoTexto } from '@/components/ui/CampoTexto'
-import { useCadastros } from '../api/useCadastros'
+import { pacotesDaLista, useCadastros } from '../api/useCadastros'
 import { useEditarCaso } from '../api/useEditarCaso'
 import { mensagemDeErro } from '../lib/erros'
 import type { CasoQuadro } from '../types'
@@ -81,7 +81,7 @@ export function EditarCasoDialogo({ caso, onFechar }: PropsEditarCasoDialogo) {
           aoMudar={setPacoteId}
           carregando={carregandoCadastros}
           faltando={caso.faltaPacote}
-          opcoes={(cadastros?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome }))}
+          opcoes={pacotesDaLista(cadastros?.pacotes ?? [], caso.pacoteId).map((p) => ({ valor: p.id, rotulo: p.nome }))}
         />
 
         <Selecao

@@ -87,8 +87,6 @@ export interface ResumoDaOperacao {
   cancelados: number
   /** Nulos para quem não vê a venda (26/10/2026). */
   totalVendido: number | null
-  vendidoPix: number | null
-  vendidoCartao: number | null
 }
 
 export const POR_PAGINA = 50
@@ -250,8 +248,6 @@ export function useResumoDaOperacao(filtros: FiltrosDaOperacao) {
         totalDespesas: numero(l?.total_despesas) ?? 0,
         cancelados: l?.cancelados ?? 0,
         totalVendido: numero(l?.total_vendido),
-        vendidoPix: numero(l?.vendido_pix),
-        vendidoCartao: numero(l?.vendido_cartao),
       }
     },
   })
