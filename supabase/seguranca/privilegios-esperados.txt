@@ -76,7 +76,7 @@ GRANT ALL ON FUNCTION public.registrar_estacao(p_caso_etapa_id uuid, p_estacao t
 GRANT ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, p_campo public.campo_material, p_valor text) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) TO authenticated;
 GRANT ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) TO authenticated;
-GRANT ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer) TO authenticated;
+GRANT ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer, p_valor_parcela numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) TO authenticated;
 GRANT ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) TO authenticated;
@@ -101,6 +101,7 @@ GRANT SELECT ON TABLE public.fila_edicao TO authenticated;
 GRANT SELECT ON TABLE public.handoffs TO authenticated;
 GRANT SELECT ON TABLE public.notificacoes_vistas TO authenticated;
 GRANT SELECT ON TABLE public.ofertas_comerciais TO authenticated;
+GRANT SELECT ON TABLE public.precos_dos_pacotes TO authenticated;
 GRANT SELECT ON TABLE public.quadro_casos TO authenticated;
 GRANT SELECT ON TABLE public.retornos_comerciais TO authenticated;
 GRANT SELECT ON TABLE public.vendas_do_caso TO authenticated;
@@ -210,7 +211,7 @@ REVOKE ALL ON FUNCTION public.registrar_material_da_etapa(p_caso_etapa_id uuid, 
 REVOKE ALL ON FUNCTION public.registrar_mudanca_de_acesso() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_pagamento_do_click_home(p_caso_etapa_id uuid, p_pagamento public.pagamento_click_home) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.registrar_termo(p_caso_id uuid, p_termo public.termo_status) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.registrar_venda_do_caso(p_caso_id uuid, p_item public.item_de_venda, p_valor numeric, p_descricao text, p_forma public.forma_de_pagamento, p_parcelas integer, p_valor_parcela numeric) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_anexo_da_etapa(p_anexo_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_despesa(p_despesa_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.remover_entregavel(p_entregavel_id uuid, p_motivo text) FROM PUBLIC;

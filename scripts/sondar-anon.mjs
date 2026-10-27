@@ -77,6 +77,8 @@ const TABELAS = [
   // ao contrato da família — nem fotógrafa logada lê.
   { nome: 'vendas_do_caso' },
   { nome: 'contratos_dos_casos' },
+  // A tabela de preços (20261027120001): é da venda, e lida só por quem vende.
+  { nome: 'precos_dos_pacotes' },
   // A marca do sino (20260917215442). Ela guarda a que horas cada pessoa abriu
   // o app: leitura aberta a anon seria um relógio de presença da equipe
   // exposto na rua.

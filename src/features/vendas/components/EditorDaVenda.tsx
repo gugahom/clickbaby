@@ -1,3 +1,5 @@
+import type { KeyboardEvent } from 'react'
+import { Botao } from '@/components/ui/Botao'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -5,19 +7,22 @@ import { IconeAdicionar, IconeX } from '@/components/ui/icones'
 import { formatarMoeda } from '@/lib/formato'
 import type { VendaDoCaso } from '../api/useVendaDoCaso'
 import {
-  FORMAS_DE_PAGAMENTO,
   ITENS_DE_VENDA,
   PARCELAS,
-  ROTULO_FORMA,
   ROTULO_ITEM_DE_VENDA,
+  alternativaNoCartao,
+  editarRascunho,
   linhaDoRascunho,
   linkValido,
   problemaDoRascunho,
+  proximoRascunho,
+  rascunhoDaTabela,
+  rascunhoEfetivo,
   rotuloDaLinha,
-  rotuloDoPagamento,
+  sufixoDoValor,
   type EstadoDaVenda,
-  type FormaDePagamento,
   type ItemDeVenda,
+  type PrecoDoPacote,
 } from '../lib/vendas'
 
 /**
@@ -30,18 +35,30 @@ import {
  * O que já está no banco aparece com um × que marca para apagar; as linhas
  * novas entram pelo "Adicionar", e a que ficou digitada sem o clique entra
  * sozinha no Salvar (ver `mudancaDaVenda`).
+ *
+ * O PACOTE VEM DA TABELA (27/10/2026, o quadro do gestor): escolhidos pacote e
+ * maternidade, a linha mostra "até 6x R$ 265,00 ou R$ 1.490,00 no Pix" em
+ * caixas fixas, bem à vista — é o que o vendedor passa para o cliente. EDITAR
+ * abre os valores para uma negociação. Sem preço na tabela (BIRTH, NEWBORN,
+ * EVENTO, a Rocio) e nas vendas a mais, os valores são digitados.
  */
 export function EditorDaVenda({
   inicial,
   carregando,
   estado,
   onMudar,
+  tabela,
+  entraSozinho,
 }: {
   /** O que o banco tem — ausente num caso novo. */
   inicial: VendaDoCaso | undefined
   carregando: boolean
   estado: EstadoDaVenda
   onMudar: (estado: EstadoDaVenda) => void
+  /** O preço do pacote, já filtrado por `tabelaAplicavel`. */
+  tabela: PrecoDoPacote | null
+  /** O pacote da tabela entra no Salvar sem o "+" (ver `mudancaDaVenda`). */
+  entraSozinho: boolean
 }) {
   const contrato = estado.contrato ?? inicial?.contrato ?? ''
   const existentes = (inicial?.linhas ?? []).filter((l) => !estado.removidas.includes(l.id))
@@ -50,21 +67,38 @@ export function EditorDaVenda({
       estado.novas.reduce((t, l) => t + Math.round(l.valor * 100), 0)) /
     100
   const r = estado.rascunho
-  const problema = problemaDoRascunho(r)
+  const daTabela = rascunhoDaTabela(r, tabela)
+  const efetivo = rascunhoEfetivo(r, tabela)
+  const problema = problemaDoRascunho(efetivo)
   const quantas = existentes.length + estado.novas.length
 
   const mudarRascunho = (parcial: Partial<typeof r>) => onMudar({ ...estado, rascunho: { ...r, ...parcial } })
 
-  // A linha entra e o rascunho volta limpo, guardando a FORMA e as parcelas: a
-  // venda a mais de um caso costuma ser paga do mesmo jeito que o pacote.
   function adicionar() {
     if (problema !== null) return
-    onMudar({
-      ...estado,
-      novas: [...estado.novas, linhaDoRascunho(r)],
-      rascunho: { ...r, item: r.item === 'pacote' ? 'reels' : r.item, valor: '', descricao: '' },
-    })
+    onMudar({ ...estado, novas: [...estado.novas, linhaDoRascunho(efetivo)], rascunho: proximoRascunho(efetivo) })
   }
+
+  // ENTER ADICIONA, como o "+" (26/10/2026) — e não salva o formulário: o
+  // diálogo inteiro é um <form>.
+  const enterAdiciona = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    adicionar()
+  }
+
+  const botaoAdicionar = (
+    <BotaoIcone
+      rotulo="Adicionar esta venda"
+      tom="acao"
+      disabled={problema !== null}
+      motivo={problema ? `Falta ${problema}.` : undefined}
+      onClick={adicionar}
+      className="mb-0.5"
+    >
+      <IconeAdicionar className="size-5" />
+    </BotaoIcone>
+  )
 
   return (
     <section className="space-y-2.5 rounded-xl border border-border px-3 py-2.5" aria-label="Venda do caso">
@@ -86,8 +120,9 @@ export function EditorDaVenda({
             <Linha
               key={l.id}
               rotulo={rotuloDaLinha(l)}
-              pagamento={rotuloDoPagamento(l.forma, l.parcelas)}
               valor={l.valor}
+              sufixo={sufixoDoValor(l)}
+              alternativa={alternativaNoCartao(l)}
               onTirar={() => onMudar({ ...estado, removidas: [...estado.removidas, l.id] })}
             />
           ))}
@@ -95,8 +130,9 @@ export function EditorDaVenda({
             <Linha
               key={l.chave}
               rotulo={rotuloDaLinha({ item: l.item, descricao: l.descricao || null })}
-              pagamento={rotuloDoPagamento(l.forma, l.parcelas)}
               valor={l.valor}
+              sufixo={sufixoDoValor({ forma: null, ...l })}
+              alternativa={alternativaNoCartao({ forma: null, ...l })}
               nova
               onTirar={() => onMudar({ ...estado, novas: estado.novas.filter((n) => n.chave !== l.chave) })}
             />
@@ -109,12 +145,11 @@ export function EditorDaVenda({
         </p>
       )}
 
-      {/* LANÇAR: o que foi vendido, quanto e COMO FOI PAGO (26/10/2026). O
-          pacote é o primeiro, e "Outro" pede a descrição — senão vira linha que
-          ninguém entende depois. ENTER NO VALOR ADICIONA, como o "+" (pedido do
-          gestor), e não salva o formulário: o diálogo inteiro é um <form>. */}
-      <div className="grid grid-cols-2 items-end gap-2 md:grid-cols-[minmax(0,11rem)_minmax(0,9rem)_minmax(0,8rem)_minmax(0,7rem)_auto]">
-        <div>
+      {/* LANÇAR: o quê, ATÉ quantas vezes de quanto no cartão, OU quanto no Pix —
+          o desenho do quadro do gestor. "Outro" pede a descrição, senão vira
+          linha que ninguém entende depois. */}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-full sm:w-44">
           <span className="text-xs font-medium text-muted-foreground">O quê</span>
           <div className="mt-1">
             <Dropdown
@@ -126,75 +161,60 @@ export function EditorDaVenda({
             />
           </div>
         </div>
-        <CampoTexto
-          rotulo="Valor (R$)"
-          valor={r.valor}
-          aoMudar={(valor) => mudarRascunho({ valor })}
-          inputMode="decimal"
-          placeholder="4.500,00"
-          enterKeyHint="done"
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter') return
-            e.preventDefault()
-            adicionar()
-          }}
-        />
-        <div>
-          <span className="text-xs font-medium text-muted-foreground">Pagamento</span>
-          <div className="mt-1">
-            <Dropdown
-              larguraCheia
-              rotulo="Escolha"
-              selecionado={r.forma ?? ''}
-              onEscolher={(item) => mudarRascunho({ forma: item.id as FormaDePagamento })}
-              itens={FORMAS_DE_PAGAMENTO.map((f) => ({ id: f, rotulo: ROTULO_FORMA[f] }))}
-            />
-          </div>
-        </div>
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-muted-foreground">Parcelas</span>
-            <div className="mt-1">
-              <Dropdown
-                larguraCheia
-                rotulo="Parcelas"
-                selecionado={String(r.parcelas)}
-                onEscolher={(item) => mudarRascunho({ parcelas: Number(item.id) })}
-                itens={PARCELAS.map((n) => ({ id: String(n), rotulo: `${n}x` }))}
+
+        {daTabela ? (
+          <>
+            <ValorFixo rotulo={`Até ${tabela.parcelas}x`} valor={formatarMoeda(tabela.valorParcela)} />
+            <span className="pb-3 text-sm text-muted-foreground">ou</span>
+            <ValorFixo rotulo="Pix" valor={formatarMoeda(tabela.valorPix)} />
+            <Botao variante="contorno" className="mb-0.5" onClick={() => mudarRascunho(editarRascunho(r, tabela))}>
+              Editar
+            </Botao>
+          </>
+        ) : (
+          <>
+            <div className="w-24">
+              <span className="text-xs font-medium text-muted-foreground">Até</span>
+              <div className="mt-1">
+                <Dropdown
+                  larguraCheia
+                  rotulo="Parcelas"
+                  selecionado={String(r.parcelas)}
+                  onEscolher={(item) => mudarRascunho({ parcelas: Number(item.id) })}
+                  itens={PARCELAS.map((n) => ({ id: String(n), rotulo: `${n}x` }))}
+                />
+              </div>
+            </div>
+            <div className="w-32">
+              <CampoTexto
+                rotulo="Parcela (R$)"
+                valor={r.valorParcela}
+                aoMudar={(valorParcela) => mudarRascunho({ valorParcela })}
+                inputMode="decimal"
+                placeholder="265,00"
+                enterKeyHint="done"
+                onKeyDown={enterAdiciona}
               />
             </div>
-          </div>
-          {/* O "+" mora com as parcelas no celular, para não ficar sozinho numa linha. */}
-          <BotaoIcone
-            rotulo="Adicionar esta venda"
-            tom="acao"
-            disabled={problema !== null}
-            motivo={problema ? `Falta ${problema}.` : undefined}
-            onClick={adicionar}
-            className="mb-0.5 md:hidden"
-          >
-            <IconeAdicionar className="size-5" />
-          </BotaoIcone>
-        </div>
-        <BotaoIcone
-          rotulo="Adicionar esta venda"
-          tom="acao"
-          disabled={problema !== null}
-          motivo={problema ? `Falta ${problema}.` : undefined}
-          onClick={adicionar}
-          className="mb-0.5 hidden md:inline-flex"
-        >
-          <IconeAdicionar className="size-5" />
-        </BotaoIcone>
+            <span className="pb-3 text-sm text-muted-foreground">ou</span>
+            <div className="w-36">
+              <CampoTexto
+                rotulo="Pix (R$)"
+                valor={r.valor}
+                aoMudar={(valor) => mudarRascunho({ valor })}
+                inputMode="decimal"
+                placeholder="1.490,00"
+                enterKeyHint="done"
+                onKeyDown={enterAdiciona}
+              />
+            </div>
+          </>
+        )}
+        {botaoAdicionar}
       </div>
-      <CampoTexto
-        rotulo="Link do contrato"
-        valor={contrato}
-        aoMudar={(v) => onMudar({ ...estado, contrato: v })}
-        opcional
-        inputMode="url"
-        placeholder="https://"
-      />
+      {daTabela && !entraSozinho && (
+        <p className="text-xs font-semibold text-atencao-tinta">Valores da tabela. Aperte + para lançar o pacote.</p>
+      )}
       {r.item === 'outro' && (
         <CampoTexto
           rotulo="O que foi vendido"
@@ -204,6 +224,14 @@ export function EditorDaVenda({
         />
       )}
 
+      <CampoTexto
+        rotulo="Link do contrato"
+        valor={contrato}
+        aoMudar={(v) => onMudar({ ...estado, contrato: v })}
+        opcional
+        inputMode="url"
+        placeholder="https://"
+      />
       {contrato.trim() !== '' && !linkValido(contrato) && (
         <p className="text-xs font-semibold text-atrasado">Cole o link do contrato completo, começando com https://.</p>
       )}
@@ -214,28 +242,50 @@ export function EditorDaVenda({
   )
 }
 
+/** O valor da tabela em destaque, do tamanho de um campo — mas que não se digita. */
+function ValorFixo({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="min-w-32">
+      <span className="text-sm font-medium">{rotulo}</span>
+      <div className="mt-1.5 flex min-h-12 items-center rounded-md border border-marca/40 bg-marca-suave px-3 text-lg font-extrabold text-foreground tabular-nums">
+        {valor}
+      </div>
+    </div>
+  )
+}
+
 function Linha({
   rotulo,
-  pagamento,
   valor,
+  sufixo,
+  alternativa,
   nova,
   onTirar,
 }: {
   rotulo: string
-  /** "Cartão 10x"; nulo nas linhas de antes da forma. */
-  pagamento: string | null
   valor: number
+  /** "no Pix" — ou como a linha de 26/10 foi paga. */
+  sufixo: string | null
+  /** "ou até 6x de R$ 265,00 no cartão". */
+  alternativa: string | null
   nova?: boolean
   onTirar: () => void
 }) {
   return (
-    <li className="flex items-center gap-2 rounded-lg bg-muted/50 py-0.5 pr-0.5 pl-2.5 text-sm">
-      <span className="min-w-0 flex-1 truncate">
-        {rotulo}
-        {pagamento && <span className="ml-1.5 text-xs text-muted-foreground">· {pagamento}</span>}
-        {nova && <span className="ml-1.5 text-xs text-muted-foreground">nova</span>}
+    // `min-w-0`: item de grade não encolhe abaixo do texto inteiro, e a condição
+    // do cartão é comprida — sem isto ela alargava o diálogo no celular.
+    <li className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/50 py-1 pr-0.5 pl-2.5 text-sm">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">
+          {rotulo}
+          {nova && <span className="ml-1.5 text-xs font-normal text-muted-foreground">nova</span>}
+        </span>
+        {alternativa && <span className="block text-xs text-muted-foreground">{alternativa}</span>}
       </span>
-      <span className="flex-shrink-0 tabular-nums">{formatarMoeda(valor)}</span>
+      <span className="flex-shrink-0 text-right tabular-nums">
+        {formatarMoeda(valor)}
+        {sufixo && <span className="ml-1 text-xs text-muted-foreground">{sufixo}</span>}
+      </span>
       <BotaoIcone rotulo={`Tirar ${rotulo}`} onClick={onTirar}>
         <IconeX className="size-4" />
       </BotaoIcone>

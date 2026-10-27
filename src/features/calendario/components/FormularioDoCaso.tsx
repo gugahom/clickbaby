@@ -4,7 +4,7 @@ import { CampoTexto } from '@/components/ui/CampoTexto'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { EditorDeTexto } from '@/components/ui/EditorDeTexto'
-import { useCadastros } from '@/features/quadro/api/useCadastros'
+import { pacotesDaLista, useCadastros } from '@/features/quadro/api/useCadastros'
 import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
 import { emBrasilia, rotuloDoDia } from '../lib/datas'
@@ -12,9 +12,9 @@ import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugeri
 import { IconeCheck } from '@/components/ui/icones'
 import type { TermoStatus } from '@/features/quadro/types'
 import { usePodeVenda } from '@/features/vendas/podeVenda'
-import { useVendaDoCaso } from '@/features/vendas/api/useVendaDoCaso'
+import { usePrecoDoPacote, useVendaDoCaso } from '@/features/vendas/api/useVendaDoCaso'
 import { EditorDaVenda } from '@/features/vendas/components/EditorDaVenda'
-import { VENDA_INTOCADA, mudancaDaVenda, type EstadoDaVenda } from '@/features/vendas/lib/vendas'
+import { VENDA_INTOCADA, mudancaDaVenda, tabelaAplicavel, type EstadoDaVenda } from '@/features/vendas/lib/vendas'
 
 /**
  * O CASO PELO CALENDÁRIO — criar (30/09/2026, pedido do gestor: "criar casos
@@ -146,7 +146,17 @@ function FormularioDoCaso({
   const podeVenda = usePodeVenda()
   const vendaAtual = useVendaDoCaso(caso?.id ?? null, podeVenda)
   const [estadoDaVenda, setEstadoDaVenda] = useState<EstadoDaVenda>(VENDA_INTOCADA)
-  const venda = podeVenda ? mudancaDaVenda(estadoDaVenda, vendaAtual.data?.contrato ?? null) : null
+  // O PREÇO DA TABELA (27/10/2026), pelo pacote e pela maternidade escolhidos.
+  // No caso NOVO, salvar é lançar: o pacote da tabela entra sem o "+". No
+  // "Editar caso", quem só foi trocar a hora não lança venda sem querer.
+  const preco = usePrecoDoPacote(pacoteId || null, maternidadeId || null, podeVenda)
+  const vendaCarregada = caso === undefined || vendaAtual.data !== undefined
+  const tabelaDaVenda = vendaCarregada
+    ? tabelaAplicavel(preco.preco, vendaAtual.data?.linhas ?? [], estadoDaVenda)
+    : null
+  const venda = podeVenda
+    ? mudancaDaVenda(estadoDaVenda, vendaAtual.data?.contrato ?? null, { tabela: tabelaDaVenda, entraSozinho: caso === undefined })
+    : null
 
   const pacote = cadastros.data?.pacotes.find((p) => p.id === pacoteId)
   // O MASTER + ÁLBUM já traz o Foto/Livro: a caixa aparece marcada e presa.
@@ -256,7 +266,11 @@ function FormularioDoCaso({
               aoMudar={setPacoteId}
               carregando={cadastros.isPending}
               buscarPor="Buscar pacote"
-              opcoes={(cadastros.data?.pacotes ?? []).map((p) => ({ valor: p.id, rotulo: p.nome, cor: p.cor_calendar }))}
+              opcoes={pacotesDaLista(cadastros.data?.pacotes ?? [], caso?.pacoteId).map((p) => ({
+                valor: p.id,
+                rotulo: p.nome,
+                cor: p.cor_calendar,
+              }))}
             />
             <Escolha
               rotulo="Maternidade"
@@ -451,6 +465,8 @@ function FormularioDoCaso({
               carregando={caso !== undefined && vendaAtual.isPending}
               estado={estadoDaVenda}
               onMudar={setEstadoDaVenda}
+              tabela={tabelaDaVenda}
+              entraSozinho={caso === undefined}
             />
           </div>
         )}

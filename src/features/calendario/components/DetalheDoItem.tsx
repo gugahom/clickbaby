@@ -114,7 +114,13 @@ export function DetalheDoItem({
           <VendaDoCaso casoId={item.casoId} {...(podeVenda ? { aoLancar: () => setLancandoVenda(true) } : {})} />
         )}
         {lancandoVenda && (
-          <DialogoLancarVenda casoId={item.casoId} nome={item.nome} onFechar={() => setLancandoVenda(false)} />
+          <DialogoLancarVenda
+            casoId={item.casoId}
+            nome={item.nome}
+            pacoteId={caso.data?.pacoteId ?? null}
+            maternidadeId={caso.data?.maternidadeId ?? null}
+            onFechar={() => setLancandoVenda(false)}
+          />
         )}
         {item.google && (
           <p className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground" role="status">

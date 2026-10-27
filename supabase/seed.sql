@@ -159,3 +159,35 @@ insert into public.maternidades (nome, sigla) values
   ('Mackenzie', 'MACKENZIE'),
   ('Luiza de Marilac', 'MARILAC')
 on conflict (sigla) do nothing;
+
+
+-- =============================================================================
+-- A tabela de preços (27/10/2026) — a mesma da migration 20261027120001, que é
+-- a fonte de verdade do remoto. Ela se repete aqui porque, num `db reset`, os
+-- pacotes originais só nascem neste seed, DEPOIS das migrations: lá a inserção
+-- não acha pacote nenhum. ON CONFLICT DO NOTHING dos dois lados.
+-- =============================================================================
+
+insert into public.precos_dos_pacotes (pacote_id, maternidade_id, parcelas, valor_parcela, valor_pix)
+select p.id, m.id, t.parcelas, t.valor_parcela, t.valor_pix
+from (values
+  ('a', 'basic',                6, 152.00,  850.00),
+  ('a', 'standard',             6, 177.00,  990.00),
+  ('a', 'baby-reels',           6, 265.00, 1490.00),
+  ('a', 'master',               6, 315.00, 1790.00),
+  ('a', 'master-album',        10, 296.00, 2960.00),
+  ('a', 'basic-reels-contrato', 6, 205.00, 1200.00),
+  ('b', 'basic',                6, 159.00,  880.00),
+  ('b', 'standard',             6, 184.00, 1029.00),
+  ('b', 'baby-reels',           6, 271.00, 1530.00),
+  ('b', 'master',               6, 322.00, 1830.00),
+  ('b', 'master-album',        10, 299.00, 2990.00),
+  ('b', 'basic-reels-contrato', 6, 205.00, 1200.00)
+) as t(grupo, slug, parcelas, valor_parcela, valor_pix)
+join (values
+  ('a', 'GNDI'), ('a', 'HNSF'), ('a', 'HSC'), ('a', 'MACKENZIE'), ('a', 'MARILAC'),
+  ('b', 'HNSG'), ('b', 'CWB')
+) as g(grupo, sigla) on g.grupo = t.grupo
+join public.pacotes p on p.slug = t.slug
+join public.maternidades m on m.sigla = g.sigla
+on conflict (pacote_id, maternidade_id) do nothing;

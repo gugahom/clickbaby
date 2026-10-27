@@ -431,7 +431,7 @@ registrar_entregavel(p_caso_id, p_tipo, p_url)
 remover_entregavel(p_entregavel_id, p_motivo)           -- link errado; confirmado recusa
 
 -- o valor vendido e o contrato do caso (14/10/2026; ver seção 13) — atendimento/adm ou tela Comercial
-registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao, p_forma, p_parcelas) -- pacote ou venda a mais; Pix/Cartão e parcelas (26/10/2026)
+registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao, p_forma, p_parcelas, p_valor_parcela) -- valor no Pix + "até Nx de tanto" no cartão (27/10/2026); p_forma é das linhas de 26/10
 remover_venda_do_caso(p_venda_id)                -- não existe editar
 definir_contrato_do_caso(p_caso_id, p_url)       -- em branco tira; o link não vai para eventos
 
@@ -1856,6 +1856,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   externo também abre para quem tem só a tela Relatórios, e para essa pessoa os campos de venda
   voltam nulos e o modo é recusado — as funções são `security definer` e leriam a tabela por cima
   da RLS. `venda_no_periodo` é interna, fechada até para `authenticated`.
+  **A TABELA DE PREÇOS E AS DUAS CONDIÇÕES** (27/10/2026, o quadro do gestor, migration
+  `20261027120001`): escolhidos pacote e maternidade, a venda do pacote vem PRONTA da tabela
+  `precos_dos_pacotes` (pacote × maternidade: até N parcelas, valor da parcela, valor no Pix) — "até
+  6x R$ 265,00 ou R$ 1.490,00 no Pix", em caixas fixas e bem à vista, para o vendedor passar ao
+  cliente; o **Editar** abre os valores numa negociação. Os dois grupos de preço do gestor viraram
+  uma linha por maternidade; ficam SEM preço (valor à mão) BIRTH, BIRTH + REELS, BASIC + REELS,
+  NEWBORN, EVENTO e a ROCIO (decisão do gestor). Leitura de quem vê a venda; sem escrita pelo app —
+  preço novo é migration até existir a tela. O seed repete as linhas (no `db reset` os pacotes
+  nascem no seed, depois das migrations). **A LINHA GUARDA AS DUAS CONDIÇÕES** (decisão do gestor):
+  `valor` é o do PIX e é o que conta como vendido no relatório; `parcelas` + `valor_parcela` são o
+  "até Nx de tanto" no cartão. Como o cliente pagou deixou de ser perguntado — a `forma_pagamento`
+  de 26/10 ficou só nas linhas daquele dia, e uma constraint impede misturar as duas formas. **O
+  PACOTE DA TABELA SÓ ENTRA SOZINHO onde salvar é lançar** (caso novo e "Lançar venda"); no
+  "Editar caso" ele pede o "+", para quem só foi trocar a hora não lançar venda sem querer. Só o
+  PRIMEIRO pacote vem da tabela (`tabelaAplicavel`): com um já lançado, outro igual seria venda em
+  dobro. O cartão "Vendido" do relatório perdeu a divisão Pix/Cartão, que só falaria das linhas de
+  26/10.
+  **A LISTA DE PACOTES** (mesmo pedido) segue a ordem do gestor — BIRTH + REELS, BABY REELS, BASIC,
+  BASIC REELS, STANDARD, MASTER, MASTER + ÁLBUM, BIRTH, NEWBORN, EVENTO — e SEM o BASIC + REELS
+  (`pacotesDaLista`, em `useCadastros.ts`, no Calendário e no "Editar caso" do Quadro). Ele continua
+  no cadastro (casos antigos, e a agenda ainda o escreve), e quem já é BASIC + REELS o vê na lista.
   **FICA PARA DEPOIS** (decisão do gestor): a tela do financeiro (a previsão do que foi
   vendido por mês, a planilha) e a do comercial — os dados já estão aqui para elas.
   Não trava a entrega: venda não é status do caso.

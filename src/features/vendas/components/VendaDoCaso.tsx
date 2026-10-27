@@ -3,7 +3,7 @@ import { Botao } from '@/components/ui/Botao'
 import { usePodeVenda } from '../podeVenda'
 import { formatarMoeda } from '@/lib/formato'
 import { useVendaDoCaso } from '../api/useVendaDoCaso'
-import { rotuloDaLinha, rotuloDoPagamento } from '../lib/vendas'
+import { alternativaNoCartao, rotuloDaLinha, sufixoDoValor } from '../lib/vendas'
 
 /**
  * O VALOR VENDIDO E O CONTRATO, PARA LER (14/10/2026, pedido do gestor: "quando
@@ -47,14 +47,17 @@ export function VendaDoCaso({
           {data.linhas.length > 0 ? (
             <ul className="mt-1.5 space-y-0.5 text-sm">
               {data.linhas.map((l) => (
+                // AS DUAS CONDIÇÕES, como o vendedor passa ao cliente (27/10/2026):
+                // "R$ 1.490,00 no Pix", e embaixo "ou até 6x de R$ 265,00 no cartão".
                 <li key={l.id} className="flex justify-between gap-3">
-                  <span className="min-w-0 truncate text-muted-foreground">
-                    {rotuloDaLinha(l)}
-                    {rotuloDoPagamento(l.forma, l.parcelas) && (
-                      <span className="ml-1.5 text-xs">· {rotuloDoPagamento(l.forma, l.parcelas)}</span>
+                  <span className="min-w-0 truncate text-muted-foreground">{rotuloDaLinha(l)}</span>
+                  <span className="flex-shrink-0 text-right tabular-nums">
+                    <span className="font-semibold text-foreground">{formatarMoeda(l.valor)}</span>
+                    {sufixoDoValor(l) && <span className="ml-1 text-xs text-muted-foreground">{sufixoDoValor(l)}</span>}
+                    {alternativaNoCartao(l) && (
+                      <span className="block text-xs text-muted-foreground">{alternativaNoCartao(l)}</span>
                     )}
                   </span>
-                  <span className="flex-shrink-0 tabular-nums">{formatarMoeda(l.valor)}</span>
                 </li>
               ))}
             </ul>

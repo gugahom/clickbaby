@@ -1241,6 +1241,54 @@ export type Database = {
         }
         Relationships: []
       }
+      precos_dos_pacotes: {
+        Row: {
+          created_at: string
+          id: string
+          maternidade_id: string
+          pacote_id: string
+          parcelas: number
+          updated_at: string
+          valor_parcela: number
+          valor_pix: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          maternidade_id: string
+          pacote_id: string
+          parcelas: number
+          updated_at?: string
+          valor_parcela: number
+          valor_pix: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          maternidade_id?: string
+          pacote_id?: string
+          parcelas?: number
+          updated_at?: string
+          valor_parcela?: number
+          valor_pix?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precos_dos_pacotes_maternidade_id_fkey"
+            columns: ["maternidade_id"]
+            isOneToOne: false
+            referencedRelation: "maternidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_dos_pacotes_pacote_id_fkey"
+            columns: ["pacote_id"]
+            isOneToOne: false
+            referencedRelation: "pacotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retornos_comerciais: {
         Row: {
           atualizado_por: string
@@ -1325,6 +1373,7 @@ export type Database = {
           registrado_por: string
           updated_at: string
           valor: number
+          valor_parcela: number | null
         }
         Insert: {
           caso_id: string
@@ -1339,6 +1388,7 @@ export type Database = {
           registrado_por: string
           updated_at?: string
           valor: number
+          valor_parcela?: number | null
         }
         Update: {
           caso_id?: string
@@ -1353,6 +1403,7 @@ export type Database = {
           registrado_por?: string
           updated_at?: string
           valor?: number
+          valor_parcela?: number | null
         }
         Relationships: [
           {
@@ -2197,6 +2248,7 @@ export type Database = {
           p_item: Database["public"]["Enums"]["item_de_venda"]
           p_parcelas?: number
           p_valor: number
+          p_valor_parcela?: number
         }
         Returns: string
       }

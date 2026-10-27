@@ -10,6 +10,42 @@ export interface PacoteOpcao {
   cor_calendar: string | null
 }
 
+/**
+ * A ORDEM DOS PACOTES NAS LISTAS DE ESCOLHA (27/10/2026, pedido do gestor): os
+ * mais vendidos primeiro, e não a ordem alfabética. O BASIC REELS entra depois
+ * do BASIC (perguntado). Pacote que não estiver aqui vai para o fim, por nome.
+ */
+const ORDEM_DOS_PACOTES = [
+  'birth-reels',
+  'baby-reels',
+  'basic',
+  'basic-reels-contrato',
+  'standard',
+  'master',
+  'master-album',
+  'birth',
+  'newborn',
+  'evento',
+]
+
+/**
+ * FORA DA LISTA (mesmo pedido): o BASIC + REELS não é mais oferecido. Ele
+ * continua no cadastro — casos antigos o têm, e a agenda ainda o escreve, então
+ * o sync precisa achá-lo —, e um caso que JÁ É BASIC + REELS continua vendo o
+ * próprio pacote na lista: sumir com ele trocaria o pacote sem ninguém pedir.
+ */
+const FORA_DA_LISTA = ['basic-reels-venda']
+
+export function pacotesDaLista(pacotes: PacoteOpcao[], atualId?: string | null): PacoteOpcao[] {
+  const posicao = (p: PacoteOpcao) => {
+    const i = ORDEM_DOS_PACOTES.indexOf(p.slug)
+    return i === -1 ? ORDEM_DOS_PACOTES.length : i
+  }
+  return pacotes
+    .filter((p) => !FORA_DA_LISTA.includes(p.slug) || p.id === atualId)
+    .sort((a, b) => posicao(a) - posicao(b) || a.nome.localeCompare(b.nome, 'pt-BR'))
+}
+
 export interface MaternidadeOpcao {
   id: string
   sigla: string

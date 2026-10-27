@@ -1,6 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { LinhaDeVenda, MudancaDaVenda } from '../lib/vendas'
+import type { LinhaDeVenda, MudancaDaVenda, PrecoDoPacote } from '../lib/vendas'
 
 const CHAVE = 'venda-do-caso'
 
@@ -28,7 +28,7 @@ export function useVendaDoCaso(casoId: string | null, habilitado = true) {
         supabase
           .from('vendas_do_caso')
           .select(
-            'id, item, descricao, valor, forma_pagamento, parcelas, created_at, registrado:pessoas!vendas_do_caso_registrado_por_fkey(nome)',
+            'id, item, descricao, valor, forma_pagamento, parcelas, valor_parcela, created_at, registrado:pessoas!vendas_do_caso_registrado_por_fkey(nome)',
           )
           .eq('caso_id', casoId ?? '')
           .order('created_at', { ascending: true })
@@ -44,6 +44,7 @@ export function useVendaDoCaso(casoId: string | null, habilitado = true) {
         valor: Number(v.valor),
         forma: v.forma_pagamento,
         parcelas: v.parcelas,
+        valorParcela: v.valor_parcela === null ? null : Number(v.valor_parcela),
         registradoPorNome: v.registrado?.nome ?? null,
         registradoEm: v.created_at,
       }))
@@ -85,8 +86,10 @@ export async function salvarVendaDoCaso(
       p_item: n.item,
       p_valor: n.valor,
       ...(n.descricao ? { p_descricao: n.descricao } : {}),
-      p_forma: n.forma,
-      p_parcelas: n.parcelas,
+      // A condição do cartão (27/10/2026): as duas juntas, ou nenhuma.
+      ...(n.valorParcela !== null && n.parcelas !== null
+        ? { p_parcelas: n.parcelas, p_valor_parcela: n.valorParcela }
+        : {}),
     })
     if (error) throw falhou(error)
   }
@@ -94,4 +97,30 @@ export async function salvarVendaDoCaso(
 
 export function invalidarVendas(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: [CHAVE] })
+}
+
+/**
+ * A TABELA DE PREÇOS (27/10/2026, migration 20261027120001): pacote ×
+ * maternidade. São poucas dezenas de linhas e mudam em escala de meses, então
+ * vem inteira e com cache longo; quem não vê a venda nem pede (a RLS também
+ * devolveria vazio).
+ */
+export function usePrecoDoPacote(pacoteId: string | null, maternidadeId: string | null, habilitado: boolean) {
+  const tabela = useQuery({
+    queryKey: ['precos-dos-pacotes'],
+    enabled: habilitado,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('precos_dos_pacotes')
+        .select('pacote_id, maternidade_id, parcelas, valor_parcela, valor_pix')
+      if (error) throw new Error(error.message)
+      return data
+    },
+  })
+  const linha = tabela.data?.find((l) => l.pacote_id === pacoteId && l.maternidade_id === maternidadeId)
+  const preco: PrecoDoPacote | null = linha
+    ? { parcelas: linha.parcelas, valorParcela: Number(linha.valor_parcela), valorPix: Number(linha.valor_pix) }
+    : null
+  return { preco, carregando: habilitado && tabela.isPending }
 }

@@ -77,7 +77,9 @@ select pg_temp.como('gestao.venda@clickbaby.test');
 -- P2
 select throws_ok(
   $$ select public.registrar_venda_do_caso(pg_temp.caso('Mae VENDA B'), 'pacote', 100, null, null, 3) $$,
-  'Diga a forma de pagamento das parcelas: Pix ou Cartão.',
+  -- Desde 20261027120001 parcelas sem forma pedem o valor da parcela (a
+  -- condição do cartão), e o recado mudou junto.
+  'Diga o valor de cada parcela.',
   'P2: parcelas sem forma são recusadas'
 );
 select throws_ok(
