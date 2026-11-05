@@ -19,6 +19,9 @@ export interface PessoaLogada {
    * por `useTelas`/`telasEfetivas`, nunca direto.
    */
   telas: Tela[] | null
+  /** As marcas da Equipe: o que do New Born chama esta pessoa no sino. */
+  avisaEscolhaNewBorn: boolean
+  avisaEdicaoNewBorn: boolean
 }
 
 /** Recarrega a pessoa do banco. Depois de trocar a foto, é o que atualiza o chip. */

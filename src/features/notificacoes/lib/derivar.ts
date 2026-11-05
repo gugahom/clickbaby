@@ -1,5 +1,8 @@
 import { MINUTOS_IMINENTE, alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
 import {
+  FASES_CLICK_HOME_A_EDITAR,
+  FASE_CLICK_HOME_ESCOLHA,
+  FASE_CLICK_HOME_SELECAO,
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
   rotuloDaRodada,
@@ -39,9 +42,27 @@ import {
  *     agora só para a dona.
  * O ADM continua achando a fila de Entregáveis pelo anel verde da aba, e os
  * rascunhos pela aba deles.
+ *
+ * O NEW BORN CHAMA PELA MARCA DA PESSOA (05/11/2026, pedido do gestor). Quem
+ * manda a galeria à família não tem o nome no card, e quem edita pode não ter.
+ * Não é a volta do trabalho do papel: a gestão marca UMA pessoa na Equipe, e é
+ * o nome dela que está marcado — só que na ficha, e não no card.
  */
 
-export type TipoNotificacao = 'atribuida' | 'horario' | 'prazo' | 'alteracao_minha' | 'rendicao' | 'aviso'
+export type TipoNotificacao =
+  | 'atribuida'
+  | 'horario'
+  | 'new_born'
+  | 'prazo'
+  | 'alteracao_minha'
+  | 'rendicao'
+  | 'aviso'
+
+/** As marcas da pessoa na Equipe: o que do New Born a chama. */
+export interface AvisosDoNewBorn {
+  escolha: boolean
+  edicao: boolean
+}
 
 export interface Notificacao {
   /** Estável entre renderizações: é o que o React usa de chave e o que o
@@ -57,6 +78,8 @@ export interface Notificacao {
   detalhe: string
   casoId: string
   casoNome: string
+  /** Com ela, o clique abre a ficha desta etapa em vez de levar ao card. */
+  fichaDaEtapa?: string
   /** Quando isto passou a ser verdade — o que decide se é NOVIDADE. */
   em: string
 }
@@ -68,10 +91,11 @@ export interface Notificacao {
 const ORDEM: Record<TipoNotificacao, number> = {
   horario: 0,
   atribuida: 1,
-  prazo: 2,
-  alteracao_minha: 3,
-  rendicao: 4,
-  aviso: 5,
+  new_born: 2,
+  prazo: 3,
+  alteracao_minha: 4,
+  rendicao: 5,
+  aviso: 6,
 }
 
 /**
@@ -111,11 +135,13 @@ export function derivarNotificacoes({
   casos,
   etapasPorCaso,
   pessoaId,
+  avisos,
   agora,
 }: {
   casos: CasoQuadro[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   pessoaId: string | null
+  avisos: AvisosDoNewBorn
   agora: Date
 }): Notificacao[] {
   const lista: Notificacao[] = []
@@ -127,6 +153,42 @@ export function derivarNotificacoes({
 
     const etapas = etapasPorCaso.get(caso.id) ?? []
     const nome = nomeDoCaso(caso)
+
+    /*
+     * O NEW BORN ESPERANDO QUEM A EQUIPE MARCOU. Antes do corte de "minhas"
+     * logo abaixo: estas não dependem do nome no card. Resolver é apagar, como
+     * no resto: o envio marcado, o play, ou o ensaio mudar de coluna.
+     */
+    for (const etapa of etapas) {
+      if (etapa.tipo !== 'click_home' || etapa.status === 'concluida' || etapa.status === 'dispensada') continue
+      const base = {
+        tipo: 'new_born' as const,
+        peso: ORDEM.new_born,
+        urgente: false,
+        casoId: caso.id,
+        casoNome: nome,
+        fichaDaEtapa: etapa.id,
+        em: quando(etapa),
+      }
+      if (avisos.escolha && etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA && etapa.clickHomeEnviadoEm === null) {
+        lista.push({
+          ...base,
+          id: `new_born_escolha:${etapa.id}`,
+          titulo: 'Mandar o New Born para a família escolher',
+          detalhe: 'A galeria está pronta',
+        })
+      }
+      if (avisos.edicao && FASES_CLICK_HOME_A_EDITAR.has(etapa.faseClickHome) && etapa.status !== 'em_andamento') {
+        const selecao = etapa.faseClickHome === FASE_CLICK_HOME_SELECAO
+        lista.push({
+          ...base,
+          id: `new_born_edicao:${etapa.faseClickHome}:${etapa.id}`,
+          titulo: selecao ? 'Editar a seleção do New Born' : 'Editar o New Born',
+          detalhe: selecao ? 'A família escolheu as fotos' : 'Ensaio feito, aguardando a primeira edição',
+        })
+      }
+    }
+
     const enviado = caso.liberadoParaEntregaEm !== null
     const minhas = etapas.filter((e) => e.responsavelId === pessoaId)
     if (minhas.length === 0 && !etapas.some((e) => e.proximoResponsavelId === pessoaId)) continue

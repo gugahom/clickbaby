@@ -72,6 +72,7 @@ import { PagamentoDoClickHome } from './components/PagamentoDoClickHome'
 import { PrazoDaEtapa } from './components/PrazoDaEtapa'
 import { PedidosDaEtapa } from './components/PedidosDaEtapa'
 import { MensagemDoClickHome } from './components/MensagemDoClickHome'
+import { EnvioDoClickHome } from './components/EnvioDoClickHome'
 import { PilulaLinkDoFotolivro } from './components/LinkDoFotolivro'
 import { AcoesDaEtapa } from './components/AcoesDaEtapa'
 import { CampoBusca } from './components/CampoBusca'
@@ -94,6 +95,7 @@ import {
   FASES_CLICK_HOME_NA_TELA,
   FASE_CLICK_HOME_ESCOLHA,
   FASE_CLICK_HOME_ENTREGA,
+  FASE_CLICK_HOME_SELECAO,
   ROTULO_FASE_CLICK_HOME,
   FASES_VIDEO_NA_TELA,
   FASE_ALBUM_APROVACAO,
@@ -200,7 +202,12 @@ export function QuadroPage() {
    * efeito mexendo no histórico durante a renderização, e o ganho seria uma
    * barra de endereços mais curta.
    */
-  const casoEmFoco = useSearchParams()[0].get('caso')
+  const [parametros, setParametros] = useSearchParams()
+  const casoEmFoco = parametros.get('caso')
+  // A FICHA PELO ENDEREÇO (05/11/2026): o sino do New Born leva direto à ficha do
+  // ensaio, que tem os controles. Levar ao card não servia: com o caso encerrado
+  // ele não está em aba nenhuma de quem só opera.
+  const etapaDaFicha = parametros.get('ficha')
   /*
    * A ABA SEGUE O CASO EM FOCO. Uma notificação de caso já entregue abre a aba
    * Entregáveis; de caso encerrado, Concluídos. Sem isto o clique levaria a um
@@ -788,6 +795,21 @@ export function QuadroPage() {
    * está com o ensaio, o prazo combinado com a família, os pedidos dela e a
    * fase — mais a pílula que diz quando ele está parado em Entregáveis.
    */
+  const avancarClickHome = (
+    etapa: EtapaQuadro,
+    fase: FaseClickHome,
+    rotulo: string,
+    onErro: (mensagem: string | null) => void,
+  ) => ({
+    rotulo,
+    aoTocar: () => {
+      onErro(null)
+      moverClickHome
+        .mutateAsync({ casoEtapaId: etapa.id, fase })
+        .catch((e: unknown) => onErro(mensagemDeErro(e)))
+    },
+  })
+
   const controlesDoClickHome = (
     caso: CasoQuadro,
     etapa: EtapaQuadro,
@@ -803,6 +825,7 @@ export function QuadroPage() {
       {/* A mensagem da galeria para a família, com copiar (22/10/2026). */}
       <MensagemDoClickHome etapa={etapa} onErro={onErro} />
       <FaseDoClickHome etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
+      <EnvioDoClickHome etapa={etapa} onErro={onErro} />
       {etapa.faseClickHome === FASE_CLICK_HOME_ENTREGA && (
         <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
           Em Entregáveis
@@ -823,19 +846,14 @@ export function QuadroPage() {
                 rotulo: 'Galeria pronta — mandar para escolha',
                 aoTocar: () => setEnviandoClickHome({ etapa, caso }),
               }
-            : // NA ESCOLHA, o ✓ é "a família escolheu" (22/10/2026): leva para
-              // Pronto para entrega, que é o que põe o ensaio em Entregáveis.
+            : // NA ESCOLHA, o ✓ é "a família escolheu" e leva à edição do que
+              // ela escolheu (05/11/2026); NA SELEÇÃO, é o fim da edição, e o
+              // Pronto para entrega põe o ensaio em Entregáveis.
               etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA
-              ? {
-                  rotulo: 'A família escolheu — pronto para entrega',
-                  aoTocar: () => {
-                    onErro(null)
-                    moverClickHome
-                      .mutateAsync({ casoEtapaId: etapa.id, fase: FASE_CLICK_HOME_ENTREGA })
-                      .catch((e: unknown) => onErro(mensagemDeErro(e)))
-                  },
-                }
-              : null
+              ? avancarClickHome(etapa, FASE_CLICK_HOME_SELECAO, 'A família escolheu — editar seleção', onErro)
+              : etapa.faseClickHome === FASE_CLICK_HOME_SELECAO
+                ? avancarClickHome(etapa, FASE_CLICK_HOME_ENTREGA, 'Seleção editada — pronto para entrega', onErro)
+                : null
         }
       />
     </>
@@ -1663,24 +1681,34 @@ export function QuadroPage() {
       </div>
 
       {(() => {
-        if (!ficha) return null
-        const caso = data?.casos.find((c) => c.id === ficha.casoId)
-        const etapa = etapasPorCaso.get(ficha.casoId)?.find((e) => e.id === ficha.etapaId)
+        const aberta =
+          ficha ??
+          (() => {
+            if (!etapaDaFicha) return null
+            const dona = data?.casos.find((c) => etapasPorCaso.get(c.id)?.some((e) => e.id === etapaDaFicha))
+            return dona ? { casoId: dona.id, etapaId: etapaDaFicha, tipo: 'click_home' as const } : null
+          })()
+        if (!aberta) return null
+        const caso = data?.casos.find((c) => c.id === aberta.casoId)
+        const etapa = etapasPorCaso.get(aberta.casoId)?.find((e) => e.id === aberta.etapaId)
         if (!caso || !etapa) return null
         return (
           <FichaDaEdicao
             caso={caso}
             etapa={etapa}
-            tipo={ficha.tipo}
+            tipo={aberta.tipo}
             hoje={hoje}
             controles={(onErro) =>
-              ficha.tipo === 'master'
+              aberta.tipo === 'master'
                 ? controlesDoMaster(caso, etapa, onErro)
-                : ficha.tipo === 'fotolivro'
+                : aberta.tipo === 'fotolivro'
                   ? controlesDoFotolivro(caso, etapa, onErro)
                   : controlesDoClickHome(caso, etapa, onErro)
             }
-            onFechar={() => setFicha(null)}
+            onFechar={() => {
+              setFicha(null)
+              if (etapaDaFicha) setParametros({}, { replace: true })
+            }}
           />
         )
       })()}

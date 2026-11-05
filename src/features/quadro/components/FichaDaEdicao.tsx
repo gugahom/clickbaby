@@ -106,8 +106,17 @@ export function FichaDaEdicao({
             {tipo === 'click_home' && etapa.faseClickHome === 'enviar_para_escolha' && (
               <Bloco titulo="Escolha da família">
                 <p className="text-sm font-medium">
-                  Galeria enviada — esperando a família escolher as fotos. Quando ela escolher, leve o
-                  ensaio para “Pronto para entrega”: é aí que ele vai para a aba Entregáveis.
+                  {etapa.clickHomeEnviadoEm
+                    ? `Enviada à família${etapa.clickHomeEnviadoPorNome ? ` por ${etapa.clickHomeEnviadoPorNome}` : ''} em ${formatarDataHora(etapa.clickHomeEnviadoEm)}. Quando ela escolher, leve o ensaio para “Editar seleção”.`
+                    : 'Galeria pronta — falta mandar para a família escolher as fotos. Depois de mandar, aperte “Marcar enviado à família”.'}
+                </p>
+              </Bloco>
+            )}
+            {tipo === 'click_home' && etapa.faseClickHome === 'editar_selecao' && (
+              <Bloco titulo="Edição da seleção">
+                <p className="text-sm font-medium">
+                  A família escolheu as fotos. Agora é a edição final; quando terminar, leve o ensaio
+                  para “Pronto para entrega”: é aí que ele vai para a aba Entregáveis.
                 </p>
               </Bloco>
             )}

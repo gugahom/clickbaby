@@ -322,6 +322,7 @@ const RPCS_TRANSICAO = {
   venda_no_periodo: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_de: null, p_ate: null },
   definir_contrato_do_caso: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_url: null },
   definir_mensagem_do_click_home: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000', p_mensagem: null },
+  marcar_click_home_enviado: { p_caso_etapa_id: '00000000-0000-0000-0000-000000000000' },
   agendar_etapa: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_previsao_em: null,

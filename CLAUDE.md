@@ -398,13 +398,14 @@ enviar_video_para_entrega(p_caso_etapa_id, p_link_video, p_link_wetransfer) -- 2
 enviar_video_nos_links_do_caso(p_caso_etapa_id)  -- pronto SEM par novo: o vídeo foi para os links do caso (29/09/2026)
 confirmar_entrega_do_video(p_caso_etapa_id)      -- conclui, em Entregáveis; atendimento/adm
 
--- esteira do ensaio CLICK HOME (8 fases desde 22/10/2026; ver seção 13)
+-- esteira do ensaio CLICK HOME (9 fases desde 05/11/2026; ver seção 13)
 mover_click_home(p_caso_etapa_id, p_fase)        -- escreve fase E status juntos
 agendar_click_home(p_caso_etapa_id, p_quando)    -- dia e hora do ensaio + fase "agendado" (13/10/2026)
 registrar_pagamento_do_click_home(p_caso_etapa_id, p_pagamento) -- pago / a cobrar; atendimento/adm (13/10/2026)
 enviar_click_home_para_escolha(p_caso_etapa_id, p_link) -- link da galeria + fase
 confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm; só de "pronto para entrega"
 definir_mensagem_do_click_home(p_caso_etapa_id, p_mensagem) -- a mensagem da galeria para a família; qualquer pessoa ativa (22/10/2026)
+marcar_click_home_enviado(p_caso_etapa_id)       -- "Enviado à família", só na escolha; qualquer pessoa ativa (05/11/2026)
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
@@ -1532,6 +1533,25 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   "Mensagem" vira **"Copiar mensagem"** quando há texto — um toque copia —, com o lápis ao lado
   para trocar (`MensagemDoClickHome.tsx`). Por ter senha, o evento diz só `tem_mensagem`, nunca o
   texto, como o link de entrega.
+  **"EDITAR SELEÇÃO" E O SINO DO NEW BORN** (05/11/2026, pedido do gestor, migrations
+  `20261105120001` e `20261105120002`). A primeira edição é só uma pré-seleção: faltava a coluna
+  da edição de verdade, entre a escolha da família e o Pronto para entrega. Ela exige o link da
+  galeria e CHEGA PAUSADA, porque quem move o card é quem fala com a família: o relógio corre no
+  play. Na escolha, o ✓ virou "A família escolheu — editar seleção"; na seleção, "Seleção editada
+  — pronto para entrega". O seletor continua livre, como no resto da esteira: a ordem é a do ✓, e
+  o banco não proíbe pular.
+  **"ENVIADO À FAMÍLIA"** é `caso_etapas.click_home_enviado_em/_por`, por
+  `marcar_click_home_enviado`: na coluna da escolha o card fica parado dias, e a fase sozinha não
+  separa "falta mandar" de "a família está escolhendo". O ensaio não muda de coluna. Galeria nova
+  zera o carimbo (`enviar_click_home_para_escolha`, e não `mover_click_home`, que sai sem escrever
+  quando a fase não muda).
+  **QUEM O SINO CHAMA é marca na pessoa** (decisão do gestor): `pessoas.avisa_escolha_new_born` e
+  `avisa_edicao_new_born`, na caixa "Sino do New Born" do Gerenciar da Equipe. Sem nome no código,
+  e não é a volta do trabalho do papel que saiu em 01/10: é a gestão apontando uma pessoa. A
+  primeira chama enquanto a galeria não foi enviada; a segunda em "Aguardando edição" e em "Editar
+  seleção", até o play (e de novo se pausar). As marcas nascem desligadas, e a mudança vale para a
+  pessoa ao recarregar. O clique leva à ficha (`/?ficha=<etapa>`), não ao card: com o caso
+  encerrado, o card não está em aba nenhuma de quem só opera.
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
   **desde 26/10/2026 também no título que o SISTEMA escreve no Google** ("BASIC REELS + NEW
   BORN"): o detalhe do parto vai num print para a família depois da reserva, e "click home" a

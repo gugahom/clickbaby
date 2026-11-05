@@ -100,6 +100,8 @@ export type Database = {
           cartao_foto: string | null
           cartao_video: string | null
           caso_id: string
+          click_home_enviado_em: string | null
+          click_home_enviado_por: string | null
           concluido_em: string | null
           created_at: string
           estacao: string | null
@@ -139,6 +141,8 @@ export type Database = {
           cartao_foto?: string | null
           cartao_video?: string | null
           caso_id: string
+          click_home_enviado_em?: string | null
+          click_home_enviado_por?: string | null
           concluido_em?: string | null
           created_at?: string
           estacao?: string | null
@@ -180,6 +184,8 @@ export type Database = {
           cartao_foto?: string | null
           cartao_video?: string | null
           caso_id?: string
+          click_home_enviado_em?: string | null
+          click_home_enviado_por?: string | null
           concluido_em?: string | null
           created_at?: string
           estacao?: string | null
@@ -262,6 +268,13 @@ export type Database = {
             columns: ["caso_id"]
             isOneToOne: false
             referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caso_etapas_click_home_enviado_por_fkey"
+            columns: ["click_home_enviado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
             referencedColumns: ["id"]
           },
           {
@@ -1177,6 +1190,8 @@ export type Database = {
           apelidos: string[]
           ativo: boolean
           auth_user_id: string | null
+          avisa_edicao_new_born: boolean
+          avisa_escolha_new_born: boolean
           created_at: string
           foto_path: string | null
           id: string
@@ -1190,6 +1205,8 @@ export type Database = {
           apelidos?: string[]
           ativo?: boolean
           auth_user_id?: string | null
+          avisa_edicao_new_born?: boolean
+          avisa_escolha_new_born?: boolean
           created_at?: string
           foto_path?: string | null
           id?: string
@@ -1203,6 +1220,8 @@ export type Database = {
           apelidos?: string[]
           ativo?: boolean
           auth_user_id?: string | null
+          avisa_edicao_new_born?: boolean
+          avisa_escolha_new_born?: boolean
           created_at?: string
           foto_path?: string | null
           id?: string
@@ -1885,6 +1904,10 @@ export type Database = {
         Args: { p_chave: string; p_filtros: Json }
         Returns: string[]
       }
+      marcar_click_home_enviado: {
+        Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
       marcar_despesa_ressarcida: {
         Args: { p_despesa_id: string; p_ressarcida: boolean }
         Returns: undefined
@@ -2418,6 +2441,7 @@ export type Database = {
         | "editando"
         | "criar_galeria"
         | "enviar_para_escolha"
+        | "editar_selecao"
         | "pronto_para_entrega"
         | "finalizado"
       fase_comercial: "apresentar" | "enviado" | "recusou" | "vendido"
@@ -2674,6 +2698,7 @@ export const Constants = {
         "editando",
         "criar_galeria",
         "enviar_para_escolha",
+        "editar_selecao",
         "pronto_para_entrega",
         "finalizado",
       ],

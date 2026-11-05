@@ -23,6 +23,7 @@ import {
 import { EscalaDaPessoa } from './EscalaDaPessoa'
 import { somarDia, useEscalaDaPessoa } from '../api/useEscala'
 import { TelasDaPessoa } from './TelasDaPessoa'
+import { AvisosDaPessoa } from './AvisosDaPessoa'
 import {
   COR_LUGAR,
   PAPEIS,
@@ -142,6 +143,7 @@ function GerenciarPessoa({
         <div className="grid gap-4 p-4 md:grid-cols-2 md:items-start md:p-5">
           <div className="space-y-4">
             <TelasDaPessoa pessoa={pessoa} />
+            <AvisosDaPessoa pessoa={pessoa} />
           </div>
           <div className="space-y-4">
             <EscalaDaPessoa pessoa={pessoa} />
