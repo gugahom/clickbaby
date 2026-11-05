@@ -176,6 +176,13 @@ export interface EtapaQuadro {
    */
   mensagemClickHome: string | null
   /**
+   * Quando a galeria foi mandada à família (05/11/2026). Nulo com a fase na
+   * escolha = falta mandar, e o sino chama.
+   */
+  clickHomeEnviadoEm: string | null
+  /** Quem mandou — a ficha diz "enviada por". */
+  clickHomeEnviadoPorNome: string | null
+  /**
    * QUANTOS ANEXOS os pedidos do cliente têm (13/10/2026) — foto, vídeo,
    * música, PDF. Só o número, contado pelo banco na mesma consulta; a lista
    * se busca quando alguém abre os pedidos. Zero fora das etapas com "Pedidos".
@@ -338,6 +345,7 @@ type LinhaEtapaComResponsavel = LinhaEtapa & {
   baixou: { nome: string } | null
   subiu: { nome: string } | null
   fotolivro_enviado: { nome: string } | null
+  click_home_enviado: { nome: string } | null
   anexos_da_etapa: { count: number }[]
 }
 
@@ -360,6 +368,8 @@ export function normalizarEtapa(linha: LinhaEtapaComResponsavel): EtapaQuadro {
     faseClickHome: linha.fase_click_home,
     pagamentoClickHome: linha.pagamento_click_home,
     mensagemClickHome: linha.mensagem_click_home,
+    clickHomeEnviadoEm: linha.click_home_enviado_em,
+    clickHomeEnviadoPorNome: linha.click_home_enviado?.nome ?? null,
     anexos: linha.anexos_da_etapa[0]?.count ?? 0,
     faseCampo: linha.fase_campo,
     faseCampoEm: linha.fase_campo_em,
@@ -736,8 +746,11 @@ export const FASES_CLICK_HOME = [
   'editando',
   'criar_galeria',
   'enviar_para_escolha',
-  // A FAMÍLIA ESCOLHEU (22/10/2026, pedido do gestor): o fim que o Foto/Livro
-  // já tinha. É daqui, e não da escolha, que o ensaio vai para Entregáveis.
+  // A EDIÇÃO DE VERDADE (05/11/2026, pedido do gestor): a primeira edição é só
+  // uma pré-seleção, e o que a família escolheu ainda precisa ser editado.
+  'editar_selecao',
+  // O fim que o Foto/Livro já tinha (22/10/2026). É daqui, e não da escolha,
+  // que o ensaio vai para Entregáveis.
   'pronto_para_entrega',
   'finalizado',
 ] as const
@@ -754,6 +767,12 @@ export const FASES_CLICK_HOME_NA_TELA: readonly FaseClickHome[] =
 
 /** A fase em que o ensaio entra só pelo diálogo do link da galeria. */
 export const FASE_CLICK_HOME_ESCOLHA: FaseClickHome = 'enviar_para_escolha'
+
+/** A fase depois da escolha da família: a edição do que ela escolheu. */
+export const FASE_CLICK_HOME_SELECAO: FaseClickHome = 'editar_selecao'
+
+/** As fases em que o ensaio espera quem edita — o sino chama até o play. */
+export const FASES_CLICK_HOME_A_EDITAR = new Set<FaseClickHome | null>(['aguardando_edicao', FASE_CLICK_HOME_SELECAO])
 
 /**
  * A fase que põe o ensaio em Entregáveis (22/10/2026). Até aqui era a escolha —
@@ -778,6 +797,7 @@ export const ROTULO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
   editando: 'Editando',
   criar_galeria: 'Criar galeria online',
   enviar_para_escolha: 'Enviar para escolha',
+  editar_selecao: 'Editar seleção',
   pronto_para_entrega: 'Pronto para entrega',
   finalizado: 'Finalizado',
 }
@@ -793,6 +813,8 @@ export const ESTILO_FASE_CLICK_HOME: Record<FaseClickHome, string> = {
   criar_galeria: 'bg-andamento/12 text-andamento-tinta',
   // Esperando a família escolher: bola de fora, cor neutra.
   enviar_para_escolha: 'bg-pronto-fundo text-pronto border border-pronto-borda',
+  // A família escolheu e a bola voltou para a EQUIPE, como em "Aguardando edição".
+  editar_selecao: 'bg-atencao/15 text-atencao-tinta',
   // Esperando o ADM confirmar a entrega: a cor do "pronto" do Foto/Livro.
   pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',
   finalizado: 'bg-pronto-fundo text-pronto border border-pronto-borda',

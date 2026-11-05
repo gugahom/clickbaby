@@ -135,6 +135,30 @@ export function useDefinirTelas() {
   })
 }
 
+/** As marcas do sino do New Born. Cadastro, como as telas. */
+export function useDefinirAvisoNewBorn() {
+  const qc = useQueryClient()
+  const reler = useRelerSeForEu()
+
+  return useMutation({
+    mutationFn: async ({
+      pessoaId,
+      coluna,
+      ligado,
+    }: Alvo & { coluna: 'avisa_escolha_new_born' | 'avisa_edicao_new_born'; ligado: boolean }) => {
+      const { error } = await supabase
+        .from('pessoas')
+        .update(coluna === 'avisa_escolha_new_born' ? { avisa_escolha_new_born: ligado } : { avisa_edicao_new_born: ligado })
+        .eq('id', pessoaId)
+      if (error) throw error
+    },
+    onSuccess: (_r, { pessoaId }) => {
+      invalidar(qc)
+      reler(pessoaId)
+    },
+  })
+}
+
 /**
  * A FOTO DE OUTRA PESSOA, pela Equipe. O arquivo vai para
  * `avatares/equipe/<pessoa_id>/`, a pasta que a policy da Equipe abre, e o

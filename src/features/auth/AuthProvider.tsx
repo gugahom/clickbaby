@@ -27,7 +27,7 @@ import { ContextoAuth, type EstadoAuth, type PessoaLogada } from './contexto'
 async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
   const completa = await supabase
     .from('pessoas')
-    .select('id, nome, papel_sistema, foto_path, telas')
+    .select('id, nome, papel_sistema, foto_path, telas, avisa_escolha_new_born, avisa_edicao_new_born')
     .eq('auth_user_id', authUserId)
     .maybeSingle()
 
@@ -38,6 +38,8 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
       papelSistema: completa.data.papel_sistema,
       fotoPath: completa.data.foto_path,
       telas: completa.data.telas,
+      avisaEscolhaNewBorn: completa.data.avisa_escolha_new_born,
+      avisaEdicaoNewBorn: completa.data.avisa_edicao_new_born,
     }
   }
 
@@ -59,6 +61,8 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
     papelSistema: minima.data.papel_sistema,
     fotoPath: null,
     telas: null,
+    avisaEscolhaNewBorn: false,
+    avisaEdicaoNewBorn: false,
   }
 }
 

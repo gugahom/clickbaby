@@ -38,6 +38,7 @@ const TETO = 30
 const ICONE: Record<TipoNotificacao, (props: { className: string }) => ReactNode> = {
   atribuida: IconeAtribuir,
   horario: IconeRelogio,
+  new_born: IconeAtribuir,
   prazo: IconeCalendario,
   alteracao_minha: IconeReabrir,
   rendicao: IconeRendicao,
@@ -89,7 +90,8 @@ function quandoRelativo(em: string, agora: Date): string | null {
  *      elas as abas e o botão: sobrou uma lista só, toda ela esperando por
  *      quem abre. A coluna `gerais_limpas_em` e a RPC de limpar ficaram no
  *      banco, sem uso.
- *   3. CLICAR LEVA AO CASO (`/?caso=`), que o Quadro abre e destaca.
+ *   3. CLICAR LEVA AO CASO (`/?caso=`), que o Quadro abre e destaca — ou, no
+ *      New Born, à ficha do ensaio (`/?ficha=`).
  *
  */
 export function Sino() {
@@ -134,6 +136,7 @@ export function Sino() {
     casos: data?.casos ?? [],
     etapasPorCaso: data?.etapasPorCaso ?? new Map(),
     pessoaId: pessoa?.id ?? null,
+    avisos: { escolha: pessoa?.avisaEscolhaNewBorn ?? false, edicao: pessoa?.avisaEdicaoNewBorn ?? false },
     agora,
   })
 
@@ -192,7 +195,7 @@ export function Sino() {
     // O Quadro lê `?caso=` e abre o card, seja em que aba ele estiver — ver
     // QuadroPage. Query e não rota própria: o caso não tem tela, ele tem um
     // lugar DENTRO do Quadro.
-    void navegar(`/?caso=${n.casoId}`)
+    void navegar(n.fichaDaEtapa ? `/?ficha=${n.fichaDaEtapa}` : `/?caso=${n.casoId}`)
   }
 
   return (

@@ -178,7 +178,7 @@ async function buscarEtapas(ids: string[]): Promise<Map<string, EtapaQuadro[]>> 
           // `anexos_da_etapa(count)` é só o NÚMERO de anexos dos pedidos
           // (13/10/2026), contado pelo banco — a lista vem quando alguém abre.
           .select(
-            '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome), fotolivro_enviado:pessoas!caso_etapas_fotolivro_enviado_por_fkey(nome), anexos_da_etapa(count)',
+            '*, responsavel:pessoas!caso_etapas_responsavel_id_fkey(nome), proximo_responsavel:pessoas!caso_etapas_proximo_responsavel_id_fkey(nome), baixou:pessoas!caso_etapas_baixou_por_fkey(nome), subiu:pessoas!caso_etapas_subiu_por_fkey(nome), fotolivro_enviado:pessoas!caso_etapas_fotolivro_enviado_por_fkey(nome), click_home_enviado:pessoas!caso_etapas_click_home_enviado_por_fkey(nome), anexos_da_etapa(count)',
             { count: 'exact' },
           )
           .in('caso_id', lote)

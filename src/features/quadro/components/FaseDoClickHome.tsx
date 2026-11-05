@@ -25,7 +25,7 @@ import { DialogoAgendarEnsaio } from './AgendamentoDoClickHome'
  * vai agora"), não sobre carga por coluna. A pílula é o alvo; trocar é abrir a
  * lista.
  *
- * O FIM NÃO SE ESCOLHE AQUI. A última fase do seletor é "Enviar para escolha",
+ * O FIM NÃO SE ESCOLHE AQUI. A última fase do seletor é "Pronto para entrega",
  * e ela não conclui nada: o ensaio aparece em Entregáveis e espera a Morgana
  * confirmar. Ver FASES_CLICK_HOME_NA_TELA.
  *

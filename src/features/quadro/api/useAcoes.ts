@@ -203,6 +203,16 @@ export function useDefinirMensagemDoClickHome() {
   )
 }
 
+/**
+ * "ENVIADO À FAMÍLIA" (05/11/2026): a galeria foi mandada, e o sino de quem faz
+ * esse meio de campo apaga. O ensaio fica na coluna até a família escolher.
+ */
+export function useMarcarClickHomeEnviado() {
+  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
+    chamar('marcar_click_home_enviado', { p_caso_etapa_id: casoEtapaId }),
+  )
+}
+
 export function useMoverClickHome() {
   return useAcaoDoQuadro<{ casoEtapaId: string; fase: FaseClickHome }>(
     ({ casoEtapaId, fase }) =>

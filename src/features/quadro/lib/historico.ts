@@ -330,6 +330,9 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
     case 'click_home_para_escolha':
       return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
 
+    case 'click_home_enviado_a_familia':
+      return { ...base, acao: 'Enviou a galeria do New Born à família', tom: 'marco' }
+
     case 'click_home_entregue':
       return { ...base, acao: 'Finalizou o New Born', tom: 'marco' }
 
