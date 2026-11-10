@@ -562,6 +562,28 @@ export function podeCancelar(
 }
 
 /**
+ * VOLTAR PARA A AGENDA (10/11/2026) — espelho das recusas de
+ * `devolver_para_a_agenda`: só o que ainda está no dia e cujo bebê não nasceu.
+ */
+export function podeVoltarParaAgenda(
+  caso: CasoQuadro,
+  etapas: EtapaQuadro[],
+  papelSistema: string,
+): Disponibilidade {
+  if (!podeEncerrarCaso(papelSistema)) {
+    return { habilitada: false, motivo: 'Só atendimento ou gestão.' }
+  }
+  if (caso.ehTerminal) return { habilitada: false, motivo: 'Caso já encerrado ou cancelado.' }
+  if (caso.liberadoParaEntregaEm !== null) return { habilitada: false, motivo: 'Já foi para Entregáveis.' }
+  if (caso.naUti) return { habilitada: false, motivo: 'Retorne da UTI antes.' }
+  if (caso.ehRascunho) return { habilitada: false, motivo: 'Confirme o pacote e a maternidade antes.' }
+  if (etapas.some((e) => (e.tipo === 'nascimento' || e.tipo === 'acompanhamento') && e.status === 'concluida')) {
+    return { habilitada: false, motivo: 'O bebê já nasceu.' }
+  }
+  return OK
+}
+
+/**
  * Os dois textos que SÓ o sync grava ao cancelar — espelho literal de
  * `sync_cancelar_caso` e `sync_upsert_caso`, e da checagem em
  * `restaurar_caso_cancelado_pelo_sync`. É o que separa "o evento sumiu do

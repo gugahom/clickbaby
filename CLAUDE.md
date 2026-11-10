@@ -445,6 +445,7 @@ devolver_para_o_quadro(p_caso_id, p_motivo)             -- tira de Entregáveis;
 liberar_para_entrega(p_caso_id)                         -- envia para a aba Entregas
 confirmar_entrega(p_caso_id)                            -- encerra; atendimento/adm
 cancelar_caso(p_caso_id, p_motivo)                      -- atendimento/adm
+devolver_para_a_agenda(p_caso_id, p_previsao_em, p_sem_hora, p_motivo) -- o bebê não nasceu no dia; atendimento/adm (10/11/2026)
 reabrir_caso(p_caso_id, p_motivo, p_etapas)             -- traz de volta um encerrado
 
 -- sino do cabeçalho (17/09/2026; ver seção 13)
@@ -2117,6 +2118,21 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `caso_etapas_fase_campo_valida` e no espelho `FASES_DA_ETAPA` da tela — muda nos dois ou em
   nenhum. Estender para banho e fechamento é uma regra que ninguém deu.
 - **Rascunho descartado** some do Quadro inteiro, sem poluir Concluídos.
+- **O CASO VOLTA PARA A AGENDA** (10/11/2026, pedido do gestor, migration `20261110120001`).
+  "Já foi feita a entrada, foi feito até despesas com ele, só que o bebê não vai nascer hoje": a
+  mãe vai para casa e volta outro dia. Sem caminho próprio o caso ficava ATRASADO no dia antigo, e
+  cancelar apagaria o que já aconteceu. "Voltar para a agenda", ao lado de "Cancelar caso" no card
+  (atendimento ou adm, o mesmo par), pede o dia novo — depois de hoje —, a hora (em branco = hora a
+  definir) e um motivo opcional. `devolver_para_a_agenda` muda o DIA e deixa o resto: etapas,
+  despesas, links, venda e histórico ficam; o Google acompanha pela trigger de sempre; o
+  nascimento previsto (`cesarea_em`) anda os mesmos dias; o caso sai do Quadro e volta na véspera.
+  **Toda etapa em andamento PAUSA** (os dias em casa não são trabalho, seção 9) e **a ENTRADA
+  CONCLUÍDA volta para ser refeita** (decisão do gestor) — PAUSADA, com o início mantido: no dia
+  novo é "retomar", e o relógio soma as duas idas sem os dias em casa, o mesmo argumento de
+  `reabrir_etapa`. Não grava `etapa_reaberta`, que é o "voltou para ajuste" do relatório. Recusa
+  terminal, enviado, UTI, rascunho e caso cujo bebê já nasceu; o botão só aparece quando dá.
+  Uma conta conhecida: a fase de campo declarada antes (ex.: "Aguardando internamento") segue até
+  a próxima declaração, e nas métricas das fases ela leva os dias em casa junto.
 - **O RESPONSÁVEL EM DESTAQUE na trilha do card** (15/09/2026, pedido do gestor, em DUAS
   voltas no mesmo dia). EM ANDAMENTO, o nome aparece com as INICIAIS num círculo azul sólido e
   o primeiro nome em negrito extra, na cor principal do texto — na fita completa e no resumo

@@ -1836,6 +1836,15 @@ export type Database = {
         Args: { p_caso_id: string; p_retorno_em: string }
         Returns: undefined
       }
+      devolver_para_a_agenda: {
+        Args: {
+          p_caso_id: string
+          p_motivo?: string
+          p_previsao_em: string
+          p_sem_hora?: boolean
+        }
+        Returns: undefined
+      }
       devolver_para_o_quadro: {
         Args: { p_caso_id: string; p_motivo: string }
         Returns: undefined

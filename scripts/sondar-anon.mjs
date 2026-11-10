@@ -105,6 +105,10 @@ const RPCS_TRANSICAO = {
     p_observacao: null,
   },
   liberar_para_entrega: { p_caso_id: '00000000-0000-0000-0000-000000000000' },
+  devolver_para_a_agenda: {
+    p_caso_id: '00000000-0000-0000-0000-000000000000',
+    p_previsao_em: '2099-01-01T08:00:00-03:00',
+  },
   devolver_para_o_quadro: {
     p_caso_id: '00000000-0000-0000-0000-000000000000',
     p_motivo: 'sonda',

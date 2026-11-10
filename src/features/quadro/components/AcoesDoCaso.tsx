@@ -26,6 +26,7 @@ import {
 import { DialogoConfirmarEntrega } from './DialogoConfirmarEntrega'
 import { DialogoExcluirAviso } from './DialogoExcluirAviso'
 import { DialogoPessoa } from './DialogoPessoa'
+import { DialogoVoltarParaAgenda } from './DialogoVoltarParaAgenda'
 import { CampoEstacao } from './CampoEstacao'
 import { FaseDeCampo } from './FaseDeCampo'
 import { MaterialDoAcompanhamento } from './MaterialDoAcompanhamento'
@@ -54,6 +55,7 @@ import {
 import {
   podeAtribuir,
   podeCancelar,
+  podeVoltarParaAgenda,
   podeConcluir,
   podeLiberarParaEntrega,
   podeIniciar,
@@ -122,6 +124,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   const [erro, setErro] = useState<string | null>(null)
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
+  const [voltandoParaAgenda, setVoltandoParaAgenda] = useState(false)
   const [handoffDe, setHandoffDe] = useState<EtapaQuadro | null>(null)
   const [atribuirDe, setAtribuirDe] = useState<EtapaQuadro | null>(null)
   const [rendicaoDe, setRendicaoDe] = useState<EtapaQuadro | null>(null)
@@ -172,6 +175,7 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
   // de envio, que também deixa registrá-lo ali mesmo. Ver podeLiberarParaEntrega.
   const envio = podeLiberarParaEntrega(caso, etapas)
   const cancelamento = podeCancelar(caso, papel)
+  const voltaParaAgenda = podeVoltarParaAgenda(caso, etapas, papel)
   const vaiParaUti = podeMoverParaUti(caso)
   const voltaDaUti = podeRetornarDaUti(caso)
   const adicao = podeAdicionarEtapa(caso, etapas)
@@ -820,6 +824,22 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
           </Botao>
         )}
 
+        {/* VOLTAR PARA A AGENDA (10/11/2026): o bebê não nasceu no dia. Fica ao
+            lado de cancelar, como o gestor pediu — e não é um cancelamento:
+            nada se perde, o caso só muda de dia. */}
+        {mostraAcoesDeCaso && voltaParaAgenda.habilitada && (
+          <Botao
+            variante="contorno"
+            onClick={() => {
+              setErro(null)
+              setVoltandoParaAgenda(true)
+            }}
+            disabled={ocupado}
+          >
+            Voltar para a agenda
+          </Botao>
+        )}
+
         {mostraAcoesDeCaso && (
           <Botao
             variante="fantasma"
@@ -836,9 +856,13 @@ export function AcoesDoCaso({ caso, etapas }: PropsAcoes) {
         )}
 
         <span className="text-xs text-muted-foreground">
-          Encerram o caso — sem desfazer.
+          Enviar e cancelar encerram o caso — sem desfazer.
         </span>
       </div>
+
+      {voltandoParaAgenda && (
+        <DialogoVoltarParaAgenda caso={caso} etapas={etapas} onFechar={() => setVoltandoParaAgenda(false)} />
+      )}
 
       {observacaoDe && (
         <DialogoObservacao
