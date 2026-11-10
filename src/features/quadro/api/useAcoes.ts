@@ -609,6 +609,22 @@ export function usePedirAlteracaoDaEtapa() {
   )
 }
 
+/**
+ * O CASO VOLTA PARA A AGENDA (10/11/2026): o bebê não nasceu no dia. Muda o dia
+ * e leva tudo junto — ver `devolver_para_a_agenda`.
+ */
+export function useDevolverParaAgenda() {
+  return useAcaoDoQuadro<{ casoId: string; previsaoEm: string; semHora: boolean; motivo?: string }>(
+    ({ casoId, previsaoEm, semHora, motivo }) =>
+      chamar('devolver_para_a_agenda', {
+        p_caso_id: casoId,
+        p_previsao_em: previsaoEm,
+        p_sem_hora: semHora,
+        ...(motivo ? { p_motivo: motivo } : {}),
+      }),
+  )
+}
+
 export function useCancelarCaso() {
   return useAcaoDoQuadro<{ casoId: string; motivo: string }>(({ casoId, motivo }) =>
     chamar('cancelar_caso', { p_caso_id: casoId, p_motivo: motivo }),

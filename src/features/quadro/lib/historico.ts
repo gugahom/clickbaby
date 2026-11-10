@@ -13,7 +13,7 @@ import {
   type TermoStatus,
 } from '../types'
 import { ROTULO_TERMO } from './termo'
-import { formatarMoeda } from '@/lib/formato'
+import { formatarData, formatarMoeda } from '@/lib/formato'
 import { ROTULO_ITEM_DE_VENDA, type ItemDeVenda } from '@/features/vendas/lib/vendas'
 
 export interface EventoHistorico {
@@ -329,6 +329,12 @@ export function descreverEvento(evento: EventoHistorico): LinhaHistorico {
 
     case 'click_home_para_escolha':
       return { ...base, acao: 'Mandou a galeria do New Born para escolha', tom: 'marco' }
+
+    case 'caso_voltou_para_a_agenda': {
+      const nova = texto(evento.payload, 'previsao_nova')
+      const quando = nova ? formatarData(nova) : null
+      return { ...base, acao: quando ? `Voltou o caso para a agenda · ${quando}` : 'Voltou o caso para a agenda', tom: 'marco' }
+    }
 
     case 'click_home_enviado_a_familia':
       return { ...base, acao: 'Enviou a galeria do New Born à família', tom: 'marco' }
