@@ -2334,6 +2334,13 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   etapas com relógio), com a proporção. **É ESCALA PLANEJADA, NÃO PONTO** (seção 9): a frase do
   bloco diz o que a conta não pega — campo registrado depois, deslocamento, tempo entre etapas —
   e que campo em paralelo conta duas vezes, porque a leitura crua seria injusta com quem fotografa.
+  **O PLANTÃO ABRE O QUE FOI FEITO NELE** (11/11/2026, pedido do gestor: "o que a pessoa fez no
+  plantão, qual foi a produção dela"). Na escala do Gerenciar, a chave "Próximos · Anteriores" (as
+  últimas quatro semanas) e o toque num plantão abrem `ProducaoDoPlantao`: as etapas que ela
+  CONCLUIU dentro do horário, somadas por tipo ("2 Nascimento, 2 Reels") e listadas com a hora e o
+  caso, e à parte as que ela COMEÇOU ali e ficaram abertas. Crédito do RESPONSÁVEL, como no
+  relatório interno. Sem migration: `caso_etapas` já é legível por pessoa ativa. Campo registrado
+  depois do fim do plantão fica fora — o resumo diz isso.
 - **Equipe** (`/quadro/equipe`), de quem tem a tela Equipe. Desde 30/09/2026 a ficha também
   muda FOTO (pasta `avatares/equipe/<pessoa_id>/`, `definir_foto_da_pessoa`) e NOME/APELIDO de
   qualquer pessoa, as TELAS e a ESCALA — ver os dois itens acima —, e os grupos "Sem acesso" e
