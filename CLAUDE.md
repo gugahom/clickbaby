@@ -1563,9 +1563,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `mover_click_home` recusa o pronto sem eles; `confirmar_entrega_do_click_home` confirma os três
   links. Os três caminhos da tela (seletor, arrastar e o ✓ "Seleção editada") abrem
   `DialogoLinksDoNewBorn`, e a linha do New Born em Entregáveis mostra a galeria e os dois.
-  **O NÚMERO DA SEÇÃO É O DOS AGENDADOS**: o disco da coluna da direita e a aba do celular contam
-  só os ensaios na fase "Agendado" (`contador` em `PainelLateral`/`SecaoEmModal`); a lista e o
-  subtítulo do modal ("3 casos · 1 agendado") continuam com todos.
+  **O NÚMERO DA SEÇÃO É DO "AGENDADO" EM DIANTE**: o disco da coluna da direita e a aba do
+  celular contam os ensaios de "Agendado" até "Pronto para entrega" — só o "A agendar" (e o sem
+  fase, que é ele) fica fora (`contador` em `PainelLateral`/`SecaoEmModal`; a primeira versão,
+  no mesmo dia, contava só "Agendado", e o gestor corrigiu). A lista e o subtítulo do modal
+  ("3 casos · 2 já agendados") continuam com todos.
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
   **desde 26/10/2026 também no título que o SISTEMA escreve no Google** ("BASIC REELS + NEW
   BORN"): o detalhe do parto vai num print para a família depois da reserva, e "click home" a
