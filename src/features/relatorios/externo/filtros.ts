@@ -144,6 +144,8 @@ export const ROTULO_DO_LINK: Record<TipoDeLink, string> = {
   video: 'Vídeo',
   video_wetransfer: 'WeTransfer do vídeo',
   click_home: 'Galeria do New Born',
+  click_home_google: 'Google Fotos do New Born',
+  click_home_wetransfer: 'WeTransfer do New Born',
   google_drive: 'Google Drive',
 }
 

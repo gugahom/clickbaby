@@ -8,12 +8,14 @@ import { mensagemDeErro } from '../lib/erros'
 import {
   ESTILO_FASE_CLICK_HOME,
   FASES_CLICK_HOME_NA_TELA,
+  FASE_CLICK_HOME_ENTREGA,
   FASE_CLICK_HOME_ESCOLHA,
   ROTULO_FASE_CLICK_HOME,
   type EtapaQuadro,
   type FaseClickHome,
 } from '../types'
 import { DialogoGaleriaDoClickHome } from './DialogoGaleriaDoClickHome'
+import { DialogoLinksDoNewBorn } from './DialogoLinksDoNewBorn'
 import { DialogoAgendarEnsaio } from './AgendamentoDoClickHome'
 
 /**
@@ -31,6 +33,9 @@ import { DialogoAgendarEnsaio } from './AgendamentoDoClickHome'
  *
  * "ENVIAR PARA ESCOLHA" ABRE UM DIÁLOGO, porque sem o link da galeria a fase
  * não significa nada — e o banco recusa sem ele.
+ *
+ * "PRONTO PARA ENTREGA" TAMBÉM ABRE UM (11/11/2026): o Google Fotos e o
+ * WeTransfer do New Born, obrigatórios.
  *
  * SEM FASE CONTA COMO "A AGENDAR" (13/10/2026): estar na seção sem fase é ser um
  * New Born vendido que ninguém marcou ainda — o que a coluna nova diz.
@@ -51,6 +56,7 @@ export function FaseDoClickHome({
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [entregando, setEntregando] = useState(false)
   const [agendando, setAgendando] = useState(false)
   // SEM FASE É "A AGENDAR" (13/10/2026): o New Born vendido e ainda sem data.
   const atual: FaseClickHome = etapa.faseClickHome ?? 'a_agendar'
@@ -71,6 +77,10 @@ export function FaseDoClickHome({
           }
           if (item.id === FASE_CLICK_HOME_ESCOLHA) {
             setEnviando(true)
+            return
+          }
+          if (item.id === FASE_CLICK_HOME_ENTREGA) {
+            setEntregando(true)
             return
           }
           // Agendado pede o dia e a hora — mesmo diálogo da pílula do ensaio.
@@ -117,6 +127,10 @@ export function FaseDoClickHome({
           nomeDoCaso={nomeDoCaso}
           onFechar={() => setEnviando(false)}
         />
+      )}
+
+      {entregando && (
+        <DialogoLinksDoNewBorn etapa={etapa} nomeDoCaso={nomeDoCaso} onFechar={() => setEntregando(false)} />
       )}
 
       {dispensando && (

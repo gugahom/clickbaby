@@ -47,6 +47,12 @@ interface PropsSecaoEmModal {
   quantidade: number
   criterio: string
   vazio: string
+  /**
+   * O NÚMERO DO DISCO, quando não é a quantidade de casos da seção. O New Born
+   * mostra os AGENDADOS (11/11/2026, pedido do gestor), e a lista continua com
+   * todos. `rotulo` diz o que o número conta, para quem passa o mouse.
+   */
+  contador?: { valor: number; rotulo: string }
   erro: string | null
   onLimparErro: () => void
   itens: ItemDaSecao[]
@@ -96,6 +102,7 @@ export function SecaoEmModal({
   quantidade,
   criterio,
   vazio,
+  contador,
   erro,
   onLimparErro,
   itens,
@@ -127,8 +134,12 @@ export function SecaoEmModal({
           <span className="min-w-0 flex-1">
             <span className="flex items-center justify-between gap-2">
               <span className="rotulo-sobrescrito text-acento-forte">{titulo}</span>
-              <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white">
-                {quantidade}
+              <span
+                title={contador?.rotulo}
+                aria-label={contador ? `${contador.valor} ${contador.rotulo}` : undefined}
+                className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white"
+              >
+                {contador?.valor ?? quantidade}
               </span>
             </span>
           </span>
@@ -143,7 +154,14 @@ export function SecaoEmModal({
           subtitulo={
             <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
               <span className="font-bold text-foreground tabular-nums">{quantidade}</span>
-              {quantidade === 1 ? ' caso' : ' casos'} · {criterio}
+              {quantidade === 1 ? ' caso' : ' casos'}
+              {contador && (
+                <>
+                  {' · '}
+                  <span className="font-bold text-foreground tabular-nums">{contador.valor}</span> {contador.rotulo}
+                </>
+              )}{' '}
+              · {criterio}
             </p>
           }
           acoes={<ChaveDeModo modo={modo} onTrocar={trocarModo} />}

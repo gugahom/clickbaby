@@ -107,7 +107,7 @@ select is(
 
 select pg_temp.como('gestao.en@clickbaby.test');
 select public.enviar_click_home_para_escolha(pg_temp.etapa('NB TESTE', 'click_home'), 'https://galeria.exemplo/nb');
-select public.mover_click_home(pg_temp.etapa('NB TESTE', 'click_home'), 'pronto_para_entrega');
+select public.enviar_click_home_para_entrega(pg_temp.etapa('NB TESTE', 'click_home'), 'https://photos.exemplo/nb', 'https://we.exemplo/nb');
 select lives_ok(
   $$ select public.confirmar_entrega_do_click_home(pg_temp.etapa('NB TESTE', 'click_home')) $$,
   'N2: a Morgana confirma a galeria'

@@ -203,13 +203,20 @@ function LinhaDoVideo({
   )
 }
 
+/** Os links que a linha do New Born mostra, na ordem do trabalho. */
+const TIPOS_DO_NEW_BORN = [
+  { tipo: 'click_home', rotulo: 'Galeria de escolha' },
+  { tipo: 'click_home_google', rotulo: 'Google Fotos do New Born' },
+  { tipo: 'click_home_wetransfer', rotulo: 'WeTransfer do New Born' },
+] as const
+
 /**
  * UMA LINHA DE NEW BORN (22/09/2026). Selo próprio, pelo mesmo motivo do
  * vídeo: o que está passando por Entregáveis aqui não é o caso nem o livro — é
  * a galeria do ensaio newborn, e quem entrega precisa ver isso de relance.
  *
- * SÓ O LINK DA GALERIA, e ainda não conferido: a lista inteira do caso traria
- * os links do parto, entregues semanas antes.
+ * SÓ OS LINKS DO ENSAIO, e ainda não conferidos: a lista inteira do caso
+ * traria os links do parto, entregues semanas antes.
  */
 function LinhaDoClickHome({
   item,
@@ -226,8 +233,10 @@ function LinhaDoClickHome({
   const [confirmando, setConfirmando] = useState(false)
 
   const titulo = caso.bebeNome ? `${caso.maeNome} · ${caso.bebeNome}` : caso.maeNome
-  const daGaleria = (links ?? []).filter(
-    (l) => l.tipo === 'click_home' && l.confirmado_em === null,
+  // A galeria de escolha e, desde 11/11/2026, os dois links de entrega do
+  // ensaio — o Google Fotos e o WeTransfer do New Born. Nesta ordem.
+  const daGaleria = TIPOS_DO_NEW_BORN.flatMap((t) =>
+    (links ?? []).filter((l) => l.tipo === t.tipo && l.confirmado_em === null).map((l) => ({ ...l, rotulo: t.rotulo })),
   )
 
   return (
@@ -275,7 +284,7 @@ function LinhaDoClickHome({
           <p className="text-xs text-muted-foreground">Sem link da galeria.</p>
         ) : (
           daGaleria.map((link) => (
-            <LinkParaCopiar key={link.id} rotulo="Galeria de escolha" url={link.url} />
+            <LinkParaCopiar key={link.id} rotulo={link.rotulo} url={link.url} />
           ))
         )}
       </div>
@@ -298,8 +307,8 @@ function LinhaDoClickHome({
           }}
         >
           <p className="text-sm text-muted-foreground">
-            {titulo}. O ensaio fica como finalizado, o link da galeria passa a contar
-            como conferido, e o cartão sai da seção New Born.
+            {titulo}. O ensaio fica como finalizado, a galeria e os links de entrega
+            passam a contar como conferidos, e o cartão sai da seção New Born.
           </p>
           {/* NÃO TRAVA (decisão do gestor): avisa, em vermelho, e a entrega
               segue. Pago não precisa de aviso nenhum. */}
