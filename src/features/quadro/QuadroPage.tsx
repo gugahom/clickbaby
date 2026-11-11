@@ -1040,14 +1040,18 @@ export function QuadroPage() {
     />
   )
   const conteudoClickHome = emClickHome.map((caso) => cartaoClickHome(caso))
-  // O NÚMERO DO NEW BORN É O DOS AGENDADOS (11/11/2026, pedido do gestor): os
-  // ensaios com dia marcado e ainda não feitos. A lista continua com todos.
+  // O NÚMERO DO NEW BORN É DO "AGENDADO" EM DIANTE (11/11/2026, pedido do gestor,
+  // corrigido no mesmo dia): conta todo ensaio já marcado — agendado, feito, em
+  // edição, até o pronto. Só o "A agendar" (e o sem fase, que é ele) fica fora.
+  // A lista continua com todos.
   const agendadosClickHome = emClickHome.filter((c) =>
-    ensaiosAbertos(etapasPorCaso.get(c.id) ?? []).some((e) => e.faseClickHome === 'agendado'),
+    ensaiosAbertos(etapasPorCaso.get(c.id) ?? []).some(
+      (e) => e.faseClickHome !== null && e.faseClickHome !== 'a_agendar',
+    ),
   ).length
   const contadorClickHome = {
     valor: agendadosClickHome,
-    rotulo: agendadosClickHome === 1 ? 'agendado' : 'agendados',
+    rotulo: agendadosClickHome === 1 ? 'já agendado' : 'já agendados',
   }
 
   /*
