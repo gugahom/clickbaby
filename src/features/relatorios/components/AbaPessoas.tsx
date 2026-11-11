@@ -187,6 +187,7 @@ export function AbaPessoas({ mes, periodoDoMes, hoje }: { mes: string; periodoDo
             pontos={pontos.data ?? []}
             padrao={{ dentro: dentroDoPadrao.data ?? [], vigentes: padroes.data ?? [] }}
             plantoes={plantoes.data ?? []}
+            periodo={periodo}
             rotuloDoPeriodo={rotuloDoPeriodo}
             ranking={{ linhas: doTrabalho, anteriores, rotuloDaComparacao }}
           />

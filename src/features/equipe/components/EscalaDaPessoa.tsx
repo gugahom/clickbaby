@@ -13,10 +13,8 @@ import {
   useLancarPlantoes,
   useRemoverPlantao,
   type NovoPlantao,
-  type Plantao,
 } from '../api/useEscala'
 import { diaCurto, horaEmBrasilia } from '../lib/apresentacao'
-import { ProducaoDoPlantao } from './ProducaoDoPlantao'
 
 /** Quantos dias para a frente a ficha mostra. */
 const JANELA = 28
@@ -35,23 +33,15 @@ const horas = (minutos: number) => {
  *
  * É A ESCALA PLANEJADA, não ponto (seção 9 do CLAUDE.md): o relatório interno
  * a compara com as horas de etapa, e só isso.
- *
- * O PLANTÃO ABRE O QUE FOI FEITO NELE (11/11/2026, pedido do gestor): a chave
- * "Anteriores" mostra as últimas quatro semanas, e tocar num plantão abre o
- * resumo — ver `ProducaoDoPlantao`.
  */
 export function EscalaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
   const hoje = hojeNoFuso()
-  const [anteriores, setAnteriores] = useState(false)
-  const de = anteriores ? somarDia(hoje, -JANELA) : hoje
-  const ate = anteriores ? hoje : somarDia(hoje, JANELA - 1)
-  const { data, isPending, error } = useEscalaDaPessoa(pessoa.id, de, ate)
+  const ate = somarDia(hoje, JANELA - 1)
+  const { data, isPending, error } = useEscalaDaPessoa(pessoa.id, hoje, ate)
   const remover = useRemoverPlantao()
   const [lancando, setLancando] = useState(false)
-  const [aberto, setAberto] = useState<Plantao | null>(null)
 
-  // Nos anteriores, o mais recente primeiro: é o que se procura.
-  const plantoes = anteriores ? [...(data ?? [])].reverse() : (data ?? [])
+  const plantoes = data ?? []
   const total = plantoes.reduce(
     (acc, p) => acc + Math.round((new Date(p.fim).getTime() - new Date(p.inicio).getTime()) / 60_000),
     0,
@@ -63,7 +53,7 @@ export function EscalaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
         <div>
           <h3 className="rotulo-sobrescrito text-acento">Escala</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {anteriores ? 'Últimas 4 semanas' : 'Próximas 4 semanas'}
+            Próximas 4 semanas
             {plantoes.length > 0 && ` · ${plantoes.length} ${plantoes.length === 1 ? 'plantão' : 'plantões'}, ${horas(total)}`}
           </p>
         </div>
@@ -73,35 +63,13 @@ export function EscalaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
         </Botao>
       </div>
 
-      <div className="mt-3 inline-flex rounded-full border border-border p-0.5 text-sm" role="group" aria-label="Quais plantões">
-        {[
-          { valor: false, rotulo: 'Próximos' },
-          { valor: true, rotulo: 'Anteriores' },
-        ].map((o) => (
-          <button
-            key={o.rotulo}
-            type="button"
-            aria-pressed={anteriores === o.valor}
-            onClick={() => setAnteriores(o.valor)}
-            className={clsx(
-              'min-h-9 rounded-full px-3 font-semibold transition-colors',
-              anteriores === o.valor ? 'bg-marca text-white' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {o.rotulo}
-          </button>
-        ))}
-      </div>
-
       {error ? (
         <p className="mt-3 text-sm text-atrasado">Não deu para carregar a escala.</p>
       ) : isPending ? (
         <p className="mt-3 text-sm text-muted-foreground">Carregando…</p>
       ) : plantoes.length === 0 ? (
         <p className="mt-3 rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-          {anteriores
-            ? 'Nenhum plantão nas últimas 4 semanas.'
-            : 'Nenhum plantão lançado. Lance um dia ou uma sequência inteira.'}
+          Nenhum plantão lançado. Lance um dia ou uma sequência inteira.
         </p>
       ) : (
         <ul className="mt-3 max-h-72 space-y-1 overflow-y-auto">
@@ -111,18 +79,11 @@ export function EscalaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
                 className={clsx('size-2 flex-shrink-0 rounded-full', p.turno === 'noturno' ? 'bg-marca' : 'bg-atencao')}
                 aria-hidden="true"
               />
-              <button
-                type="button"
-                onClick={() => setAberto(p)}
-                title="Ver o que foi feito neste plantão"
-                className="flex min-h-9 flex-1 items-center gap-2 rounded text-left hover:text-marca"
-              >
-                <span className="w-20 flex-shrink-0 text-sm font-semibold capitalize tabular-nums">{diaCurto(p.data)}</span>
-                <span className="flex-1 text-sm tabular-nums text-foreground/80">
-                  {horaEmBrasilia(p.inicio)}–{horaEmBrasilia(p.fim)}
-                  <span className="ml-1.5 text-xs text-muted-foreground">{p.turno === 'noturno' ? 'noite' : 'dia'}</span>
-                </span>
-              </button>
+              <span className="w-20 flex-shrink-0 text-sm font-semibold capitalize tabular-nums">{diaCurto(p.data)}</span>
+              <span className="flex-1 text-sm tabular-nums text-foreground/80">
+                {horaEmBrasilia(p.inicio)}–{horaEmBrasilia(p.fim)}
+                <span className="ml-1.5 text-xs text-muted-foreground">{p.turno === 'noturno' ? 'noite' : 'dia'}</span>
+              </span>
               <button
                 type="button"
                 onClick={() => remover.mutate(p.id)}
@@ -138,7 +99,6 @@ export function EscalaDaPessoa({ pessoa }: { pessoa: PessoaDaEquipe }) {
       )}
 
       {lancando && <LancarPlantoes pessoa={pessoa} hoje={hoje} onFechar={() => setLancando(false)} />}
-      {aberto && <ProducaoDoPlantao pessoa={pessoa} plantao={aberto} onFechar={() => setAberto(null)} />}
     </section>
   )
 }

@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { Dialogo } from '@/components/ui/Dialogo'
 import { ROTULO_ETAPA, rotuloDaRodada } from '@/features/quadro/types'
-import type { PessoaDaEquipe } from '../api/useEquipe'
-import type { Plantao } from '../api/useEscala'
+import type { Plantao } from '@/features/equipe/api/useEscala'
+import { diaCurto, horaEmBrasilia } from '@/features/equipe/lib/apresentacao'
 import { useProducaoDoPlantao, type EtapaDoPlantao } from '../api/useProducaoDoPlantao'
-import { diaCurto, horaEmBrasilia } from '../lib/apresentacao'
 
 /** "Reels · B+F" da segunda rodada em diante, como no Quadro. */
 function nomeDaEtapa(e: EtapaDoPlantao): string {
@@ -23,17 +22,23 @@ function contagem(etapas: EtapaDoPlantao[]): { nome: string; quantas: number }[]
  * O RESUMO DO PLANTÃO (11/11/2026, pedido do gestor): "eu clico no plantão e me
  * mostra um resumo — fotografou 2 nascimentos, editou 2 reels, editou um
  * master". A contagem em cima, os casos embaixo. Ver `useProducaoDoPlantao`.
+ *
+ * MORA NO RELATÓRIO INTERNO (mesmo dia, segunda volta: "juntar tudo num lugar
+ * só quando diz respeito a trabalho realizado"), no perfil da pessoa, ao lado
+ * das horas de plantão. A primeira versão abria pela escala da Equipe.
  */
 export function ProducaoDoPlantao({
-  pessoa,
+  pessoaId,
+  nome,
   plantao,
   onFechar,
 }: {
-  pessoa: PessoaDaEquipe
+  pessoaId: string
+  nome: string
   plantao: Plantao
   onFechar: () => void
 }) {
-  const { data, isPending, error } = useProducaoDoPlantao(pessoa.id, plantao.inicio, plantao.fim)
+  const { data, isPending, error } = useProducaoDoPlantao(pessoaId, plantao.inicio, plantao.fim)
   // O relógio de quando o resumo abriu: o diálogo vive minutos, não horas.
   const [agora] = useState(() => Date.now())
   const futuro = new Date(plantao.inicio).getTime() > agora
@@ -42,7 +47,7 @@ export function ProducaoDoPlantao({
 
   return (
     <Dialogo
-      titulo={`Plantão de ${pessoa.nome.split(' ')[0]}`}
+      titulo={`Plantão de ${nome.split(' ')[0]}`}
       rotuloConfirmar="Fechar"
       soFechar
       onConfirmar={onFechar}

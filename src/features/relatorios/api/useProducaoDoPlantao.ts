@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
-import { chavesEquipe } from './useEquipe'
 
 type EtapaTipo = Database['public']['Enums']['etapa_tipo']
 
@@ -58,7 +57,7 @@ function paraEtapa(l: Linha): EtapaDoPlantao {
 
 export function useProducaoDoPlantao(pessoaId: string, inicio: string, fim: string) {
   return useQuery({
-    queryKey: [...chavesEquipe.todos, 'producao-do-plantao', pessoaId, inicio, fim] as const,
+    queryKey: ['metricas', 'producao-do-plantao', pessoaId, inicio, fim] as const,
     queryFn: async (): Promise<ProducaoDoPlantao> => {
       const [concluidas, abertas] = await Promise.all([
         supabase

@@ -79,7 +79,10 @@ export function ModalAmplo({
         </BotaoIcone>
       </header>
 
-      <div className="min-h-0 flex-1">{children}</div>
+      {/* Na FICHA quem rola é este corpo: a janela só tem altura máxima, e o
+          `h-full` de dentro não tem contra o que se medir — o conteúdo passava
+          da borda e era cortado (11/11/2026, o Gerenciar da Equipe). */}
+      <div className={clsx('min-h-0 flex-1', tamanho === 'ficha' && 'overflow-y-auto')}>{children}</div>
     </dialog>
   )
 }

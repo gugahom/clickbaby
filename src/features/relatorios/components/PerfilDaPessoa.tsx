@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { BotaoIcone } from '@/components/ui/BotaoIcone'
 import { IconeX } from '@/components/ui/icones'
-import { ROTULO_PAPEL } from '@/features/equipe/lib/apresentacao'
+import { useEscalaDaPessoa, type Plantao } from '@/features/equipe/api/useEscala'
+import { ROTULO_PAPEL, diaCurto, horaEmBrasilia } from '@/features/equipe/lib/apresentacao'
 import { FASES_DA_ETAPA, ROTULO_FASE_CAMPO, type EtapaTipo } from '@/features/quadro/types'
 import { iniciais } from '@/lib/iniciais'
 import type {
@@ -12,8 +13,10 @@ import type {
   MetricaPorPessoa,
   PadraoDeTempo,
   PlantaoDaPessoa,
+  Periodo,
   PontosDaPessoa,
 } from '../api/useMetricas'
+import { ProducaoDoPlantao } from './ProducaoDoPlantao'
 import { ETAPAS_DE_EDICAO, type LinhaDaPessoa } from '../lib/kpis'
 import { ORDEM_DAS_ETAPAS, formatarMinutos, rotuloDaEtapa } from '../lib/metricas'
 import { ITENS_DE_PONTUACAO, formatarPontos, pontosComUnidade } from '../lib/pontos'
@@ -70,6 +73,7 @@ export function PerfilDaPessoa({
   pontos,
   padrao,
   plantao,
+  periodo,
   rotuloDoPeriodo,
   onFechar,
 }: {
@@ -83,6 +87,8 @@ export function PerfilDaPessoa({
   padrao: PadraoNoPerfil
   /** As horas de plantão da escala no período; sem lançamento, `undefined`. */
   plantao: PlantaoDaPessoa | undefined
+  /** O período da aba: os plantões listados são os dele. */
+  periodo: Periodo
   /** Como a frase termina: "em dezembro de 2027", "nos últimos 7 dias". */
   rotuloDoPeriodo: string
   /** O "xiszinho" (pedido do gestor): fecha o perfil e a tabela ocupa a largura. */
@@ -181,6 +187,7 @@ export function PerfilDaPessoa({
 
       <Bloco titulo="Plantão e trabalho" nota="escala planejada × relógio das etapas">
         <PlantaoETrabalho plantao={plantao} minutosDeEtapa={minutosDeEtapa} medidas={medidas} />
+        <PlantoesDoPeriodo pessoaId={linha.pessoaId} nome={linha.nome} periodo={periodo} />
       </Bloco>
 
       <Bloco titulo="Pontos" nota="o peso de cada etapa, dividido quando passou de mão">
@@ -320,6 +327,46 @@ function emHoras(minutos: number): string {
   const h = Math.floor(minutos / 60)
   const m = Math.round(minutos % 60)
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
+}
+
+/**
+ * OS PLANTÕES DO PERÍODO, um toque cada (11/11/2026, pedido do gestor: "o que a
+ * pessoa fez no plantão"). Tocar abre o que ela concluiu e começou naquele
+ * horário — ver `ProducaoDoPlantao`. O mais recente em cima.
+ */
+function PlantoesDoPeriodo({ pessoaId, nome, periodo }: { pessoaId: string; nome: string; periodo: Periodo }) {
+  const { data } = useEscalaDaPessoa(pessoaId, periodo.inicio, periodo.fim)
+  const [aberto, setAberto] = useState<Plantao | null>(null)
+  const plantoes = [...(data ?? [])].reverse()
+  if (plantoes.length === 0) return null
+
+  return (
+    <div className="mt-3">
+      <div className="text-xs font-semibold text-muted-foreground">Toque num plantão para ver o que foi feito</div>
+      <ul className="mt-1.5 max-h-56 space-y-0.5 overflow-y-auto">
+        {plantoes.map((p) => (
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => setAberto(p)}
+              className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-muted/60"
+            >
+              <span
+                className={clsx('size-2 flex-shrink-0 rounded-full', p.turno === 'noturno' ? 'bg-marca' : 'bg-atencao')}
+                aria-hidden="true"
+              />
+              <span className="w-20 flex-shrink-0 font-semibold capitalize tabular-nums">{diaCurto(p.data)}</span>
+              <span className="flex-1 tabular-nums text-foreground/80">
+                {horaEmBrasilia(p.inicio)}–{horaEmBrasilia(p.fim)}
+              </span>
+              <span className="text-xs font-semibold text-marca">Ver</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {aberto && <ProducaoDoPlantao pessoaId={pessoaId} nome={nome} plantao={aberto} onFechar={() => setAberto(null)} />}
+    </div>
+  )
 }
 
 function PlantaoETrabalho({
