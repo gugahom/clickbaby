@@ -22,6 +22,9 @@ export interface EtapaDoPlantao {
   tipo: EtapaTipo
   rodada: number
   status: Database['public']['Enums']['status_etapa']
+  /** Campo ou edição: a cor da marca na linha do tempo do plantão. */
+  trilha: 'acompanhamento' | 'edicao'
+  iniciadoEm: string | null
   concluidoEm: string | null
   casoId: string
   casoNome: string
@@ -32,13 +35,15 @@ export interface ProducaoDoPlantao {
   abertas: EtapaDoPlantao[]
 }
 
-const CAMPOS = 'id, tipo, rodada, status, concluido_em, caso:casos!caso_etapas_caso_id_fkey(id, mae_nome, bebe_nome)'
+const CAMPOS = 'id, tipo, rodada, status, trilha, iniciado_em, concluido_em, caso:casos!caso_etapas_caso_id_fkey(id, mae_nome, bebe_nome)'
 
 interface Linha {
   id: string
   tipo: EtapaTipo
   rodada: number
   status: Database['public']['Enums']['status_etapa']
+  trilha: string | null
+  iniciado_em: string | null
   concluido_em: string | null
   caso: { id: string; mae_nome: string; bebe_nome: string | null } | null
 }
@@ -49,6 +54,8 @@ function paraEtapa(l: Linha): EtapaDoPlantao {
     tipo: l.tipo,
     rodada: l.rodada,
     status: l.status,
+    trilha: l.trilha === 'edicao' ? 'edicao' : 'acompanhamento',
+    iniciadoEm: l.iniciado_em,
     concluidoEm: l.concluido_em,
     casoId: l.caso?.id ?? '',
     casoNome: l.caso ? (l.caso.bebe_nome ? `${l.caso.mae_nome} · ${l.caso.bebe_nome}` : l.caso.mae_nome) : 'caso sem nome',
