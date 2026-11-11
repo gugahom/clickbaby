@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { useAuth } from '@/features/auth/contexto'
 import { useUrlsDasFotos } from '@/features/perfil/api/useFotoDePerfil'
 import { useFotosDaEquipe, type PlantaoDaPessoa } from '../api/useMetricas'
-import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, PontosDaPessoa } from '../api/useMetricas'
+import type { FaseDaPessoa, MetricaPorEtapa, MetricaPorPessoa, Periodo, PontosDaPessoa } from '../api/useMetricas'
 import type { PadraoNoPerfil } from './PerfilDaPessoa'
 import type { LinhaDaPessoa } from '../lib/kpis'
 import { primeiroNome } from '../lib/metricas'
@@ -69,6 +69,7 @@ export function TabelaDePessoas({
   pontos,
   padrao,
   plantoes,
+  periodo,
   rotuloDoPeriodo,
   ranking,
 }: {
@@ -80,6 +81,8 @@ export function TabelaDePessoas({
   padrao: PadraoNoPerfil
   /** As horas de plantão da escala, por pessoa. */
   plantoes: PlantaoDaPessoa[]
+  /** O período da aba, para o perfil listar os plantões dele. */
+  periodo: Periodo
   /** Como a frase do perfil termina: "em dezembro de 2027". */
   rotuloDoPeriodo: string
   /**
@@ -280,6 +283,7 @@ export function TabelaDePessoas({
               pontos={pontos}
               padrao={padrao}
               plantao={plantoes.find((p) => p.pessoaId === selecionada.pessoaId)}
+              periodo={periodo}
               rotuloDoPeriodo={rotuloDoPeriodo}
               onFechar={fechar}
             />
