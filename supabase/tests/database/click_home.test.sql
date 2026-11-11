@@ -239,8 +239,9 @@ select throws_ok(
   'Para mandar o Click Home para escolha é preciso o link da galeria.',
   'D2c: pronto sem o link da galeria não passa'
 );
+-- Desde 11/11/2026 o pronto cobra os dois links de entrega do New Born.
 select lives_ok(
-  format($$ select public.mover_click_home(%L::uuid, 'pronto_para_entrega') $$, pg_temp.ensaio('Mae CH Standard')),
+  format($$ select public.enviar_click_home_para_entrega(%L::uuid, 'https://photos.exemplo/ch', 'https://we.exemplo/ch') $$, pg_temp.ensaio('Mae CH Standard')),
   'D2d: a família escolheu — a fotógrafa leva para Pronto para entrega'
 );
 reset role;

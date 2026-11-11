@@ -23,6 +23,10 @@ export const ROTULO_TIPO_DE_LINK: Record<TipoEntregavel, string> = {
   // família escolhe as fotos do Click Home. Tipo próprio porque não é o álbum
   // do parto — são dois endereços, em dois momentos.
   click_home: 'Galeria do New Born',
+  // O que a família RECEBE do ensaio (11/11/2026), cobrado depois de "Editar
+  // seleção". Tipos próprios: o Google e o WeTransfer do caso são do PARTO.
+  click_home_google: 'Google Fotos do New Born',
+  click_home_wetransfer: 'WeTransfer do New Born',
   // O material do BIRTH vendido depois da entrega (30/09/2026).
   google_drive: 'Google Drive',
 }

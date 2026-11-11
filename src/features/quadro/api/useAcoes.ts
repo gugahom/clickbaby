@@ -264,6 +264,22 @@ export function useEnviarClickHomeParaEscolha() {
   )
 }
 
+/**
+ * OS LINKS DE ENTREGA DO NEW BORN (11/11/2026): o Google Fotos e o WeTransfer,
+ * gravados junto com a passagem para "Pronto para entrega". Migration
+ * 20261111140002.
+ */
+export function useEnviarClickHomeParaEntrega() {
+  return useAcaoDoQuadro<{ casoEtapaId: string; linkGoogle: string; linkWetransfer: string }>(
+    ({ casoEtapaId, linkGoogle, linkWetransfer }) =>
+      chamar('enviar_click_home_para_entrega', {
+        p_caso_etapa_id: casoEtapaId,
+        p_link_google: linkGoogle.trim(),
+        p_link_wetransfer: linkWetransfer.trim(),
+      }),
+  )
+}
+
 /** A confirmação da Morgana em Entregáveis: finaliza o ensaio e confirma o link. */
 export function useConfirmarEntregaDoClickHome() {
   return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>

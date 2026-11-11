@@ -7,6 +7,12 @@ interface PropsPainelLateral {
   /** Uma linha explicando o critério da seção. */
   criterio: string
   vazio: string
+  /**
+   * O NÚMERO DO DISCO, quando não é a quantidade de casos da seção. O New Born
+   * mostra os AGENDADOS (11/11/2026, pedido do gestor), e a lista continua com
+   * todos. `rotulo` diz o que o número conta, para quem passa o mouse.
+   */
+  contador?: { valor: number; rotulo: string }
   /** Erro de uma ação disparada de dentro da seção. */
   erro?: string | null
   children: ReactNode
@@ -35,6 +41,7 @@ export function PainelLateral({
   quantidade,
   criterio,
   vazio,
+  contador,
   erro = null,
   children,
 }: PropsPainelLateral) {
@@ -49,8 +56,12 @@ export function PainelLateral({
       <header className="flex-shrink-0 border-b border-border bg-acento-suave px-3.5 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="rotulo-sobrescrito text-acento-forte">{titulo}</h2>
-          <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white">
-            {quantidade}
+          <span
+            title={contador?.rotulo}
+            aria-label={contador ? `${contador.valor} ${contador.rotulo}` : undefined}
+            className="inline-flex min-w-7 items-center justify-center rounded-full bg-contador px-2 py-0.5 text-sm font-bold tabular-nums text-white"
+          >
+            {contador?.valor ?? quantidade}
           </span>
         </div>
         <p className="mt-1 text-xs leading-snug text-muted-foreground">{criterio}</p>

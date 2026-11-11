@@ -82,6 +82,7 @@ import { FichaDaEdicao } from './components/FichaDaEdicao'
 import { DialogoFinalizarVideo } from './components/DialogoFinalizarVideo'
 import { AtribuicaoDaSecao } from './components/AtribuicaoDaSecao'
 import { DialogoGaleriaDoClickHome } from './components/DialogoGaleriaDoClickHome'
+import { DialogoLinksDoNewBorn } from './components/DialogoLinksDoNewBorn'
 import type {
   ClickHomeNaEntrega,
   FotolivroNaEntrega,
@@ -170,6 +171,11 @@ export function QuadroPage() {
   // O ensaio que está indo para a escolha pelo arrastar ou pelo ✓ do cartão —
   // o seletor de fase abre o mesmo diálogo por conta própria.
   const [enviandoClickHome, setEnviandoClickHome] = useState<{
+    etapa: EtapaQuadro
+    caso: CasoQuadro
+  } | null>(null)
+  // Os links de entrega do New Born, pedidos ao ir para o pronto (11/11/2026).
+  const [entregandoClickHome, setEntregandoClickHome] = useState<{
     etapa: EtapaQuadro
     caso: CasoQuadro
   } | null>(null)
@@ -852,7 +858,8 @@ export function QuadroPage() {
               etapa.faseClickHome === FASE_CLICK_HOME_ESCOLHA
               ? avancarClickHome(etapa, FASE_CLICK_HOME_SELECAO, 'A família escolheu — editar seleção', onErro)
               : etapa.faseClickHome === FASE_CLICK_HOME_SELECAO
-                ? avancarClickHome(etapa, FASE_CLICK_HOME_ENTREGA, 'Seleção editada — pronto para entrega', onErro)
+                ? // O fim da seleção pede os dois links de entrega (11/11/2026).
+                  { rotulo: 'Seleção editada — pronto para entrega', aoTocar: () => setEntregandoClickHome({ etapa, caso }) }
                 : null
         }
       />
@@ -1033,6 +1040,15 @@ export function QuadroPage() {
     />
   )
   const conteudoClickHome = emClickHome.map((caso) => cartaoClickHome(caso))
+  // O NÚMERO DO NEW BORN É O DOS AGENDADOS (11/11/2026, pedido do gestor): os
+  // ensaios com dia marcado e ainda não feitos. A lista continua com todos.
+  const agendadosClickHome = emClickHome.filter((c) =>
+    ensaiosAbertos(etapasPorCaso.get(c.id) ?? []).some((e) => e.faseClickHome === 'agendado'),
+  ).length
+  const contadorClickHome = {
+    valor: agendadosClickHome,
+    rotulo: agendadosClickHome === 1 ? 'agendado' : 'agendados',
+  }
 
   /*
    * MASTER E FOTO/LIVRO EM MODAL (15/09/2026). Cada cartão vai junto com a FASE
@@ -1149,6 +1165,12 @@ export function QuadroPage() {
       if (caso) setEnviandoClickHome({ etapa: ensaio, caso })
       return false
     }
+    // O pronto pede os dois links de entrega (11/11/2026).
+    if (fase === FASE_CLICK_HOME_ENTREGA) {
+      const caso = emClickHome.find((c) => c.id === casoId)
+      if (caso) setEntregandoClickHome({ etapa: ensaio, caso })
+      return false
+    }
     try {
       await moverClickHome.mutateAsync({ casoEtapaId: ensaio.id, fase: fase as FaseClickHome })
       return true
@@ -1210,6 +1232,7 @@ export function QuadroPage() {
     <PainelLateral
       titulo="New Born"
       quantidade={emClickHome.length}
+      contador={contadorClickHome}
       criterio={CRITERIO_CLICK_HOME}
       vazio="Nenhum New Born em produção."
       erro={erroClickHome}
@@ -1491,7 +1514,7 @@ export function QuadroPage() {
             Foto/Livro ({emFotolivro.length})
           </BotaoAba>
           <BotaoAba ativa={aba === 'clickhome'} onClick={() => setAba('clickhome')}>
-            New Born ({emClickHome.length})
+            New Born ({agendadosClickHome})
           </BotaoAba>
           <BotaoAba ativa={aba === 'uti'} onClick={() => setAba('uti')}>
             UTI ({naUti.length})
@@ -1646,6 +1669,7 @@ export function QuadroPage() {
                 <SecaoEmModal
                   titulo="New Born"
                   quantidade={emClickHome.length}
+                  contador={contadorClickHome}
                   criterio={CRITERIO_CLICK_HOME}
                   vazio="Nenhum New Born em produção."
                   erro={erroClickHome}
@@ -1742,6 +1766,14 @@ export function QuadroPage() {
           etapa={enviandoClickHome.etapa}
           nomeDoCaso={nomeDoCaso(enviandoClickHome.caso)}
           onFechar={() => setEnviandoClickHome(null)}
+        />
+      )}
+
+      {entregandoClickHome && (
+        <DialogoLinksDoNewBorn
+          etapa={entregandoClickHome.etapa}
+          nomeDoCaso={nomeDoCaso(entregandoClickHome.caso)}
+          onFechar={() => setEntregandoClickHome(null)}
         />
       )}
 

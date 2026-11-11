@@ -403,6 +403,7 @@ mover_click_home(p_caso_etapa_id, p_fase)        -- escreve fase E status juntos
 agendar_click_home(p_caso_etapa_id, p_quando)    -- dia e hora do ensaio + fase "agendado" (13/10/2026)
 registrar_pagamento_do_click_home(p_caso_etapa_id, p_pagamento) -- pago / a cobrar; atendimento/adm (13/10/2026)
 enviar_click_home_para_escolha(p_caso_etapa_id, p_link) -- link da galeria + fase
+enviar_click_home_para_entrega(p_caso_etapa_id, p_link_google, p_link_wetransfer) -- os 2 links de entrega + pronto (11/11/2026)
 confirmar_entrega_do_click_home(p_caso_etapa_id) -- finaliza, em Entregáveis; atendimento/adm; só de "pronto para entrega"
 definir_mensagem_do_click_home(p_caso_etapa_id, p_mensagem) -- a mensagem da galeria para a família; qualquer pessoa ativa (22/10/2026)
 marcar_click_home_enviado(p_caso_etapa_id)       -- "Enviado à família", só na escolha; qualquer pessoa ativa (05/11/2026)
@@ -1553,6 +1554,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   seleção", até o play (e de novo se pausar). As marcas nascem desligadas, e a mudança vale para a
   pessoa ao recarregar. O clique leva à ficha (`/?ficha=<etapa>`), não ao card: com o caso
   encerrado, o card não está em aba nenhuma de quem só opera.
+  **OS LINKS DE ENTREGA E O CONTADOR DOS AGENDADOS** (11/11/2026, pedido do gestor, migrations
+  `20261111140001` e `20261111140002`). Depois de "Editar seleção", o **PRONTO PARA ENTREGA COBRA
+  DOIS LINKS** (decisão do gestor: obrigatórios) — o **Google Fotos do New Born** e o **WeTransfer
+  do New Born**, tipos próprios (`click_home_google`, `click_home_wetransfer`) pelo motivo do
+  `video_wetransfer`: o Google e o WeTransfer do caso são do PARTO. `enviar_click_home_para_entrega`
+  grava os dois e leva a pronto NA MESMA TRANSAÇÃO, trocando um par ainda não conferido;
+  `mover_click_home` recusa o pronto sem eles; `confirmar_entrega_do_click_home` confirma os três
+  links. Os três caminhos da tela (seletor, arrastar e o ✓ "Seleção editada") abrem
+  `DialogoLinksDoNewBorn`, e a linha do New Born em Entregáveis mostra a galeria e os dois.
+  **O NÚMERO DA SEÇÃO É O DOS AGENDADOS**: o disco da coluna da direita e a aba do celular contam
+  só os ensaios na fase "Agendado" (`contador` em `PainelLateral`/`SecaoEmModal`); a lista e o
+  subtítulo do modal ("3 casos · 1 agendado") continuam com todos.
   **O NOME NA TELA É "NEW BORN"** (decisão do gestor, 22/09/2026, ao ver a seção pronta), e
   **desde 26/10/2026 também no título que o SISTEMA escreve no Google** ("BASIC REELS + NEW
   BORN"): o detalhe do parto vai num print para a família depois da reserva, e "click home" a

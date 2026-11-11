@@ -1875,6 +1875,14 @@ export type Database = {
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
       eh_pessoa_ativa: { Args: never; Returns: boolean }
+      enviar_click_home_para_entrega: {
+        Args: {
+          p_caso_etapa_id: string
+          p_link_google: string
+          p_link_wetransfer: string
+        }
+        Returns: undefined
+      }
       enviar_click_home_para_escolha: {
         Args: { p_caso_etapa_id: string; p_link: string }
         Returns: undefined
@@ -2541,6 +2549,8 @@ export type Database = {
         | "video_wetransfer"
         | "click_home"
         | "google_drive"
+        | "click_home_google"
+        | "click_home_wetransfer"
       turno: "diurno" | "noturno" | "comercial"
     }
     CompositeTypes: {
@@ -2807,6 +2817,8 @@ export const Constants = {
         "video_wetransfer",
         "click_home",
         "google_drive",
+        "click_home_google",
+        "click_home_wetransfer",
       ],
       turno: ["diurno", "noturno", "comercial"],
     },

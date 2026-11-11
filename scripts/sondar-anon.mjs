@@ -203,6 +203,12 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_link: 'https://sonda.test',
   },
+  // Os links de entrega do New Born (20261111140002).
+  enviar_click_home_para_entrega: {
+    p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
+    p_link_google: 'https://sonda.test',
+    p_link_wetransfer: 'https://sonda.test',
+  },
   confirmar_entrega_do_click_home: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
   },
