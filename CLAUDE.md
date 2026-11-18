@@ -963,6 +963,19 @@ O guia completo, para a gestão, é `docs/backup.md`. O que importa para quem me
   ou uma pilha local separada). Esvaziar o banco local de desenvolvimento para carregar a
   cópia por cima foi recusado pela trava de ações destrutivas em 30/09 — e com razão.
 
+### A queda de 16/11/2026 e o alarme
+
+Em 16/11 o projeto ficou "Unhealthy" (login, banco, Storage) e ninguém entrava. A causa foi
+MEMÓRIA: a máquina era **Nano** e passou o dia com "Memory commitment" em 1,37 de 1,5 GB (SEVERE),
+swap acima da RAM; CPU, disco e conexões folgados. Voltou com Restart e o compute subiu para
+**Micro**. Se o Memory commitment voltar a SEVERE, o próximo passo é Small — não código.
+- **Faxina do agendador** (migration `20261118120001`): `cron.job_run_details` era 48% do banco
+  (uma linha por execução do sync a cada 25s, nunca apagada). Um job diário apaga o que tem mais
+  de 7 dias.
+- **Alarme** (`.github/workflows/alarme-supabase.yml`): a cada 5 min, de FORA do Supabase, testa
+  o login e o banco com as `vars` públicas do Publicar; três falhas seguidas deixam o fluxo
+  vermelho e o GitHub manda e-mail para quem mexeu por último no `schedule` do arquivo.
+
 ### Definição de pronto
 
 Uma tarefa só está pronta quando:
