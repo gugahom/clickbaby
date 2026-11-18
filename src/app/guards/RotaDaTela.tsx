@@ -1,7 +1,8 @@
 import { Link, Navigate, Outlet } from 'react-router'
 import type { Tela } from '@/features/auth/telas'
 import { useTelas } from '@/features/auth/telas'
-import { destinosDe } from '../layout/destinos'
+import { useAuth } from '@/features/auth/contexto'
+import { destinosDe, temPaginaPropriaDoComercial } from '../layout/destinos'
 
 /**
  * A PORTA DE CADA TELA, por tela e não mais por papel (30/09/2026, pedido do
@@ -19,12 +20,14 @@ import { destinosDe } from '../layout/destinos'
  */
 export function RotaDaTela({ tela }: { tela: Tela | Tela[] }) {
   const telas = useTelas()
+  const papel = useAuth().pessoa?.papelSistema
   // Uma lista abre com QUALQUER uma delas: o relatório externo é da tela
   // Relatórios e também da Comercial (só no modo comercial — quem confere o
   // modo é a própria página, e o banco).
   if ((Array.isArray(tela) ? tela : [tela]).some((t) => telas.has(t))) return <Outlet />
 
-  const primeira = destinosDe(telas)[0]
+  if (temPaginaPropriaDoComercial(telas, papel)) return <Navigate to="/comercial" replace />
+  const primeira = destinosDe(telas, papel)[0]
   if (primeira) return <Navigate to={primeira.para} replace />
 
   return (

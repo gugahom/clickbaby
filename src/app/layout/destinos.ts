@@ -80,7 +80,7 @@ export const ROTULO_DO_GRUPO: Record<GrupoDeDestino, string> = {
  * `telasPadraoDoPapel`: o Quadro para todos, o Calendário para quem não é
  * fotógrafa, Despesas do financeiro e da gestão, Equipe e Relatórios da gestão.
  */
-export function destinosDe(telas: Set<Tela>): Destino[] {
+export function destinosDe(telas: Set<Tela>, papel: string | undefined): Destino[] {
   const destinos: Destino[] = []
 
   if (telas.has('quadro')) {
@@ -106,10 +106,11 @@ export function destinosDe(telas: Set<Tela>): Destino[] {
     })
   }
 
-  // O COMERCIAL é trabalho acontecendo — a venda —, e por isso fica na
-  // Operação (18/11/2026). É a fila de leads de quem vende; o relatório
-  // externo continua sendo o lugar das ofertas pós-parto.
-  if (telas.has('comercial')) {
+  // O COMERCIAL NA BARRA É SÓ DA GESTÃO (18/11/2026, pedido do gestor: "a
+  // página comercial vai ficar na sidebar apenas para gestores, ela é uma NOVA
+  // PÁGINA"). Quem VENDE não chega por aqui: para o papel comercial ela é a
+  // página inteira, sem barra — ver `temPaginaPropriaDoComercial`.
+  if (telas.has('comercial') && papel === 'gestao') {
     destinos.push({
       para: '/comercial',
       rotulo: 'Comercial',
@@ -202,4 +203,18 @@ export function agruparDestinos(destinos: Destino[]): {
   return grupos
     .map((grupo) => ({ grupo, destinos: destinos.filter((d) => d.grupo === grupo) }))
     .filter((g) => g.destinos.length > 0)
+}
+
+/**
+ * A PÁGINA PRÓPRIA DO COMERCIAL (18/11/2026, decisão do gestor). Para quem é do
+ * papel `comercial` — Guizão, Rafinha, Vavá —, o Comercial não é mais um item
+ * da barra: é o sistema inteiro. Entrar leva direto a ele, não há barra nem
+ * faixa de navegação, e a logo volta para lá.
+ *
+ * O Calendário (onde hoje se cria caso) e o pós-venda do relatório externo
+ * continuam abertos pelo endereço, e voltam para a mão do vendedor quando
+ * entrarem DENTRO do Comercial, na fase B. Regra de TELA: a RLS não muda.
+ */
+export function temPaginaPropriaDoComercial(telas: Set<Tela>, papel: string | undefined): boolean {
+  return papel === 'comercial' && telas.has('comercial')
 }

@@ -2,10 +2,10 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from './layout/AppShell'
 import { RotaProtegida } from './guards/RotaProtegida'
 import { RotaDaTela } from './guards/RotaDaTela'
+import { Inicio } from './guards/Inicio'
 import { CalendarioPage } from '@/features/calendario/CalendarioPage'
 import { DespesasPage } from '@/features/despesas/DespesasPage'
 import { LoginPage } from '@/features/auth/LoginPage'
-import { QuadroPage } from '@/features/quadro/QuadroPage'
 import { EquipePage } from '@/features/equipe/EquipePage'
 import { RelatoriosPage } from '@/features/relatorios/RelatoriosPage'
 import { RelatorioExternoPage } from '@/features/relatorios/externo/RelatorioExternoPage'
@@ -46,7 +46,8 @@ export const router = createBrowserRouter(
             // `RotaDaTela` e a migration 20260930232424.
             {
               element: <RotaDaTela tela="quadro" />,
-              children: [{ index: true, element: <QuadroPage /> }],
+              // Quem vende entra direto no Comercial — a página dele.
+              children: [{ index: true, element: <Inicio /> }],
             },
             // O perfil é de qualquer pessoa logada — inclusive, e sobretudo,
             // de quem opera: é ali que a senha inicial compartilhada morre.

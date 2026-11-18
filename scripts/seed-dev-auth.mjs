@@ -13,7 +13,7 @@
  * no formato que o GoTrue espera: o usuário existe e o login falha, sem pista
  * do motivo. A Admin API faz as duas coisas.
  *
- * DOIS PAPÉIS, NÃO UM: operador e gestao (adm). É o que permite exercitar a
+ * TRÊS PAPÉIS: operador, gestao (adm) e, desde 18/11/2026, comercial. É o que permite exercitar a
  * RLS com o caso positivo e o negativo — as escritas de cadastro, por exemplo,
  * são só de adm (policies `*_escrita_adm`). (`eventos` já foi exemplo disto;
  * desde 25/08 ele é legível por toda pessoa ativa — 20260825020122.)
@@ -44,6 +44,14 @@ const USUARIOS = [
     senha: 'clickbaby123',
     nome: 'Gestão Dev',
     papel: 'gestao',
+  },
+  // O vendedor (18/11/2026): a tela Comercial vista de dentro, sem os poderes
+  // da gestão — o padrão do papel `comercial`.
+  {
+    email: 'comercial@clickbaby.local',
+    senha: 'clickbaby123',
+    nome: 'Comercial Dev',
+    papel: 'comercial',
   },
 ]
 
@@ -159,5 +167,5 @@ for (const u of USUARIOS) {
   )
 }
 
-console.log('\nSenha dos dois: clickbaby123')
+console.log('\nSenha de todos: clickbaby123')
 console.log('Credenciais de desenvolvimento local. Não existem no remoto.')

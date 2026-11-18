@@ -22,7 +22,7 @@ import {
   type EstadoDeclarado,
 } from '@/features/presenca/lib/estados'
 import { useTelaLarga } from '@/features/quadro/lib/useTelaLarga'
-import { destinosDe } from './destinos'
+import { destinosDe, temPaginaPropriaDoComercial } from './destinos'
 import { useTelas } from '@/features/auth/telas'
 import { BarraLateral } from './BarraLateral'
 import { FaixaDeNavegacao } from './FaixaDeNavegacao'
@@ -52,7 +52,11 @@ export function AppShell() {
   const { pessoa, sair } = useAuth()
   // Para onde esta pessoa pode ir: as telas dela, que as guardas de rota
   // conferem do mesmo jeito — ver `destinos.ts`.
-  const destinos = destinosDe(useTelas())
+  const telas = useTelas()
+  const destinos = destinosDe(telas, pessoa?.papelSistema)
+  // Para quem vende, o Comercial é a página inteira: sem barra, e a logo leva
+  // para ele — ver `temPaginaPropriaDoComercial`.
+  const paginaDoComercial = temPaginaPropriaDoComercial(telas, pessoa?.papelSistema)
   const telaLarga = useTelaLarga()
   // O modo TV é do Quadro. Na Equipe o botão continuaria visível e não mudaria
   // nada — um interruptor ligado a nada ensina que ele às vezes não funciona.
@@ -79,7 +83,7 @@ export function AppShell() {
    * (gestão), as Despesas (financeiro) e os Concluídos. Quem opera não perde
    * acesso a nada — as telas da gestão nunca foram dela, e a RLS não mudou.
    */
-  const temNavegacao = destinos.length > 1
+  const temNavegacao = destinos.length > 1 && !paginaDoComercial
   const [modoTv, alternarModoTv] = useModoTv()
   const temBotaoTv = telaLarga && noQuadro
   // O retrato no chip do cabeçalho: num aparelho compartilhado que troca de mão
@@ -113,9 +117,9 @@ export function AppShell() {
               `clara` e não `preta`: a mesma silhueta, invertida.
             */}
             <NavLink
-              to="/"
+              to={paginaDoComercial ? '/comercial' : '/'}
               end
-              aria-label="Ir para o Quadro"
+              aria-label={paginaDoComercial ? 'Ir para o Comercial' : 'Ir para o Quadro'}
               className="inline-flex flex-shrink-0 items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               <Logo variante="clara" className="h-7 max-w-[9.5rem] md:h-8 md:max-w-[12rem]" prioridade />
