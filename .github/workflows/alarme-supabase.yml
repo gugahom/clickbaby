@@ -1,0 +1,55 @@
+# =============================================================================
+# ALARME DE QUEDA DO SUPABASE (18/11/2026, depois da queda de 16/11)
+# =============================================================================
+#
+# Em 16/11 o projeto ficou "Unhealthy" e quem avisou foi a equipe, sem conseguir
+# entrar. Este fluxo testa, a cada 5 minutos, o serviço de login e o banco. Se
+# falhar, o fluxo fica VERMELHO e o GitHub manda e-mail.
+#
+# Mora FORA do Supabase de propósito: um alarme dentro dele (pg_cron, Edge
+# Function chamada pelo banco) cairia junto com o que deveria vigiar.
+#
+# QUEM RECEBE O E-MAIL: em fluxo agendado, o GitHub avisa quem fez o último
+# commit que mexeu no `schedule` deste arquivo (e só se a notificação de Actions
+# estiver ligada em Settings → Notifications). O agendamento do GitHub pode
+# atrasar alguns minutos em horário de pico — é aviso, não monitor de segundos.
+#
+# Usa só o que já é público: a URL e a anon key (as mesmas `vars` do Publicar).
+# Tenta 3 vezes antes de acusar, para um soluço de rede não virar alarme falso.
+# =============================================================================
+
+name: Alarme do Supabase
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Testa login e banco
+        env:
+          URL: ${{ vars.VITE_SUPABASE_URL }}
+          KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -u
+          checar() {
+            auth=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/auth/v1/health" -H "apikey: $KEY")
+            # O anon não lê tabela nenhuma: o banco responder "permission denied"
+            # (401) prova que o PostgREST chegou ao Postgres. 5xx é queda.
+            rest=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/rest/v1/pacotes?select=id&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+            echo "auth=$auth rest=$rest"
+            [ "$auth" = "200" ] && [ "${rest:0:1}" != "5" ] && [ "$rest" != "000" ]
+          }
+          for tentativa in 1 2 3; do
+            if checar; then echo "Supabase no ar."; exit 0; fi
+            echo "Falhou (tentativa $tentativa)."; sleep 30
+          done
+          echo "::error::Supabase fora do ar: login ou banco sem resposta em 3 tentativas."
+          exit 1
