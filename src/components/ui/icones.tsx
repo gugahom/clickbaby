@@ -780,3 +780,152 @@ export function IconeConversa({ className }: PropsIcone) {
     </svg>
   )
 }
+
+/*
+ * OS ÍCONES DO CRM (18/11/2026). Mesmo traço de 2px e viewBox de 24 dos outros;
+ * o embrulho fica numa função só para a lista não repetir o mesmo `<svg>`
+ * catorze vezes.
+ */
+function Traco({ className, children }: { className?: string | undefined; children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  )
+}
+
+export function IconeCasa({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+    </Traco>
+  )
+}
+
+export function IconeLeads({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7" />
+      <path d="M18.5 14.2a6.5 6.5 0 0 1 3 5.8" />
+    </Traco>
+  )
+}
+
+export function IconePresente({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M12 8v13" />
+      <path d="M19 12v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8" />
+      <path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" />
+    </Traco>
+  )
+}
+
+export function IconeCifrao({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15 9.2c-.6-1-1.7-1.5-3-1.5-1.8 0-3 .9-3 2.2 0 3.1 6 1.6 6 4.6 0 1.3-1.3 2.3-3 2.3-1.4 0-2.6-.6-3.1-1.6" />
+      <path d="M12 6v1.7M12 16.8v1.7" />
+    </Traco>
+  )
+}
+
+export function IconeTendencia({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="m3 17 6-6 4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </Traco>
+  )
+}
+
+export function IconeRaio({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
+    </Traco>
+  )
+}
+
+export function IconeSacola({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M6 7h12l1 13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 7Z" />
+      <path d="M9 7V6a3 3 0 0 1 6 0v1" />
+    </Traco>
+  )
+}
+
+export function IconeAjustes({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </Traco>
+  )
+}
+
+export function IconeMenu({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </Traco>
+  )
+}
+
+/** Recolher a barra lateral: a moldura com a seta para dentro. */
+export function IconeRecolher({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="m16 10-2 2 2 2" />
+    </Traco>
+  )
+}
+
+/** Abrir a barra lateral: a mesma moldura, a seta para fora. */
+export function IconeExpandir({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="m14 10 2 2-2 2" />
+    </Traco>
+  )
+}
+
+/** Coluna que se pode ordenar e ainda não está ordenada. */
+export function IconeOrdenar({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="m7 15 5 5 5-5" />
+      <path d="m7 9 5-5 5 5" />
+    </Traco>
+  )
+}
+
+export function IconeSetaDireita({ className }: PropsIcone) {
+  return (
+    <Traco className={className}>
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </Traco>
+  )
+}

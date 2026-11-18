@@ -10,7 +10,12 @@ import { EquipePage } from '@/features/equipe/EquipePage'
 import { RelatoriosPage } from '@/features/relatorios/RelatoriosPage'
 import { RelatorioExternoPage } from '@/features/relatorios/externo/RelatorioExternoPage'
 import { PerfilPage } from '@/features/perfil/PerfilPage'
-import { ComercialPage } from '@/features/comercial/ComercialPage'
+import { CrmLayout } from '@/features/comercial/crm/CrmLayout'
+import { InicioDoCrm } from '@/features/comercial/paginas/InicioDoCrm'
+import { LeadsDoCrm } from '@/features/comercial/paginas/LeadsDoCrm'
+import { FunilDoCrm } from '@/features/comercial/paginas/FunilDoCrm'
+import { ConfiguracoesDoCrm } from '@/features/comercial/paginas/ConfiguracoesDoCrm'
+import { EmBreveDoCrm } from '@/features/comercial/paginas/EmBreveDoCrm'
 
 /**
  * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
@@ -67,19 +72,33 @@ export const router = createBrowserRouter(
               children: [{ path: 'relatorios/externo', element: <RelatorioExternoPage /> }],
             },
             {
-              // Os leads da venda (18/11/2026, fase A do painel comercial —
-              // docs/painel-comercial.md). Aqui a tela é também a segurança:
-              // a RLS dos leads confere `tem_tela('comercial')`.
-              element: <RotaDaTela tela="comercial" />,
-              children: [{ path: 'comercial', element: <ComercialPage /> }],
-            },
-            {
               element: <RotaDaTela tela="despesas" />,
               children: [{ path: 'despesas', element: <DespesasPage /> }],
             },
             {
               element: <RotaDaTela tela="calendario" />,
               children: [{ path: 'calendario', element: <CalendarioPage /> }],
+            },
+          ],
+        },
+        {
+          // O CRM DO COMERCIAL (18/11/2026) é uma página PRÓPRIA, fora da
+          // moldura do Quadro: tem a barra, o cabeçalho e a busca dele — ver
+          // `CrmLayout`. Aqui a tela é também a segurança: a RLS dos leads
+          // confere `tem_tela('comercial')`.
+          element: <RotaDaTela tela="comercial" />,
+          children: [
+            {
+              path: 'comercial',
+              element: <CrmLayout />,
+              children: [
+                { index: true, element: <InicioDoCrm /> },
+                { path: 'leads', element: <LeadsDoCrm /> },
+                { path: 'funil', element: <FunilDoCrm /> },
+                { path: 'configuracoes', element: <ConfiguracoesDoCrm /> },
+                // As páginas que ainda não chegaram — ver `navegacao.ts`.
+                { path: ':pagina', element: <EmBreveDoCrm /> },
+              ],
             },
           ],
         },

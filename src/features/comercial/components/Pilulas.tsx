@@ -125,3 +125,27 @@ export function PilulaSituacao({ lead }: { lead: Lead }) {
     </span>
   )
 }
+
+/**
+ * A CONTAGEM EM PÍLULA, para a tabela e o Funil, onde o quadrado da
+ * `ContagemDoPrazo` não cabe: "4 dias", "hoje", "passou há 3". Mesma cor,
+ * mesma régua.
+ */
+export function PilulaPrazo({ lead }: { lead: Lead }) {
+  const d = lead.diasParaPrazo
+  if (d === null || lead.prioridade === null) {
+    return <span className="text-xs text-muted-foreground">{lead.dpp ? '—' : 'sem DPP'}</span>
+  }
+  const texto = d === 0 ? 'hoje' : d > 0 ? `${d} ${d === 1 ? 'dia' : 'dias'}` : `passou há ${-d}`
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap tabular-nums',
+        COR_PRIORIDADE[lead.prioridade],
+      )}
+      title={`${ROTULO_PRIORIDADE[lead.prioridade]} — ${DESCRICAO_PRIORIDADE[lead.prioridade]}`}
+    >
+      {texto}
+    </span>
+  )
+}

@@ -756,3 +756,46 @@
     text-transform: uppercase;
   }
 }
+
+/*
+ * A GAVETA DO CRM (18/11/2026): a ficha do lead entra pela direita, a barra do
+ * celular pela esquerda, a busca rápida desce. Curta e sem quique — é um
+ * painel de trabalho, não um enfeite —, e parada para quem pediu menos
+ * movimento.
+ */
+/* SÓ MOVIMENTO, SEM OPACIDADE: numa aba em segundo plano o navegador pode
+   congelar a animação no primeiro quadro, e com opacidade a ficha ficaria
+   meio apagada até alguém mexer na tela. Deslocada 20px, ela está inteira. */
+@keyframes gaveta-direita {
+  from {
+    transform: translateX(1.25rem);
+  }
+}
+@keyframes gaveta-esquerda {
+  from {
+    transform: translateX(-1.25rem);
+  }
+}
+@keyframes paleta-desce {
+  from {
+    transform: translateY(-0.5rem) scale(0.98);
+  }
+}
+@layer components {
+  .entra-direita {
+    animation: gaveta-direita 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .entra-esquerda {
+    animation: gaveta-esquerda 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .entra-paleta {
+    animation: paleta-desce 160ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entra-direita,
+  .entra-esquerda,
+  .entra-paleta {
+    animation: none;
+  }
+}

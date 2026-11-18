@@ -2350,17 +2350,27 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   "Já nasceu" e "sem WhatsApp" são PERDA (decisão do gestor). `marcar_lead_ganho` liga o lead a um
   caso já criado; a fase B troca isso por `fechar_lead`, que cria o caso. A origem `vendedor` é o
   "CELL GUI / CELL RAFA" da planilha **[a confirmar com o gestor]**.
-  **A TELA `/quadro/comercial`** (18/11/2026, fase A2; `src/features/comercial`): destino
-  "Comercial" na Operação, da tela `comercial`. Duas abas — **Hoje** (só o que pede gesto agora:
-  retorno atrasado, retorno de hoje, novos, repescagem, sem próximo passo; lead com retorno futuro
-  sai da fila até o dia) e **Todos os leads** (busca por nome ou telefone e filtros) — e duas
-  lentes, **Meus · Equipe**. "Meus" é `ehMeu` (`lib/leads.ts`): na fase de venda, o vendedor do
-  lead; na repescagem, quem tem `faz_repescagem` — e, sem ninguém marcado, continua com o
-  vendedor, para nenhum lead ficar órfão. A ficha (`?lead=` no endereço) tem os gestos no alto, a
-  RÉGUA DO PRAZO (entrada → prazo → DPP, com o "hoje") e o histórico, montado de `eventos` com a
-  nota dos contatos. O WhatsApp é só o link `wa.me`. "Quem atende o quê" (vendedor por
-  maternidade e quem faz repescagem) aparece só para quem tem a tela Equipe, e grava na hora.
-  Sem Realtime: a lista relê a cada minuto. "Fechou" ainda não cria o caso (fase B).
+  **O CRM `/quadro/comercial`** (18/11/2026, fase A2; `src/features/comercial`, desenho em
+  `docs/painel-comercial.md`, seção 4). O gestor pediu "um CRM PREMIUM" e recusou a primeira versão,
+  uma página com abas dentro do Quadro ("muito amontoado"). Virou uma PÁGINA PRÓPRIA, fora do
+  `AppShell` (rota irmã dele no `router.tsx`): `CrmLayout` com barra (`BarraDoCrm`, índigo da marca,
+  recolhível, gaveta no celular), cabeçalho (`CabecalhoDoCrm`: onde se está, busca rápida, lente
+  Meus · Equipe, Novo lead) e as páginas de `crm/navegacao.ts` — Início (números, fila de hoje,
+  agenda), Leads (tabela com visões, filtros, ordem e página), Funil (colunas por situação; arrastar
+  abre o MESMO gesto da ficha), Distribuição, e as "em breve" (Conversas, Agenda, Pós-venda, Vendas,
+  Desempenho, Automações, Monte seu pacote), cada uma com a fase e, quando existe, o caminho de hoje.
+  **QUEM VENDE (papel `comercial`) TEM O CRM COMO O SISTEMA INTEIRO** (`temPaginaPropriaDoComercial`,
+  em `destinos.ts`): "/" leva a ele, o `AppShell` some com a navegação e a logo volta para o CRM. O
+  item "Comercial" na barra do Quadro é só da gestão, e a logo do CRM abre as outras áreas dela.
+  Os leads chegam UMA vez, no layout (`crm/contexto.ts`), e as páginas recortam — fila, tabela e
+  funil não discordam. A ficha é uma GAVETA à direita que NÃO bloqueia a lista (`PainelDoLead`,
+  `?lead=`): tocar em outro lead troca a ficha. A busca rápida (`PaletaDeComandos`) abre com Ctrl K,
+  ⌘ K ou "/". "Meus" é `ehMeu` (`lib/leads.ts`): na venda, o vendedor do lead; na repescagem, quem
+  tem `faz_repescagem` — sem ninguém marcado, continua com o vendedor. O WhatsApp é só o link
+  `wa.me`. Sem Realtime: a lista relê a cada minuto. "Fechou" ainda não cria o caso (fase B).
+  As referências (Pipedrive, Close, HubSpot, Attio, Twenty, Kommo) e o que veio de cada uma estão no
+  doc; o "app dashboard shell" que o gestor mandou é referência de ESTRUTURA, feito com as peças da
+  casa — sem shadcn nem lucide —, e os gráficos dele são da futura página de Desempenho.
 - **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
   do padrão dos papéis `comercial` e `gestao`. **Desde 01/10/2026 (migration
   `20261001143922`) ela abre o RELATÓRIO EXTERNO INTEIRO** — `exigir_operacao` aceita a tela

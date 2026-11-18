@@ -133,13 +133,26 @@ const RETORNO_SUGERIDO: Partial<Record<ResultadoContato, AtalhoRetorno>> = {
   pediu_retorno: 'd3',
 }
 
-export function DialogoContato({ lead, onFechar }: { lead: Lead; onFechar: () => void }) {
+export function DialogoContato({
+  lead,
+  onFechar,
+  resultadoInicial,
+}: {
+  lead: Lead
+  onFechar: () => void
+  /** O resultado já escolhido — o Funil, quando o lead é solto em "Negociando". */
+  resultadoInicial?: ResultadoContato | undefined
+}) {
   const hoje = hojeNoFuso()
   const registrar = useRegistrarContato()
   const [canal, setCanal] = useState<CanalContato>('whatsapp')
-  const [resultado, setResultado] = useState<ResultadoContato | null>(null)
+  const [resultado, setResultado] = useState<ResultadoContato | null>(resultadoInicial ?? null)
   const [nota, setNota] = useState('')
-  const [retorno, setRetorno] = useState<EstadoRetorno>({ atalho: 'sem', dia: '', hora: '09:00' })
+  const [retorno, setRetorno] = useState<EstadoRetorno>({
+    atalho: (resultadoInicial && RETORNO_SUGERIDO[resultadoInicial]) ?? 'sem',
+    dia: '',
+    hora: '09:00',
+  })
   const [retornoTocado, setRetornoTocado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 

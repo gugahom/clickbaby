@@ -135,47 +135,57 @@ GRANT só de SELECT para `authenticated` (escrita só por RPC); entradas no
 
 ---
 
-## 4. Tela — `/quadro/comercial`
+## 4. O CRM — `/quadro/comercial`
 
-Para os comerciais e a gestão (tela `comercial`). O relatório externo continua em Relatórios.
+**A meta (18/11/2026, do gestor): um CRM PREMIUM.** Não é uma aba do Quadro: é uma página própria,
+com barra, cabeçalho e busca dela. Para quem é do papel comercial é o sistema inteiro (entra direto
+nele, sem a barra do Quadro); para a gestão, um item da barra lateral, e a logo do CRM leva de volta
+às outras áreas.
 
-```
-┌ Comercial ───────────────────────────── [Buscar mãe ou telefone] [+ Novo lead] ┐
-│ Para hoje 12 · Urgentes 4 · Repescagem 9 · Fechados no mês 23 (31%)            │
-│ [Hoje] [Funil] [Todos] [Calendário] [Pós-venda]                                │
-├───────────────────────────────────────────────┬───────────────────────────────┤
-│ fila de trabalho (prioridade, DPP, último     │ FICHA DO LEAD                 │
-│ contato, próximo passo, vendedor, ações)      │ dados · WhatsApp (wa.me)      │
-│                                               │ registrar contato · retorno   │
-│                                               │ passar · fechar · perdido     │
-│                                               │ linha do tempo                │
-└───────────────────────────────────────────────┴───────────────────────────────┘
-```
+### As referências (pesquisadas em 18/11) e o que cada uma deu
 
-- **Hoje** (abre aqui): só o que pede gesto agora, em cinco grupos — retorno atrasado, retorno
-  para hoje, novos (ninguém falou), repescagem (o prazo passou e a Vavá ainda não chamou) e sem
-  próximo passo (houve contato e nenhum retorno está marcado — o lead que a planilha deixava
-  sumir). Lead com retorno marcado para depois sai da fila até o dia dele; dentro de cada grupo,
-  o prazo mais apertado primeiro. Cada um vê o seu por padrão ("Meus": o vendedor vê os da fase de
-  venda; quem faz repescagem, os que passaram do prazo), com a lente "Equipe".
-- **Funil**: Novo · Em contato · Negociando · Repescagem · Ganho/Perdido do mês; arrastar só no
-  mouse, como as seções do Quadro.
-- **Todos**: a planilha como tabela, com `FiltrosDeBusca`: mês da DPP, origem, vendedor,
-  prioridade, situação; exportar CSV.
-- **Calendário**: o calendário atual, trazido para dentro (mesmos componentes). **[a confirmar]**
-  se ele sai da barra lateral ou fica nos dois lugares — hoje o ADM também o usa.
-- **Pós-venda**: o modo comercial que hoje mora no relatório externo (ofertas e retorno agendado)
-  — é o trabalho da Vavá com BIRTH, Reels, Foto/Livro e New Born.
-- **Ficha**: dados; botão **WhatsApp** que abre a conversa por `wa.me` no WhatsApp Web do
-  computador (funciona JÁ, sem API); "Registrar contato" com chips e atalhos de retorno (amanhã, 2,
-  3, 7 dias ou outro dia e hora — o resultado sugere um: sem resposta → amanhã); Passar; **Fechar venda** (abre o formulário do caso já preenchido, com a tabela de
-  preços); Perdido; linha do tempo. Com a API do WhatsApp, a conversa entra nessa coluna.
-- **Números**: só a faixa de 4 KPIs no topo por enquanto (painel enxuto). Conversão por origem
-  e por vendedor na fase C.
+| CRM | O que veio dele |
+|---|---|
+| **Pipedrive** | todo negócio aberto tem um PRÓXIMO PASSO; o funil ordenado por ele; o atrasado em vermelho |
+| **Close** | "smart views": listas que se esvaziam sozinhas conforme o trabalho anda (as visões de Leads) e a caixa de "hoje" × "futuro" (o Início e a agenda) |
+| **HubSpot** | a ficha como "preview" numa gaveta ao lado da tabela; as visões como abas com contagem |
+| **Attio / Twenty** | a busca rápida no Ctrl K / "/"; ficha com detalhes + linha do tempo; tabela e quadro como duas formas da mesma lista |
+| **Kommo** | é o CRM de WhatsApp do Brasil: o lugar reservado para as Conversas, ligadas ao lead (fase D) |
 
-O sino chama o dono do lead quando um retorno dele vence (derivado, como o resto).
+O componente de painel que o gestor mandou (um "app dashboard shell" de shadcn) é REFERÊNCIA DE
+ESTRUTURA — barra recolhível que vira gaveta no celular, cabeçalho com caminho e busca, cartões de
+número, tabela que ordena com filtros e paginação —, e foi feito com as peças da casa: sem shadcn,
+sem lucide, sem as cores dele. Os gráficos dele ficam para a página de Desempenho (fase C).
 
----
+### As páginas (`crm/navegacao.ts`, a tabela única)
+
+- **Início** — saudação, quatro números (para hoje, urgentes, em negociação, fechados no mês com a
+  conversão e a comparação com o mês anterior quando ele tem dado), a **fila de hoje** em cinco
+  grupos (retorno atrasado, retorno de hoje, novos, repescagem, sem próximo passo) e a **agenda** dos
+  retornos dos próximos sete dias.
+- **Leads** — a planilha como tabela: visões com contagem (Abertos, Sem próximo passo, Urgentes,
+  Repescagem, Fechados, Perdidos, Todos), busca e filtros (maternidade, origem, prioridade,
+  vendedor), colunas que ordenam, 25 por página. No celular vira lista de cartões.
+- **Funil** — colunas por situação (Novos, Em contato, Negociando, e Fechou/Perdido do mês),
+  ordenadas pelo próximo passo. Arrastar (só no mouse) abre o MESMO gesto da ficha: registrar
+  contato (já com "mandou proposta" em Negociando), fechou, perdido.
+- **Distribuição** — quem atende cada maternidade e quem faz a repescagem. Todo mundo lê; só a tela
+  Equipe muda.
+- **Em breve**, cada uma dizendo o que vai ser e a fase: Conversas (D), Agenda (B), Pós-venda (B),
+  Vendas (F), Desempenho (C), Automações (E), Monte seu pacote (G). Agenda e Pós-venda levam ao lugar
+  onde esse trabalho mora hoje (o Calendário e o modo comercial do relatório externo).
+
+### O que vale em todas
+
+- **A ficha do lead** abre numa gaveta à direita (`?lead=` no endereço) e não bloqueia a lista:
+  tocar em outro lead troca a ficha. No alto, a contagem do prazo no lugar do retrato, WhatsApp e
+  Registrar contato à vista, o resto em "Mais". No corpo: próximo passo, régua do prazo, detalhes,
+  atividade.
+- **A lente Meus · Equipe** no cabeçalho vale para Início, Leads e Funil.
+- **A busca rápida** (Ctrl K, ⌘ K, "/") acha a família pelo nome ou pelo telefone, leva a qualquer
+  página e cria lead.
+- **A cor é da casa:** a barra no índigo da marca, o rosa marcando a página aberta, siglas de
+  maternidade em mono (a regra do sistema), e a contagem do prazo com a legenda da planilha.
 
 ## 5. Fases
 
@@ -230,9 +240,7 @@ Falta:
 
 - **A1 — banco** (migration `20261118150001`): tabelas, view, RPCs, eventos com `lead_id`, 29
   testes pgTAP. Branch `feat/comercial-leads-banco`.
-- **A2 — tela** (`src/features/comercial`, branch `feat/comercial-tela`): abas **Hoje** e **Todos
-  os leads**, lentes **Meus · Equipe**, os quatro números, a ficha (gestos no alto, régua do
-  prazo, histórico), novo/editar lead, registrar contato com retorno sugerido pelo resultado,
-  passar, perdido, fechou, reabrir, e "Quem atende o quê" (vendedor por maternidade +
-  repescagem). Funil, Calendário e Pós-venda dentro da tela são da fase B.
+- **A2 — o CRM** (`src/features/comercial`, branch `feat/comercial-tela`): ver a seção 4. A
+  primeira versão (uma página com abas, dentro do Quadro) foi recusada pelo gestor no mesmo dia
+  ("ficou tudo muito amontoado"; "é uma NOVA PÁGINA"; "um CRM premium") e virou o CRM.
 - **A3 — importação**: falta. Os CSVs ficam fora do repositório (têm nome e telefone).
