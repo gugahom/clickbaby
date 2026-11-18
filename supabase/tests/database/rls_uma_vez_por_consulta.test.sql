@@ -36,9 +36,11 @@ select is(
   -- a leitura de ofertas_comerciais e de retornos_comerciais usa
   -- tem_tela('comercial'/'relatorios'). A 22ª é a leitura de anexos_da_etapa
   -- (13/10/2026); a 23ª e a 24ª, as de vendas_do_caso e contratos_dos_casos
-  -- (14/10/2026); a 25ª, a de precos_dos_pacotes (27/10/2026).
-  25,
-  'U2: as 25 policies que usam os helpers continuam lá');
+  -- (14/10/2026); a 25ª, a de precos_dos_pacotes (27/10/2026). A 26ª, a 27ª e a
+  -- 28ª são as de leads, contatos_do_lead e vendedores_da_maternidade
+  -- (18/11/2026); a de eventos foi refeita na mesma migration e continua contada.
+  28,
+  'U2: as 28 policies que usam os helpers continuam lá');
 
 -- 3. O PLANO mostra a diferença: a consulta do Quadro, como o app a faz, não
 --    tem mais a função como filtro linha a linha — ela aparece como InitPlan.

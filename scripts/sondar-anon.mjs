@@ -83,6 +83,12 @@ const TABELAS = [
   // o app: leitura aberta a anon seria um relógio de presença da equipe
   // exposto na rua.
   { nome: 'notificacoes_vistas' },
+  // Os leads do comercial (20261118150001): telefone, DPP e maternidade de
+  // gestante. Nem fotógrafa logada lê — só quem tem a tela Comercial.
+  { nome: 'leads' },
+  { nome: 'contatos_do_lead' },
+  { nome: 'vendedores_da_maternidade' },
+  { nome: 'leads_do_comercial', view: true },
 ]
 
 /*
@@ -273,6 +279,20 @@ const RPCS_TRANSICAO = {
   definir_oferta_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_oferta: 'reels', p_fase: 'enviado' },
   // O retorno agendado do comercial (20261005055525).
   definir_retorno_comercial: { p_caso_id: '00000000-0000-0000-0000-000000000000', p_retorno_em: null },
+  // Os leads do comercial (20261118150001). Enum vai como null (ver acima).
+  criar_lead: { p_mae_nome: 'sonda', p_telefone: '41999999999' },
+  editar_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_mae_nome: 'sonda', p_telefone: '41999999999', p_dpp: null, p_maternidade_id: null, p_origem: null },
+  registrar_contato_do_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_canal: null, p_resultado: null },
+  agendar_retorno_do_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_quando: null },
+  passar_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_para_pessoa_id: '00000000-0000-0000-0000-000000000000' },
+  marcar_lead_perdido: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_motivo: null },
+  marcar_lead_ganho: { p_lead_id: '00000000-0000-0000-0000-000000000000' },
+  reabrir_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_motivo: 'sonda' },
+  definir_vendedor_da_maternidade: { p_maternidade_id: '00000000-0000-0000-0000-000000000000', p_pessoa_id: null },
+  dias_de_prazo_da_venda: {},
+  normalizar_telefone: { p_telefone: '41999999999' },
+  pessoa_do_comercial: {},
+  pode_receber_lead: { p_pessoa_id: '00000000-0000-0000-0000-000000000000' },
   // O ressarcimento das despesas (20261005060950).
   marcar_despesa_ressarcida: { p_despesa_id: '00000000-0000-0000-0000-000000000000', p_ressarcida: false },
   metricas_dentro_do_padrao: { p_inicio: '2026-10-01', p_fim: '2026-10-31' },
@@ -463,6 +483,8 @@ const FORMA = {
   notificacoes_vistas: { chave: 'pessoa_id' },
   // Um contrato por caso: a chave é caso_id, e não há `id`.
   contratos_dos_casos: { chave: 'caso_id' },
+  // Um vendedor por maternidade (20261118150001): a chave é maternidade_id.
+  vendedores_da_maternidade: { chave: 'maternidade_id' },
   // A view do relatório externo (20260929233525) tem `id` e não tem
   // `created_at`: com o padrão, o PostgREST devolvia PGRST204 (coluna
   // inexistente) e a sonda acusava falha — foi o que aconteceu no push de

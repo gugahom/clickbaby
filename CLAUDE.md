@@ -437,6 +437,14 @@ registrar_venda_do_caso(p_caso_id, p_item, p_valor, p_descricao, p_forma, p_parc
 remover_venda_do_caso(p_venda_id)                -- não existe editar
 definir_contrato_do_caso(p_caso_id, p_url)       -- em branco tira; o link não vai para eventos
 
+-- os leads do comercial (18/11/2026; ver seção 13 e docs/painel-comercial.md) — tela Comercial
+criar_lead(p_mae_nome, p_telefone, p_dpp, p_maternidade_id, p_origem, ...) -- telefone com lead aberto devolve o existente
+editar_lead(p_lead_id, ...)                      -- só dados; o evento diz QUE campos, nunca valores
+registrar_contato_do_lead(p_lead_id, p_canal, p_resultado, p_nota, p_proximo_retorno_em) -- carimba a fase
+agendar_retorno_do_lead(p_lead_id, p_quando) / passar_lead(p_lead_id, p_para_pessoa_id, p_motivo)
+marcar_lead_perdido(p_lead_id, p_motivo, p_texto) / marcar_lead_ganho(p_lead_id, p_caso_id) / reabrir_lead(p_lead_id, p_motivo)
+definir_vendedor_da_maternidade(p_maternidade_id, p_pessoa_id) -- tela Equipe
+
 -- despesas do caso (12/09/2026; ver seção 13)
 registrar_despesa(p_caso_id, p_tipo, p_valor, p_pessoa_id, p_momento, p_descricao)
 remover_despesa(p_despesa_id, p_motivo)                 -- não existe editar
@@ -2324,6 +2332,24 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   escurecendo, para a barra ler como a continuação daquele canto — um L em volta do
   conteúdo. O gradiente do cabeçalho é horizontal e atravessa as duas cores da marca;
   espremido numa coluna de 3.5rem viraria listra.
+- **OS LEADS DO COMERCIAL — fase A do painel comercial** (18/11/2026, migration
+  `20261118150001`; o desenho inteiro e as fases estão em `docs/painel-comercial.md`). É o ANTES
+  da venda, que morava na planilha "PAINEL DE VENDAS": `leads` (uma mãe em negociação; telefone
+  normalizado `+55…` por `normalizar_telefone`, único entre leads ABERTOS — é a chave que o
+  WhatsApp vai usar), `contatos_do_lead` (APPEND-ONLY: "1º retorno", "último contato" e os
+  retornos da repescagem são CONTADOS, com o carimbo do servidor), `vendedores_da_maternidade`
+  (cadastro: o lead nasce com o vendedor da maternidade; tela Equipe) e `pessoas.faz_repescagem`
+  (marca na pessoa, como as do sino do New Born).
+  **O QUE SE CALCULA mora na view `leads_do_comercial`**: prazo = DPP − `dias_de_prazo_da_venda()`
+  (10 — 142 de 142 linhas da planilha), a prioridade da legenda dela (normal >10 dias, acompanhar
+  6–10, atenção 3–5, urgente 0–2, repescagem passou do prazo) e a FASE (venda ou repescagem).
+  Nenhum job move lead de fase: passou do prazo sem fechar, ele aparece na fila da repescagem; o
+  `vendedor_id` continua dizendo quem teve a venda.
+  **`eventos` ganhou `lead_id`**, e a policy de leitura esconde essas linhas de quem não tem a
+  tela Comercial. Payload com ids e motivos — telefone, nome e nota nunca.
+  "Já nasceu" e "sem WhatsApp" são PERDA (decisão do gestor). `marcar_lead_ganho` liga o lead a um
+  caso já criado; a fase B troca isso por `fechar_lead`, que cria o caso. A origem `vendedor` é o
+  "CELL GUI / CELL RAFA" da planilha **[a confirmar com o gestor]**.
 - **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
   do padrão dos papéis `comercial` e `gestao`. **Desde 01/10/2026 (migration
   `20261001143922`) ela abre o RELATÓRIO EXTERNO INTEIRO** — `exigir_operacao` aceita a tela
