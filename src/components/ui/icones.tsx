@@ -741,3 +741,42 @@ export function IconeDocumento({ className }: PropsIcone) {
     </IconeDeTraco>
   )
 }
+
+/** O funil da venda — o destino "Comercial" (18/11/2026). */
+export function IconeFunil({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z" />
+    </svg>
+  )
+}
+
+/**
+ * Um balão de conversa, para "Abrir no WhatsApp". Genérico de propósito: a
+ * marca do WhatsApp não entra no app; quem diz o destino é o texto do botão.
+ */
+export function IconeConversa({ className }: PropsIcone) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12Z" />
+    </svg>
+  )
+}

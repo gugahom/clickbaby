@@ -2350,6 +2350,17 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   "Já nasceu" e "sem WhatsApp" são PERDA (decisão do gestor). `marcar_lead_ganho` liga o lead a um
   caso já criado; a fase B troca isso por `fechar_lead`, que cria o caso. A origem `vendedor` é o
   "CELL GUI / CELL RAFA" da planilha **[a confirmar com o gestor]**.
+  **A TELA `/quadro/comercial`** (18/11/2026, fase A2; `src/features/comercial`): destino
+  "Comercial" na Operação, da tela `comercial`. Duas abas — **Hoje** (só o que pede gesto agora:
+  retorno atrasado, retorno de hoje, novos, repescagem, sem próximo passo; lead com retorno futuro
+  sai da fila até o dia) e **Todos os leads** (busca por nome ou telefone e filtros) — e duas
+  lentes, **Meus · Equipe**. "Meus" é `ehMeu` (`lib/leads.ts`): na fase de venda, o vendedor do
+  lead; na repescagem, quem tem `faz_repescagem` — e, sem ninguém marcado, continua com o
+  vendedor, para nenhum lead ficar órfão. A ficha (`?lead=` no endereço) tem os gestos no alto, a
+  RÉGUA DO PRAZO (entrada → prazo → DPP, com o "hoje") e o histórico, montado de `eventos` com a
+  nota dos contatos. O WhatsApp é só o link `wa.me`. "Quem atende o quê" (vendedor por
+  maternidade e quem faz repescagem) aparece só para quem tem a tela Equipe, e grava na hora.
+  Sem Realtime: a lista relê a cada minuto. "Fechou" ainda não cria o caso (fase B).
 - **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
   do padrão dos papéis `comercial` e `gestao`. **Desde 01/10/2026 (migration
   `20261001143922`) ela abre o RELATÓRIO EXTERNO INTEIRO** — `exigir_operacao` aceita a tela

@@ -10,6 +10,7 @@ import { EquipePage } from '@/features/equipe/EquipePage'
 import { RelatoriosPage } from '@/features/relatorios/RelatoriosPage'
 import { RelatorioExternoPage } from '@/features/relatorios/externo/RelatorioExternoPage'
 import { PerfilPage } from '@/features/perfil/PerfilPage'
+import { ComercialPage } from '@/features/comercial/ComercialPage'
 
 /**
  * Rotas do MVP. As telas do plano (seção 7 de docs/plano.md) entram como irmãs
@@ -63,6 +64,13 @@ export const router = createBrowserRouter(
               // comercial (01/10/2026).
               element: <RotaDaTela tela={['relatorios', 'comercial']} />,
               children: [{ path: 'relatorios/externo', element: <RelatorioExternoPage /> }],
+            },
+            {
+              // Os leads da venda (18/11/2026, fase A do painel comercial —
+              // docs/painel-comercial.md). Aqui a tela é também a segurança:
+              // a RLS dos leads confere `tem_tela('comercial')`.
+              element: <RotaDaTela tela="comercial" />,
+              children: [{ path: 'comercial', element: <ComercialPage /> }],
             },
             {
               element: <RotaDaTela tela="despesas" />,

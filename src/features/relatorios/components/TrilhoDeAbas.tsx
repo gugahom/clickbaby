@@ -12,17 +12,20 @@ export function TrilhoDeAbas<T extends string>({
   abas,
   ativa,
   onTrocar,
+  rotulo = 'Visões do relatório',
 }: {
   abas: { id: T; rotulo: string }[]
   ativa: T
   onTrocar: (id: T) => void
+  /** O nome do grupo de abas para leitor de tela. */
+  rotulo?: string
 }) {
   return (
     <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
       <div
         className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-cartao"
         role="tablist"
-        aria-label="Visões do relatório"
+        aria-label={rotulo}
       >
         {abas.map((aba) => (
           <button

@@ -152,9 +152,12 @@ Para os comerciais e a gestão (tela `comercial`). O relatório externo continua
 └───────────────────────────────────────────────┴───────────────────────────────┘
 ```
 
-- **Hoje** (abre aqui): a fila na ordem do que vence — retornos atrasados, urgentes, retornos de
-  hoje, novos sem contato. Cada um vê o seu por padrão (o vendedor vê os da fase de venda; quem
-  faz repescagem vê a fila dela), com chave "Todos".
+- **Hoje** (abre aqui): só o que pede gesto agora, em cinco grupos — retorno atrasado, retorno
+  para hoje, novos (ninguém falou), repescagem (o prazo passou e a Vavá ainda não chamou) e sem
+  próximo passo (houve contato e nenhum retorno está marcado — o lead que a planilha deixava
+  sumir). Lead com retorno marcado para depois sai da fila até o dia dele; dentro de cada grupo,
+  o prazo mais apertado primeiro. Cada um vê o seu por padrão ("Meus": o vendedor vê os da fase de
+  venda; quem faz repescagem, os que passaram do prazo), com a lente "Equipe".
 - **Funil**: Novo · Em contato · Negociando · Repescagem · Ganho/Perdido do mês; arrastar só no
   mouse, como as seções do Quadro.
 - **Todos**: a planilha como tabela, com `FiltrosDeBusca`: mês da DPP, origem, vendedor,
@@ -164,8 +167,8 @@ Para os comerciais e a gestão (tela `comercial`). O relatório externo continua
 - **Pós-venda**: o modo comercial que hoje mora no relatório externo (ofertas e retorno agendado)
   — é o trabalho da Vavá com BIRTH, Reels, Foto/Livro e New Born.
 - **Ficha**: dados; botão **WhatsApp** que abre a conversa por `wa.me` no WhatsApp Web do
-  computador (funciona JÁ, sem API); "Registrar contato" com chips e atalhos de retorno (+1, +3,
-  +7 dias); Passar; **Fechar venda** (abre o formulário do caso já preenchido, com a tabela de
+  computador (funciona JÁ, sem API); "Registrar contato" com chips e atalhos de retorno (amanhã, 2,
+  3, 7 dias ou outro dia e hora — o resultado sugere um: sem resposta → amanhã); Passar; **Fechar venda** (abre o formulário do caso já preenchido, com a tabela de
   preços); Perdido; linha do tempo. Com a API do WhatsApp, a conversa entra nessa coluna.
 - **Números**: só a faixa de 4 KPIs no topo por enquanto (painel enxuto). Conversão por origem
   e por vendedor na fase C.
@@ -203,14 +206,33 @@ Anotações para quando chegar a vez:
 
 ---
 
-## 6. Perguntas que ainda faltam
+## 6. Respostas do gestor (18/11) e o que ainda falta
 
-1. **Vendedor por maternidade**: além de GNDI → Guizão e HSC → Rafinha, a lista do "Partos 2026"
-   (Guizão: Brígida, HNSG, Unimed, Curitiba, Mackenzie, Rocio, Marillac; Rafinha: Santa Cruz)
-   vale para os leads também? Fátima, Graças e Materdei ficam com quem?
-2. **Repescagem**: só a Vavá? E começa exatamente no prazo (DPP − 10)?
-3. **"CELL GUI / CELL RAFA"** é o lead que o próprio vendedor trouxe?
-4. **"Sem WhatsApp"** é perda, ou vira ligação?
-5. **Importação**: só os meses com DPP pela frente (NOV/26 em diante) entram como leads vivos? Os
-   meses passados entram como histórico, para os números já nascerem com comparação?
-6. **Calendário**: sai da barra lateral e vira só aba do Comercial, ou fica nos dois lugares?
+Respondido:
+- **Vendedor por maternidade**: a lista do "Partos 2026" vale para os leads, e **Fátima, Graças e
+  Materdei ficam com o Guizão**. Na prática: tudo com o Guizão, menos a Santa Cruz (Rafinha). A
+  tela já tem o cadastro ("Quem atende o quê", só para quem tem a tela Equipe) — falta preencher.
+- **Repescagem**: só a Vavá, a partir do prazo (DPP − 10).
+- **"Sem WhatsApp"** é perda (como "já nasceu").
+- **Importação**: os meses passados entram como HISTÓRICO, para o painel de números já nascer com
+  comparação; os meses com DPP pela frente entram como leads vivos.
+- **Calendário**: fica nos dois lugares (barra lateral e aba do Comercial), **mas criar caso
+  passa a ser só do comercial** — isso muda `criar_caso` (hoje é `eh_adm()`) e o "+ Novo caso" do
+  Calendário; entra na fase B, junto com "fechar venda → caso".
+
+Falta:
+1. **"CELL GUI / CELL RAFA"** — o usuário vai perguntar ao gestor. Enquanto isso, a origem
+   `vendedor` ("Celular do vendedor" na tela) cobre os dois, com o detalhe no texto da origem.
+
+---
+
+## 7. O que já está feito
+
+- **A1 — banco** (migration `20261118150001`): tabelas, view, RPCs, eventos com `lead_id`, 29
+  testes pgTAP. Branch `feat/comercial-leads-banco`.
+- **A2 — tela** (`src/features/comercial`, branch `feat/comercial-tela`): abas **Hoje** e **Todos
+  os leads**, lentes **Meus · Equipe**, os quatro números, a ficha (gestos no alto, régua do
+  prazo, histórico), novo/editar lead, registrar contato com retorno sugerido pelo resultado,
+  passar, perdido, fechou, reabrir, e "Quem atende o quê" (vendedor por maternidade +
+  repescagem). Funil, Calendário e Pós-venda dentro da tela são da fase B.
+- **A3 — importação**: falta. Os CSVs ficam fora do repositório (têm nome e telefone).

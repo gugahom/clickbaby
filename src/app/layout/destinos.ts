@@ -2,6 +2,7 @@ import {
   IconeCalendario,
   IconeDespesa,
   IconeEquipe,
+  IconeFunil,
   IconeKanban,
   IconeRelatorio,
 } from '@/components/ui/icones'
@@ -102,6 +103,19 @@ export function destinosDe(telas: Set<Tela>): Destino[] {
       grupo: 'operacao',
       descricao: 'Partos, horas marcadas, prazos e feriados',
       Icone: IconeCalendario,
+    })
+  }
+
+  // O COMERCIAL é trabalho acontecendo — a venda —, e por isso fica na
+  // Operação (18/11/2026). É a fila de leads de quem vende; o relatório
+  // externo continua sendo o lugar das ofertas pós-parto.
+  if (telas.has('comercial')) {
+    destinos.push({
+      para: '/comercial',
+      rotulo: 'Comercial',
+      grupo: 'operacao',
+      descricao: 'Os leads da venda: quem chamar hoje',
+      Icone: IconeFunil,
     })
   }
 
