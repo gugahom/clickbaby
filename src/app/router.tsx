@@ -37,6 +37,8 @@ import { EmBreveDoCrm } from '@/features/comercial/paginas/EmBreveDoCrm'
  * /quadro/quadro. Os três lados desta decisão (base do Vite, outDir e este
  * basename) precisam concordar; ver o comentário em vite.config.ts.
  */
+// ROTA NOVA DE PRIMEIRO NÍVEL entra também em `ROTAS_DO_APP`, no vite.config.ts:
+// sem isso, abrir o endereço direto (link colado, F5) dá 404 no Cloudflare.
 export const router = createBrowserRouter(
   [
     { path: '/login', element: <LoginPage /> },
