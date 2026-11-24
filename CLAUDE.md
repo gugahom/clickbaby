@@ -2378,7 +2378,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `?lead=`): tocar em outro lead troca a ficha. A busca rápida (`PaletaDeComandos`) abre com Ctrl K,
   ⌘ K ou "/". "Meus" é `ehMeu` (`lib/leads.ts`): na venda, o vendedor do lead; na repescagem, quem
   tem `faz_repescagem` — sem ninguém marcado, continua com o vendedor. O WhatsApp é só o link
-  `wa.me`. Sem Realtime: a lista relê a cada minuto. "Fechou" ainda não cria o caso (fase B).
+  `wa.me`. Sem Realtime: a lista relê a cada minuto.
+  **"FECHOU" CRIA O CASO** (24/11/2026, fase B2, `components/DialogoFechou.tsx`): primeiro os casos
+  parecidos da agenda (`casos_parecidos_do_lead`) — com algum, LIGAR a ele (`marcar_lead_ganho`, e a
+  venda do pacote e o contrato são cobrados ali se o caso não os tem, menos no BIRTH); sem nenhum,
+  o formulário do Calendário em modo FECHAMENTO (`FecharVendaDialogo`, aberto com mãe, bebê,
+  maternidade, DPP e New Born do lead) grava tudo por `fechar_lead`. A ficha do lead ganho mostra o
+  caso e "Ver na agenda". **As animações de entrada da ficha e da gaveta são `backwards`, NUNCA
+  `both`**: o transform que fica depois do fim vira a referência dos menus `fixed` de dentro, e o
+  "Mais" da ficha abria fora da tela.
   As referências (Pipedrive, Close, HubSpot, Attio, Twenty, Kommo) e o que veio de cada uma estão no
   doc; o "app dashboard shell" que o gestor mandou é referência de ESTRUTURA, feito com as peças da
   casa — sem shadcn nem lucide —, e os gráficos dele são da futura página de Desempenho.

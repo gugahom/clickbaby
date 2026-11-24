@@ -398,6 +398,56 @@ export function useCriarCaso() {
 }
 
 /**
+ * FECHAR O LEAD CRIA O CASO (24/11/2026, fase B do CRM, `fechar_lead`). O MESMO
+ * caso de `useCriarCaso`, montado do mesmo jeito (`previsao`, `camposNovos`), mas
+ * numa transação só com a venda, o contrato e o lead — por isso a venda vai
+ * DENTRO da chamada, e não depois como no Calendário. A linha do pacote e o
+ * contrato são obrigatórios: o banco recusa sem eles. Só o termo vem depois,
+ * como em toda criação de caso.
+ */
+export interface FechamentoDoLead extends Omit<NovoCaso, 'venda'> {
+  leadId: string
+  venda: MudancaDaVenda
+}
+
+export function useFecharLead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (n: FechamentoDoLead): Promise<string> => {
+      const { data, error } = await supabase.rpc('fechar_lead', {
+        p_lead_id: n.leadId,
+        p_mae_nome: n.maeNome,
+        p_bebe_nome: n.bebeNome,
+        p_pacote_id: n.pacoteId,
+        p_maternidade_id: n.maternidadeId,
+        p_previsao_em: previsao(n.dia, n.hora),
+        p_vendas: n.venda.novas.map((v) => ({
+          item: v.item,
+          valor: v.valor,
+          descricao: v.descricao,
+          // A condição do cartão: as duas juntas, ou nenhuma.
+          parcelas: v.valorParcela !== null ? v.parcelas : null,
+          valor_parcela: v.valorParcela,
+        })),
+        p_contrato: n.venda.contrato ?? '',
+        p_click_home: n.clickHome,
+        p_sem_hora: n.hora === '',
+        ...camposNovos(n),
+      })
+      if (error) throw new Error(error.message)
+      await registrarTermoSeMudou(data, n.termo, null)
+      return data
+    },
+    onSettled: () => {
+      void invalidarVendas(queryClient)
+      void queryClient.invalidateQueries({ queryKey: ['comercial'] })
+      agendarRecargaDoQuadro(queryClient)
+      return queryClient.invalidateQueries({ queryKey: [CHAVE] })
+    },
+  })
+}
+
+/**
  * O CASO COMO ELE ESTÁ NO BANCO, para o formulário de edição — o item do
  * calendário só traz o que a tela mostra (a sigla, o nome do pacote), e editar
  * precisa dos ids e da previsão exata.

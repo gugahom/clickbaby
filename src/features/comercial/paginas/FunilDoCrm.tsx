@@ -1,7 +1,8 @@
 import { useMemo, useState, type DragEvent } from 'react'
 import clsx from 'clsx'
 import { iniciais } from '@/lib/iniciais'
-import { DialogoGanho, DialogoPerdido } from '../components/DialogosDoLead'
+import { DialogoPerdido } from '../components/DialogosDoLead'
+import { DialogoFechou } from '../components/DialogoFechou'
 import { PilulaPrazo, PilulaRetorno } from '../components/Pilulas'
 import { useCrm } from '../crm/contexto'
 import {
@@ -177,7 +178,7 @@ export function FunilDoCrm() {
         </div>
       </div>
 
-      {fechar?.como === 'ganho' && <DialogoGanho lead={fechar.lead} onFechar={() => setFechar(null)} />}
+      {fechar?.como === 'ganho' && <DialogoFechou lead={fechar.lead} onFechar={() => setFechar(null)} />}
       {fechar?.como === 'perdido' && <DialogoPerdido lead={fechar.lead} onFechar={() => setFechar(null)} />}
     </div>
   )

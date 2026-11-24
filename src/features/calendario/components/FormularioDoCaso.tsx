@@ -5,7 +5,13 @@ import { Dialogo } from '@/components/ui/Dialogo'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { EditorDeTexto } from '@/components/ui/EditorDeTexto'
 import { pacotesDaLista, useCadastros } from '@/features/quadro/api/useCadastros'
-import { useCasoEditavel, useCriarCaso, useEditarCasoDoCalendario, type CasoEditavel } from '../api/useCalendario'
+import {
+  useCasoEditavel,
+  useCriarCaso,
+  useEditarCasoDoCalendario,
+  useFecharLead,
+  type CasoEditavel,
+} from '../api/useCalendario'
 import { corDoGoogle, corDoParto } from '../lib/coresGoogle'
 import { emBrasilia, rotuloDoDia } from '../lib/datas'
 import { CLASSE_TERMO, EXPLICACAO_TERMO, OPCOES_TERMO, ROTULO_TERMO, termoSugerido } from '@/features/quadro/lib/termo'
@@ -77,6 +83,34 @@ export function NovoCasoDialogo({
   return <FormularioDoCaso proposta={{ dia: diaInicial, hora: null }} onPronto={onCriado} onFechar={onFechar} />
 }
 
+/**
+ * O LEAD QUE FECHOU (24/11/2026, fase B do CRM): o formulário abre com o que o
+ * lead já sabe — mãe, bebê, maternidade, DPP, interesse em New Born — e salvar
+ * cria o caso, a venda e o contrato e fecha o lead, numa transação
+ * (`fechar_lead`). Aqui a linha do PACOTE e o CONTRATO são obrigatórios
+ * (decisão do usuário); no Calendário seguem opcionais.
+ */
+export interface LeadParaFechar {
+  id: string
+  maeNome: string
+  bebeNome: string | null
+  maternidadeId: string | null
+  dpp: string | null
+  interesseNewBorn: boolean
+}
+
+export function FecharVendaDialogo({
+  lead,
+  onFechado,
+  onFechar,
+}: {
+  lead: LeadParaFechar
+  onFechado: () => void
+  onFechar: () => void
+}) {
+  return <FormularioDoCaso lead={lead} proposta={null} onPronto={onFechado} onFechar={onFechar} />
+}
+
 /** Carrega o caso como está no banco e abre o formulário nele. */
 export function EditarCasoDialogo({
   casoId,
@@ -109,11 +143,13 @@ export function EditarCasoDialogo({
 
 function FormularioDoCaso({
   caso,
+  lead,
   proposta,
   onPronto,
   onFechar,
 }: {
   caso?: CasoEditavel
+  lead?: LeadParaFechar
   proposta: Proposta | null
   onPronto: (dia: string) => void
   onFechar: () => void
@@ -121,14 +157,17 @@ function FormularioDoCaso({
   const cadastros = useCadastros(true)
   const criar = useCriarCaso()
   const editar = useEditarCasoDoCalendario()
+  const fechar = useFecharLead()
   const antes = caso?.previsaoEm ? emBrasilia(caso.previsaoEm) : null
-  const [maeNome, setMaeNome] = useState(caso?.maeNome ?? '')
+  const [maeNome, setMaeNome] = useState(caso?.maeNome ?? lead?.maeNome.toUpperCase() ?? '')
   // "BEBÊ" é o que o sync grava quando o título não tem nome (o título precisa
   // da barra): no formulário, é o campo vazio.
-  const [bebeNome, setBebeNome] = useState(caso?.bebeNome && caso.bebeNome !== 'BEBÊ' ? caso.bebeNome : '')
+  const [bebeNome, setBebeNome] = useState(
+    caso?.bebeNome && caso.bebeNome !== 'BEBÊ' ? caso.bebeNome : (lead?.bebeNome?.toUpperCase() ?? ''),
+  )
   const [pacoteId, setPacoteId] = useState(caso?.pacoteId ?? '')
-  const [maternidadeId, setMaternidadeId] = useState(caso?.maternidadeId ?? '')
-  const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? '')
+  const [maternidadeId, setMaternidadeId] = useState(caso?.maternidadeId ?? lead?.maternidadeId ?? '')
+  const [dia, setDia] = useState(proposta?.dia ?? antes?.dia ?? lead?.dpp ?? '')
   // Hora a definir abre com o campo vazio — a meia-noite guardada não é hora.
   const [hora, setHora] = useState(proposta?.hora ?? (caso?.semHora ? '' : (antes?.hora ?? '')))
   // OS TRÊS DE QUANDO (14/10/2026, o gestor: "a data provável do parto, o
@@ -136,13 +175,13 @@ function FormularioDoCaso({
   // HORA é a do internamento, e o NASCIMENTO previsto mora em `cesarea_em`.
   const [nascimento, setNascimento] = useState(caso?.cesareaEm ? emBrasilia(caso.cesareaEm).hora : '')
   const [observacao, setObservacao] = useState(caso?.observacao ?? '')
-  const [clickHome, setClickHome] = useState(caso?.clickHome ?? false)
+  const [clickHome, setClickHome] = useState(caso?.clickHome ?? lead?.interesseNewBorn ?? false)
   const [fotolivro, setFotolivro] = useState(caso?.temFotolivro ?? false)
   // O termo ESCOLHIDO; enquanto ninguém tocou, vale o do caso ou a sugestão do
   // pacote (BIRTH = sem contrato), que acompanha a troca de pacote.
   const [termoEscolhido, setTermoEscolhido] = useState<TermoStatus | null | undefined>(undefined)
   const [erro, setErro] = useState<string | null>(null)
-  const ocupado = criar.isPending || editar.isPending
+  const ocupado = criar.isPending || editar.isPending || fechar.isPending
   const podeVenda = usePodeVenda()
   const vendaAtual = useVendaDoCaso(caso?.id ?? null, podeVenda)
   const [estadoDaVenda, setEstadoDaVenda] = useState<EstadoDaVenda>(VENDA_INTOCADA)
@@ -183,6 +222,9 @@ function FormularioDoCaso({
     !maternidade && 'a maternidade',
     dia === '' && 'o dia',
     venda?.falta,
+    // No FECHAMENTO a venda e o contrato são obrigatórios (o banco também recusa).
+    lead && venda?.mudanca && !venda.mudanca.novas.some((n) => n.item === 'pacote') && 'o valor do pacote na venda',
+    lead && venda?.mudanca && !venda.mudanca.contrato && 'o link do contrato',
   ].filter(Boolean) as string[]
   const trocouPacote = caso?.pacoteId != null && pacoteId !== caso.pacoteId
   const horaAntes = caso?.semHora ? '' : (antes?.hora ?? '')
@@ -220,7 +262,9 @@ function FormularioDoCaso({
     }
     const feito = caso
       ? editar.mutateAsync({ ...dados, casoId: caso.id, termoAntes: caso.termo })
-      : criar.mutateAsync(dados)
+      : lead && venda?.mudanca
+        ? fechar.mutateAsync({ ...dados, leadId: lead.id, venda: venda.mudanca })
+        : criar.mutateAsync(dados)
     feito
       .then(() => onPronto(dia))
       .catch((e: unknown) =>
@@ -228,7 +272,17 @@ function FormularioDoCaso({
       )
   }
 
-  const rotuloConfirmar = caso ? (editar.isPending ? 'Salvando…' : 'Salvar') : criar.isPending ? 'Criando…' : 'Criar caso'
+  const rotuloConfirmar = caso
+    ? editar.isPending
+      ? 'Salvando…'
+      : 'Salvar'
+    : lead
+      ? fechar.isPending
+        ? 'Fechando…'
+        : 'Fechar e criar o caso'
+      : criar.isPending
+        ? 'Criando…'
+        : 'Criar caso'
   const quandoChega = !caso
     ? ' · entra na agenda em até um minuto.'
     : caso.noGoogle
@@ -237,7 +291,7 @@ function FormularioDoCaso({
 
   return (
     <Dialogo
-      titulo={caso ? 'Editar caso' : 'Novo caso'}
+      titulo={caso ? 'Editar caso' : lead ? 'Fechar a venda' : 'Novo caso'}
       rotuloConfirmar={rotuloConfirmar}
       confirmarDesabilitado={falta.length > 0 || temBarra || cadastros.isPending}
       ocupado={ocupado}
@@ -250,7 +304,7 @@ function FormularioDoCaso({
         {/* O TÍTULO DO EVENTO: quem, pacote, onde, quando — e como fica no Google. */}
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            {!ehEvento && <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso} />}
+            {!ehEvento && <CampoTexto rotulo="Mãe" valor={maeNome} aoMudar={setMaeNome} autoFocus={!caso && !lead} />}
             {ehEvento ? (
               <CampoTexto rotulo="Nome do evento" valor={bebeNome} aoMudar={setBebeNome} ajuda="Ex.: MKT, 60 ANOS, ENFERMAGEM." />
             ) : (
@@ -467,6 +521,7 @@ function FormularioDoCaso({
               onMudar={setEstadoDaVenda}
               tabela={tabelaDaVenda}
               entraSozinho={caso === undefined}
+              contratoObrigatorio={lead !== undefined}
             />
           </div>
         )}

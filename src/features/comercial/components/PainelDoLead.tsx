@@ -17,7 +17,11 @@ import {
   type Lead,
 } from '../lib/leads'
 import { AtividadeDoLead } from './AtividadeDoLead'
-import { DialogoGanho, DialogoPassar, DialogoPerdido, DialogoReabrir, DialogoRetorno } from './DialogosDoLead'
+import { DialogoPassar, DialogoPerdido, DialogoReabrir, DialogoRetorno } from './DialogosDoLead'
+import { DialogoFechou } from './DialogoFechou'
+import { Link } from 'react-router'
+import { useCasoEditavel } from '@/features/calendario/api/useCalendario'
+import { emBrasilia } from '@/features/calendario/lib/datas'
 import { DialogoLead } from './DialogoLead'
 import { ContagemDoPrazo, PilulaPrioridade, PilulaRetorno, PilulaSituacao } from './Pilulas'
 import { ReguaDoPrazo } from './ReguaDoPrazo'
@@ -217,7 +221,7 @@ export function PainelDoLead({
       {gesto === 'retorno' && <DialogoRetorno lead={lead} onFechar={fechar} />}
       {gesto === 'passar' && <DialogoPassar lead={lead} onFechar={fechar} />}
       {gesto === 'perdido' && <DialogoPerdido lead={lead} onFechar={fechar} />}
-      {gesto === 'ganho' && <DialogoGanho lead={lead} onFechar={fechar} />}
+      {gesto === 'ganho' && <DialogoFechou lead={lead} onFechar={fechar} />}
       {gesto === 'reabrir' && <DialogoReabrir lead={lead} onFechar={fechar} />}
       {gesto === 'editar' && <DialogoLead lead={lead} onFechar={fechar} />}
     </aside>
@@ -294,7 +298,10 @@ function Encerramento({ lead }: { lead: Lead }) {
       )}
     >
       {lead.situacao === 'ganho' ? (
-        <p className="font-semibold">Venda fechada{quando ? ` em ${quando}` : ''}.</p>
+        <>
+          <p className="font-semibold">Venda fechada{quando ? ` em ${quando}` : ''}.</p>
+          {lead.casoId && <CasoDoLead casoId={lead.casoId} />}
+        </>
       ) : (
         <>
           <p className="font-semibold">
@@ -303,6 +310,30 @@ function Encerramento({ lead }: { lead: Lead }) {
           </p>
           {lead.motivoPerdaTexto && <p className="mt-1 text-muted-foreground">{lead.motivoPerdaTexto}</p>}
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * O CASO QUE NASCEU DO LEAD (fase B): quem é, o dia e o caminho para a agenda.
+ * O dia leva à visão do DIA no Calendário, onde o caso está com tudo o que tem.
+ */
+function CasoDoLead({ casoId }: { casoId: string }) {
+  const caso = useCasoEditavel(casoId)
+  if (!caso.data) return null
+  const c = caso.data
+  const dia = c.previsaoEm ? emBrasilia(c.previsaoEm).dia : null
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="min-w-0 text-muted-foreground">
+        Caso <span className="font-semibold text-foreground">{c.maeNome}</span>
+        {dia ? ` · ${dia.split('-').reverse().slice(0, 2).join('/')}` : ''}
+      </span>
+      {dia && (
+        <Link to={`/calendario?ver=dia&dia=${dia}`} className="font-semibold text-marca underline underline-offset-2">
+          Ver na agenda
+        </Link>
       )}
     </div>
   )

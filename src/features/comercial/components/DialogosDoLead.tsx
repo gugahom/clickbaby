@@ -4,7 +4,6 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { hojeNoFuso } from '@/lib/formato'
 import {
   useAgendarRetorno,
-  useMarcarGanho,
   useMarcarPerdido,
   usePassarLead,
   usePessoasDoComercial,
@@ -365,37 +364,6 @@ export function DialogoPerdido({ lead, onFechar }: { lead: Lead; onFechar: () =>
         />
         <p className="text-xs text-muted-foreground">
           O lead sai da fila. Se a família voltar a chamar, ele se reabre pela ficha.
-        </p>
-      </div>
-    </Dialogo>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// FECHOU — nesta fase, o caso continua nascendo no Calendário
-// ---------------------------------------------------------------------------
-
-export function DialogoGanho({ lead, onFechar }: { lead: Lead; onFechar: () => void }) {
-  const ganhar = useMarcarGanho()
-  const [erro, setErro] = useState<string | null>(null)
-
-  return (
-    <Dialogo
-      titulo="Fechou a venda?"
-      rotuloConfirmar={ganhar.isPending ? 'Salvando…' : 'Fechou'}
-      ocupado={ganhar.isPending}
-      erro={erro}
-      onCancelar={onFechar}
-      onConfirmar={() => {
-        setErro(null)
-        ganhar.mutate({ leadId: lead.id }, { onSuccess: onFechar, onError: (e) => setErro(mensagem(e)) })
-      }}
-    >
-      <div className="space-y-3">
-        <Quem lead={lead} />
-        <p className="text-sm">
-          O lead sai da fila e conta como venda fechada. Crie o caso no Calendário, como sempre — ligar o lead ao
-          caso, e criar o caso daqui, entra na próxima etapa da tela.
         </p>
       </div>
     </Dialogo>

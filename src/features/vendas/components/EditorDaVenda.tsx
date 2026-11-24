@@ -49,6 +49,7 @@ export function EditorDaVenda({
   onMudar,
   tabela,
   entraSozinho,
+  contratoObrigatorio = false,
 }: {
   /** O que o banco tem — ausente num caso novo. */
   inicial: VendaDoCaso | undefined
@@ -59,6 +60,8 @@ export function EditorDaVenda({
   tabela: PrecoDoPacote | null
   /** O pacote da tabela entra no Salvar sem o "+" (ver `mudancaDaVenda`). */
   entraSozinho: boolean
+  /** No fechamento do lead (fase B do CRM) o contrato é obrigatório: o campo não diz "opcional". */
+  contratoObrigatorio?: boolean
 }) {
   const contrato = estado.contrato ?? inicial?.contrato ?? ''
   const existentes = (inicial?.linhas ?? []).filter((l) => !estado.removidas.includes(l.id))
@@ -228,7 +231,7 @@ export function EditorDaVenda({
         rotulo="Link do contrato"
         valor={contrato}
         aoMudar={(v) => onMudar({ ...estado, contrato: v })}
-        opcional
+        opcional={!contratoObrigatorio}
         inputMode="url"
         placeholder="https://"
       />

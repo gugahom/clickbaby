@@ -333,10 +333,53 @@ export function useMarcarPerdido() {
   })
 }
 
+/**
+ * LIGAR O LEAD A UM CASO QUE JÁ EXISTE (fase B): a família já estava na agenda.
+ * Quem cria o caso novo é `useFecharLead`, em features/calendario — o mesmo
+ * caminho de toda criação de caso.
+ */
 export function useMarcarGanho() {
-  return useAcaoDoComercial(async (a: { leadId: string }) => {
-    const { error } = await supabase.rpc('marcar_lead_ganho', { p_lead_id: a.leadId })
+  return useAcaoDoComercial(async (a: { leadId: string; casoId: string }) => {
+    const { error } = await supabase.rpc('marcar_lead_ganho', { p_lead_id: a.leadId, p_caso_id: a.casoId })
     falhou(error)
+  })
+}
+
+/** Um caso da agenda que pode ser o deste lead (`casos_parecidos_do_lead`). */
+export interface CasoParecido {
+  id: string
+  maeNome: string
+  bebeNome: string | null
+  dia: string
+  semHora: boolean
+  pacote: string | null
+  maternidade: string | null
+  situacao: string
+}
+
+/**
+ * ANTES DE CRIAR, A AGENDA: mesmo primeiro nome da mãe, perto da DPP, sem outro
+ * lead. É sugestão — quem fecha escolhe ligar ou criar (seção 7 do CLAUDE.md:
+ * nada se assume por nome parecido).
+ */
+export function useCasosParecidos(leadId: string) {
+  return useQuery({
+    queryKey: [...CHAVE, 'parecidos', leadId],
+    staleTime: 0,
+    queryFn: async (): Promise<CasoParecido[]> => {
+      const { data, error } = await supabase.rpc('casos_parecidos_do_lead', { p_lead_id: leadId })
+      if (error) throw new Error(error.message)
+      return data.map((c) => ({
+        id: c.id,
+        maeNome: c.mae_nome,
+        bebeNome: c.bebe_nome,
+        dia: c.dia,
+        semHora: c.sem_hora,
+        pacote: c.pacote,
+        maternidade: c.maternidade,
+        situacao: c.situacao,
+      }))
+    },
   })
 }
 

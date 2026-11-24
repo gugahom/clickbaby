@@ -781,15 +781,19 @@
     transform: translateY(-0.5rem) scale(0.98);
   }
 }
+/* `backwards`, e NUNCA `both`/`forwards` (24/11/2026): uma animação de transform
+   que segura o estado final continua valendo como transform, e elemento com
+   transform vira a REFERÊNCIA dos `position: fixed` de dentro — o menu "Mais" da
+   ficha do lead abria centenas de pixels para fora da tela. */
 @layer components {
   .entra-direita {
-    animation: gaveta-direita 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+    animation: gaveta-direita 220ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
   }
   .entra-esquerda {
-    animation: gaveta-esquerda 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+    animation: gaveta-esquerda 220ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
   }
   .entra-paleta {
-    animation: paleta-desce 160ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation: paleta-desce 160ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
   }
 }
 @media (prefers-reduced-motion: reduce) {
