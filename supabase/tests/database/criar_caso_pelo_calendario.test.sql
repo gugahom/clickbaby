@@ -53,7 +53,7 @@ $$;
 select pg_temp.como('atendimento.cc@clickbaby.test');
 select throws_ok(
   $$ select public.criar_caso('Ana', null, pg_temp.pac('basic'), pg_temp.mat('HSC'), '2029-06-10 10:00-03') $$,
-  'P0001', 'Só a gestão, a coordenação, o comercial e o financeiro criam caso.',
+  'P0001', 'Só quem tem a tela Comercial cria caso.',
   'C1: o atendimento vê o calendário e não cria caso'
 );
 reset role;
@@ -61,7 +61,7 @@ reset role;
 select pg_temp.como('fotografa.cc@clickbaby.test');
 select throws_ok(
   $$ select public.criar_caso('Ana', null, pg_temp.pac('basic'), pg_temp.mat('HSC'), '2029-06-10 10:00-03') $$,
-  'P0001', 'Só a gestão, a coordenação, o comercial e o financeiro criam caso.',
+  'P0001', 'Só quem tem a tela Comercial cria caso.',
   'C1: a fotógrafa também não'
 );
 reset role;
