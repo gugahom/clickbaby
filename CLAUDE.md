@@ -424,7 +424,7 @@ pedir_alteracao_da_etapa(p_caso_etapa_id, p_motivo)  -- fase + pedido, sem reabr
 mover_fase_de_campo(p_caso_etapa_id, p_fase)     -- só entrada e nascimento; qualquer pessoa ativa
 
 -- caso
-criar_caso(p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- pelo calendário; adm (30/09/2026)
+criar_caso(p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- pelo calendário; tela Comercial (24/11/2026; antes adm)
 editar_caso(p_caso_id, p_mae_nome, p_bebe_nome, p_pacote_id, p_maternidade_id, p_previsao_em, p_click_home) -- idem; o Google acompanha (30/09/2026)
 registrar_termo(p_caso_id, p_termo)              -- termo de uso de imagem; atendimento/adm
 registrar_avaliacao(p_caso_id)                   -- avaliação da família; atendimento/adm
@@ -443,6 +443,8 @@ editar_lead(p_lead_id, ...)                      -- só dados; o evento diz QUE 
 registrar_contato_do_lead(p_lead_id, p_canal, p_resultado, p_nota, p_proximo_retorno_em) -- carimba a fase
 agendar_retorno_do_lead(p_lead_id, p_quando) / passar_lead(p_lead_id, p_para_pessoa_id, p_motivo)
 marcar_lead_perdido(p_lead_id, p_motivo, p_texto) / marcar_lead_ganho(p_lead_id, p_caso_id) / reabrir_lead(p_lead_id, p_motivo)
+fechar_lead(p_lead_id, ..., p_vendas, p_contrato, ...) -- cria o caso + venda + contrato e fecha o lead, numa transação (24/11/2026)
+casos_parecidos_do_lead(p_lead_id)              -- o caso que já está na agenda, para ligar em vez de duplicar
 definir_vendedor_da_maternidade(p_maternidade_id, p_pessoa_id) -- tela Equipe
 
 -- despesas do caso (12/09/2026; ver seção 13)
@@ -2347,9 +2349,18 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   `vendedor_id` continua dizendo quem teve a venda.
   **`eventos` ganhou `lead_id`**, e a policy de leitura esconde essas linhas de quem não tem a
   tela Comercial. Payload com ids e motivos — telefone, nome e nota nunca.
-  "Já nasceu" e "sem WhatsApp" são PERDA (decisão do gestor). `marcar_lead_ganho` liga o lead a um
-  caso já criado; a fase B troca isso por `fechar_lead`, que cria o caso. A origem `vendedor` é o
+  "Já nasceu" e "sem WhatsApp" são PERDA (decisão do gestor). A origem `vendedor` é o
   "CELL GUI / CELL RAFA" da planilha **[a confirmar com o gestor]**.
+  **FECHOU, O CASO NASCE NO CRM** (24/11/2026, fase B, migration `20261124150001`). `fechar_lead`
+  cria o caso, lança a venda, grava o contrato e fecha o lead NUMA TRANSAÇÃO; **a linha do PACOTE e
+  o CONTRATO são obrigatórios** ali (decisão do usuário) — pelo Calendário seguem opcionais. O
+  miolo de `criar_caso` foi para `inserir_caso_novo` (fechado para todos), que as duas portas
+  chamam; o `caso_criado` diz a origem ('calendario' ou 'crm') e leva o `lead_id` no PAYLOAD, não
+  na coluna (a coluna esconderia a criação do histórico do caso). **CRIAR CASO É DA TELA
+  COMERCIAL** ("criar caso passa a ser só do comercial", o gestor em 18/11): era `eh_adm()`;
+  editar e cancelar não mudaram. Enquanto agenda e CRM convivem, `casos_parecidos_do_lead`
+  (mesmo primeiro nome, até 60 dias da DPP, sem outro lead) deixa o fechamento LIGAR a um caso
+  que já existe (`marcar_lead_ganho`) em vez de duplicar — sugestão, nunca ligação automática.
 - **A TELA COMERCIAL** (01/10/2026, migrations `20261001001602` e `20261001001607`) é a sétima,
   do padrão dos papéis `comercial` e `gestao`. **Desde 01/10/2026 (migration
   `20261001143922`) ela abre o RELATÓRIO EXTERNO INTEIRO** — `exigir_operacao` aceita a tela

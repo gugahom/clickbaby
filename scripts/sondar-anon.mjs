@@ -287,6 +287,11 @@ const RPCS_TRANSICAO = {
   passar_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_para_pessoa_id: '00000000-0000-0000-0000-000000000000' },
   marcar_lead_perdido: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_motivo: null },
   marcar_lead_ganho: { p_lead_id: '00000000-0000-0000-0000-000000000000' },
+  // Fechar o lead cria o caso (20261124150001). `inserir_caso_novo` é o miolo,
+  // fechado até para authenticated.
+  fechar_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_mae_nome: 'sonda', p_bebe_nome: null, p_pacote_id: null, p_maternidade_id: null, p_previsao_em: null, p_vendas: [], p_contrato: null },
+  casos_parecidos_do_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000' },
+  inserir_caso_novo: { p_pessoa_id: null, p_origem: 'sonda', p_mae_nome: 'sonda', p_bebe_nome: null, p_pacote_id: null, p_maternidade_id: null, p_previsao_em: null, p_click_home: false, p_sem_hora: false, p_cesarea_em: null, p_observacao: null, p_fotolivro: false, p_dpp: null },
   reabrir_lead: { p_lead_id: '00000000-0000-0000-0000-000000000000', p_motivo: 'sonda' },
   definir_vendedor_da_maternidade: { p_maternidade_id: '00000000-0000-0000-0000-000000000000', p_pessoa_id: null },
   dias_de_prazo_da_venda: {},
