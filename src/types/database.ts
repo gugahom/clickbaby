@@ -454,6 +454,67 @@ export type Database = {
           },
         ]
       }
+      contatos_do_lead: {
+        Row: {
+          canal: Database["public"]["Enums"]["canal_contato_lead"]
+          created_at: string
+          fase: Database["public"]["Enums"]["fase_do_lead"]
+          id: string
+          lead_id: string
+          nota: string | null
+          ocorrido_em: string
+          pessoa_id: string
+          resultado: Database["public"]["Enums"]["resultado_contato_lead"]
+          updated_at: string
+        }
+        Insert: {
+          canal: Database["public"]["Enums"]["canal_contato_lead"]
+          created_at?: string
+          fase: Database["public"]["Enums"]["fase_do_lead"]
+          id?: string
+          lead_id: string
+          nota?: string | null
+          ocorrido_em?: string
+          pessoa_id: string
+          resultado: Database["public"]["Enums"]["resultado_contato_lead"]
+          updated_at?: string
+        }
+        Update: {
+          canal?: Database["public"]["Enums"]["canal_contato_lead"]
+          created_at?: string
+          fase?: Database["public"]["Enums"]["fase_do_lead"]
+          id?: string
+          lead_id?: string
+          nota?: string | null
+          ocorrido_em?: string
+          pessoa_id?: string
+          resultado?: Database["public"]["Enums"]["resultado_contato_lead"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_do_lead_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_do_lead_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_do_comercial"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contatos_do_lead_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos_dos_casos: {
         Row: {
           caso_id: string
@@ -763,6 +824,7 @@ export type Database = {
           created_at: string
           device_id: string | null
           id: string
+          lead_id: string | null
           ocorrido_em: string
           payload: Json
           pessoa_id: string | null
@@ -775,6 +837,7 @@ export type Database = {
           created_at?: string
           device_id?: string | null
           id?: string
+          lead_id?: string | null
           ocorrido_em?: string
           payload?: Json
           pessoa_id?: string | null
@@ -787,6 +850,7 @@ export type Database = {
           created_at?: string
           device_id?: string | null
           id?: string
+          lead_id?: string | null
           ocorrido_em?: string
           payload?: Json
           pessoa_id?: string | null
@@ -841,6 +905,20 @@ export type Database = {
             columns: ["caso_id"]
             isOneToOne: false
             referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads_do_comercial"
             referencedColumns: ["id"]
           },
           {
@@ -929,6 +1007,132 @@ export type Database = {
           {
             foreignKeyName: "handoffs_para_pessoa_id_fkey"
             columns: ["para_pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          bebe_nome: string | null
+          caso_id: string | null
+          created_at: string
+          criado_por: string
+          dpp: string | null
+          encerrado_em: string | null
+          id: string
+          interesse_new_born: boolean
+          mae_nome: string
+          maternidade_id: string | null
+          motivo_perda: Database["public"]["Enums"]["motivo_perda_lead"] | null
+          motivo_perda_texto: string | null
+          observacao: string | null
+          origem: Database["public"]["Enums"]["origem_lead"]
+          origem_detalhe: string | null
+          proximo_retorno_em: string | null
+          situacao: Database["public"]["Enums"]["situacao_lead"]
+          telefone: string
+          updated_at: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          bebe_nome?: string | null
+          caso_id?: string | null
+          created_at?: string
+          criado_por: string
+          dpp?: string | null
+          encerrado_em?: string | null
+          id?: string
+          interesse_new_born?: boolean
+          mae_nome: string
+          maternidade_id?: string | null
+          motivo_perda?: Database["public"]["Enums"]["motivo_perda_lead"] | null
+          motivo_perda_texto?: string | null
+          observacao?: string | null
+          origem?: Database["public"]["Enums"]["origem_lead"]
+          origem_detalhe?: string | null
+          proximo_retorno_em?: string | null
+          situacao?: Database["public"]["Enums"]["situacao_lead"]
+          telefone: string
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          bebe_nome?: string | null
+          caso_id?: string | null
+          created_at?: string
+          criado_por?: string
+          dpp?: string | null
+          encerrado_em?: string | null
+          id?: string
+          interesse_new_born?: boolean
+          mae_nome?: string
+          maternidade_id?: string | null
+          motivo_perda?: Database["public"]["Enums"]["motivo_perda_lead"] | null
+          motivo_perda_texto?: string | null
+          observacao?: string | null
+          origem?: Database["public"]["Enums"]["origem_lead"]
+          origem_detalhe?: string | null
+          proximo_retorno_em?: string | null
+          situacao?: Database["public"]["Enums"]["situacao_lead"]
+          telefone?: string
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_maternidade_id_fkey"
+            columns: ["maternidade_id"]
+            isOneToOne: false
+            referencedRelation: "maternidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_vendedor_id_fkey"
+            columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "pessoas"
             referencedColumns: ["id"]
@@ -1193,6 +1397,7 @@ export type Database = {
           avisa_edicao_new_born: boolean
           avisa_escolha_new_born: boolean
           created_at: string
+          faz_repescagem: boolean
           foto_path: string | null
           id: string
           nome: string
@@ -1208,6 +1413,7 @@ export type Database = {
           avisa_edicao_new_born?: boolean
           avisa_escolha_new_born?: boolean
           created_at?: string
+          faz_repescagem?: boolean
           foto_path?: string | null
           id?: string
           nome: string
@@ -1223,6 +1429,7 @@ export type Database = {
           avisa_edicao_new_born?: boolean
           avisa_escolha_new_born?: boolean
           created_at?: string
+          faz_repescagem?: boolean
           foto_path?: string | null
           id?: string
           nome?: string
@@ -1469,6 +1676,52 @@ export type Database = {
           },
         ]
       }
+      vendedores_da_maternidade: {
+        Row: {
+          created_at: string
+          definido_por: string
+          maternidade_id: string
+          pessoa_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          definido_por: string
+          maternidade_id: string
+          pessoa_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          definido_por?: string
+          maternidade_id?: string
+          pessoa_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendedores_da_maternidade_definido_por_fkey"
+            columns: ["definido_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendedores_da_maternidade_maternidade_id_fkey"
+            columns: ["maternidade_id"]
+            isOneToOne: true
+            referencedRelation: "maternidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendedores_da_maternidade_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       despesas_detalhe: {
@@ -1597,6 +1850,100 @@ export type Database = {
           {
             foreignKeyName: "caso_etapas_responsavel_id_fkey"
             columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads_do_comercial: {
+        Row: {
+          bebe_nome: string | null
+          caso_id: string | null
+          contatos_na_repescagem: number | null
+          created_at: string | null
+          criado_por: string | null
+          dias_para_prazo: number | null
+          dpp: string | null
+          encerrado_em: string | null
+          fase: string | null
+          id: string | null
+          interesse_new_born: boolean | null
+          mae_nome: string | null
+          maternidade_id: string | null
+          maternidade_nome: string | null
+          maternidade_sigla: string | null
+          motivo_perda: Database["public"]["Enums"]["motivo_perda_lead"] | null
+          motivo_perda_texto: string | null
+          observacao: string | null
+          origem: Database["public"]["Enums"]["origem_lead"] | null
+          origem_detalhe: string | null
+          prazo_venda: string | null
+          primeiro_contato_em: string | null
+          prioridade: string | null
+          proximo_retorno_em: string | null
+          retorno_atrasado: boolean | null
+          situacao: Database["public"]["Enums"]["situacao_lead"] | null
+          telefone: string | null
+          total_contatos: number | null
+          ultimo_contato_em: string | null
+          updated_at: string | null
+          vendedor_id: string | null
+          vendedor_nome: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "despesas_por_caso"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "fila_edicao"
+            referencedColumns: ["caso_id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "operacao_dos_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "quadro_casos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_maternidade_id_fkey"
+            columns: ["maternidade_id"]
+            isOneToOne: false
+            referencedRelation: "maternidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_vendedor_id_fkey"
+            columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "pessoas"
             referencedColumns: ["id"]
@@ -1743,6 +2090,10 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_previsao_em: string }
         Returns: undefined
       }
+      agendar_retorno_do_lead: {
+        Args: { p_lead_id: string; p_quando: string }
+        Returns: undefined
+      }
       anotar_etapa: {
         Args: { p_caso_etapa_id: string; p_observacao: string }
         Returns: undefined
@@ -1797,6 +2148,21 @@ export type Database = {
         }
         Returns: string
       }
+      criar_lead: {
+        Args: {
+          p_bebe_nome?: string
+          p_dpp?: string
+          p_interesse_new_born?: boolean
+          p_mae_nome: string
+          p_maternidade_id?: string
+          p_observacao?: string
+          p_origem?: Database["public"]["Enums"]["origem_lead"]
+          p_origem_detalhe?: string
+          p_telefone: string
+          p_vendedor_id?: string
+        }
+        Returns: Json
+      }
       definir_contrato_do_caso: {
         Args: { p_caso_id: string; p_url: string }
         Returns: undefined
@@ -1836,6 +2202,10 @@ export type Database = {
         Args: { p_caso_id: string; p_retorno_em: string }
         Returns: undefined
       }
+      definir_vendedor_da_maternidade: {
+        Args: { p_maternidade_id: string; p_pessoa_id: string }
+        Returns: undefined
+      }
       devolver_para_a_agenda: {
         Args: {
           p_caso_id: string
@@ -1850,6 +2220,7 @@ export type Database = {
         Returns: undefined
       }
       dia_da_regua_de_pontos: { Args: never; Returns: string }
+      dias_de_prazo_da_venda: { Args: never; Returns: number }
       disparar_sync_calendar: { Args: never; Returns: string }
       dispensar_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
@@ -1871,6 +2242,21 @@ export type Database = {
           p_sem_hora?: boolean
         }
         Returns: string
+      }
+      editar_lead: {
+        Args: {
+          p_bebe_nome?: string
+          p_dpp: string
+          p_interesse_new_born?: boolean
+          p_lead_id: string
+          p_mae_nome: string
+          p_maternidade_id: string
+          p_observacao?: string
+          p_origem: Database["public"]["Enums"]["origem_lead"]
+          p_origem_detalhe?: string
+          p_telefone: string
+        }
+        Returns: undefined
       }
       eh_adm: { Args: never; Returns: boolean }
       eh_atendimento: { Args: never; Returns: boolean }
@@ -1931,6 +2317,18 @@ export type Database = {
       }
       marcar_fotolivro_enviado: {
         Args: { p_caso_etapa_id: string }
+        Returns: undefined
+      }
+      marcar_lead_ganho: {
+        Args: { p_caso_id?: string; p_lead_id: string }
+        Returns: undefined
+      }
+      marcar_lead_perdido: {
+        Args: {
+          p_lead_id: string
+          p_motivo: Database["public"]["Enums"]["motivo_perda_lead"]
+          p_texto?: string
+        }
         Returns: undefined
       }
       marcar_notificacoes_vistas: { Args: never; Returns: string }
@@ -2075,6 +2473,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
       operacao_buscar: {
         Args: {
           p_deslocamento?: number
@@ -2192,6 +2591,10 @@ export type Database = {
           vigente_desde: string
         }[]
       }
+      passar_lead: {
+        Args: { p_lead_id: string; p_motivo?: string; p_para_pessoa_id: string }
+        Returns: undefined
+      }
       pausar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       pedir_alteracao_da_etapa: {
         Args: { p_caso_etapa_id: string; p_motivo: string }
@@ -2201,10 +2604,12 @@ export type Database = {
         Args: { p_fim: string; p_inicio: string }
         Returns: Record<string, unknown>
       }
+      pessoa_do_comercial: { Args: never; Returns: string }
       planejar_rendicao: {
         Args: { p_caso_etapa_id: string; p_proxima_pessoa_id: string }
         Returns: undefined
       }
+      pode_receber_lead: { Args: { p_pessoa_id: string }; Returns: boolean }
       pode_ver_venda: { Args: never; Returns: boolean }
       pontos_por_item_vigentes: {
         Args: never
@@ -2230,11 +2635,25 @@ export type Database = {
         Args: { p_caso_etapa_id: string; p_motivo?: string }
         Returns: undefined
       }
+      reabrir_lead: {
+        Args: { p_lead_id: string; p_motivo: string }
+        Returns: undefined
+      }
       registrar_anexo_da_etapa: {
         Args: { p_caminho: string; p_caso_etapa_id: string; p_nome: string }
         Returns: string
       }
       registrar_avaliacao: { Args: { p_caso_id: string }; Returns: undefined }
+      registrar_contato_do_lead: {
+        Args: {
+          p_canal: Database["public"]["Enums"]["canal_contato_lead"]
+          p_lead_id: string
+          p_nota?: string
+          p_proximo_retorno_em?: string
+          p_resultado: Database["public"]["Enums"]["resultado_contato_lead"]
+        }
+        Returns: string
+      }
       registrar_despesa: {
         Args: {
           p_caso_id: string
@@ -2426,6 +2845,7 @@ export type Database = {
     }
     Enums: {
       campo_material: "cartao_foto" | "cartao_video" | "baixou" | "upload"
+      canal_contato_lead: "whatsapp" | "ligacao" | "presencial" | "outro"
       etapa_tipo:
         | "entrada"
         | "nascimento"
@@ -2468,6 +2888,7 @@ export type Database = {
         | "admissao_cco"
         | "nascimento"
         | "cuidados"
+      fase_do_lead: "venda" | "repescagem"
       forma_de_pagamento: "pix" | "cartao"
       item_de_pontuacao:
         | "nascimento"
@@ -2490,7 +2911,21 @@ export type Database = {
         | "acompanhamento"
       item_de_venda: "pacote" | "reels" | "new_born" | "foto_livro" | "outro"
       momento_despesa: "parto" | "substituicao" | "fechamento"
+      motivo_perda_lead:
+        | "nao_quis"
+        | "ja_nasceu"
+        | "sem_whatsapp"
+        | "sem_resposta"
+        | "outro"
       oferta_comercial: "birth" | "reels" | "new_born" | "fotolivro"
+      origem_lead:
+        | "cupom"
+        | "vendedor"
+        | "anuncio"
+        | "instagram"
+        | "indicacao"
+        | "monte_seu_pacote"
+        | "outro"
       pagamento_click_home: "pago" | "a_cobrar"
       papel_sistema:
         | "operador"
@@ -2499,6 +2934,12 @@ export type Database = {
         | "atendimento"
         | "financeiro"
         | "gestao"
+      resultado_contato_lead:
+        | "sem_resposta"
+        | "respondeu"
+        | "pediu_retorno"
+        | "mandou_proposta"
+        | "outro"
       situacao_clinica:
         | "aguardando"
         | "internada"
@@ -2507,6 +2948,7 @@ export type Database = {
         | "nasceu"
         | "uti"
         | "alta"
+      situacao_lead: "novo" | "em_contato" | "negociando" | "ganho" | "perdido"
       status_entrega: "pendente" | "links_prontos" | "confirmado"
       status_etapa:
         | "pendente"
@@ -2683,6 +3125,7 @@ export const Constants = {
   public: {
     Enums: {
       campo_material: ["cartao_foto", "cartao_video", "baixou", "upload"],
+      canal_contato_lead: ["whatsapp", "ligacao", "presencial", "outro"],
       etapa_tipo: [
         "entrada",
         "nascimento",
@@ -2729,6 +3172,7 @@ export const Constants = {
         "nascimento",
         "cuidados",
       ],
+      fase_do_lead: ["venda", "repescagem"],
       forma_de_pagamento: ["pix", "cartao"],
       item_de_pontuacao: [
         "nascimento",
@@ -2752,7 +3196,23 @@ export const Constants = {
       ],
       item_de_venda: ["pacote", "reels", "new_born", "foto_livro", "outro"],
       momento_despesa: ["parto", "substituicao", "fechamento"],
+      motivo_perda_lead: [
+        "nao_quis",
+        "ja_nasceu",
+        "sem_whatsapp",
+        "sem_resposta",
+        "outro",
+      ],
       oferta_comercial: ["birth", "reels", "new_born", "fotolivro"],
+      origem_lead: [
+        "cupom",
+        "vendedor",
+        "anuncio",
+        "instagram",
+        "indicacao",
+        "monte_seu_pacote",
+        "outro",
+      ],
       pagamento_click_home: ["pago", "a_cobrar"],
       papel_sistema: [
         "operador",
@@ -2761,6 +3221,13 @@ export const Constants = {
         "atendimento",
         "financeiro",
         "gestao",
+      ],
+      resultado_contato_lead: [
+        "sem_resposta",
+        "respondeu",
+        "pediu_retorno",
+        "mandou_proposta",
+        "outro",
       ],
       situacao_clinica: [
         "aguardando",
@@ -2771,6 +3238,7 @@ export const Constants = {
         "uti",
         "alta",
       ],
+      situacao_lead: ["novo", "em_contato", "negociando", "ganho", "perdido"],
       status_entrega: ["pendente", "links_prontos", "confirmado"],
       status_etapa: [
         "pendente",
