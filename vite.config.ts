@@ -12,24 +12,55 @@ import tailwindcss from '@tailwindcss/vite'
 const BASE = '/quadro/'
 
 /**
+ * As rotas do app, uma por linha do dist/_redirects.
+ *
+ * O PRIMEIRO TRECHO de cada `path` do router (src/app/router.tsx). Rota nova de
+ * primeiro nivel entra AQUI tambem -- esquecer nao quebra nada no uso normal,
+ * mas abrir o endereco direto (link colado, F5) da 404.
+ */
+const ROTAS_DO_APP = [
+  'login',
+  'perfil',
+  'equipe',
+  'relatorios',
+  'despesas',
+  'calendario',
+  'comercial',
+]
+
+/**
  * Escreve dist/_redirects depois do build.
  *
  * Precisa ficar na RAIZ do diretorio publicado, e o outDir e dist/quadro -- ou
  * seja, fora do alcance de public/, que o Vite copia para dentro do outDir.
  * Dai o plugin em vez de um arquivo estatico.
  *
- * A regra existe porque /quadro/fila nao e um arquivo: sem ela o Pages devolve
- * 404 em qualquer rota que nao seja a inicial, inclusive num F5. So /quadro/*
- * e reescrito -- a raiz fica de fora de proposito, para a landing poder ocupa-la
- * depois sem esbarrar nesta regra.
+ * As regras existem porque /quadro/calendario nao e um arquivo: sem elas o Pages
+ * devolve 404 ao abrir o endereco direto ou dar F5. A raiz fica de fora de
+ * proposito, para a landing poder ocupa-la depois.
+ *
+ * POR QUE UMA LISTA E NAO `/quadro/*` (24/11/2026). A regra era
+ * `/quadro/* /quadro/index.html 200`, e o Cloudflare a JOGAVA FORA em silencio
+ * ("Infinite loop detected": ele tira o `index.html` do destino, e /quadro/ casa
+ * de novo com /quadro/*) -- o deploy nao avisa, so o `wrangler pages dev`. Toda
+ * rota de dentro dava 404 ao abrir direto, em producao, desde sempre.
+ * Trocar o destino por `/quadro/` acaba com o loop e cria um defeito pior: o
+ * curinga pega tambem os ARQUIVOS (as regras valem antes dos assets), e todo JS,
+ * CSS e icone passaria a ser respondido com o HTML -- o site inteiro em branco.
+ * Com uma regra por rota, os arquivos nao casam com nada. Conferido no
+ * `wrangler pages dev`: rotas 200 em HTML, assets com o tipo certo.
  */
 function redirectsDoPages() {
   return {
     name: 'clickbaby:redirects-do-pages',
     apply: 'build' as const,
     closeBundle() {
+      const regras = ROTAS_DO_APP.flatMap((rota) => [
+        `/quadro/${rota} /quadro/ 200`,
+        `/quadro/${rota}/* /quadro/ 200`,
+      ])
       mkdirSync('dist', { recursive: true })
-      writeFileSync('dist/_redirects', '/quadro/* /quadro/index.html 200\n')
+      writeFileSync('dist/_redirects', `${regras.join('\n')}\n`)
     },
   }
 }
