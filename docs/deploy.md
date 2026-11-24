@@ -20,15 +20,25 @@ ele: a rota índice é o Quadro (`/quadro`) e `/fila` é a Fila (`/quadro/fila`)
 Não existe uma rota `'/quadro'` no arquivo — ela viraria `/quadro/quadro`.
 
 O `dist/_redirects` (escrito por um plugin no `vite.config.ts`, porque precisa
-ficar na raiz do publicado e o `outDir` é `dist/quadro`) contém:
+ficar na raiz do publicado e o `outDir` é `dist/quadro`) tem duas linhas por rota
+do app, a partir da lista `ROTAS_DO_APP`:
 
 ```
-/quadro/* /quadro/index.html 200
+/quadro/calendario /quadro/ 200
+/quadro/calendario/* /quadro/ 200
 ```
 
-Sem essa linha, o Pages devolve 404 em qualquer rota que não seja a inicial —
-inclusive num F5 em `/quadro/fila`. A raiz fica de fora da regra de propósito,
-para a landing poder ocupá-la depois.
+Sem elas, o Pages devolve 404 em qualquer rota que não seja a inicial, ao abrir
+o endereço direto ou dar F5. A raiz fica de fora de propósito, para a landing
+poder ocupá-la depois. **Rota nova de primeiro nível entra na lista.**
+
+**Não volte para `/quadro/*`** (24/11/2026). `/quadro/* /quadro/index.html 200`
+foi a regra até essa data, e o Cloudflare a ignorava em silêncio como loop
+infinito: nenhum endereço de dentro abria direto, em produção. Com destino
+`/quadro/` o loop some, mas o curinga passa a pegar os arquivos (as regras valem
+antes dos assets) e todo JS e CSS volta como HTML. Para conferir uma mudança no
+`_redirects`, rode o build e `npx wrangler pages dev dist`: o aviso de regra
+inválida só aparece ali, nunca no deploy.
 
 ## Configuração no Cloudflare
 
