@@ -14,6 +14,7 @@ GRANT ALL ON FUNCTION public.agendar_retorno_do_lead(p_lead_id uuid, p_quando ti
 GRANT ALL ON FUNCTION public.anotar_etapa(p_caso_etapa_id uuid, p_observacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) TO authenticated;
+GRANT ALL ON FUNCTION public.casos_parecidos_do_lead(p_lead_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.concluir_etapa_com_entregaveis(p_caso_etapa_id uuid, p_entregaveis jsonb, p_observacao text) TO authenticated;
 GRANT ALL ON FUNCTION public.confirmar_entrega(p_caso_id uuid) TO authenticated;
@@ -44,6 +45,7 @@ GRANT ALL ON FUNCTION public.enviar_click_home_para_escolha(p_caso_etapa_id uuid
 GRANT ALL ON FUNCTION public.enviar_fotolivro_para_aprovacao(p_caso_etapa_id uuid, p_link text, p_capa text) TO authenticated;
 GRANT ALL ON FUNCTION public.enviar_video_nos_links_do_caso(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.enviar_video_para_entrega(p_caso_etapa_id uuid, p_link_video text, p_link_wetransfer text) TO authenticated;
+GRANT ALL ON FUNCTION public.fechar_lead(p_lead_id uuid, p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_vendas jsonb, p_contrato text, p_sem_hora boolean, p_cesarea_em timestamp with time zone, p_observacao text, p_click_home boolean, p_fotolivro boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.liberar_para_entrega(p_caso_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.limpar_notificacoes_gerais() TO authenticated;
@@ -147,6 +149,7 @@ REVOKE ALL ON FUNCTION public.anotar_etapa(p_caso_etapa_id uuid, p_observacao te
 REVOKE ALL ON FUNCTION public.atribuir_etapa(p_caso_etapa_id uuid, p_para_pessoa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancelar_caso(p_caso_id uuid, p_motivo text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.caso_tem_trabalho(p_caso_id uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.casos_parecidos_do_lead(p_lead_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.completar_etapas_do_pacote() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.concluir_etapa(p_caso_etapa_id uuid, p_observacao text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.concluir_etapa_com_entregaveis(p_caso_etapa_id uuid, p_entregaveis jsonb, p_observacao text) FROM PUBLIC;
@@ -183,12 +186,14 @@ REVOKE ALL ON FUNCTION public.enviar_video_nos_links_do_caso(p_caso_etapa_id uui
 REVOKE ALL ON FUNCTION public.enviar_video_para_entrega(p_caso_etapa_id uuid, p_link_video text, p_link_wetransfer text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.exigir_gestao() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.exigir_operacao(p_filtros jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.fechar_lead(p_lead_id uuid, p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_vendas jsonb, p_contrato text, p_sem_hora boolean, p_cesarea_em timestamp with time zone, p_observacao text, p_click_home boolean, p_fotolivro boolean) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_caso_etapas() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_etapa_do_click_home() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.gerar_segunda_rodada_de_edicao() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.guardar_acesso_a_equipe() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.iniciar_etapa(p_caso_etapa_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.inicio_das_metricas() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.inserir_caso_novo(p_pessoa_id uuid, p_origem text, p_mae_nome text, p_bebe_nome text, p_pacote_id uuid, p_maternidade_id uuid, p_previsao_em timestamp with time zone, p_click_home boolean, p_sem_hora boolean, p_cesarea_em timestamp with time zone, p_observacao text, p_fotolivro boolean, p_dpp date, p_lead_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.item_de_pontuacao(p_tipo public.etapa_tipo, p_rodada integer, p_pacote_slug text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.liberar_para_entrega(p_caso_id uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.limpar_notificacoes_gerais() FROM PUBLIC;

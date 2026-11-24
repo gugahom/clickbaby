@@ -2107,6 +2107,19 @@ export type Database = {
         Returns: undefined
       }
       caso_tem_trabalho: { Args: { p_caso_id: string }; Returns: boolean }
+      casos_parecidos_do_lead: {
+        Args: { p_lead_id: string }
+        Returns: {
+          bebe_nome: string
+          dia: string
+          id: string
+          mae_nome: string
+          maternidade: string
+          pacote: string
+          sem_hora: boolean
+          situacao: Database["public"]["Enums"]["status_operacional"]
+        }[]
+      }
       concluir_etapa: {
         Args: { p_caso_etapa_id: string; p_observacao?: string }
         Returns: undefined
@@ -2291,8 +2304,45 @@ export type Database = {
       }
       exigir_gestao: { Args: never; Returns: undefined }
       exigir_operacao: { Args: { p_filtros: Json }; Returns: undefined }
+      fechar_lead: {
+        Args: {
+          p_bebe_nome: string
+          p_cesarea_em?: string
+          p_click_home?: boolean
+          p_contrato: string
+          p_fotolivro?: boolean
+          p_lead_id: string
+          p_mae_nome: string
+          p_maternidade_id: string
+          p_observacao?: string
+          p_pacote_id: string
+          p_previsao_em: string
+          p_sem_hora?: boolean
+          p_vendas: Json
+        }
+        Returns: string
+      }
       iniciar_etapa: { Args: { p_caso_etapa_id: string }; Returns: undefined }
       inicio_das_metricas: { Args: never; Returns: string }
+      inserir_caso_novo: {
+        Args: {
+          p_bebe_nome: string
+          p_cesarea_em: string
+          p_click_home: boolean
+          p_dpp: string
+          p_fotolivro: boolean
+          p_lead_id?: string
+          p_mae_nome: string
+          p_maternidade_id: string
+          p_observacao: string
+          p_origem: string
+          p_pacote_id: string
+          p_pessoa_id: string
+          p_previsao_em: string
+          p_sem_hora: boolean
+        }
+        Returns: string
+      }
       item_de_pontuacao: {
         Args: {
           p_pacote_slug: string

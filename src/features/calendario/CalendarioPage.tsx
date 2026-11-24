@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
 import { useAuth } from '@/features/auth/contexto'
+import { useTelas } from '@/features/auth/telas'
 import { podeEditarCadastro, podeEncerrarCaso } from '@/features/quadro/lib/acoes'
 import { Segmentado } from '@/features/relatorios/components/Segmentado'
 import { useCalendario, type Feriado, type ItemDoCalendario } from './api/useCalendario'
@@ -53,7 +54,9 @@ import { TIPOS } from './lib/estilos'
  * maternidade), todo item de um caso na cor dele. O que vem pela frente é cor
  * cheia; o que passou é fundo branco com a bolinha — ver `aparencia`.
  *
- * CRIA CASO (adm): "+ Novo caso", e o sync escreve o evento no Google.
+ * CRIA CASO: "+ Novo caso", e o sync escreve o evento no Google. Desde 24/11/2026
+ * é de quem tem a tela Comercial (`criar_caso`, migration 20261124150001 — "criar
+ * caso passa a ser só do comercial"); editar e o feriado continuam do adm.
  *
  * QUEM VÊ: todos menos as fotógrafas (decisão do gestor), pela
  * `RotaAdministrativa`. A visão e o dia moram no endereço.
@@ -80,6 +83,7 @@ export function CalendarioPage() {
   const escolhido = dataDaUrl && /^\d{4}-\d{2}-\d{2}$/.test(dataDaUrl) ? dataDaUrl : hoje
   const ehAdm = podeEditarCadastro(pessoa?.papelSistema ?? '')
   const cancela = podeEncerrarCaso(pessoa?.papelSistema ?? '')
+  const criaCaso = useTelas().has('comercial')
 
   const [busca, setBusca] = useState('')
   const [tipos, setTipos] = useState<string[]>([])
@@ -207,7 +211,7 @@ export function CalendarioPage() {
             ativa={visao}
             onTrocar={(v) => irPara(escolhido, v)}
           />
-          {ehAdm && (
+          {criaCaso && (
             <Botao variante="primario" onClick={() => setNovoCasoEm(escolhido)}>
               + Novo caso
             </Botao>
@@ -259,12 +263,14 @@ export function CalendarioPage() {
               podeArrastar={podeArrastar}
               onSoltar={soltar}
               acoes={
-                ehAdm && (
+                (ehAdm || criaCaso) && (
                   <>
-                    <ControleDoFeriado key={escolhido} dia={escolhido} feriado={feriados.get(escolhido)} />
-                    <Botao variante="primario" onClick={() => setNovoCasoEm(escolhido)}>
-                      + Novo caso neste dia
-                    </Botao>
+                    {ehAdm && <ControleDoFeriado key={escolhido} dia={escolhido} feriado={feriados.get(escolhido)} />}
+                    {criaCaso && (
+                      <Botao variante="primario" onClick={() => setNovoCasoEm(escolhido)}>
+                        + Novo caso neste dia
+                      </Botao>
+                    )}
                   </>
                 )
               }
