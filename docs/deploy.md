@@ -219,3 +219,19 @@ Desde 14/10/2026 o `main` NÃO constrói sozinho no Cloudflare — de propósito
 "Quem publica", acima). Olhe a última execução em **Actions → Publicar**:
 vermelha no passo "Parar se há migration…" é migration esperando aprovação;
 vermelha em outro passo é segredo faltando ou build quebrado, e o log diz qual.
+
+## Homologação — `homolog.clickbaby.pages.dev` (24/11/2026)
+
+Para testar uma tela em uso real antes de soltá-la para a equipe (começou com o CRM do comercial):
+**Actions → Homologação → Run workflow**, com o branch no campo. O fluxo builda o branch e publica
+no Cloudflare Pages como prévia fixa (`--branch=homolog`): **https://homolog.clickbaby.pages.dev/quadro**.
+O site da equipe não muda.
+
+- **O banco é o da produção.** O fluxo nunca aplica migration; se o branch tiver migration que o
+  banco não recebeu, ele para. O caminho é sempre: PR de BANCO pela main e pelo Publicar (tabela nova
+  sem tela é inofensiva) e a TELA pela homologação, até ser liberada pela main.
+- **Tudo o que se faz lá é de verdade** — lead criado na homologação é lead no banco de produção.
+- **Quem entra:** qualquer conta da produção, com login; o endereço só não é divulgado. Para trancar
+  de vez, no painel da Cloudflare: Zero Trust → Access → Applications → Add → Self-hosted, domínio
+  `homolog.clickbaby.pages.dev`, política "Allow" só com o seu e-mail (gratuito até 50 pessoas).
+- **Liberar para a equipe** é mergear o branch da tela na main: o Publicar faz o resto.

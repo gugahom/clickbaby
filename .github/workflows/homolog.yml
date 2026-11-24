@@ -1,0 +1,98 @@
+# HOMOLOGAÇÃO: um branch no ar num endereço à parte (24/11/2026).
+#
+# O CRM do comercial vai ser testado em uso real ANTES de ir para a equipe. Em
+# vez de esconder a tela dentro do site de produção (um flag que alguém acha),
+# o branch inteiro é publicado num endereço próprio do Cloudflare Pages:
+#
+#     https://homolog.clickbaby.pages.dev/quadro
+#
+# O site da equipe (clickbaby.com.br/quadro) continua sendo só a main, pelo
+# fluxo Publicar, e não muda nada com isto.
+#
+# O BANCO É O MESMO DA PRODUÇÃO. Por isso este fluxo NUNCA aplica migration: o
+# que é de banco entra pela main e pelo Publicar, com a aprovação de sempre
+# (seção 11 do CLAUDE.md). Banco novo sem tela é inofensivo; a tela vem para cá.
+# Se o branch tem migration que o banco ainda não recebeu, o fluxo PARA — a
+# homologação abriria uma tela pedindo tabela que não existe.
+#
+# Quem entra: qualquer conta da produção, com login (o endereço não é
+# divulgado). Para trancar de vez, dá para pôr o Cloudflare Access na frente
+# deste endereço só com o seu e-mail — ver docs/deploy.md.
+#
+# Usa os mesmos segredos e variáveis do Publicar.
+
+name: Homologação
+
+on:
+  workflow_dispatch:
+    inputs:
+      ramo:
+        description: 'Branch para publicar em homolog.clickbaby.pages.dev'
+        type: string
+        default: feat/comercial-tela
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homologacao
+  cancel-in-progress: true
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+  SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+
+jobs:
+  homologar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ramo }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: O banco já tem as migrations deste branch?
+        run: |
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          saida=$(npx supabase db push --dry-run 2>&1) || { echo "$saida"; exit 1; }
+          echo "$saida"
+          pendentes=$(echo "$saida" | grep -oE '[0-9]{14}_[A-Za-z0-9_]+\.sql' | sort -u || true)
+          if [ -n "$pendentes" ]; then
+            {
+              echo "### A homologação NÃO foi publicada"
+              echo "O branch tem migration que o banco ainda não recebeu:"
+              echo "$pendentes" | sed 's/^/- `/; s/$/`/'
+              echo
+              echo "Suba primeiro o PR de banco pela main e pelo Publicar; depois rode este fluxo de novo."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Migration pendente no banco — a homologação não foi publicada."
+            exit 1
+          fi
+
+      - name: Variáveis do build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$VITE_SUPABASE_URL" "$VITE_SUPABASE_ANON_KEY" > .env
+
+      - run: npm run build
+
+      # `--branch=homolog`: o Cloudflare publica como PRÉVIA, num endereço fixo
+      # (homolog.clickbaby.pages.dev), e não mexe na produção, que é `main`.
+      - name: Publicar a homologação
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          conta=$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '[:space:]"' | tr 'A-F' 'a-f')
+          export CLOUDFLARE_ACCOUNT_ID="$conta"
+          npx --yes wrangler@4.131.2 pages deploy dist --project-name=clickbaby --branch=homolog --commit-hash="$(git rev-parse HEAD)"
+          echo "Publicado em https://homolog.clickbaby.pages.dev/quadro" >> "$GITHUB_STEP_SUMMARY"
