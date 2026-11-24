@@ -244,3 +244,41 @@ Falta:
   primeira versão (uma página com abas, dentro do Quadro) foi recusada pelo gestor no mesmo dia
   ("ficou tudo muito amontoado"; "é uma NOVA PÁGINA"; "um CRM premium") e virou o CRM.
 - **A3 — importação**: falta. Os CSVs ficam fora do repositório (têm nome e telefone).
+
+---
+
+## 8. A fase B — o plano (24/11/2026)
+
+Decidido com o usuário nesse dia, em cima do que o gestor já tinha dito em 18/11:
+
+- **"Fechou" abre o formulário do caso JÁ PREENCHIDO** com o lead (mãe, bebê, maternidade, DPP,
+  New Born) — o mesmo formulário do Calendário, com a tabela de preços. Salvar cria o caso, lança
+  a venda, grava o contrato e fecha o lead numa transação só (`fechar_lead`). O evento vai sozinho
+  para o Google pelo sync, como todo caso criado no sistema.
+- **Valor e contrato são OBRIGATÓRIOS no fechamento** — a linha do pacote e o link. A trava é do
+  banco. Pelo Calendário os dois seguem opcionais.
+- **Criar caso é da tela Comercial** (vendedores e gestão); coordenação e financeiro deixam de
+  criar. Editar e cancelar continuam do ADM.
+- **Caso que já existe não se duplica:** antes de criar, o fechamento mostra os casos parecidos
+  (mesmo primeiro nome da mãe, até 60 dias da DPP) e oferece LIGAR a um deles. Ligar a um caso
+  sem valor ou sem contrato pede os dois ali mesmo — menos no BIRTH, que nasce sem contrato.
+
+### As entregas, em ordem
+
+| | Entrega | Onde |
+|---|---|---|
+| **B1** | banco: `fechar_lead`, `casos_parecidos_do_lead`, `criar_caso` da tela Comercial, o "+ Novo caso" do Calendário seguindo a regra | PR para a main (`feat/comercial-fechar-lead-banco`) |
+| **B2** | tela: "Fechou" na ficha e no Funil abrindo o formulário preenchido; os casos parecidos com "ligar a este"; o lead ganho mostra o caso dele (abrir no Calendário/Quadro) | `feat/comercial-tela` → homologação |
+| **B3** | **Agenda** dentro do CRM (`/comercial/agenda`): o Calendário com os mesmos componentes, mais os RETORNOS dos leads como um tipo de item | `feat/comercial-tela` |
+| **B4** | **Pós-venda** dentro do CRM (`/comercial/pos-venda`): o modo comercial do relatório externo (ofertas de Birth, Reels, New Born e Foto/Livro, e o retorno agendado) | `feat/comercial-tela` |
+| **A3** | importação das planilhas: DPP pela frente vira lead vivo, meses passados viram histórico | script local, roda contra o remoto com aprovação |
+
+### Para levar ao gestor antes de ligar o B na operação
+
+1. **Quem escreve o parto na agenda depois do B?** Fechado no CRM, o evento vai sozinho. Se a
+   equipe continuar escrevendo o mesmo parto à mão no Google, o sync cria um SEGUNDO caso. A
+   regra precisa ser: venda fechada no CRM não se escreve na agenda.
+2. **Pós-venda tem dono?** As ofertas (Birth, Reels, New Born, Foto/Livro) não têm vendedor. A
+   planilha "Partos 2026" diz que é a Vavá; a lente "Meus" do Pós-venda pode ser "quem faz
+   repescagem", ou todo mundo vê tudo.
+3. **"CELL GUI / CELL RAFA"** — ainda aberto.
