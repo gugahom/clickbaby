@@ -269,7 +269,7 @@ Decidido com o usuário nesse dia, em cima do que o gestor já tinha dito em 18/
 |---|---|---|
 | **B1** ✅ | banco: `fechar_lead`, `casos_parecidos_do_lead`, `criar_caso` da tela Comercial, o "+ Novo caso" do Calendário seguindo a regra | PR para a main (`feat/comercial-fechar-lead-banco`) |
 | **B2** ✅ | tela: "Fechou" na ficha e no Funil abrindo o formulário preenchido; os casos parecidos com "ligar a este"; o lead ganho mostra o caso dele (abrir no Calendário/Quadro) | `feat/comercial-tela` → homologação |
-| **B3** | **Agenda** dentro do CRM (`/comercial/agenda`): o Calendário com os mesmos componentes, mais os RETORNOS dos leads como um tipo de item | `feat/comercial-tela` |
+| **B3** ✅ | **Agenda** dentro do CRM (`/comercial/agenda`): o Calendário com os mesmos componentes, mais os RETORNOS dos leads como um tipo de item | `feat/comercial-tela` |
 | **B4** | **Pós-venda** dentro do CRM (`/comercial/pos-venda`): o modo comercial do relatório externo (ofertas de Birth, Reels, New Born e Foto/Livro, e o retorno agendado) | `feat/comercial-tela` |
 | **A3** | importação das planilhas: DPP pela frente vira lead vivo, meses passados viram histórico | script local, roda contra o remoto com aprovação |
 

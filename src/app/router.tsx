@@ -14,6 +14,7 @@ import { CrmLayout } from '@/features/comercial/crm/CrmLayout'
 import { InicioDoCrm } from '@/features/comercial/paginas/InicioDoCrm'
 import { LeadsDoCrm } from '@/features/comercial/paginas/LeadsDoCrm'
 import { FunilDoCrm } from '@/features/comercial/paginas/FunilDoCrm'
+import { AgendaDoCrm } from '@/features/comercial/paginas/AgendaDoCrm'
 import { ConfiguracoesDoCrm } from '@/features/comercial/paginas/ConfiguracoesDoCrm'
 import { EmBreveDoCrm } from '@/features/comercial/paginas/EmBreveDoCrm'
 
@@ -97,6 +98,7 @@ export const router = createBrowserRouter(
                 { index: true, element: <InicioDoCrm /> },
                 { path: 'leads', element: <LeadsDoCrm /> },
                 { path: 'funil', element: <FunilDoCrm /> },
+                { path: 'agenda', element: <AgendaDoCrm /> },
                 { path: 'configuracoes', element: <ConfiguracoesDoCrm /> },
                 // As páginas que ainda não chegaram — ver `navegacao.ts`.
                 { path: ':pagina', element: <EmBreveDoCrm /> },

@@ -293,7 +293,12 @@ function Agenda({ leads, hoje, onAbrir }: { leads: Lead[]; hoje: string; onAbrir
         <h2 id="titulo-agenda" className="text-[13.5px] font-extrabold tracking-tight">
           Próximos retornos
         </h2>
-        <span className="ml-auto text-xs text-muted-foreground">7 dias</span>
+        <Link
+          to="/comercial/agenda"
+          className="ml-auto text-xs font-semibold text-marca underline-offset-2 hover:underline"
+        >
+          Ver a agenda
+        </Link>
       </div>
 
       {porDia.length === 0 ? (

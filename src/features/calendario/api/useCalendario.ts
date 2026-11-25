@@ -24,7 +24,12 @@ import { diaDoNascimento, emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, som
  * verdade esperando alguém confirmar o pacote.
  */
 
-export type TipoDeItem = 'parto' | 'hora_marcada' | 'entrega_combinada' | 'prazo'
+/**
+ * 'retorno' é o retorno combinado com um LEAD (24/11/2026, fase B3): ele não vem
+ * daqui — quem o entrega é a Agenda do CRM (`extras` de `CalendarioPage`), e só
+ * lá ele existe. Não tem caso: `casoId` vem vazio e o lead vai em `leadId`.
+ */
+export type TipoDeItem = 'parto' | 'hora_marcada' | 'entrega_combinada' | 'prazo' | 'retorno'
 
 export interface ItemDoCalendario {
   chave: string
@@ -68,6 +73,8 @@ export interface ItemDoCalendario {
    * ('atualizando'). O sync resolve em até um ciclo.
    */
   google: 'enviando' | 'atualizando' | null
+  /** Só no 'retorno': o lead que abre ao tocar. */
+  leadId?: string
 }
 
 export interface Feriado {

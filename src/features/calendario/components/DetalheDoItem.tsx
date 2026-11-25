@@ -36,10 +36,13 @@ export function DetalheDoItem({
   item,
   acoes,
   onFechar,
+  semQuadro = false,
 }: {
   item: ItemDoCalendario
   acoes: AcoesDoDetalhe
   onFechar: () => void
+  /** Na Agenda do CRM: quem vende não tem o Quadro, e o link levaria de volta ao CRM. */
+  semQuadro?: boolean
 }) {
   const a = aparencia(item)
   const podeVenda = usePodeVenda()
@@ -148,7 +151,7 @@ export function DetalheDoItem({
           </div>
         )}
         {/* Só quando o caso ESTÁ no Quadro — ver useNoQuadro. */}
-        {noQuadro.data && (
+        {noQuadro.data && !semQuadro && (
           <Link
             to={`/?caso=${item.casoId}`}
             className="superficie-acento flex min-h-11 w-full items-center justify-center rounded-full text-sm font-bold text-white"

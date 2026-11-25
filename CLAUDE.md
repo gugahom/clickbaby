@@ -2387,6 +2387,12 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   caso e "Ver na agenda". **As animações de entrada da ficha e da gaveta são `backwards`, NUNCA
   `both`**: o transform que fica depois do fim vira a referência dos menus `fixed` de dentro, e o
   "Mais" da ficha abria fora da tela.
+  **A AGENDA MORA NO CRM** (24/11/2026, fase B3, `paginas/AgendaDoCrm.tsx`): é a `CalendarioPage` de
+  sempre — uma página, não duas — com três ajustes que só o CRM passa: `extras` (os RETORNOS
+  combinados com os leads abertos, tipo de item `retorno`, na cor Flamingo e vermelhos quando
+  vencem; seguem a lente Meus · Equipe), `onAbrirExtra` (tocar num retorno abre a ficha do lead) e
+  `semQuadro` (quem vende não tem o Quadro; o link "Abrir o caso no Quadro" sai do detalhe). O
+  Calendário da barra lateral continua igual: sem `extras`, o tipo "retorno" nem aparece no filtro.
   As referências (Pipedrive, Close, HubSpot, Attio, Twenty, Kommo) e o que veio de cada uma estão no
   doc; o "app dashboard shell" que o gestor mandou é referência de ESTRUTURA, feito com as peças da
   casa — sem shadcn nem lucide —, e os gráficos dele são da futura página de Desempenho.

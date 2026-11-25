@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import clsx from 'clsx'
 import { Botao } from '@/components/ui/Botao'
@@ -60,7 +60,18 @@ import { TIPOS } from './lib/estilos'
  *
  * QUEM VÊ: todos menos as fotógrafas (decisão do gestor), pela
  * `RotaAdministrativa`. A visão e o dia moram no endereço.
+ *
+ * A AGENDA DO CRM É ESTA MESMA PÁGINA (24/11/2026, fase B3), com três ajustes
+ * que só o CRM passa: `extras` (os retornos combinados com os leads, que não
+ * vêm do banco do calendário), `onAbrirExtra` (tocar num retorno abre a ficha do
+ * lead, não o detalhe de caso) e `semQuadro` (quem vende não tem o Quadro).
+ * Uma página e não duas: a próxima mudança no calendário vale para os dois.
  */
+export interface AjustesDoCalendario {
+  extras?: ItemDoCalendario[]
+  onAbrirExtra?: (item: ItemDoCalendario) => void
+  semQuadro?: boolean
+}
 const NOMES_DAS_VISOES: Record<Visao, string> = { mes: 'Mês', semana: 'Semana', dia: 'Dia', lista: 'Lista' }
 const VISOES: Visao[] = ['mes', 'semana', 'dia', 'lista']
 
@@ -73,7 +84,7 @@ const semAcento = (t: string) =>
 /** "14:30" com a hora trocada pela da célula onde o item caiu. */
 const naHora = (h: number, antes: string | null) => `${String(h).padStart(2, '0')}:${antes?.slice(3) ?? '00'}`
 
-export function CalendarioPage() {
+export function CalendarioPage({ extras = [], onAbrirExtra, semQuadro = false }: AjustesDoCalendario = {}) {
   const { pessoa } = useAuth()
   const [params, setParams] = useSearchParams()
   const [hoje] = useState(hojeEmBrasilia)
@@ -107,17 +118,18 @@ export function CalendarioPage() {
       return p
     })
 
-  const todos = useMemo(() => calendario.data?.itens ?? [], [calendario.data])
+  // Sem useMemo: o React Compiler memoiza sozinho, e com `periodo` (um objeto)
+  // na lista de dependências a memoização à mão ele não consegue preservar.
+  const todos = [
+    ...(calendario.data?.itens ?? []),
+    ...extras.filter((i) => i.dia >= periodo.inicio && i.dia <= periodo.fim),
+  ]
 
   // As opções dos filtros saem do que ESTÁ no período — uma maternidade sem
   // nada neste mês não ocupa lugar no menu.
-  const opcoesDeMaternidade = useMemo(
-    () =>
-      [...new Set(todos.map((i) => i.maternidade).filter((m): m is string => m !== null))]
-        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-        .map((m) => ({ valor: m, rotulo: m })),
-    [todos],
-  )
+  const opcoesDeMaternidade = [...new Set(todos.map((i) => i.maternidade).filter((m): m is string => m !== null))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    .map((m) => ({ valor: m, rotulo: m }))
 
   const termo = semAcento(busca.trim())
   const visiveis = todos.filter(
@@ -141,7 +153,9 @@ export function CalendarioPage() {
   // QUEM PODE O QUÊ, num item — a mesma regra no detalhe e no arrastar.
   const editavel = (i: ItemDoCalendario) => i.tipo === 'parto' && ehAdm
   const reagendavel = (i: ItemDoCalendario) => i.etapaId !== null && !i.feito
-  const podeArrastar = (i: ItemDoCalendario) => (editavel(i) && !i.feito && !i.encerrado) || reagendavel(i)
+  const podeArrastar = (i: ItemDoCalendario) =>
+    i.tipo !== 'retorno' && ((editavel(i) && !i.feito && !i.encerrado) || reagendavel(i))
+  const abrir = (i: ItemDoCalendario) => (i.tipo === 'retorno' && onAbrirExtra ? onAbrirExtra(i) : setAberto(i))
 
   function acoesDe(i: ItemDoCalendario): AcoesDoDetalhe {
     const acoes: AcoesDoDetalhe = {}
@@ -177,7 +191,7 @@ export function CalendarioPage() {
     hoje,
     porDia,
     feriados,
-    onAbrir: setAberto,
+    onAbrir: abrir,
     onIrParaDia: (d: string) => irPara(d, 'dia'),
     podeArrastar,
     onSoltar: soltar,
@@ -228,7 +242,11 @@ export function CalendarioPage() {
           {
             id: 'tipos',
             titulo: 'Tipos',
-            opcoes: TIPOS.map((t) => ({ valor: t.id, rotulo: t.legenda })),
+            // O tipo "retorno" só existe onde alguém o entrega (a Agenda do CRM).
+            opcoes: TIPOS.filter((t) => t.id !== 'retorno' || extras.length > 0).map((t) => ({
+              valor: t.id,
+              rotulo: t.legenda,
+            })),
             marcados: tipos,
             onMudar: setTipos,
           },
@@ -259,7 +277,7 @@ export function CalendarioPage() {
               hoje={hoje}
               porDia={porDia}
               feriados={feriados}
-              onAbrir={setAberto}
+              onAbrir={abrir}
               podeArrastar={podeArrastar}
               onSoltar={soltar}
               acoes={
@@ -279,7 +297,9 @@ export function CalendarioPage() {
         </div>
       )}
 
-      {aberto && <DetalheDoItem item={aberto} acoes={acoesDe(aberto)} onFechar={() => setAberto(null)} />}
+      {aberto && (
+        <DetalheDoItem item={aberto} acoes={acoesDe(aberto)} onFechar={() => setAberto(null)} semQuadro={semQuadro} />
+      )}
       {editando && (
         <EditarCasoDialogo
           casoId={editando.casoId}

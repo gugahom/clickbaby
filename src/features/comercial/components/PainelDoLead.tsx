@@ -317,7 +317,7 @@ function Encerramento({ lead }: { lead: Lead }) {
 
 /**
  * O CASO QUE NASCEU DO LEAD (fase B): quem é, o dia e o caminho para a agenda.
- * O dia leva à visão do DIA no Calendário, onde o caso está com tudo o que tem.
+ * O dia leva à visão do DIA da Agenda do CRM, onde o caso está com tudo o que tem.
  */
 function CasoDoLead({ casoId }: { casoId: string }) {
   const caso = useCasoEditavel(casoId)
@@ -331,7 +331,7 @@ function CasoDoLead({ casoId }: { casoId: string }) {
         {dia ? ` · ${dia.split('-').reverse().slice(0, 2).join('/')}` : ''}
       </span>
       {dia && (
-        <Link to={`/calendario?ver=dia&dia=${dia}`} className="font-semibold text-marca underline underline-offset-2">
+        <Link to={`/comercial/agenda?ver=dia&dia=${dia}`} className="font-semibold text-marca underline underline-offset-2">
           Ver na agenda
         </Link>
       )}

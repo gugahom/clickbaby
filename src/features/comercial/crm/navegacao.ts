@@ -20,7 +20,7 @@ import type { Tela } from '@/features/auth/telas'
  * breve"). A barra lateral, a busca rápida e o título do cabeçalho leem daqui.
  *
  * AS QUE JÁ EXISTEM são as que a fase A sustenta com dado de verdade — Início,
- * Leads, Funil e a distribuição. As "em breve" dizem o que vão ser e em que
+ * Leads, Funil e a distribuição —, e a Agenda, desde a fase B3. As "em breve" dizem o que vão ser e em que
  * fase do docs/painel-comercial.md entram; quando o trabalho de hoje já tem
  * outro lugar no sistema (o Calendário, o pós-venda no relatório externo), a
  * página aponta para ele, para ninguém perder o caminho no meio da mudança.
@@ -66,21 +66,7 @@ export const GRUPOS_DO_CRM: GrupoDoCrm[] = [
           ],
         },
       },
-      {
-        id: 'agenda',
-        rotulo: 'Agenda',
-        Icone: IconeCalendario,
-        emBreve: {
-          fase: 'Fase B',
-          resumo: 'Os partos marcados e os retornos combinados num calendário só, dentro do CRM.',
-          itens: [
-            'Partos e retornos lado a lado, por dia e por semana',
-            'Fechar a venda já cria o caso, sem passar pelo Google',
-            'Criar caso passa a ser do comercial',
-          ],
-          hoje: { rotulo: 'Abrir o Calendário', para: '/calendario', tela: 'calendario' },
-        },
-      },
+      { id: 'agenda', rotulo: 'Agenda', Icone: IconeCalendario },
     ],
   },
   {

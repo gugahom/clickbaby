@@ -11,7 +11,16 @@ export const TIPOS: { id: TipoDeItem; legenda: string }[] = [
   { id: 'hora_marcada', legenda: 'Banho e fechamento' },
   { id: 'entrega_combinada', legenda: 'Vídeo, Foto/Livro e New Born' },
   { id: 'prazo', legenda: 'Prazos de entrega' },
+  // Só na Agenda do CRM, que é quem entrega esses itens (fase B3).
+  { id: 'retorno', legenda: 'Retornos dos leads' },
 ]
+
+/**
+ * A COR DO RETORNO: Flamingo, a cor do Google que nenhuma maternidade usa, e a
+ * mais perto do rosa da marca, que marca o CRM. O retorno que passou sem
+ * contato fica vermelho, como o prazo vencido — é o que ainda pede alguém.
+ */
+export const COR_DO_RETORNO = '4'
 
 /** O vermelho do atraso — o mesmo "Tomate" do Google, que já é a cor de alarme da equipe. */
 const VERMELHO_DO_ATRASO = '#D50000'
