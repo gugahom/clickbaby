@@ -12,7 +12,14 @@ import { diaDoNascimento, emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, som
  * A LEITURA DO CALENDÁRIO (30/09/2026). Nada novo no banco: tudo o que ele
  * mostra já existe e já é legível sob a RLS de sempre — a previsão do parto, a
  * hora marcada de banho e fechamento, o prazo combinado do vídeo, do
- * Foto/Livro e do New Born, o vencimento do prazo do pacote, e os feriados.
+ * Foto/Livro e do New Born, e os feriados.
+ *
+ * O PRAZO DO PACOTE SAIU (26/11/2026, pedido do gestor: "tem como tirar esse
+ * negócio de prazo daqui, deixar realmente um espelho do Google?"). O "Vence o
+ * prazo" de cada caso ainda não enviado entrava no dia como mais um item, e o
+ * dia do Calendário passava a ter mais coisas que o dia da agenda do Google — a
+ * equipe compara os dois para conferir. O prazo continua onde ele é régua: no
+ * Quadro, no card e nos relatórios.
  *
  * SÓ O PERÍODO DA TELA (no máximo seis semanas), em três consultas paralelas.
  * Paginadas com `buscarTudo` e ordenação total mesmo sendo poucas linhas: é a
@@ -24,7 +31,7 @@ import { diaDoNascimento, emBrasilia, hojeEmBrasilia, inicioDoDiaEmBrasilia, som
  * verdade esperando alguém confirmar o pacote.
  */
 
-export type TipoDeItem = 'parto' | 'hora_marcada' | 'entrega_combinada' | 'prazo'
+export type TipoDeItem = 'parto' | 'hora_marcada' | 'entrega_combinada'
 
 export interface ItemDoCalendario {
   chave: string
@@ -33,7 +40,7 @@ export interface ItemDoCalendario {
   dia: string
   /** "14:30", ou nulo quando é o dia todo. */
   hora: string | null
-  /** O que é: "Parto previsto", "Banho", "Prazo do vídeo", "Vence o prazo". */
+  /** O que é: "Parto previsto", "Banho", "Prazo do vídeo". */
   titulo: string
   /** "MÃE · BEBÊ" */
   nome: string
@@ -50,15 +57,15 @@ export interface ItemDoCalendario {
   /**
    * A cor do evento do CASO no Google (colorId). Todo item de um caso usa a
    * cor dele — o banho da Ana é da cor do parto da Ana —, e o tipo se lê no
-   * texto ("Banho", "Vence o prazo"), como no Google.
+   * texto ("Banho", "Prazo do vídeo"), como no Google.
    */
   corDoGoogle: string | null
   /** Para os filtros. */
   maternidade: string | null
   pacote: string | null
-  /** Quem está com a etapa; nulo no parto e no prazo. */
+  /** Quem está com a etapa; nulo no parto. */
   responsavel: string | null
-  /** A etapa por trás do item (hora marcada, entrega combinada); nulo no parto e no prazo. */
+  /** A etapa por trás do item (hora marcada, entrega combinada); nulo no parto. */
   etapaId: string | null
   /** O caso já foi entregue (encerrado). Cancelado nem aparece. */
   encerrado: boolean
@@ -102,9 +109,9 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
   const agora = Date.now()
 
   const colunasDoCaso =
-    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, vence_em, na_uti, cor_calendar, previsao_sem_hora'
+    'id, mae_nome, bebe_nome, dia, previsao_em, maternidade_sigla, pacote_nome, status_operacional, eh_rascunho, eh_terminal, nascimento_concluido_em, liberado_para_entrega_em, na_uti, cor_calendar, previsao_sem_hora'
 
-  const [partos, prazos, etapas, feriados, naFila] = await Promise.all([
+  const [partos, etapas, feriados, naFila] = await Promise.all([
     buscarTudo((a, b) =>
       supabase
         .from('quadro_casos')
@@ -113,21 +120,6 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
         .lte('dia', fim)
         .neq('status_operacional', 'cancelado')
         .order('dia')
-        .order('id')
-        .range(a, b),
-    ),
-    // O prazo do pacote só interessa enquanto o caso não foi ENVIADO: depois
-    // disso ele já foi cumprido ou estourado, e o calendário não é relatório.
-    buscarTudo((a, b) =>
-      supabase
-        .from('quadro_casos')
-        .select(colunasDoCaso, { count: 'exact' })
-        .gte('vence_em', de)
-        .lt('vence_em', ate)
-        .eq('eh_terminal', false)
-        .eq('eh_rascunho', false)
-        .is('liberado_para_entrega_em', null)
-        .order('vence_em')
         .order('id')
         .range(a, b),
     ),
@@ -185,32 +177,6 @@ async function lerCalendario(inicio: string, fim: string): Promise<Calendario> {
       etapaId: null,
       encerrado: c.status_operacional === 'encerrado',
       google: noGoogle.get(c.id) ?? null,
-      passou: false,
-    })
-  }
-
-  for (const c of prazos) {
-    if (!c.id || !c.vence_em) continue
-    const quando = emBrasilia(c.vence_em)
-    itens.push({
-      chave: `prazo:${c.id}`,
-      tipo: 'prazo',
-      dia: quando.dia,
-      hora: quando.hora,
-      titulo: 'Vence o prazo',
-      nome: nomeDoCaso(c.mae_nome, c.bebe_nome),
-      detalhe: juntar(c.maternidade_sigla, c.pacote_nome, c.na_uti ? 'na UTI, prazo parado' : null),
-      casoId: c.id,
-      feito: false,
-      vencido: new Date(c.vence_em).getTime() < agora && !c.na_uti,
-      rascunho: false,
-      corDoGoogle: c.cor_calendar,
-      maternidade: c.maternidade_sigla,
-      pacote: c.pacote_nome,
-      responsavel: null,
-      etapaId: null,
-      encerrado: false,
-      google: null,
       passou: false,
     })
   }

@@ -1,9 +1,10 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import type { Feriado, ItemDoCalendario } from '../api/useCalendario'
 import { NOMES_DOS_DIAS, diaDaSemanaCurto, rotuloDoDia, rotuloDoDiaCompleto } from '../lib/datas'
 import { useAlvoDoArrasto } from '../lib/arrasto'
 import { aparencia } from '../lib/estilos'
+import { IconeX } from '@/components/ui/icones'
 import { CartaoDoItem } from './CartaoDoItem'
 
 /**
@@ -76,6 +77,8 @@ export function VisaoMes({
   onSoltar,
 }: PropsComuns & { dias: string[]; mes: string }) {
   const alvo = useAlvoDoArrasto(onSoltar)
+  // O "+N mais" abre a lista do dia por cima da célula (ver `ListaDoDia`).
+  const [lista, setLista] = useState<{ dia: string; caixa: DOMRect } | null>(null)
   return (
     <div className="overflow-hidden rounded-painel border border-border bg-card">
       <div className="grid grid-cols-7 border-b border-border bg-muted/40">
@@ -95,6 +98,7 @@ export function VisaoMes({
               key={dia}
               onClick={() => onIrParaDia(dia)}
               {...alvo.props(dia, dia, null)}
+              data-celula-do-mes=""
               className={clsx(
                 'flex min-h-20 cursor-pointer flex-col gap-1 border-border p-1 transition-colors sm:min-h-28 sm:p-1.5',
                 i % 7 !== 6 && 'border-r',
@@ -133,7 +137,8 @@ export function VisaoMes({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onIrParaDia(dia)
+                      const celula = e.currentTarget.closest('[data-celula-do-mes]')
+                      if (celula) setLista({ dia, caixa: celula.getBoundingClientRect() })
                     }}
                     className="px-1 text-left text-[11px] font-semibold text-muted-foreground hover:text-foreground"
                   >
@@ -144,6 +149,108 @@ export function VisaoMes({
             </div>
           )
         })}
+      </div>
+      {lista && (
+        <ListaDoDia
+          dia={lista.dia}
+          caixa={lista.caixa}
+          hoje={hoje}
+          itens={doDia(porDia, lista.dia)}
+          onAbrir={(item) => {
+            setLista(null)
+            onAbrir(item)
+          }}
+          onIrParaDia={(d) => {
+            setLista(null)
+            onIrParaDia(d)
+          }}
+          onFechar={() => setLista(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * A LISTA DO DIA (26/11/2026, pedido do gestor: "abrir só um pop-up com a lista,
+ * igual ao calendário do Google, em vez de abrir a tela inteira"). O "+N mais"
+ * do mês levava à visão do Dia, que é uma grade de horas inteira para ler sete
+ * nomes. Agora abre um cartão POR CIMA da célula, como no Google: o dia no topo
+ * (o número continua levando à visão do Dia), todos os itens, e o X. Fecha com
+ * Esc e com um clique fora. Tocar num item fecha a lista e abre o detalhe.
+ *
+ * `position: fixed` medido da célula, e puxado para dentro da janela quando a
+ * célula está na borda (sábado, última semana).
+ */
+const LARGURA_DA_LISTA = 260
+
+function ListaDoDia({
+  dia,
+  caixa,
+  hoje,
+  itens,
+  onAbrir,
+  onIrParaDia,
+  onFechar,
+}: {
+  dia: string
+  caixa: DOMRect
+  hoje: string
+  itens: ItemDoCalendario[]
+  onAbrir: (item: ItemDoCalendario) => void
+  onIrParaDia: (dia: string) => void
+  onFechar: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fora = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onFechar()
+    }
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar()
+    }
+    document.addEventListener('mousedown', fora)
+    document.addEventListener('keydown', tecla)
+    return () => {
+      document.removeEventListener('mousedown', fora)
+      document.removeEventListener('keydown', tecla)
+    }
+  }, [onFechar])
+
+  // O foco vai para a lista UMA vez, ao abrir: o Esc funciona sem clicar nela.
+  useEffect(() => ref.current?.focus(), [])
+
+  const largura = Math.max(LARGURA_DA_LISTA, caixa.width + 16)
+  const esquerda = Math.min(Math.max(8, caixa.left + caixa.width / 2 - largura / 2), window.innerWidth - largura - 8)
+  const alturaMaxima = Math.min(420, window.innerHeight - 16)
+  const topo = Math.min(Math.max(8, caixa.top - 8), window.innerHeight - alturaMaxima - 8)
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label={`Tudo de ${rotuloDoDiaCompleto(dia)}`}
+      tabIndex={-1}
+      className="z-50 flex flex-col rounded-painel border border-border bg-card p-3 text-foreground shadow-cartao-alto outline-none"
+      style={{ position: 'fixed', left: esquerda, top: topo, width: largura, maxHeight: alturaMaxima }}
+    >
+      <div className="relative flex flex-col items-center pb-2">
+        <span className="text-[11px] font-semibold uppercase text-muted-foreground">{diaDaSemanaCurto(dia)}</span>
+        <NumeroDoDia dia={dia} hoje={hoje} onIr={() => onIrParaDia(dia)} grande />
+        <button
+          type="button"
+          onClick={onFechar}
+          aria-label="Fechar"
+          className="absolute -right-1 -top-1 grid size-9 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <IconeX className="size-4" />
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+        {itens.map((item) => (
+          <CartaoDoItem key={item.chave} item={item} densidade="compacto" onAbrir={onAbrir} />
+        ))}
       </div>
     </div>
   )

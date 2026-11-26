@@ -10,7 +10,6 @@ export const TIPOS: { id: TipoDeItem; legenda: string }[] = [
   { id: 'parto', legenda: 'Partos' },
   { id: 'hora_marcada', legenda: 'Banho e fechamento' },
   { id: 'entrega_combinada', legenda: 'Vídeo, Foto/Livro e New Born' },
-  { id: 'prazo', legenda: 'Prazos de entrega' },
 ]
 
 /** O vermelho do atraso — o mesmo "Tomate" do Google, que já é a cor de alarme da equipe. */
