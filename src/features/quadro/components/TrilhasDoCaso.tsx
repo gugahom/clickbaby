@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { useRelogioDeMinuto } from '@/lib/useRelogio'
 import { iniciais } from '@/lib/iniciais'
+import { IconeMonitor } from '@/components/ui/icones'
 import { PilulaAtribuida } from './PilulaAtribuida'
 import {
   ROTULO_FAIXA,
@@ -253,6 +254,8 @@ function Etapa({
         </span>
       )}
 
+      <PcDaEtapa etapa={etapa} />
+
       <ResponsavelDaEtapa etapa={etapa} larguraMaxima="max-w-[8rem]" />
 
       {decorrido && (
@@ -260,6 +263,30 @@ function Etapa({
           {decorrido}
         </span>
       )}
+    </span>
+  )
+}
+
+/**
+ * O PC DA EDIÇÃO NA FITA DO CARD (26/11/2026, pedido do gestor: "pegar esse
+ * ícone que está nas fases e trazer para a tela, para olhar na televisão e já
+ * ver em qual computador foram importadas as fotos"). Com o volume de edição,
+ * o mesmo parto chegava a ser importado duas vezes no mesmo PC, porque o PC só
+ * aparecia dentro do card aberto e nas seções.
+ *
+ * SÓ LEITURA, e no mesmo desenho do `CampoEstacao` (monitor + "pc-1"): quem
+ * anota continua anotando na linha da etapa, e a fita só mostra. Herda a cor
+ * da pílula (`bg-current/12`), como a fase do campo — a cor ali é do status.
+ */
+function PcDaEtapa({ etapa }: { etapa: EtapaQuadro }) {
+  if (!etapa.estacao) return null
+  return (
+    <span
+      className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-current/12 px-1.5 py-px text-xs font-semibold"
+      title={`Editando no ${etapa.estacao}`}
+    >
+      <IconeMonitor className="size-3.5" />
+      <span className="font-mono">{etapa.estacao}</span>
     </span>
   )
 }
@@ -529,6 +556,7 @@ function ResumoDaFaixa({ faixa, etapas }: { faixa: Faixa; etapas: EtapaQuadro[] 
               {ROTULO_FASE_CAMPO_CURTO[atual.faseCampo]}
             </span>
           )}
+          <PcDaEtapa etapa={atual} />
           <ResponsavelDaEtapa etapa={atual} larguraMaxima="max-w-[7rem]" />
         </span>
       ) : (
