@@ -1264,7 +1264,11 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
 - **Etapas**: iniciar/pausar/concluir, handoff, rendição, aviso, estação (`pc-1`,
   anotável tanto nas seções laterais quanto na lista de etapas do card — a edição de
   FOTOS não tem seção, então lá era o único lugar possível, e até 06/09/2026 o campo
-  aparecia sem ser editável),
+  aparecia sem ser editável). **O PC TAMBÉM APARECE NA FITA DO CARD** (26/11/2026, pedido do
+  gestor: "olhar na televisão e já ver em qual computador foram importadas as fotos" — o mesmo
+  parto chegava a ser importado duas vezes no mesmo PC): monitor + "pc-1" dentro da pílula da
+  etapa, na fita completa e no resumo do modo TV (`PcDaEtapa`, em `TrilhasDoCaso.tsx`), só
+  leitura — anotar continua na linha da etapa,
   **dispensar** (não vai acontecer) e **acrescentar** fora do pacote — inclusive
   `encontro_irmaos`, `saida_uti` e `alta`, que nenhum pacote traz de fábrica.
   **A RENDIÇÃO SE TIRA** (21/09/2026, pedido do gestor). O menu da etapa ganha "Tirar
