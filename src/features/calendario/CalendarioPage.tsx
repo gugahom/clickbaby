@@ -44,7 +44,7 @@ import { TIPOS } from './lib/estilos'
  *     regra de `cancelar_caso`) — e cancelar pinta o evento de cinza no Google;
  *   - hora marcada e entrega combinada: MUDAR O HORÁRIO, qualquer um que vê o
  *     calendário (`agendar_etapa`); não toca no Google, que só tem o parto;
- *   - prazo do pacote: nada — é conta, não combinado.
+ *   (o prazo do pacote saiu do calendário em 26/11/2026 — ver useCalendario.ts.)
  * ARRASTAR segue a mesma regra e só abre o formulário já preenchido.
  *
  * O FILTRO DE CORES SAIU (pedido do usuário): a cor é a da maternidade, e o

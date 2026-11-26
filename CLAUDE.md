@@ -2782,10 +2782,15 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   (`quadro_casos` pelo `dia` e pelo `vence_em`, `caso_etapas` pela `previsao_em`) mais
   `feriados`, com `buscarTudo` e ordenação total. Quatro tipos de item, uma cor cada (a legenda
   é também o filtro): PARTO (previsão do caso; "Nasceu" esmaecido quando já nasceu; rascunho
-  marcado), HORA MARCADA (banho, fechamento e as outras de campo, com o responsável), ENTREGA
-  COMBINADA (vídeo, Foto/Livro, New Born — o `previsao_em` da seção lateral) e PRAZO DO PACOTE
-  (só de caso ainda não ENVIADO; vermelho quando venceu). Cancelado não aparece; o nascimento
-  não vira item de etapa, porque o caso já é o item do parto.
+  marcado), HORA MARCADA (banho, fechamento e as outras de campo, com o responsável) e ENTREGA
+  COMBINADA (vídeo, Foto/Livro, New Born — o `previsao_em` da seção lateral). Cancelado não
+  aparece; o nascimento não vira item de etapa, porque o caso já é o item do parto.
+  **O PRAZO DO PACOTE SAIU** (26/11/2026, pedido do gestor: "deixar realmente um espelho do
+  Google"): ele entrava no dia como mais um item e o dia passava a ter mais coisas que a agenda
+  do Google, que a equipe usa para conferir. O prazo continua no Quadro, no card e nos
+  relatórios. **O "+N MAIS" DO MÊS ABRE A LISTA DO DIA num pop-up por cima da célula**, como no
+  Google (`ListaDoDia`, em `Visoes.tsx`), em vez de levar à visão do Dia; o número do dia, dentro
+  dele, continua levando.
   **O DESENHO É O DO EXEMPLO QUE O GESTOR MANDOU** (30/09/2026, "nosso calendário vai virar"
   um `EventManager` de shadcn), feito com as PEÇAS DA CASA — o exemplo traria sete pacotes
   (Radix, cva, lucide…) e um segundo sistema de botões, diálogos e selects; é o arranjo do sino
