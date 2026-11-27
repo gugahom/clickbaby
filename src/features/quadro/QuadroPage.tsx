@@ -99,13 +99,13 @@ import {
   FASE_CLICK_HOME_SELECAO,
   ROTULO_FASE_CLICK_HOME,
   FASES_VIDEO_NA_TELA,
-  FASE_ALBUM_APROVACAO,
   FASE_VIDEO_FINAL,
   ROTULO_FASE_ALBUM,
   ROTULO_FASE_VIDEO,
+  ehFaseDaProva,
   faseDoVideo,
 } from './types'
-import type { EtapaQuadro, FaseAlbum, FaseClickHome, FaseVideoMaster } from './types'
+import type { EtapaQuadro, FaseAlbum, FaseClickHome, FaseDaProva, FaseVideoMaster } from './types'
 
 /**
  * Aba só existe no mobile. No desktop as duas colunas convivem, porque a
@@ -161,6 +161,8 @@ export function QuadroPage() {
   const [aprovandoFotolivro, setAprovandoFotolivro] = useState<{
     etapa: EtapaQuadro
     caso: CasoQuadro
+    /** Qual das duas colunas da prova (27/11/2026). */
+    fase: FaseDaProva
   } | null>(null)
   // O vídeo que está terminando a edição pelo arrastar ou pelo ✓ do cartão —
   // o seletor de fase abre o mesmo diálogo por conta própria.
@@ -368,24 +370,17 @@ export function QuadroPage() {
       emFotolivro: casosComAlbumAberto(casos, etapas),
       emClickHome: casosComClickHomeAberto(casos, etapas),
       /*
-       * O FOTO/LIVRO EM ENTREGÁVEIS (21/09/2026, pedido do gestor). Duas
-       * passagens: a PROVA para o ADM mandar ao cliente (sai quando ele marca
-       * "Enviado ao cliente"), e o LIVRO PRONTO para ele confirmar a entrega.
-       * Na seção o cartão fica onde está nas duas — o que muda é quem precisa
-       * agir. Derivado das etapas, como o resto: a fase e o carimbo dizem tudo.
+       * O FOTO/LIVRO EM ENTREGÁVEIS: o LIVRO PRONTO, para o ADM confirmar a
+       * entrega. Na seção o cartão fica em "Pronto para entrega" até lá. A
+       * PROVA para o cliente também passava por aqui (21/09 a 27/11/2026); agora
+       * quem a manda é chamado pelo sino, na própria seção.
        */
       fotolivrosNaEntrega: casos
         .filter((c) => c.statusOperacional !== 'cancelado')
         .flatMap((caso) =>
           (etapas.get(caso.id) ?? [])
-            .filter((e) => e.tipo === 'album')
-            .flatMap((etapa): FotolivroNaEntrega[] =>
-              etapa.faseAlbum === 'aguardando_aprovacao' && etapa.fotolivroEnviadoEm === null
-                ? [{ caso, etapa, momento: 'aprovacao' }]
-                : etapa.faseAlbum === 'pronto_para_entrega'
-                  ? [{ caso, etapa, momento: 'entrega' }]
-                  : [],
-            ),
+            .filter((e) => e.tipo === 'album' && e.faseAlbum === 'pronto_para_entrega')
+            .map((etapa): FotolivroNaEntrega => ({ caso, etapa })),
         ),
       /*
        * O VÍDEO DO MASTER EM ENTREGÁVEIS (21/09/2026, pedido do gestor): o vídeo
@@ -754,22 +749,9 @@ export function QuadroPage() {
       {/* O link de entrega do livro, em qualquer fase (20/10/2026). */}
       <PilulaLinkDoFotolivro casoId={caso.id} nomeDoCaso={nomeDoCaso(caso)} />
       <FaseDoAlbum etapa={etapa} nomeDoCaso={nomeDoCaso(caso)} onErro={onErro} />
-      {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026). Nas duas fases que
-          passam por Entregáveis o cartão fica parado aqui, e sem esta pílula
-          a seção não diria se a prova já foi mandada ao cliente ou ainda
-          espera o ADM — que é exatamente a pergunta de quem cobra. */}
-      {etapa.faseAlbum === FASE_ALBUM_APROVACAO && (
-        <span
-          className={clsx(
-            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold',
-            etapa.fotolivroEnviadoEm
-              ? 'bg-muted text-muted-foreground'
-              : 'bg-atencao/15 text-atencao-tinta',
-          )}
-        >
-          {etapa.fotolivroEnviadoEm ? 'Enviado ao cliente' : 'Na fila do ADM'}
-        </span>
-      )}
+      {/* ONDE O LIVRO ESTÁ FORA DA SEÇÃO (21/09/2026): pronto, ele espera a
+          confirmação da entrega em Entregáveis. A prova não passa mais por lá
+          (27/11/2026) — a fase já diz se ela foi mandada. */}
       {etapa.faseAlbum === 'pronto_para_entrega' && (
         <span className="inline-flex items-center rounded-full bg-atencao/15 px-2.5 py-1 text-xs font-bold text-atencao-tinta">
           Em Entregáveis
@@ -779,18 +761,34 @@ export function QuadroPage() {
         etapa={etapa}
         etapas={etapasPorCaso.get(caso.id) ?? []}
         onErro={onErro}
-        /* TERMINAR A DIAGRAMAÇÃO MANDA PARA APROVAÇÃO (21/09/2026). Era um
-           `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
-           card simplesmente se move sozinho". Depois da aprovação o cartão
-           não conclui nada: quem anda é a fase, e o fim é a confirmação da
-           entrega em Entregáveis. */
+        /* O ✓ DO CARTÃO É O PRÓXIMO PASSO DA PROVA (21/09 e 27/11/2026). Era
+           um `concluir_etapa`, e o livro inteiro acabava e saía da seção — "o
+           card simplesmente se move sozinho". Agora: terminar a diagramação
+           (ou as alterações) abre o diálogo de capa e link; nas colunas da
+           prova, é "mandei ao cliente". Depois disso o cartão não conclui
+           nada: quem anda é a fase, e o fim é a confirmação em Entregáveis. */
         concluirComo={
           etapa.faseAlbum === null || FASES_ALBUM_ANTES_DA_APROVACAO.has(etapa.faseAlbum)
             ? {
                 rotulo: 'Terminar a diagramação e mandar para aprovação',
-                aoTocar: () => setAprovandoFotolivro({ etapa, caso }),
+                aoTocar: () => setAprovandoFotolivro({ etapa, caso, fase: 'enviar_para_aprovacao' }),
               }
-            : null
+            : etapa.faseAlbum === 'pedido_de_alteracoes'
+              ? {
+                  rotulo: 'Alterações feitas — mandar ao cliente',
+                  aoTocar: () => setAprovandoFotolivro({ etapa, caso, fase: 'alteracoes_realizadas' }),
+                }
+              : ehFaseDaProva(etapa.faseAlbum)
+                ? {
+                    rotulo: 'Prova enviada ao cliente — aguardando aprovação',
+                    aoTocar: () => {
+                      onErro(null)
+                      moverAlbum
+                        .mutateAsync({ casoEtapaId: etapa.id, fase: 'aguardando_aprovacao' })
+                        .catch((e: unknown) => onErro(mensagemDeErro(e)))
+                    },
+                  }
+                : null
         }
       />
     </>
@@ -1137,11 +1135,11 @@ export function QuadroPage() {
     const album = albunsAbertos(etapasPorCaso.get(casoId) ?? [])[0]
     if (!album) return false
     setErroFotolivro(null)
-    // A aprovação pede capa e link antes: o cartão não muda de coluna agora, e
-    // sim quando o diálogo gravar — o remendo do Quadro o leva para lá.
-    if (fase === FASE_ALBUM_APROVACAO) {
+    // As colunas da prova pedem capa e link antes: o cartão não muda de coluna
+    // agora, e sim quando o diálogo gravar — o remendo do Quadro o leva para lá.
+    if (ehFaseDaProva(fase)) {
       const caso = emFotolivro.find((c) => c.id === casoId)
-      if (caso) setAprovandoFotolivro({ etapa: album, caso })
+      if (caso) setAprovandoFotolivro({ etapa: album, caso, fase })
       return false
     }
     try {
@@ -1753,6 +1751,7 @@ export function QuadroPage() {
         <DialogoAprovacaoDoFotolivro
           etapa={aprovandoFotolivro.etapa}
           nomeDoCaso={nomeDoCaso(aprovandoFotolivro.caso)}
+          fase={aprovandoFotolivro.fase}
           onFechar={() => setAprovandoFotolivro(null)}
         />
       )}

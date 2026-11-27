@@ -159,6 +159,8 @@ const RPCS_TRANSICAO = {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',
     p_link: 'https://sonda.test',
     p_capa: 'fotolivro/sonda.png',
+    // Desde 20261127120002 a assinatura tem a coluna de destino.
+    p_fase: 'enviar_para_aprovacao',
   },
   marcar_fotolivro_enviado: {
     p_caso_etapa_id: '00000000-0000-0000-0000-000000000000',

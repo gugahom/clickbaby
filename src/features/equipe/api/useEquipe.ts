@@ -69,9 +69,12 @@ export interface PessoaDaEquipe {
   ultimaAtividade: string | null
   /** As telas escolhidas pela gestão; `null` = o padrão do papel. */
   telas: Tela[] | null
-  /** O que do New Born chama esta pessoa no sino — ver AvisosDaPessoa. */
+  /** O que do New Born e do Foto/Livro chama esta pessoa no sino — ver AvisosDaPessoa. */
   avisaEscolhaNewBorn: boolean
   avisaEdicaoNewBorn: boolean
+  avisaDiagramacaoFotolivro: boolean
+  avisaEnvioFotolivro: boolean
+  avisaGraficaFotolivro: boolean
 }
 
 export const chavesEquipe = {
@@ -91,6 +94,9 @@ interface LinhaPessoa {
   telas: Tela[] | null
   avisa_escolha_new_born: boolean
   avisa_edicao_new_born: boolean
+  avisa_diagramacao_fotolivro: boolean
+  avisa_envio_fotolivro: boolean
+  avisa_grafica_fotolivro: boolean
 }
 
 interface LinhaEtapa {
@@ -132,7 +138,7 @@ function vazio(): Acumulado {
 async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
   const { data: linhas, error } = await supabase
     .from('pessoas')
-    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at, foto_path, telas, avisa_escolha_new_born, avisa_edicao_new_born')
+    .select('id, nome, apelidos, papel_sistema, ativo, auth_user_id, created_at, foto_path, telas, avisa_escolha_new_born, avisa_edicao_new_born, avisa_diagramacao_fotolivro, avisa_envio_fotolivro, avisa_grafica_fotolivro')
     .order('nome')
 
   if (error) throw error
@@ -206,6 +212,9 @@ async function carregarEquipe(): Promise<PessoaDaEquipe[]> {
       telas: p.telas,
       avisaEscolhaNewBorn: p.avisa_escolha_new_born,
       avisaEdicaoNewBorn: p.avisa_edicao_new_born,
+      avisaDiagramacaoFotolivro: p.avisa_diagramacao_fotolivro,
+      avisaEnvioFotolivro: p.avisa_envio_fotolivro,
+      avisaGraficaFotolivro: p.avisa_grafica_fotolivro,
     }
   })
 }

@@ -4,7 +4,7 @@ import { Alerta } from '@/components/ui/Alerta'
 import { BotaoCopiar } from '@/components/ui/BotaoCopiar'
 import { formatarDataHora, rotularDia } from '@/lib/formato'
 import { useUrlDaCapa } from '../api/useAcoes'
-import type { CasoQuadro, EtapaQuadro } from '../types'
+import { ehFaseDaProva, type CasoQuadro, type EtapaQuadro } from '../types'
 import { AnexosDosPedidos } from './AnexosDosPedidos'
 import { useEnvioDeAnexos } from '../api/useEnvioDeAnexos'
 import { Entregaveis } from './Entregaveis'
@@ -183,8 +183,8 @@ export function FichaDaEdicao({
 
 /**
  * A CAPA, O LINK E ONDE A PROVA ESTÁ. É o que a ficha do fotolivro tem a mais:
- * no cartão pequeno a aprovação é uma pílula ("Na fila do ADM"); aqui é a capa
- * em tamanho de ver, o link para copiar, e quem mandou e quando.
+ * no cartão pequeno a aprovação é só a fase; aqui é a capa em tamanho de ver,
+ * o link para copiar, e quem mandou e quando.
  */
 function AprovacaoDoFotolivro({ etapa }: { etapa: EtapaQuadro }) {
   const { data: capa, isPending } = useUrlDaCapa(etapa.fotolivroCapa)
@@ -194,10 +194,12 @@ function AprovacaoDoFotolivro({ etapa }: { etapa: EtapaQuadro }) {
     etapa.faseAlbum === 'aguardando_aprovacao'
       ? etapa.fotolivroEnviadoEm
         ? `Enviado ao cliente${etapa.fotolivroEnviadoPorNome ? ` por ${etapa.fotolivroEnviadoPorNome}` : ''} em ${formatarDataHora(etapa.fotolivroEnviadoEm)}. Esperando a resposta.`
-        : 'Na fila do ADM, na aba Entregáveis — ainda não foi mandado ao cliente.'
-      : etapa.faseAlbum === 'pronto_para_entrega'
-        ? 'Livro pronto, na aba Entregáveis — esperando a confirmação da entrega.'
-        : null
+        : 'Esperando a resposta do cliente.'
+      : ehFaseDaProva(etapa.faseAlbum)
+        ? 'Prova pronta — ainda não foi mandada ao cliente.'
+        : etapa.faseAlbum === 'pronto_para_entrega'
+          ? 'Livro pronto, na aba Entregáveis — esperando a confirmação da entrega.'
+          : null
 
   return (
     <Bloco titulo="Aprovação do cliente">

@@ -619,6 +619,8 @@ export const FASES_ALBUM = [
   'enviar_para_aprovacao',
   'aguardando_aprovacao',
   'pedido_de_alteracoes',
+  // A prova corrigida, esperando quem a manda ao cliente (27/11/2026).
+  'alteracoes_realizadas',
   'aprovado',
   'enviado_grafica',
   'pronto_para_entrega',
@@ -645,24 +647,44 @@ export const FASES_ALBUM_NA_TELA: readonly FaseAlbum[] = FASES_ALBUM.filter(
 )
 
 /**
- * A fase em que o fotolivro entra só pelo diálogo de capa e link
- * (`enviar_fotolivro_para_aprovacao`) — pelo seletor, por arrastar e pelo
- * "concluir" do cartão.
+ * AS COLUNAS DA PROVA (27/11/2026, pedido do gestor): o fotolivro entra nelas
+ * só pelo diálogo de capa e link (`enviar_fotolivro_para_aprovacao`) — pelo
+ * seletor, por arrastar e pelo "concluir" do cartão. A primeira é a prova da
+ * diagramação; a segunda, a prova corrigida depois de um pedido de alterações.
+ * Nas duas o livro espera quem manda a prova ao cliente — e quem a manda move
+ * para "Aguardando aprovação do cliente", que é o que carimba o envio.
+ *
+ * Até 27/11 o diálogo levava direto a "Aguardando aprovação" e o livro ia para
+ * a fila do ADM em Entregáveis; a prova não passa mais por lá.
  */
-export const FASE_ALBUM_APROVACAO: FaseAlbum = 'aguardando_aprovacao'
+export type FaseDaProva = 'enviar_para_aprovacao' | 'alteracoes_realizadas'
+
+export const FASES_ALBUM_DA_PROVA: ReadonlySet<FaseAlbum> = new Set<FaseDaProva>([
+  'enviar_para_aprovacao',
+  'alteracoes_realizadas',
+])
+
+export function ehFaseDaProva(fase: FaseAlbum | string | null): fase is FaseDaProva {
+  return fase === 'enviar_para_aprovacao' || fase === 'alteracoes_realizadas'
+}
 
 /**
- * As fases ANTES da aprovação: nelas o "concluir" do cartão significa "terminei
- * a diagramação" e abre o envio para aprovação. Depois dela o cartão não
- * conclui nada — quem anda é a fase, e o fim é a confirmação em Entregáveis.
+ * As fases ANTES da prova: nelas o "concluir" do cartão significa "terminei a
+ * diagramação" e abre o diálogo de capa e link.
  */
 export const FASES_ALBUM_ANTES_DA_APROVACAO = new Set<FaseAlbum>([
   'aguardando_pagamento',
   'aguardando_diagramacao',
   'diagramando',
-  'enviar_para_aprovacao',
-  'pedido_de_alteracoes',
 ])
+
+/**
+ * O SINO DO FOTO/LIVRO (27/11/2026, pedido do gestor): em que coluna o livro
+ * espera cada pessoa que a Equipe marcou. "Realizando diagramação" não chama
+ * ninguém — quem diagrama já está nele —, e a gráfica e a entrega também não.
+ */
+export const FASES_ALBUM_A_DIAGRAMAR = new Set<FaseAlbum>(['aguardando_diagramacao', 'pedido_de_alteracoes'])
+export const FASE_ALBUM_APROVADO: FaseAlbum = 'aprovado'
 
 /**
  * Os nomes como estão no Trello deles, não uma tradução nossa.
@@ -678,6 +700,7 @@ export const ROTULO_FASE_ALBUM: Record<FaseAlbum, string> = {
   enviar_para_aprovacao: 'Enviar para aprovação',
   aguardando_aprovacao: 'Aguardando aprovação do cliente',
   pedido_de_alteracoes: 'Pedido de alterações',
+  alteracoes_realizadas: 'Alterações realizadas — enviar ao cliente',
   aprovado: 'Aprovado pelo cliente',
   enviado_grafica: 'Pago e enviado para a gráfica',
   pronto_para_entrega: 'Pronto para entrega',
@@ -710,6 +733,7 @@ export const ESTILO_FASE_ALBUM: Record<FaseAlbum, string> = {
   enviar_para_aprovacao: 'bg-atencao/15 text-atencao-tinta',
   aguardando_aprovacao: 'bg-muted text-muted-foreground',
   pedido_de_alteracoes: 'bg-atrasado/12 text-atrasado',
+  alteracoes_realizadas: 'bg-atencao/15 text-atencao-tinta',
   aprovado: 'bg-andamento/12 text-andamento-tinta',
   enviado_grafica: 'bg-muted text-muted-foreground',
   pronto_para_entrega: 'bg-pronto-fundo text-pronto border border-pronto-borda',

@@ -27,7 +27,9 @@ import { ContextoAuth, type EstadoAuth, type PessoaLogada } from './contexto'
 async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
   const completa = await supabase
     .from('pessoas')
-    .select('id, nome, papel_sistema, foto_path, telas, avisa_escolha_new_born, avisa_edicao_new_born')
+    .select(
+      'id, nome, papel_sistema, foto_path, telas, avisa_escolha_new_born, avisa_edicao_new_born, avisa_diagramacao_fotolivro, avisa_envio_fotolivro, avisa_grafica_fotolivro',
+    )
     .eq('auth_user_id', authUserId)
     .maybeSingle()
 
@@ -40,6 +42,9 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
       telas: completa.data.telas,
       avisaEscolhaNewBorn: completa.data.avisa_escolha_new_born,
       avisaEdicaoNewBorn: completa.data.avisa_edicao_new_born,
+      avisaDiagramacaoFotolivro: completa.data.avisa_diagramacao_fotolivro,
+      avisaEnvioFotolivro: completa.data.avisa_envio_fotolivro,
+      avisaGraficaFotolivro: completa.data.avisa_grafica_fotolivro,
     }
   }
 
@@ -63,6 +68,9 @@ async function buscarPessoa(authUserId: string): Promise<PessoaLogada | null> {
     telas: null,
     avisaEscolhaNewBorn: false,
     avisaEdicaoNewBorn: false,
+    avisaDiagramacaoFotolivro: false,
+    avisaEnvioFotolivro: false,
+    avisaGraficaFotolivro: false,
   }
 }
 

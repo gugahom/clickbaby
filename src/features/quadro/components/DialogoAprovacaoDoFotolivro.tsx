@@ -6,34 +6,42 @@ import {
   useUrlDaCapa,
 } from '../api/useAcoes'
 import { mensagemDeErro } from '../lib/erros'
-import type { EtapaQuadro } from '../types'
+import type { EtapaQuadro, FaseDaProva } from '../types'
 
 /**
  * MANDAR O FOTOLIVRO PARA APROVAÇÃO DO CLIENTE (21/09/2026, pedido do gestor).
  *
- * É a porta de "Aguardando aprovação do cliente", e a mesma pelos três
- * caminhos: o seletor de fase, o arrastar no quadro por fase e o "concluir" do
- * cartão enquanto a diagramação não terminou. Pede as duas coisas que a Morgana
- * precisa para mandar ao cliente — e o gestor quis as duas obrigatórias:
+ * É a porta das duas colunas da PROVA (27/11/2026) — "Enviar para aprovação",
+ * depois da diagramação, e "Alterações realizadas", depois de um pedido de
+ * alterações —, e a mesma pelos três caminhos: o seletor de fase, o arrastar no
+ * quadro por fase e o ✓ do cartão. Pede as duas coisas que quem manda a prova
+ * precisa — e o gestor quis as duas obrigatórias:
  *
  *   - a IMAGEM DA CAPA, "png simples, podendo até ser um print da tela". Por
  *     isso, além de escolher o arquivo, dá para COLAR (Ctrl+V) o print direto
  *     aqui: quem acabou de diagramar tira o print e cola, sem salvar arquivo;
- *   - o LINK da prova, que a Morgana manda ao cliente.
+ *   - o LINK da prova, que vai ao cliente.
  *
- * Quando o fotolivro volta de um pedido de alterações, o diálogo abre com a
- * capa e o link da rodada anterior: dá para manter os dois (o link da prova
- * costuma ser o mesmo, atualizado) ou trocar.
+ * Na coluna das alterações o diálogo abre com a capa e o link da rodada
+ * anterior: dá para manter os dois (o link da prova costuma ser o mesmo,
+ * atualizado) ou trocar (decisão do gestor, 27/11/2026).
+ *
+ * Até 27/11 o diálogo levava direto a "Aguardando aprovação do cliente" e a
+ * prova caía na fila do ADM em Entregáveis. Agora o sino chama quem a manda, e
+ * é essa pessoa que move o livro para "Aguardando aprovação".
  */
 export function DialogoAprovacaoDoFotolivro({
   etapa,
   nomeDoCaso,
+  fase,
   onFechar,
 }: {
   etapa: EtapaQuadro
   nomeDoCaso: string
+  fase: FaseDaProva
   onFechar: () => void
 }) {
+  const alteracoes = fase === 'alteracoes_realizadas'
   const enviar = useEnviarFotolivroParaAprovacao()
   const [link, setLink] = useState(etapa.fotolivroLink ?? '')
   const [arquivo, setArquivo] = useState<File | null>(null)
@@ -75,8 +83,10 @@ export function DialogoAprovacaoDoFotolivro({
 
   return (
     <Dialogo
-      titulo="Mandar Foto/Livro para aprovação"
-      rotuloConfirmar={enviar.isPending ? 'Enviando…' : 'Mandar para aprovação'}
+      titulo={alteracoes ? 'Alterações realizadas no Foto/Livro' : 'Mandar Foto/Livro para aprovação'}
+      rotuloConfirmar={
+        enviar.isPending ? 'Salvando…' : alteracoes ? 'Prova corrigida pronta' : 'Prova pronta'
+      }
       confirmarDesabilitado={!temCapa || link.trim() === ''}
       ocupado={enviar.isPending}
       erro={erro}
@@ -89,13 +99,16 @@ export function DialogoAprovacaoDoFotolivro({
             link,
             arquivo,
             capaAtual: etapa.fotolivroCapa,
+            fase,
           })
           .then(onFechar, (e) => setErro(mensagemDeErro(e)))
       }}
     >
       <p className="text-sm text-muted-foreground">
-        {nomeDoCaso}. O Foto/Livro vai para “Aguardando aprovação do cliente” e
-        aparece em Entregáveis para o ADM mandar o link ao cliente.
+        {nomeDoCaso}. O Foto/Livro vai para “
+        {alteracoes ? 'Alterações realizadas — enviar ao cliente' : 'Enviar para aprovação'}” e o
+        sino chama quem manda a prova ao cliente.
+        {alteracoes && ' A capa e o link da rodada anterior continuam — troque só o que mudou.'}
       </p>
 
       {/* A área inteira recebe o Ctrl+V — tabIndex para ela poder ter foco no

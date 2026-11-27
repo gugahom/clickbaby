@@ -410,8 +410,8 @@ marcar_click_home_enviado(p_caso_etapa_id)       -- "Enviado à família", só n
 
 -- esteira do fotolivro (10 fases; ver seção 13)
 mover_album(p_caso_etapa_id, p_fase)             -- escreve fase E status juntos
-enviar_fotolivro_para_aprovacao(p_caso_etapa_id, p_link, p_capa) -- capa + link + fase, juntos
-marcar_fotolivro_enviado(p_caso_etapa_id)        -- "Enviado ao cliente"; atendimento/adm
+enviar_fotolivro_para_aprovacao(p_caso_etapa_id, p_link, p_capa, p_fase) -- capa + link + fase da prova, juntos (27/11/2026)
+marcar_fotolivro_enviado(p_caso_etapa_id)        -- sem uso na tela desde 27/11/2026: mover para "aguardando aprovação" carimba o envio
 
 -- os anexos dos "Pedidos" do vídeo, do Foto/Livro e do New Born (13/10/2026; ver seção 13)
 registrar_anexo_da_etapa(p_caso_etapa_id, p_caminho, p_nome) -- o arquivo já subiu ao bucket `pedidos`
@@ -1493,6 +1493,19 @@ mínimos auditados (`npm run seguranca`), e toda transição de estado por RPC �
   a PROVA da aprovação; e não trava a confirmação da entrega. Apagar um link errado continua em
   "Links do caso". Os nomes dos tipos de link são uma tabela só, `lib/rotulos-de-link.ts`, que o
   histórico também lê ("Registrou um link de entrega · Foto/Livro", e não "album").
+  **O SINO DO FOTO/LIVRO E A PROVA FORA DE ENTREGÁVEIS** (27/11/2026, pedido do gestor,
+  migrations `20261127120001` e `20261127120002`). O sino chama, por MARCA NA PESSOA (caixa
+  "Sino do Foto/Livro" no Gerenciar da Equipe, como o New Born): quem DIAGRAMA em "Aguardando
+  diagramação" e em "Pedido de alterações"; quem MANDA A PROVA em "Enviar para aprovação" e na
+  coluna nova **"Alterações realizadas — enviar ao cliente"**; quem PAGA A GRÁFICA em "Aprovado
+  pelo cliente". Some quando o card muda de coluna. **A PROVA NÃO PASSA MAIS POR ENTREGÁVEIS**
+  (decisão do gestor: quem a manda é quem o sino chama, não o ADM): terminar a diagramação leva
+  a "Enviar para aprovação", e a prova corrigida a "Alterações realizadas" — as duas pelo
+  diálogo de capa e link (`FASES_ALBUM_DA_PROVA`; na segunda ele abre com a capa e o link da
+  rodada anterior, para manter ou trocar) —, e quem mandou move para "Aguardando aprovação do
+  cliente", que CARIMBA `fotolivro_enviado_em/_por` dentro de `mover_album`. Nas duas colunas
+  da prova o ✓ do cartão é esse gesto. Os livros que estavam na fila do ADM foram para "Enviar
+  para aprovação" na própria migration. Entregáveis segue com o LIVRO PRONTO.
 - **A SEÇÃO CLICK HOME** (22/09/2026, pedido do gestor, migrations `20260922212852` e
   `20260922212901`). O ensaio newborn na casa da família ganhou o mesmo arranjo do vídeo e do
   fotolivro — cartão na coluna da direita, seletor de fase, play/pause, ficha, quadro por

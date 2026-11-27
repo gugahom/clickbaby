@@ -22,6 +22,10 @@ export interface PessoaLogada {
   /** As marcas da Equipe: o que do New Born chama esta pessoa no sino. */
   avisaEscolhaNewBorn: boolean
   avisaEdicaoNewBorn: boolean
+  /** E o que do Foto/Livro (27/11/2026). */
+  avisaDiagramacaoFotolivro: boolean
+  avisaEnvioFotolivro: boolean
+  avisaGraficaFotolivro: boolean
 }
 
 /** Recarrega a pessoa do banco. Depois de trocar a foto, é o que atualiza o chip. */

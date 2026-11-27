@@ -8,10 +8,11 @@ import { mensagemDeErro } from '../lib/erros'
 import {
   ESTILO_FASE_ALBUM,
   FASES_ALBUM_NA_TELA,
-  FASE_ALBUM_APROVACAO,
   ROTULO_FASE_ALBUM,
+  ehFaseDaProva,
   type EtapaQuadro,
   type FaseAlbum,
+  type FaseDaProva,
 } from '../types'
 import { DialogoAprovacaoDoFotolivro } from './DialogoAprovacaoDoFotolivro'
 
@@ -36,9 +37,10 @@ import { DialogoAprovacaoDoFotolivro } from './DialogoAprovacaoDoFotolivro'
  * confirmação que conclui a etapa e tira o cartão da seção. Entre 16/09 e 21/09
  * escolher "Pronto para entrega" concluía na hora; ver FASES_ALBUM_NA_TELA.
  *
- * "AGUARDANDO APROVAÇÃO" ABRE UM DIÁLOGO: a capa e o link que a Morgana manda
- * ao cliente são obrigatórios para entrar nela (decisão do gestor), e o banco
- * recusa sem os dois. Ver DialogoAprovacaoDoFotolivro.
+ * AS COLUNAS DA PROVA ABREM UM DIÁLOGO ("Enviar para aprovação" e, desde
+ * 27/11/2026, "Alterações realizadas"): a capa e o link que vão ao cliente são
+ * obrigatórios para entrar nelas (decisão do gestor), e o banco recusa sem os
+ * dois. Ver DialogoAprovacaoDoFotolivro.
  *
  * A LISTA INTEIRA, NOS DOIS SENTIDOS. Um álbum volta de "Aprovado" para "Pedido
  * de alterações" quando a família muda de ideia depois de aprovar, e isso não é
@@ -66,7 +68,7 @@ export function FaseDoAlbum({
   const mover = useMoverAlbum()
   const dispensar = useDispensarEtapa()
   const [dispensando, setDispensando] = useState(false)
-  const [aprovando, setAprovando] = useState(false)
+  const [aprovando, setAprovando] = useState<FaseDaProva | null>(null)
   const atual = etapa.faseAlbum
 
   function mudarFase(fase: FaseAlbum) {
@@ -97,9 +99,9 @@ export function FaseDoAlbum({
             setDispensando(true)
             return
           }
-          // A aprovação pede capa e link antes — ver DialogoAprovacaoDoFotolivro.
-          if (item.id === FASE_ALBUM_APROVACAO) {
-            setAprovando(true)
+          // A prova pede capa e link antes — ver DialogoAprovacaoDoFotolivro.
+          if (ehFaseDaProva(item.id)) {
+            setAprovando(item.id)
             return
           }
           mudarFase(item.id as FaseAlbum)
@@ -140,7 +142,8 @@ export function FaseDoAlbum({
         <DialogoAprovacaoDoFotolivro
           etapa={etapa}
           nomeDoCaso={nomeDoCaso}
-          onFechar={() => setAprovando(false)}
+          fase={aprovando}
+          onFechar={() => setAprovando(null)}
         />
       )}
 
