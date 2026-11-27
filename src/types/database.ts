@@ -1394,8 +1394,11 @@ export type Database = {
           apelidos: string[]
           ativo: boolean
           auth_user_id: string | null
+          avisa_diagramacao_fotolivro: boolean
           avisa_edicao_new_born: boolean
+          avisa_envio_fotolivro: boolean
           avisa_escolha_new_born: boolean
+          avisa_grafica_fotolivro: boolean
           created_at: string
           faz_repescagem: boolean
           foto_path: string | null
@@ -1410,8 +1413,11 @@ export type Database = {
           apelidos?: string[]
           ativo?: boolean
           auth_user_id?: string | null
+          avisa_diagramacao_fotolivro?: boolean
           avisa_edicao_new_born?: boolean
+          avisa_envio_fotolivro?: boolean
           avisa_escolha_new_born?: boolean
+          avisa_grafica_fotolivro?: boolean
           created_at?: string
           faz_repescagem?: boolean
           foto_path?: string | null
@@ -1426,8 +1432,11 @@ export type Database = {
           apelidos?: string[]
           ativo?: boolean
           auth_user_id?: string | null
+          avisa_diagramacao_fotolivro?: boolean
           avisa_edicao_new_born?: boolean
+          avisa_envio_fotolivro?: boolean
           avisa_escolha_new_born?: boolean
+          avisa_grafica_fotolivro?: boolean
           created_at?: string
           faz_repescagem?: boolean
           foto_path?: string | null
@@ -2287,7 +2296,12 @@ export type Database = {
         Returns: undefined
       }
       enviar_fotolivro_para_aprovacao: {
-        Args: { p_capa: string; p_caso_etapa_id: string; p_link: string }
+        Args: {
+          p_capa: string
+          p_caso_etapa_id: string
+          p_fase?: Database["public"]["Enums"]["fase_album"]
+          p_link: string
+        }
         Returns: undefined
       }
       enviar_video_nos_links_do_caso: {
@@ -2917,6 +2931,7 @@ export type Database = {
         | "enviar_para_aprovacao"
         | "aguardando_aprovacao"
         | "pedido_de_alteracoes"
+        | "alteracoes_realizadas"
         | "aprovado"
         | "enviado_grafica"
         | "pronto_para_entrega"
@@ -3198,6 +3213,7 @@ export const Constants = {
         "enviar_para_aprovacao",
         "aguardando_aprovacao",
         "pedido_de_alteracoes",
+        "alteracoes_realizadas",
         "aprovado",
         "enviado_grafica",
         "pronto_para_entrega",

@@ -39,6 +39,8 @@ const ICONE: Record<TipoNotificacao, (props: { className: string }) => ReactNode
   atribuida: IconeAtribuir,
   horario: IconeRelogio,
   new_born: IconeAtribuir,
+  // O mesmo do New Born: as duas chamam pela marca da Equipe, não pelo card.
+  fotolivro: IconeAtribuir,
   prazo: IconeCalendario,
   alteracao_minha: IconeReabrir,
   rendicao: IconeRendicao,
@@ -136,7 +138,13 @@ export function Sino() {
     casos: data?.casos ?? [],
     etapasPorCaso: data?.etapasPorCaso ?? new Map(),
     pessoaId: pessoa?.id ?? null,
-    avisos: { escolha: pessoa?.avisaEscolhaNewBorn ?? false, edicao: pessoa?.avisaEdicaoNewBorn ?? false },
+    avisos: {
+      escolha: pessoa?.avisaEscolhaNewBorn ?? false,
+      edicao: pessoa?.avisaEdicaoNewBorn ?? false,
+      diagramacaoFotolivro: pessoa?.avisaDiagramacaoFotolivro ?? false,
+      envioFotolivro: pessoa?.avisaEnvioFotolivro ?? false,
+      graficaFotolivro: pessoa?.avisaGraficaFotolivro ?? false,
+    },
     agora,
   })
 

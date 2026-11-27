@@ -2,9 +2,10 @@
 --
 -- O QUE ESTE ARQUIVO PROTEGE: as duas portas que o gestor pediu e a guarda de
 -- cada uma.
---   A/B — a APROVAÇÃO: não se entra nela sem capa e link, e "enviado ao
---         cliente" é do atendimento ou adm.
---   C   — uma prova NOVA volta para a fila do ADM.
+--   A/B — a APROVAÇÃO: não se entra nela sem capa e link; desde 27/11/2026
+--         a prova vai para "Enviar para aprovação", e quem a manda move para
+--         "Aguardando aprovação" — é esse gesto que carimba o envio.
+--   C   — uma prova NOVA (as alterações) vai para "Alterações realizadas".
 --   D   — a ENTREGA: "entregue" é confirmação do atendimento ou adm, e só do
 --         que está em "Pronto para entrega" — que fica ABERTO esperando.
 --   E   — as colunas só existem no fotolivro, e o link não vaza para `eventos`.
@@ -99,23 +100,26 @@ reset role;
 
 select is(
   (select fase_album::text || '/' || status::text from public.caso_etapas where id = pg_temp.etapa('album')),
-  'aguardando_aprovacao/pausada',
-  'A6: fica em Aguardando aprovação, pausado — esperando o cliente, não concluído'
+  'enviar_para_aprovacao/pausada',
+  'A6: fica em Enviar para aprovação, pausado — esperando quem manda a prova'
 );
 
 select ok(
   (select fotolivro_link = 'https://prova.exemplo/x' and fotolivro_capa = pg_temp.capa()
           and fotolivro_enviado_em is null
      from public.caso_etapas where id = pg_temp.etapa('album')),
-  'A7: capa e link gravados, e na fila do ADM (ainda não enviado)'
+  'A7: capa e link gravados, e ainda não enviado'
 );
 
 
 -- =============================================================================
--- B. "Enviado ao cliente" é do atendimento ou adm
+-- B. Quem manda a prova move para "Aguardando aprovação", e isso é o envio
+--    (27/11/2026). O botão antigo (`marcar_fotolivro_enviado`) segue no banco,
+--    sem uso na tela, e continua do atendimento ou adm.
 -- =============================================================================
 
 select pg_temp.como('editora.aprova@clickbaby.test');
+select public.mover_album(pg_temp.etapa('album'), 'aguardando_aprovacao');
 select throws_ok(
   format($$ select public.marcar_fotolivro_enviado(%L::uuid) $$, pg_temp.etapa('album')),
   'P0001',
@@ -137,16 +141,16 @@ reset role;
 
 select ok(
   (select fotolivro_enviado_em is not null
-          and fotolivro_enviado_por = (select id from public.pessoas where nome = 'Atendimento Aprova')
+          and fotolivro_enviado_por = (select id from public.pessoas where nome = 'Editora Aprova')
      from public.caso_etapas where id = pg_temp.etapa('album')),
-  'B4: carimbo do servidor e quem mandou'
+  'B4: mover para Aguardando aprovação carimba quem mandou, pelo servidor'
 );
 
 select is(
   (select count(*)::int from public.eventos
     where caso_etapa_id = pg_temp.etapa('album') and tipo = 'fotolivro_enviado_ao_cliente'),
-  1,
-  'B5: um evento só, mesmo com dois toques'
+  0,
+  'B5: o botão antigo não grava nada num livro já enviado'
 );
 
 
@@ -156,14 +160,15 @@ select is(
 
 select pg_temp.como('editora.aprova@clickbaby.test');
 select public.mover_album(pg_temp.etapa('album'), 'pedido_de_alteracoes');
-select public.enviar_fotolivro_para_aprovacao(pg_temp.etapa('album'), 'https://prova.exemplo/v2', pg_temp.capa());
+select public.enviar_fotolivro_para_aprovacao(pg_temp.etapa('album'), 'https://prova.exemplo/v2', pg_temp.capa(), 'alteracoes_realizadas');
 reset role;
 
 select ok(
-  (select fotolivro_enviado_em is null and fotolivro_enviado_por is null
+  (select fase_album = 'alteracoes_realizadas'
+          and fotolivro_enviado_em is null and fotolivro_enviado_por is null
           and fotolivro_link = 'https://prova.exemplo/v2'
      from public.caso_etapas where id = pg_temp.etapa('album')),
-  'C1: depois das alterações, a prova nova volta para Entregáveis sem o "enviado" da anterior'
+  'C1: depois das alterações, a prova nova vai para Alterações realizadas sem o "enviado" da anterior'
 );
 
 

@@ -135,8 +135,16 @@ export function useDefinirTelas() {
   })
 }
 
-/** As marcas do sino do New Born. Cadastro, como as telas. */
-export function useDefinirAvisoNewBorn() {
+/** As colunas das marcas do sino (New Born e, desde 27/11/2026, Foto/Livro). */
+export type ColunaDeAviso =
+  | 'avisa_escolha_new_born'
+  | 'avisa_edicao_new_born'
+  | 'avisa_diagramacao_fotolivro'
+  | 'avisa_envio_fotolivro'
+  | 'avisa_grafica_fotolivro'
+
+/** As marcas do sino. Cadastro, como as telas. */
+export function useDefinirAviso() {
   const qc = useQueryClient()
   const reler = useRelerSeForEu()
 
@@ -145,11 +153,9 @@ export function useDefinirAvisoNewBorn() {
       pessoaId,
       coluna,
       ligado,
-    }: Alvo & { coluna: 'avisa_escolha_new_born' | 'avisa_edicao_new_born'; ligado: boolean }) => {
-      const { error } = await supabase
-        .from('pessoas')
-        .update(coluna === 'avisa_escolha_new_born' ? { avisa_escolha_new_born: ligado } : { avisa_edicao_new_born: ligado })
-        .eq('id', pessoaId)
+    }: Alvo & { coluna: ColunaDeAviso; ligado: boolean }) => {
+      const mudanca: Partial<Record<ColunaDeAviso, boolean>> = { [coluna]: ligado }
+      const { error } = await supabase.from('pessoas').update(mudanca).eq('id', pessoaId)
       if (error) throw error
     },
     onSuccess: (_r, { pessoaId }) => {

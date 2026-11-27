@@ -546,7 +546,9 @@ export function useEnviarFotolivroParaAprovacao() {
     link: string
     arquivo: File | null
     capaAtual: string | null
-  }>(async ({ casoEtapaId, link, arquivo, capaAtual }) => {
+    /** Para qual coluna da prova (27/11/2026): a da diagramação ou a das alterações. */
+    fase: 'enviar_para_aprovacao' | 'alteracoes_realizadas'
+  }>(async ({ casoEtapaId, link, arquivo, capaAtual, fase }) => {
     let capa = capaAtual
 
     if (arquivo) {
@@ -572,18 +574,9 @@ export function useEnviarFotolivroParaAprovacao() {
       p_caso_etapa_id: casoEtapaId,
       p_link: link.trim(),
       p_capa: capa,
+      p_fase: fase,
     })
   })
-}
-
-/**
- * "ENVIADO AO CLIENTE" (migration 20260921202848): a Morgana mandou a prova, e o
- * fotolivro sai de Entregáveis. Na seção ele continua em "Aguardando aprovação".
- */
-export function useMarcarFotolivroEnviado() {
-  return useAcaoDoQuadro<{ casoEtapaId: string }>(({ casoEtapaId }) =>
-    chamar('marcar_fotolivro_enviado', { p_caso_etapa_id: casoEtapaId }),
-  )
 }
 
 /**

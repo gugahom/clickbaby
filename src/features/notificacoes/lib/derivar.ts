@@ -1,10 +1,13 @@
 import { MINUTOS_IMINENTE, alertaDeHorario } from '@/features/quadro/lib/alerta-horario'
 import {
+  FASES_ALBUM_A_DIAGRAMAR,
+  FASE_ALBUM_APROVADO,
   FASES_CLICK_HOME_A_EDITAR,
   FASE_CLICK_HOME_ESCOLHA,
   FASE_CLICK_HOME_SELECAO,
   ROTULO_ETAPA,
   ROTULO_FASE_ALBUM,
+  ehFaseDaProva,
   rotuloDaRodada,
   type CasoQuadro,
   type EtapaQuadro,
@@ -47,21 +50,30 @@ import {
  * manda a galeria à família não tem o nome no card, e quem edita pode não ter.
  * Não é a volta do trabalho do papel: a gestão marca UMA pessoa na Equipe, e é
  * o nome dela que está marcado — só que na ficha, e não no card.
+ *
+ * O FOTO/LIVRO TAMBÉM (27/11/2026, pedido do gestor), pela mesma razão: quem
+ * diagrama, quem manda a prova ao cliente e quem paga a gráfica são três
+ * pessoas diferentes, e o card tem um nome só. Cada uma é chamada enquanto o
+ * livro está parado na coluna dela.
  */
 
 export type TipoNotificacao =
   | 'atribuida'
   | 'horario'
   | 'new_born'
+  | 'fotolivro'
   | 'prazo'
   | 'alteracao_minha'
   | 'rendicao'
   | 'aviso'
 
-/** As marcas da pessoa na Equipe: o que do New Born a chama. */
-export interface AvisosDoNewBorn {
+/** As marcas da pessoa na Equipe: o que do New Born e do Foto/Livro a chama. */
+export interface AvisosDaPessoa {
   escolha: boolean
   edicao: boolean
+  diagramacaoFotolivro: boolean
+  envioFotolivro: boolean
+  graficaFotolivro: boolean
 }
 
 export interface Notificacao {
@@ -92,6 +104,7 @@ const ORDEM: Record<TipoNotificacao, number> = {
   horario: 0,
   atribuida: 1,
   new_born: 2,
+  fotolivro: 2,
   prazo: 3,
   alteracao_minha: 4,
   rendicao: 5,
@@ -141,7 +154,7 @@ export function derivarNotificacoes({
   casos: CasoQuadro[]
   etapasPorCaso: Map<string, EtapaQuadro[]>
   pessoaId: string | null
-  avisos: AvisosDoNewBorn
+  avisos: AvisosDaPessoa
   agora: Date
 }): Notificacao[] {
   const lista: Notificacao[] = []
@@ -185,6 +198,55 @@ export function derivarNotificacoes({
           id: `new_born_edicao:${etapa.faseClickHome}:${etapa.id}`,
           titulo: selecao ? 'Editar a seleção do New Born' : 'Editar o New Born',
           detalhe: selecao ? 'A família escolheu as fotos' : 'Ensaio feito, aguardando a primeira edição',
+        })
+      }
+    }
+
+    /*
+     * O FOTO/LIVRO ESPERANDO QUEM A EQUIPE MARCOU (27/11/2026). Também antes do
+     * corte de "minhas". Resolver é mover o card: diagramação começada, prova
+     * mandada, livro pago.
+     */
+    for (const etapa of etapas) {
+      if (etapa.tipo !== 'album' || etapa.status === 'concluida' || etapa.status === 'dispensada') continue
+      const fase = etapa.faseAlbum
+      if (fase === null) continue
+      const base = {
+        tipo: 'fotolivro' as const,
+        peso: ORDEM.fotolivro,
+        urgente: false,
+        casoId: caso.id,
+        casoNome: nome,
+        fichaDaEtapa: etapa.id,
+        em: quando(etapa),
+      }
+      // A alteração no MEU fotolivro já chama pela linha de "alteração minha",
+      // logo abaixo; a mesma coisa duas vezes no sino seria ruído.
+      const alteracaoJaMinha = fase === 'pedido_de_alteracoes' && etapa.responsavelId === pessoaId
+      if (avisos.diagramacaoFotolivro && FASES_ALBUM_A_DIAGRAMAR.has(fase) && !alteracaoJaMinha) {
+        const alteracao = fase === 'pedido_de_alteracoes'
+        lista.push({
+          ...base,
+          id: `fotolivro_diagramar:${fase}:${etapa.id}`,
+          titulo: alteracao ? 'Fazer as alterações do Foto/Livro' : 'Diagramar o Foto/Livro',
+          detalhe: alteracao ? 'O cliente pediu alterações' : ROTULO_FASE_ALBUM[fase],
+        })
+      }
+      if (avisos.envioFotolivro && ehFaseDaProva(fase)) {
+        const alteracao = fase === 'alteracoes_realizadas'
+        lista.push({
+          ...base,
+          id: `fotolivro_enviar:${fase}:${etapa.id}`,
+          titulo: alteracao ? 'Mandar a prova corrigida ao cliente' : 'Mandar a prova do Foto/Livro ao cliente',
+          detalhe: alteracao ? 'Alterações realizadas' : 'A diagramação está pronta',
+        })
+      }
+      if (avisos.graficaFotolivro && fase === FASE_ALBUM_APROVADO) {
+        lista.push({
+          ...base,
+          id: `fotolivro_grafica:${etapa.id}`,
+          titulo: 'Pagar e mandar o Foto/Livro para a gráfica',
+          detalhe: 'Aprovado pelo cliente',
         })
       }
     }

@@ -16,8 +16,9 @@ interface PropsAcoesDaEtapa {
    *
    * No Foto/Livro, terminar a diagramação não termina a etapa: manda a prova
    * para aprovação do cliente (ver DialogoAprovacaoDoFotolivro), e o livro segue
-   * na esteira. `null` esconde o botão — depois da aprovação o cartão não
-   * conclui nada, quem anda é a fase. Ausente, é o concluir de sempre.
+   * na esteira; nas colunas da prova, é "mandei ao cliente". `null` esconde o
+   * botão — depois disso o cartão não conclui nada, quem anda é a fase.
+   * Ausente, é o concluir de sempre.
    */
   concluirComo?: { rotulo: string; aoTocar: () => void } | null
 }
